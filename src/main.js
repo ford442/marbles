@@ -96,7 +96,7 @@ class MarblesGame {
 
   async setupAssets() {
     // A. Load the Material File
-    const response = await fetch('./baked_color.filamat');
+    const response = await fetch('./baked_color.filmat');
     const buffer = await response.arrayBuffer();
     // Create the Material object in Filament
     this.material = this.engine.createMaterial(new Uint8Array(buffer));
