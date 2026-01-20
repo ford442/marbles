@@ -1,6 +1,6 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 
-// Helper function to convert Quaternion and position to 4x4 matrix (column-major)
+// --- HELPER: Math for Transforms ---
 function quaternionToMat4(position, quaternion) {
   const x = quaternion.x, y = quaternion.y, z = quaternion.z, w = quaternion.w;
   const x2 = x + x, y2 = y + y, z2 = z + z;
@@ -8,7 +8,6 @@ function quaternionToMat4(position, quaternion) {
   const yy = y * y2, yz = y * z2, zz = z * z2;
   const wx = w * x2, wy = w * y2, wz = w * z2;
 
-  // Column-major 4x4 matrix
   return new Float32Array([
     1 - (yy + zz), xy + wz, xz - wy, 0,
     xy - wz, 1 - (xx + zz), yz + wx, 0,
@@ -17,12 +16,29 @@ function quaternionToMat4(position, quaternion) {
   ]);
 }
 
-// Load Filament dynamically
+// --- HELPER: Raw Cube Data (Vertices + Colors + Indices) ---
+// A simple 1x1x1 cube centered at 0,0,0
+const CUBE_VERTICES = new Float32Array([
+    // positions (x, y, z)          // colors (r, g, b, a) - encoded as Uint32 later? No, we'll use dedicated logic
+    -0.5, -0.5,  0.5,   0.5, -0.5,  0.5,   0.5,  0.5,  0.5,  -0.5,  0.5,  0.5, // Front
+    -0.5, -0.5, -0.5,  -0.5,  0.5, -0.5,   0.5,  0.5, -0.5,   0.5, -0.5, -0.5, // Back
+    -0.5,  0.5, -0.5,  -0.5,  0.5,  0.5,   0.5,  0.5,  0.5,   0.5,  0.5, -0.5, // Top
+    -0.5, -0.5, -0.5,   0.5, -0.5, -0.5,   0.5, -0.5,  0.5,  -0.5, -0.5,  0.5, // Bottom
+     0.5, -0.5, -0.5,   0.5,  0.5, -0.5,   0.5,  0.5,  0.5,   0.5, -0.5,  0.5, // Right
+    -0.5, -0.5, -0.5,  -0.5, -0.5,  0.5,  -0.5,  0.5,  0.5,  -0.5,  0.5, -0.5  // Left
+]);
+
+const CUBE_INDICES = new Uint16Array([
+    0, 1, 2, 2, 3, 0,       // Front
+    4, 5, 6, 6, 7, 4,       // Back
+    8, 9, 10, 10, 11, 8,    // Top
+    12, 13, 14, 14, 15, 12, // Bottom
+    16, 17, 18, 18, 19, 16, // Right
+    20, 21, 22, 22, 23, 20  // Left
+]);
+
 async function loadFilament() {
-  // Filament uses UMD pattern - load as module
   const module = await import('filament');
-  // The default export is the Filament factory function.
-  // We return the factory itself because we need to perform a special initialization sequence.
   return module.default;
 }
 
@@ -30,216 +46,175 @@ class MarblesGame {
   constructor() {
     this.canvas = document.getElementById('canvas');
     this.marbles = [];
-    this.frameCount = 0;
     this.Filament = null;
+    this.material = null; // We need to store the loaded material
+    this.cubeMesh = null; // We need to store the geometry
   }
 
   async init() {
-    console.log('Initializing Filament and Rapier...');
-    
-    // Initialize Rapier physics
+    // 1. Initialize Physics
     await RAPIER.init();
-    console.log('Rapier initialized');
-    
-    // Create physics world with gravity (-9.81)
     const gravity = { x: 0.0, y: -9.81, z: 0.0 };
     this.world = new RAPIER.World(gravity);
-    console.log('Physics world created with gravity:', gravity);
 
-    // Try to load Filament (may fail due to UMD/WASM complexity)
-    try {
-      const Factory = await loadFilament();
-      
-      // Capture the initialized module by hooking into loadClassExtensions.
-      // This is necessary because Factory.init() does not return the module,
-      // and we cannot access the internal closure variable it updates.
-      let capturedModule = null;
-      const originalLoadClassExtensions = Factory.loadClassExtensions;
+    // 2. Initialize Filament
+    const Factory = await loadFilament();
+    let capturedModule = null;
+    const originalLoadClassExtensions = Factory.loadClassExtensions;
+    Factory.loadClassExtensions = function() {
+        capturedModule = this;
+        if (originalLoadClassExtensions) originalLoadClassExtensions();
+    };
+    await new Promise((resolve) => Factory.init([], resolve));
+    this.Filament = capturedModule;
 
-      Factory.loadClassExtensions = function() {
-        capturedModule = this; // 'this' is the initialized module
-        if (originalLoadClassExtensions) {
-            originalLoadClassExtensions();
-        }
-      };
+    this.engine = this.Filament.Engine.create(this.canvas);
+    this.scene = this.engine.createScene();
+    this.swapChain = this.engine.createSwapChain();
+    this.renderer = this.engine.createRenderer();
+    
+    // Camera setup
+    this.camera = this.engine.createCamera(this.Filament.EntityManager.get().create());
+    this.view = this.engine.createView();
+    this.view.setCamera(this.camera);
+    this.view.setScene(this.scene);
+    // Dark grey background to see white cubes clearly
+    this.renderer.setClearOptions({clearColor: [0.1, 0.1, 0.1, 1.0], clear: true}); 
 
-      // Initialize Filament using the factory's init method.
-      // This will trigger the WASM load, update the internal closure variable,
-      // and call our hooked loadClassExtensions.
-      await new Promise((resolve) => {
-        Factory.init([], resolve);
-      });
+    // 3. LOAD ASSETS (The Missing Link!)
+    await this.setupAssets();
 
-      if (!capturedModule) {
-          throw new Error("Failed to capture Filament module");
-      }
-
-      this.Filament = capturedModule;
-      console.log('Filament WASM module loaded and initialized');
-      console.log('Filament keys:', Object.keys(this.Filament));
-
-      // Create Filament Engine, Renderer, Camera, View
-      this.engine = this.Filament.Engine.create(this.canvas);
-      this.renderer = this.engine.createRenderer();
-      this.scene = this.engine.createScene();
-      
-      const eye = [0, 10, 20];
-      const center = [0, 0, 0];
-      const up = [0, 1, 0];
-      this.camera = this.engine.createCamera(this.Filament.EntityManager.get().create());
-      this.camera.lookAt(eye, center, up);
-      
-      this.view = this.engine.createView();
-      this.view.setCamera(this.camera);
-      this.view.setScene(this.scene);
-      this.view.setViewport([0, 0, this.canvas.width, this.canvas.height]);
-      this.swapChain = this.engine.createSwapChain();
-      
-      this.resize();
-      window.addEventListener('resize', () => this.resize());
-
-      console.log('Filament components created');
-    } catch (e) {
-      this.Filament = null;
-      console.warn('Filament unavailable (UMD/WASM loading issue), running physics-only:', e);
-    }
-
-    // Create floor and marbles
+    // 4. Create Scene Objects
     this.createFloor();
     this.createMarbles();
 
-    console.log('Scene setup complete');
+    // 5. Resize & Start
+    this.resize();
+    window.addEventListener('resize', () => this.resize());
+    this.loop();
   }
 
-  resize() {
-    if (!this.Filament || !this.view) return;
+  async setupAssets() {
+    // A. Load the Material File
+    const response = await fetch('./baked_color.filamat');
+    const buffer = await response.arrayBuffer();
+    // Create the Material object in Filament
+    this.material = this.engine.createMaterial(new Uint8Array(buffer));
+
+    // B. Create the Geometry (The Cube)
+    const VertexAttribute = this.Filament.VertexAttribute;
+    const AttributeType = this.Filament.VertexBuffer$AttributeType;
     
-    const dpr = window.devicePixelRatio;
-    const width = this.canvas.width = window.innerWidth * dpr;
-    const height = this.canvas.height = window.innerHeight * dpr;
-    this.view.setViewport([0, 0, width, height]);
-    
-    const aspect = width / height;
-    const fov = aspect < 1 ? this.Filament.Camera$Fov.HORIZONTAL : this.Filament.Camera$Fov.VERTICAL;
-    this.camera.setProjectionFov(45, aspect, 1.0, 1000.0, fov);
+    // Define Vertex Buffer
+    this.vb = this.Filament.VertexBuffer.Builder()
+        .vertexCount(24)
+        .bufferCount(1)
+        .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, 12) // 3 floats * 4 bytes = 12 bytes stride
+        .build(this.engine);
+    this.vb.setBufferAt(this.engine, 0, CUBE_VERTICES);
+
+    // Define Index Buffer
+    this.ib = this.Filament.IndexBuffer.Builder()
+        .indexCount(36)
+        .bufferType(this.Filament.IndexBuffer$IndexType.USHORT)
+        .build(this.engine);
+    this.ib.setBuffer(this.engine, CUBE_INDICES);
   }
 
   createFloor() {
-    console.log('Creating floor...');
-    
-    // Physics: Create static floor rigid body
-    const floorBodyDesc = RAPIER.RigidBodyDesc.fixed()
-      .setTranslation(0.0, 0.0, 0.0);
+    // PHYSICS
+    const floorBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0.0, -1.0, 0.0);
     const floorBody = this.world.createRigidBody(floorBodyDesc);
-    
-    // Create a large box collider for the floor
-    const floorColliderDesc = RAPIER.ColliderDesc.cuboid(50.0, 0.5, 50.0);
+    const floorColliderDesc = RAPIER.ColliderDesc.cuboid(50.0, 0.5, 50.0); // 100x1x100
     this.world.createCollider(floorColliderDesc, floorBody);
+
+    // VISUALS
+    const entity = this.Filament.EntityManager.get().create();
     
-    console.log('Floor created');
+    // Create a material instance with a specific color (Grey)
+    const matInstance = this.material.createInstance();
+    matInstance.setColor3Parameter('color', [0.5, 0.5, 0.5]); 
+
+    // Attach the Renderable
+    this.Filament.RenderableManager.Builder(1)
+        .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
+        .material(0, matInstance)
+        .geometry(0, this.Filament.PrimitiveType.TRIANGLES, this.vb, this.ib)
+        .build(this.engine, entity);
+
+    // Scale the generic 1x1 cube to look like the floor (100x1x100)
+    const tcm = this.engine.getTransformManager();
+    const inst = tcm.getInstance(entity);
+    const scaleMatrix = new Float32Array([
+        100, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 100, 0,
+        0, -1, 0, 1 // Position y = -1
+    ]);
+    tcm.setTransform(inst, scaleMatrix);
+    
+    this.scene.addEntity(entity);
   }
 
   createMarbles() {
-    console.log('Creating marbles...');
+    const pos = { x: 0, y: 5, z: 0 };
     
-    // Create 5 dynamic marbles at different positions
-    const marblePositions = [
-      { x: 0, y: 5, z: 0 },
-      { x: 2, y: 8, z: 1 },
-      { x: -2, y: 6, z: -1 },
-      { x: 1, y: 10, z: 2 },
-      { x: -1, y: 7, z: -2 }
-    ];
+    // PHYSICS
+    const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z);
+    const rigidBody = this.world.createRigidBody(bodyDesc);
+    // Note: Using cuboid collider because our visual is a cube for now!
+    // If you want a sphere collider, the cube will roll funny. 
+    const colliderDesc = RAPIER.ColliderDesc.cuboid(0.5, 0.5, 0.5); 
+    this.world.createCollider(colliderDesc, rigidBody);
 
-    for (const pos of marblePositions) {
-      // Physics: Create dynamic rigid body
-      const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
-        .setTranslation(pos.x, pos.y, pos.z);
-      const rigidBody = this.world.createRigidBody(bodyDesc);
-      
-      // Add sphere collider (radius 0.5)
-      const colliderDesc = RAPIER.ColliderDesc.ball(0.5)
-        .setRestitution(0.7) // Bounciness
-        .setFriction(0.5);
-      this.world.createCollider(colliderDesc, rigidBody);
-      
-      // Filament: Create entity if available
-      let entity = null;
-      if (this.Filament && this.scene) {
-        entity = this.Filament.EntityManager.get().create();
-        this.scene.addEntity(entity);
-      }
-      
-      this.marbles.push({ rigidBody, entity });
-    }
+    // VISUALS
+    const entity = this.Filament.EntityManager.get().create();
+    const matInstance = this.material.createInstance();
+    matInstance.setColor3Parameter('color', [1.0, 0.0, 0.0]); // Red Marble
+
+    this.Filament.RenderableManager.Builder(1)
+        .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
+        .material(0, matInstance)
+        .geometry(0, this.Filament.PrimitiveType.TRIANGLES, this.vb, this.ib)
+        .build(this.engine, entity);
     
-    console.log(`Created ${this.marbles.length} marbles`);
+    this.scene.addEntity(entity);
+    
+    // Store both for the sync loop
+    this.marbles.push({ rigidBody, entity });
   }
 
-  update() {
-    // Step the physics simulation
-    this.world.step();
-    
-    // Update Filament entities with physics transforms
-    for (let i = 0; i < this.marbles.length; i++) {
-      const marble = this.marbles[i];
-      const translation = marble.rigidBody.translation();
-      const rotation = marble.rigidBody.rotation();
-      
-      // Convert quaternion and position to 4x4 matrix using helper function
-      const transform = quaternionToMat4(translation, rotation);
-      
-      // Log first marble position (for demonstration)
-      if (i === 0 && this.frameCount++ % 60 === 0) {
-        console.log('Marble 0 pos:', {
-          x: translation.x.toFixed(2),
-          y: translation.y.toFixed(2),
-          z: translation.z.toFixed(2)
-        });
-      }
-      
-      // Update Filament entity transform if available
-      if (this.Filament && marble.entity) {
-        const tm = this.engine.getTransformManager();
-        const inst = tm.getInstance(marble.entity);
-        tm.setTransform(inst, transform);
-      }
-    }
-  }
-
-  render() {
-    if (!this.Filament || !this.renderer) return;
-    
-    // Render frame
-    if (this.renderer.beginFrame(this.swapChain)) {
-      this.renderer.render(this.swapChain, this.view);
-      this.renderer.endFrame();
-    }
+  resize() {
+    const width = this.canvas.width = window.innerWidth;
+    const height = this.canvas.height = window.innerHeight;
+    this.view.setViewport([0, 0, width, height]);
+    const aspect = width / height;
+    this.camera.setProjectionFov(45, aspect, 1.0, 100.0, this.Filament.Camera$Fov.VERTICAL);
+    // Look at the scene center
+    this.camera.lookAt([0, 10, 20], [0, 0, 0], [0, 1, 0]);
   }
 
   loop() {
-    this.update();
-    this.render();
+    // 1. Step Physics
+    this.world.step();
+
+    // 2. Sync Visuals
+    const tcm = this.engine.getTransformManager();
+    for (const m of this.marbles) {
+        const t = m.rigidBody.translation();
+        const r = m.rigidBody.rotation();
+        const mat = quaternionToMat4(t, r);
+        const inst = tcm.getInstance(m.entity);
+        tcm.setTransform(inst, mat);
+    }
+
+    // 3. Render
+    if (this.renderer.beginFrame(this.swapChain)) {
+        this.renderer.render(this.view);
+        this.renderer.endFrame();
+    }
     requestAnimationFrame(() => this.loop());
   }
-
-  start() {
-    console.log('Starting game loop...');
-    this.loop();
-  }
 }
 
-// Initialize and start the game
-async function main() {
-  try {
-    console.log('Starting Marbles 3D Game...');
-    const game = new MarblesGame();
-    await game.init();
-    game.start();
-    console.log('Game started successfully!');
-  } catch (error) {
-    console.error('Error starting game:', error);
-  }
-}
-
-main();
+new MarblesGame().init();
