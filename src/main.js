@@ -29,7 +29,7 @@ class MarblesGame {
   constructor() {
     this.canvas = document.getElementById('canvas');
     this.marbles = [];
-    this.entities = [];
+    this.frameCount = 0;
   }
 
   async init() {
@@ -96,7 +96,7 @@ class MarblesGame {
     this.view.setViewport([0, 0, width, height]);
     
     const aspect = width / height;
-    const fov = aspect < 1 ? this.Filament.Camera$Fov.HORIZONTAL : this.Filament.Camera$Fov.VERTICAL;
+    const fov = aspect < 1 ? this.Filament.Camera.Fov.HORIZONTAL : this.Filament.Camera.Fov.VERTICAL;
     this.camera.setProjectionFov(45, aspect, 1.0, 1000.0, fov);
   }
 
@@ -201,7 +201,6 @@ class MarblesGame {
 
   start() {
     console.log('Starting game loop...');
-    this.frameCount = 0;
     this.loop();
   }
 }
