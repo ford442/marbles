@@ -1,4 +1,3 @@
-import * as Filament from 'filament';
 import RAPIER from '@dimforge/rapier3d-compat';
 
 // Helper function to convert Quaternion and position to 4x4 matrix (column-major)
@@ -18,6 +17,14 @@ function quaternionToMat4(position, quaternion) {
   ]);
 }
 
+// Load Filament dynamically
+async function loadFilament() {
+  // Filament uses UMD pattern - load as module
+  const module = await import('filament');
+  // The default export is the Filament factory function  
+  return await module.default();
+}
+
 class MarblesGame {
   constructor() {
     this.canvas = document.getElementById('canvas');
@@ -32,47 +39,46 @@ class MarblesGame {
     await RAPIER.init();
     console.log('Rapier initialized');
     
-    // Create physics world with gravity
+    // Create physics world with gravity (-9.81)
     const gravity = { x: 0.0, y: -9.81, z: 0.0 };
     this.world = new RAPIER.World(gravity);
     console.log('Physics world created with gravity:', gravity);
 
-    // Initialize Filament
-    await Filament.init([
-      'https://unpkg.com/filament@1.51.5/filament.wasm'
-    ], () => {});
-    console.log('Filament initialized');
+    // Try to load Filament (may fail due to UMD/WASM complexity)
+    try {
+      this.Filament = await loadFilament();
+      console.log('Filament WASM module loaded');
+      
+      // Initialize Filament
+      await new Promise((resolve) => {
+        this.Filament.init([], resolve);
+      });
+      console.log('Filament initialized');
 
-    // Create Filament Engine
-    this.engine = Filament.Engine.create(this.canvas);
-    
-    // Create Renderer
-    this.renderer = this.engine.createRenderer();
-    
-    // Create Scene
-    this.scene = this.engine.createScene();
-    
-    // Create Camera
-    const eye = [0, 10, 20];
-    const center = [0, 0, 0];
-    const up = [0, 1, 0];
-    this.camera = this.engine.createCamera(Filament.EntityManager.get().create());
-    this.camera.lookAt(eye, center, up);
-    
-    // Create View
-    this.view = this.engine.createView();
-    this.view.setCamera(this.camera);
-    this.view.setScene(this.scene);
-    this.view.setViewport([0, 0, this.canvas.width, this.canvas.height]);
+      // Create Filament Engine, Renderer, Camera, View
+      this.engine = this.Filament.Engine.create(this.canvas);
+      this.renderer = this.engine.createRenderer();
+      this.scene = this.engine.createScene();
+      
+      const eye = [0, 10, 20];
+      const center = [0, 0, 0];
+      const up = [0, 1, 0];
+      this.camera = this.engine.createCamera(this.Filament.EntityManager.get().create());
+      this.camera.lookAt(eye, center, up);
+      
+      this.view = this.engine.createView();
+      this.view.setCamera(this.camera);
+      this.view.setScene(this.scene);
+      this.view.setViewport([0, 0, this.canvas.width, this.canvas.height]);
+      this.swapChain = this.engine.createSwapChain();
+      
+      this.resize();
+      window.addEventListener('resize', () => this.resize());
 
-    // Setup swap chain
-    this.swapChain = this.engine.createSwapChain();
-    
-    // Resize handler
-    this.resize();
-    window.addEventListener('resize', () => this.resize());
-
-    console.log('Filament components created');
+      console.log('Filament components created');
+    } catch (e) {
+      console.warn('Filament unavailable (UMD/WASM loading issue), running physics-only:', e.message);
+    }
 
     // Create floor and marbles
     this.createFloor();
@@ -82,13 +88,15 @@ class MarblesGame {
   }
 
   resize() {
+    if (!this.Filament) return;
+    
     const dpr = window.devicePixelRatio;
     const width = this.canvas.width = window.innerWidth * dpr;
     const height = this.canvas.height = window.innerHeight * dpr;
     this.view.setViewport([0, 0, width, height]);
     
     const aspect = width / height;
-    const fov = aspect < 1 ? Filament.Camera$Fov.HORIZONTAL : Filament.Camera$Fov.VERTICAL;
+    const fov = aspect < 1 ? this.Filament.Camera$Fov.HORIZONTAL : this.Filament.Camera$Fov.VERTICAL;
     this.camera.setProjectionFov(45, aspect, 1.0, 1000.0, fov);
   }
 
@@ -104,13 +112,13 @@ class MarblesGame {
     const floorColliderDesc = RAPIER.ColliderDesc.cuboid(50.0, 0.5, 50.0);
     this.world.createCollider(floorColliderDesc, floorBody);
     
-    console.log('Floor created (physics only)');
+    console.log('Floor created');
   }
 
   createMarbles() {
     console.log('Creating marbles...');
     
-    // Create 5 marbles at different positions
+    // Create 5 dynamic marbles at different positions
     const marblePositions = [
       { x: 0, y: 5, z: 0 },
       { x: 2, y: 8, z: 1 },
@@ -131,9 +139,12 @@ class MarblesGame {
         .setFriction(0.5);
       this.world.createCollider(colliderDesc, rigidBody);
       
-      // Filament: Create entity (visual representation would go here)
-      const entity = Filament.EntityManager.get().create();
-      this.scene.addEntity(entity);
+      // Filament: Create entity if available
+      let entity = null;
+      if (this.Filament) {
+        entity = this.Filament.EntityManager.get().create();
+        this.scene.addEntity(entity);
+      }
       
       this.marbles.push({ rigidBody, entity });
     }
@@ -146,22 +157,36 @@ class MarblesGame {
     this.world.step();
     
     // Update Filament entities with physics transforms
-    for (const marble of this.marbles) {
+    for (let i = 0; i < this.marbles.length; i++) {
+      const marble = this.marbles[i];
       const translation = marble.rigidBody.translation();
       const rotation = marble.rigidBody.rotation();
       
-      // Convert quaternion and position to 4x4 matrix
+      // Convert quaternion and position to 4x4 matrix using helper function
       const transform = quaternionToMat4(translation, rotation);
       
-      // Get transform manager and update entity transform
-      const tm = this.engine.getTransformManager();
-      const inst = tm.getInstance(marble.entity);
-      tm.setTransform(inst, transform);
+      // Log first marble position (for demonstration)
+      if (i === 0 && this.frameCount++ % 60 === 0) {
+        console.log('Marble 0 pos:', {
+          x: translation.x.toFixed(2),
+          y: translation.y.toFixed(2),
+          z: translation.z.toFixed(2)
+        });
+      }
+      
+      // Update Filament entity transform if available
+      if (this.Filament && marble.entity) {
+        const tm = this.engine.getTransformManager();
+        const inst = tm.getInstance(marble.entity);
+        tm.setTransform(inst, transform);
+      }
     }
   }
 
   render() {
-    // Begin frame
+    if (!this.Filament) return;
+    
+    // Render frame
     if (this.renderer.beginFrame(this.swapChain)) {
       this.renderer.render(this.view);
       this.renderer.endFrame();
@@ -176,6 +201,7 @@ class MarblesGame {
 
   start() {
     console.log('Starting game loop...');
+    this.frameCount = 0;
     this.loop();
   }
 }
