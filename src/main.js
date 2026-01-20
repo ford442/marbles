@@ -76,6 +76,7 @@ class MarblesGame {
 
       this.Filament = capturedModule;
       console.log('Filament WASM module loaded and initialized');
+      console.log('Filament keys:', Object.keys(this.Filament));
 
       // Create Filament Engine, Renderer, Camera, View
       this.engine = this.Filament.Engine.create(this.canvas);
@@ -119,7 +120,7 @@ class MarblesGame {
     this.view.setViewport([0, 0, width, height]);
     
     const aspect = width / height;
-    const fov = aspect < 1 ? this.Filament.Camera.Fov.HORIZONTAL : this.Filament.Camera.Fov.VERTICAL;
+    const fov = aspect < 1 ? this.Filament.Camera$Fov.HORIZONTAL : this.Filament.Camera$Fov.VERTICAL;
     this.camera.setProjectionFov(45, aspect, 1.0, 1000.0, fov);
   }
 
