@@ -21,8 +21,9 @@ function quaternionToMat4(position, quaternion) {
 async function loadFilament() {
   // Filament uses UMD pattern - load as module
   const module = await import('filament');
-  // The default export is the Filament factory function  
-  return await module.default();
+  // The default export is the Filament factory function.
+  // We return the factory itself because we need to perform a special initialization sequence.
+  return module.default;
 }
 
 class MarblesGame {
@@ -30,6 +31,7 @@ class MarblesGame {
     this.canvas = document.getElementById('canvas');
     this.marbles = [];
     this.frameCount = 0;
+    this.Filament = null;
   }
 
   async init() {
@@ -46,14 +48,35 @@ class MarblesGame {
 
     // Try to load Filament (may fail due to UMD/WASM complexity)
     try {
-      this.Filament = await loadFilament();
-      console.log('Filament WASM module loaded');
+      const Factory = await loadFilament();
       
-      // Initialize Filament
+      // Capture the initialized module by hooking into loadClassExtensions.
+      // This is necessary because Factory.init() does not return the module,
+      // and we cannot access the internal closure variable it updates.
+      let capturedModule = null;
+      const originalLoadClassExtensions = Factory.loadClassExtensions;
+
+      Factory.loadClassExtensions = function() {
+        capturedModule = this; // 'this' is the initialized module
+        if (originalLoadClassExtensions) {
+            originalLoadClassExtensions();
+        }
+      };
+
+      // Initialize Filament using the factory's init method.
+      // This will trigger the WASM load, update the internal closure variable,
+      // and call our hooked loadClassExtensions.
       await new Promise((resolve) => {
-        this.Filament.init([], resolve);
+        Factory.init([], resolve);
       });
-      console.log('Filament initialized');
+
+      if (!capturedModule) {
+          throw new Error("Failed to capture Filament module");
+      }
+
+      this.Filament = capturedModule;
+      console.log('Filament WASM module loaded and initialized');
+      console.log('Filament keys:', Object.keys(this.Filament));
 
       // Create Filament Engine, Renderer, Camera, View
       this.engine = this.Filament.Engine.create(this.canvas);
@@ -77,7 +100,8 @@ class MarblesGame {
 
       console.log('Filament components created');
     } catch (e) {
-      console.warn('Filament unavailable (UMD/WASM loading issue), running physics-only:', e.message);
+      this.Filament = null;
+      console.warn('Filament unavailable (UMD/WASM loading issue), running physics-only:', e);
     }
 
     // Create floor and marbles
@@ -88,7 +112,7 @@ class MarblesGame {
   }
 
   resize() {
-    if (!this.Filament) return;
+    if (!this.Filament || !this.view) return;
     
     const dpr = window.devicePixelRatio;
     const width = this.canvas.width = window.innerWidth * dpr;
@@ -96,7 +120,7 @@ class MarblesGame {
     this.view.setViewport([0, 0, width, height]);
     
     const aspect = width / height;
-    const fov = aspect < 1 ? this.Filament.Camera.Fov.HORIZONTAL : this.Filament.Camera.Fov.VERTICAL;
+    const fov = aspect < 1 ? this.Filament.Camera$Fov.HORIZONTAL : this.Filament.Camera$Fov.VERTICAL;
     this.camera.setProjectionFov(45, aspect, 1.0, 1000.0, fov);
   }
 
@@ -141,7 +165,7 @@ class MarblesGame {
       
       // Filament: Create entity if available
       let entity = null;
-      if (this.Filament) {
+      if (this.Filament && this.scene) {
         entity = this.Filament.EntityManager.get().create();
         this.scene.addEntity(entity);
       }
@@ -184,11 +208,11 @@ class MarblesGame {
   }
 
   render() {
-    if (!this.Filament) return;
+    if (!this.Filament || !this.renderer) return;
     
     // Render frame
     if (this.renderer.beginFrame(this.swapChain)) {
-      this.renderer.render(this.view);
+      this.renderer.render(this.swapChain, this.view);
       this.renderer.endFrame();
     }
   }
