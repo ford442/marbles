@@ -212,7 +212,7 @@ class MarblesGame {
     
     // Render frame
     if (this.renderer.beginFrame(this.swapChain)) {
-      this.renderer.render(this.view);
+      this.renderer.render(this.swapChain, this.view);
       this.renderer.endFrame();
     }
   }
