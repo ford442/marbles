@@ -1,0 +1,23 @@
+material {
+    name : "Simple Material",
+    parameters : [
+        {
+           type : float3,
+           name : baseColor
+        },
+        {
+           type : float,
+           name : roughness
+        }
+    ],
+    shadingModel : lit,
+    blending : opaque
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor.rgb = materialParams.baseColor;
+        material.roughness = materialParams.roughness;
+    }
+}
