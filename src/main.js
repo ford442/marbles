@@ -133,7 +133,7 @@ class MarblesGame {
     
     // Create a material instance with a specific color (Grey)
     const matInstance = this.material.createInstance();
-    matInstance.setColor3Parameter('color', [0.5, 0.5, 0.5]); 
+    matInstance.setColor3Parameter('color', this.Filament.RgbType.sRGB, [0.5, 0.5, 0.5]);
 
     // Attach the Renderable
     this.Filament.RenderableManager.Builder(1)
@@ -170,7 +170,7 @@ class MarblesGame {
     // VISUALS
     const entity = this.Filament.EntityManager.get().create();
     const matInstance = this.material.createInstance();
-    matInstance.setColor3Parameter('color', [1.0, 0.0, 0.0]); // Red Marble
+    matInstance.setColor3Parameter('color', this.Filament.RgbType.sRGB, [1.0, 0.0, 0.0]); // Red Marble
 
     this.Filament.RenderableManager.Builder(1)
         .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
