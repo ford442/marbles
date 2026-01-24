@@ -139,7 +139,7 @@ class MarblesGame {
     this.Filament.RenderableManager.Builder(1)
         .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
         .material(0, matInstance)
-        .geometry(0, this.Filament.PrimitiveType.TRIANGLES, this.vb, this.ib)
+        .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
         .build(this.engine, entity);
 
     // Scale the generic 1x1 cube to look like the floor (100x1x100)
@@ -175,7 +175,7 @@ class MarblesGame {
     this.Filament.RenderableManager.Builder(1)
         .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
         .material(0, matInstance)
-        .geometry(0, this.Filament.PrimitiveType.TRIANGLES, this.vb, this.ib)
+        .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
         .build(this.engine, entity);
     
     this.scene.addEntity(entity);
