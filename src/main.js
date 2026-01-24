@@ -1,4 +1,5 @@
 import RAPIER from '@dimforge/rapier3d-compat';
+import { createSphere } from './sphere.js';
 
 // --- HELPER: Math for Transforms ---
 function quaternionToMat4(position, quaternion) {
@@ -119,6 +120,7 @@ class MarblesGame {
     // 4. Create Scene Objects
     this.createLight();
     this.createFloor();
+    this.createTrack(); // Added track creation
     this.createMarbles();
 
     // 5. Resize & Start
@@ -153,13 +155,30 @@ class MarblesGame {
         .bufferType(this.Filament.IndexBuffer$IndexType.USHORT)
         .build(this.engine);
     this.ib.setBuffer(this.engine, CUBE_INDICES);
+
+    // C. Create the Geometry (The Sphere)
+    const sphereData = createSphere(0.5, 32, 16);
+    this.sphereVb = this.Filament.VertexBuffer.Builder()
+        .vertexCount(sphereData.vertices.length / 7)
+        .bufferCount(1)
+        .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, 28)
+        .attribute(VertexAttribute.TANGENTS, 0, AttributeType.FLOAT4, 12, 28)
+        .build(this.engine);
+    this.sphereVb.setBufferAt(this.engine, 0, sphereData.vertices);
+
+    this.sphereIb = this.Filament.IndexBuffer.Builder()
+        .indexCount(sphereData.indices.length)
+        .bufferType(this.Filament.IndexBuffer$IndexType.USHORT)
+        .build(this.engine);
+    this.sphereIb.setBuffer(this.engine, sphereData.indices);
   }
 
   createLight() {
+    // Main Sun Light
     this.light = this.Filament.EntityManager.get().create();
     this.Filament.LightManager.Builder(this.Filament.LightManager$Type.DIRECTIONAL)
-        .color([1.0, 1.0, 1.0])
-        .intensity(100000.0)
+        .color([0.98, 0.92, 0.89])
+        .intensity(110000.0)
         .direction([0.6, -1.0, -0.8])
         .castShadows(true)
         .sunAngularRadius(1.9)
@@ -167,69 +186,139 @@ class MarblesGame {
         .sunHaloFalloff(80.0)
         .build(this.engine, this.light);
     this.scene.addEntity(this.light);
+
+    // Fill Light (to simulate ambient/bounce)
+    this.fillLight = this.Filament.EntityManager.get().create();
+    this.Filament.LightManager.Builder(this.Filament.LightManager$Type.DIRECTIONAL)
+        .color([0.8, 0.8, 1.0])
+        .intensity(30000.0) // Softer fill
+        .direction([-0.6, -0.5, 0.8]) // Opposite direction roughly
+        .castShadows(false)
+        .build(this.engine, this.fillLight);
+    this.scene.addEntity(this.fillLight);
+
+    // Back Light (to light up the dark side)
+    this.backLight = this.Filament.EntityManager.get().create();
+    this.Filament.LightManager.Builder(this.Filament.LightManager$Type.DIRECTIONAL)
+        .color([0.5, 0.5, 0.5])
+        .intensity(20000.0)
+        .direction([0.0, -1.0, 1.0]) // From behind camera roughly
+        .castShadows(false)
+        .build(this.engine, this.backLight);
+    this.scene.addEntity(this.backLight);
+  }
+
+  createStaticBox(pos, rotation, halfExtents, color) {
+    // PHYSICS
+    const bodyDesc = RAPIER.RigidBodyDesc.fixed()
+        .setTranslation(pos.x, pos.y, pos.z)
+        .setRotation(rotation);
+    const body = this.world.createRigidBody(bodyDesc);
+    const colliderDesc = RAPIER.ColliderDesc.cuboid(halfExtents.x, halfExtents.y, halfExtents.z);
+    this.world.createCollider(colliderDesc, body);
+
+    // VISUALS
+    const entity = this.Filament.EntityManager.get().create();
+    const matInstance = this.material.createInstance();
+    matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color);
+    matInstance.setFloatParameter('roughness', 0.4);
+
+    this.Filament.RenderableManager.Builder(1)
+        .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
+        .material(0, matInstance)
+        .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+        .build(this.engine, entity);
+
+    const tcm = this.engine.getTransformManager();
+    const inst = tcm.getInstance(entity);
+    
+    // Scale matrix construction: T * R * S
+    // quaternionToMat4 returns T * R (if we pass pos)
+    const mat = quaternionToMat4(pos, rotation);
+    // Scale the columns (S)
+    const sx = halfExtents.x * 2;
+    const sy = halfExtents.y * 2;
+    const sz = halfExtents.z * 2;
+
+    mat[0] *= sx; mat[1] *= sx; mat[2] *= sx;
+    mat[4] *= sy; mat[5] *= sy; mat[6] *= sy;
+    mat[8] *= sz; mat[9] *= sz; mat[10] *= sz;
+
+    tcm.setTransform(inst, mat);
+    this.scene.addEntity(entity);
   }
 
   createFloor() {
-    // PHYSICS
-    const floorBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0.0, -1.0, 0.0);
-    const floorBody = this.world.createRigidBody(floorBodyDesc);
-    const floorColliderDesc = RAPIER.ColliderDesc.cuboid(50.0, 0.5, 50.0); // 100x1x100
-    this.world.createCollider(floorColliderDesc, floorBody);
+      // Just a base plane
+      this.createStaticBox(
+          {x: 0, y: -2, z: 0},
+          {x: 0, y: 0, z: 0, w: 1},
+          {x: 50, y: 0.5, z: 50},
+          [0.3, 0.3, 0.3]
+      );
+  }
 
-    // VISUALS
-    const entity = this.Filament.EntityManager.get().create();
-    
-    // Create a material instance with a specific color (Grey)
-    const matInstance = this.material.createInstance();
-    matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.5, 0.5, 0.5]);
+  createTrack() {
+      // Create a ramp: Tilted around X axis
+      // Positive angle makes it slope DOWN towards +Z (camera) (Right Hand Rule: +X rot dips +Z down)
+      const angle = 0.2; // Radians
+      const sinA = Math.sin(angle/2);
+      const cosA = Math.cos(angle/2);
+      const q = { x: sinA, y: 0, z: 0, w: cosA };
 
-    // Attach the Renderable
-    this.Filament.RenderableManager.Builder(1)
-        .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
-        .material(0, matInstance)
-        .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
-        .build(this.engine, entity);
+      const center = {x: 0, y: 3, z: 0};
 
-    // Scale the generic 1x1 cube to look like the floor (100x1x100)
-    const tcm = this.engine.getTransformManager();
-    const inst = tcm.getInstance(entity);
-    const scaleMatrix = new Float32Array([
-        100, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 100, 0,
-        0, -1, 0, 1 // Position y = -1
-    ]);
-    tcm.setTransform(inst, scaleMatrix);
-    
-    this.scene.addEntity(entity);
+      // Main Ramp Floor
+      this.createStaticBox(center, q, {x: 4, y: 0.2, z: 15}, [0.6, 0.6, 0.6]);
+
+      // Side Walls
+      // We need to adjust y/z slightly to match the slope visually, but for now fixed Y offset works okay for small angles
+      this.createStaticBox(
+          {x: -3.5, y: center.y + 1, z: center.z},
+          q,
+          {x: 0.5, y: 1.5, z: 15},
+          [0.5, 0.3, 0.3]
+      );
+
+      this.createStaticBox(
+          {x: 3.5, y: center.y + 1, z: center.z},
+          q,
+          {x: 0.5, y: 1.5, z: 15},
+          [0.5, 0.3, 0.3]
+      );
   }
 
   createMarbles() {
-    const pos = { x: 0, y: 5, z: 0 };
-    
-    // PHYSICS
-    const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z);
-    const rigidBody = this.world.createRigidBody(bodyDesc);
-    // Note: Using cuboid collider because our visual is a cube for now!
-    // If you want a sphere collider, the cube will roll funny. 
-    const colliderDesc = RAPIER.ColliderDesc.cuboid(0.5, 0.5, 0.5); 
-    this.world.createCollider(colliderDesc, rigidBody);
+    const marblesInfo = [
+        { color: [1.0, 0.0, 0.0], pos: { x: -1.0, y: 8, z: -12 } },
+        { color: [0.0, 0.0, 1.0], pos: { x:  1.0, y: 8, z: -12 } }
+    ];
 
-    // VISUALS
-    const entity = this.Filament.EntityManager.get().create();
-    const matInstance = this.material.createInstance();
-    matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 0.0, 0.0]); // Red Marble
+    for (const info of marblesInfo) {
+        // PHYSICS
+        const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+            .setTranslation(info.pos.x, info.pos.y, info.pos.z)
+            .setCanSleep(false);
+        const rigidBody = this.world.createRigidBody(bodyDesc);
+        const colliderDesc = RAPIER.ColliderDesc.ball(0.5);
+        this.world.createCollider(colliderDesc, rigidBody);
 
-    this.Filament.RenderableManager.Builder(1)
-        .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
-        .material(0, matInstance)
-        .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
-        .build(this.engine, entity);
-    
-    this.scene.addEntity(entity);
-    
-    // Store both for the sync loop
-    this.marbles.push({ rigidBody, entity });
+        // VISUALS
+        const entity = this.Filament.EntityManager.get().create();
+        const matInstance = this.material.createInstance();
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, info.color);
+        matInstance.setFloatParameter('roughness', 0.4);
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
+            .build(this.engine, entity);
+
+        this.scene.addEntity(entity);
+
+        this.marbles.push({ rigidBody, entity });
+    }
   }
 
   resize() {
