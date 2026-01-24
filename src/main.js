@@ -16,16 +16,48 @@ function quaternionToMat4(position, quaternion) {
   ]);
 }
 
-// --- HELPER: Raw Cube Data (Vertices + Colors + Indices) ---
+// --- HELPER: Raw Cube Data (Vertices + Tangents) ---
 // A simple 1x1x1 cube centered at 0,0,0
+// Tangents are quaternions (x, y, z, w) representing the TBN frame
+const qTop = [-0.70710678, 0, 0, 0.70710678];
+const qBottom = [0.70710678, 0, 0, 0.70710678];
+const qRight = [0, -0.70710678, 0, 0.70710678];
+const qLeft = [0, 0.70710678, 0, 0.70710678];
+const qFront = [0, 0, 0, 1];
+const qBack = [0, 1, 0, 0];
+
 const CUBE_VERTICES = new Float32Array([
-    // positions (x, y, z)          // colors (r, g, b, a) - encoded as Uint32 later? No, we'll use dedicated logic
-    -0.5, -0.5,  0.5,   0.5, -0.5,  0.5,   0.5,  0.5,  0.5,  -0.5,  0.5,  0.5, // Front
-    -0.5, -0.5, -0.5,  -0.5,  0.5, -0.5,   0.5,  0.5, -0.5,   0.5, -0.5, -0.5, // Back
-    -0.5,  0.5, -0.5,  -0.5,  0.5,  0.5,   0.5,  0.5,  0.5,   0.5,  0.5, -0.5, // Top
-    -0.5, -0.5, -0.5,   0.5, -0.5, -0.5,   0.5, -0.5,  0.5,  -0.5, -0.5,  0.5, // Bottom
-     0.5, -0.5, -0.5,   0.5,  0.5, -0.5,   0.5,  0.5,  0.5,   0.5, -0.5,  0.5, // Right
-    -0.5, -0.5, -0.5,  -0.5, -0.5,  0.5,  -0.5,  0.5,  0.5,  -0.5,  0.5, -0.5  // Left
+    // positions (x, y, z)          // tangents (qx, qy, qz, qw)
+    // Front
+    -0.5, -0.5,  0.5,   ...qFront,
+     0.5, -0.5,  0.5,   ...qFront,
+     0.5,  0.5,  0.5,   ...qFront,
+    -0.5,  0.5,  0.5,   ...qFront,
+    // Back
+    -0.5, -0.5, -0.5,   ...qBack,
+    -0.5,  0.5, -0.5,   ...qBack,
+     0.5,  0.5, -0.5,   ...qBack,
+     0.5, -0.5, -0.5,   ...qBack,
+    // Top
+    -0.5,  0.5, -0.5,   ...qTop,
+    -0.5,  0.5,  0.5,   ...qTop,
+     0.5,  0.5,  0.5,   ...qTop,
+     0.5,  0.5, -0.5,   ...qTop,
+    // Bottom
+    -0.5, -0.5, -0.5,   ...qBottom,
+     0.5, -0.5, -0.5,   ...qBottom,
+     0.5, -0.5,  0.5,   ...qBottom,
+    -0.5, -0.5,  0.5,   ...qBottom,
+    // Right
+     0.5, -0.5, -0.5,   ...qRight,
+     0.5,  0.5, -0.5,   ...qRight,
+     0.5,  0.5,  0.5,   ...qRight,
+     0.5, -0.5,  0.5,   ...qRight,
+    // Left
+    -0.5, -0.5, -0.5,   ...qLeft,
+    -0.5, -0.5,  0.5,   ...qLeft,
+    -0.5,  0.5,  0.5,   ...qLeft,
+    -0.5,  0.5, -0.5,   ...qLeft
 ]);
 
 const CUBE_INDICES = new Uint16Array([
@@ -85,6 +117,7 @@ class MarblesGame {
     await this.setupAssets();
 
     // 4. Create Scene Objects
+    this.createLight();
     this.createFloor();
     this.createMarbles();
 
@@ -109,7 +142,8 @@ class MarblesGame {
     this.vb = this.Filament.VertexBuffer.Builder()
         .vertexCount(24)
         .bufferCount(1)
-        .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, 12) // 3 floats * 4 bytes = 12 bytes stride
+        .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, 28) // 3 floats (pos) + 4 floats (tan) = 7 floats * 4 bytes = 28 bytes stride
+        .attribute(VertexAttribute.TANGENTS, 0, AttributeType.FLOAT4, 12, 28) // Offset 12 bytes
         .build(this.engine);
     this.vb.setBufferAt(this.engine, 0, CUBE_VERTICES);
 
@@ -119,6 +153,20 @@ class MarblesGame {
         .bufferType(this.Filament.IndexBuffer$IndexType.USHORT)
         .build(this.engine);
     this.ib.setBuffer(this.engine, CUBE_INDICES);
+  }
+
+  createLight() {
+    this.light = this.Filament.EntityManager.get().create();
+    this.Filament.LightManager.Builder(this.Filament.LightManager$Type.DIRECTIONAL)
+        .color([1.0, 1.0, 1.0])
+        .intensity(100000.0)
+        .direction([0.6, -1.0, -0.8])
+        .castShadows(true)
+        .sunAngularRadius(1.9)
+        .sunHaloSize(10.0)
+        .sunHaloFalloff(80.0)
+        .build(this.engine, this.light);
+    this.scene.addEntity(this.light);
   }
 
   createFloor() {
@@ -210,7 +258,7 @@ class MarblesGame {
 
     // 3. Render
     if (this.renderer.beginFrame(this.swapChain)) {
-        this.renderer.render(this.view);
+        this.renderer.render(this.swapChain, this.view);
         this.renderer.endFrame();
     }
     requestAnimationFrame(() => this.loop());
