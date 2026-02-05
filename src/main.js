@@ -82,9 +82,21 @@ class MarblesGame {
     this.Filament = null;
     this.material = null; // We need to store the loaded material
     this.cubeMesh = null; // We need to store the geometry
+
+    // Camera State
+    this.camAngle = 0;
+    this.camHeight = 10;
+    this.camRadius = 25;
+
+    // Input State
+    this.keys = {};
   }
 
   async init() {
+    // Input Listeners
+    window.addEventListener('keydown', (e) => { this.keys[e.code] = true; });
+    window.addEventListener('keyup', (e) => { this.keys[e.code] = false; });
+
     // 1. Initialize Physics
     await RAPIER.init();
     const gravity = { x: 0.0, y: -9.81, z: 0.0 };
@@ -369,7 +381,15 @@ class MarblesGame {
 
         this.scene.addEntity(entity);
 
-        this.marbles.push({ rigidBody, entity, scale });
+        this.marbles.push({ rigidBody, entity, scale, initialPos: info.pos });
+    }
+  }
+
+  resetMarbles() {
+    for (const m of this.marbles) {
+        m.rigidBody.setTranslation(m.initialPos, true);
+        m.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
     }
   }
 
@@ -384,6 +404,31 @@ class MarblesGame {
   }
 
   loop() {
+    // 0. Handle Input
+    const rotSpeed = 0.02;
+    const zoomSpeed = 0.5;
+
+    if (this.keys['ArrowLeft'] || this.keys['KeyA']) {
+        this.camAngle -= rotSpeed;
+    }
+    if (this.keys['ArrowRight'] || this.keys['KeyD']) {
+        this.camAngle += rotSpeed;
+    }
+    if (this.keys['ArrowUp'] || this.keys['KeyW']) {
+        this.camRadius = Math.max(5, this.camRadius - zoomSpeed);
+    }
+    if (this.keys['ArrowDown'] || this.keys['KeyS']) {
+        this.camRadius = Math.min(50, this.camRadius + zoomSpeed);
+    }
+    if (this.keys['Space']) {
+        this.resetMarbles();
+    }
+
+    // Update Camera
+    const eyeX = this.camRadius * Math.sin(this.camAngle);
+    const eyeZ = this.camRadius * Math.cos(this.camAngle);
+    this.camera.lookAt([eyeX, this.camHeight, eyeZ], [0, 0, 0], [0, 1, 0]);
+
     // 1. Step Physics
     this.world.step();
 
