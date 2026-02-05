@@ -290,17 +290,29 @@ class MarblesGame {
 
   createMarbles() {
     const marblesInfo = [
-        { color: [1.0, 0.0, 0.0], pos: { x: -1.0, y: 8, z: -12 } },
-        { color: [0.0, 0.0, 1.0], pos: { x:  1.0, y: 8, z: -12 } }
+        { color: [1.0, 0.0, 0.0], pos: { x: -1.0, y: 8, z: -12 } }, // Standard Red
+        { color: [0.0, 0.0, 1.0], pos: { x:  1.0, y: 8, z: -12 } }, // Standard Blue
+        // New Variant: Bouncy Giant Purple Marble
+        {
+            color: [0.6, 0.1, 0.8],
+            pos: { x: 0.0, y: 10, z: -10 },
+            radius: 0.75,
+            restitution: 1.2
+        }
     ];
 
     for (const info of marblesInfo) {
+        const radius = info.radius || 0.5;
+        const scale = radius / 0.5;
+
         // PHYSICS
         const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
             .setTranslation(info.pos.x, info.pos.y, info.pos.z)
             .setCanSleep(false);
         const rigidBody = this.world.createRigidBody(bodyDesc);
-        const colliderDesc = RAPIER.ColliderDesc.ball(0.5);
+
+        const colliderDesc = RAPIER.ColliderDesc.ball(radius)
+            .setRestitution(info.restitution || 0.5); // Default restitution roughly 0.5
         this.world.createCollider(colliderDesc, rigidBody);
 
         // VISUALS
@@ -310,14 +322,14 @@ class MarblesGame {
         matInstance.setFloatParameter('roughness', 0.4);
 
         this.Filament.RenderableManager.Builder(1)
-            .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
+            .boundingBox({ center: [0, 0, 0], halfExtent: [radius, radius, radius] })
             .material(0, matInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
             .build(this.engine, entity);
 
         this.scene.addEntity(entity);
 
-        this.marbles.push({ rigidBody, entity });
+        this.marbles.push({ rigidBody, entity, scale });
     }
   }
 
@@ -341,6 +353,14 @@ class MarblesGame {
         const t = m.rigidBody.translation();
         const r = m.rigidBody.rotation();
         const mat = quaternionToMat4(t, r);
+
+        // Apply Scale
+        if (m.scale && m.scale !== 1.0) {
+            mat[0] *= m.scale; mat[1] *= m.scale; mat[2] *= m.scale;
+            mat[4] *= m.scale; mat[5] *= m.scale; mat[6] *= m.scale;
+            mat[8] *= m.scale; mat[9] *= m.scale; mat[10] *= m.scale;
+        }
+
         const inst = tcm.getInstance(m.entity);
         tcm.setTransform(inst, mat);
     }
