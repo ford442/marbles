@@ -121,6 +121,7 @@ class MarblesGame {
     this.createLight();
     this.createFloor();
     this.createTrack(); // Added track creation
+    this.createLandingZone();
     this.createMarbles();
 
     // 5. Resize & Start
@@ -255,6 +256,45 @@ class MarblesGame {
           {x: 0, y: 0, z: 0, w: 1},
           {x: 50, y: 0.5, z: 50},
           [0.3, 0.3, 0.3]
+      );
+  }
+
+  createLandingZone() {
+      // Flat platform after the ramp
+      // Ramp ends roughly at Z=15, Y=0
+      const floorCenter = {x: 0, y: 0, z: 25};
+      const floorQ = {x: 0, y: 0, z: 0, w: 1};
+
+      // Floor: 10 wide, 20 long
+      this.createStaticBox(
+          floorCenter,
+          floorQ,
+          {x: 5, y: 0.25, z: 10},
+          [0.4, 0.4, 0.4]
+      );
+
+      // Obstacle 1: Pillar Left
+      this.createStaticBox(
+          {x: -3, y: 1.5, z: 20},
+          floorQ,
+          {x: 0.5, y: 1.5, z: 0.5},
+          [0.8, 0.2, 0.2]
+      );
+
+      // Obstacle 2: Pillar Right
+      this.createStaticBox(
+          {x: 3, y: 1.5, z: 25},
+          floorQ,
+          {x: 0.5, y: 1.5, z: 0.5},
+          [0.2, 0.2, 0.8]
+      );
+
+      // Obstacle 3: Center Low Block
+      this.createStaticBox(
+          {x: 0, y: 0.75, z: 30},
+          floorQ,
+          {x: 2, y: 0.5, z: 0.5},
+          [0.2, 0.8, 0.2]
       );
   }
 
