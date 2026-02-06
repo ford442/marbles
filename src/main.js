@@ -90,6 +90,10 @@ class MarblesGame {
 
     // Input State
     this.keys = {};
+
+    // Game State
+    this.score = 0;
+    this.scoreEl = document.getElementById('score');
   }
 
   async init() {
@@ -134,6 +138,7 @@ class MarblesGame {
     this.createFloor();
     this.createTrack(); // Added track creation
     this.createLandingZone();
+    this.createGoal();
     this.createMarbles();
 
     // 5. Resize & Start
@@ -310,6 +315,21 @@ class MarblesGame {
       );
   }
 
+  createGoal() {
+      // Goal Platform at the end (Z=32.5)
+      // Visual only here, logic will check bounds
+      const center = {x: 0, y: 0.25, z: 32.5}; // Slightly above floor level 0
+      const q = {x: 0, y: 0, z: 0, w: 1};
+
+      // Gold Platform (4x4)
+      this.createStaticBox(
+          center,
+          q,
+          {x: 2, y: 0.25, z: 2},
+          [1.0, 0.84, 0.0]
+      );
+  }
+
   createTrack() {
       // Create a ramp: Tilted around X axis
       // Positive angle makes it slope DOWN towards +Z (camera) (Right Hand Rule: +X rot dips +Z down)
@@ -390,6 +410,36 @@ class MarblesGame {
         m.rigidBody.setTranslation(m.initialPos, true);
         m.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
         m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+        m.scored = false;
+    }
+    this.score = 0;
+    this.scoreEl.innerText = 'Score: 0';
+  }
+
+  checkGameLogic() {
+    for (const m of this.marbles) {
+        const t = m.rigidBody.translation();
+
+        // Respawn Logic (Fell off the world)
+        if (t.y < -20) {
+            m.rigidBody.setTranslation(m.initialPos, true);
+            m.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+            m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+            m.scored = false; // Reset scored flag so they can score again
+            continue;
+        }
+
+        // Scoring Logic
+        // Goal Area: X[-2, 2], Z[30.5, 34.5] (matches the visual box at Z=32.5, size 4x4)
+        if (!m.scored &&
+            t.x > -2 && t.x < 2 &&
+            t.z > 30.5 && t.z < 34.5 &&
+            t.y > 0 && t.y < 2) {
+
+            this.score++;
+            this.scoreEl.innerText = 'Score: ' + this.score;
+            m.scored = true;
+        }
     }
   }
 
@@ -431,6 +481,7 @@ class MarblesGame {
 
     // 1. Step Physics
     this.world.step();
+    this.checkGameLogic();
 
     // 2. Sync Visuals
     const tcm = this.engine.getTransformManager();
