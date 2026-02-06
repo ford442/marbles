@@ -138,6 +138,7 @@ class MarblesGame {
     this.createFloor();
     this.createTrack(); // Added track creation
     this.createLandingZone();
+    this.createJumpZone();
     this.createGoal();
     this.createMarbles();
 
@@ -312,6 +313,51 @@ class MarblesGame {
           floorQ,
           {x: 2, y: 0.5, z: 0.5},
           [0.2, 0.8, 0.2]
+      );
+  }
+
+  createJumpZone() {
+      // 1. Approach Platform (Z=35 to Z=40)
+      const floorQ = {x: 0, y: 0, z: 0, w: 1};
+      this.createStaticBox(
+          {x: 0, y: 0, z: 37.5},
+          floorQ,
+          {x: 5, y: 0.25, z: 2.5},
+          [0.4, 0.4, 0.4]
+      );
+
+      // 2. Jump Ramp (Z=40 to Z=45, angled up)
+      // Negative angle for UP slope
+      const angle = -0.4;
+      const sinA = Math.sin(angle/2);
+      const cosA = Math.cos(angle/2);
+      const rampQ = { x: sinA, y: 0, z: 0, w: cosA };
+
+      // Position needs tweaking to align with Z=40, Y=0
+      // A box rotated by -0.4 around center.
+      // If center is at Z=42.5, Y=1.0
+      this.createStaticBox(
+          {x: 0, y: 1.0, z: 42.5},
+          rampQ,
+          {x: 5, y: 0.25, z: 3}, // Slightly longer to cover
+          [0.7, 0.3, 0.3]
+      );
+
+      // 3. Landing Platform (Z=55 to Z=65)
+      // Lower down
+      this.createStaticBox(
+          {x: 0, y: -2, z: 60},
+          floorQ,
+          {x: 8, y: 0.5, z: 5},
+          [0.3, 0.7, 0.3]
+      );
+
+      // Add a target/obstacle on the landing
+      this.createStaticBox(
+          {x: 0, y: -1, z: 63},
+          floorQ,
+          {x: 1, y: 0.5, z: 1},
+          [0.8, 0.8, 0.2]
       );
   }
 
