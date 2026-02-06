@@ -16,9 +16,33 @@
             height: 100vh;
             display: block;
         }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-family: sans-serif;
+            pointer-events: none;
+            user-select: none;
+        }
+        #score {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 0px #000;
+        }
+        #instructions {
+            font-size: 16px;
+            opacity: 0.8;
+            text-shadow: 1px 1px 0px #000;
+        }
     </style>
 </head>
 <body>
+    <div id="ui">
+        <div id="score">Score: 0</div>
+        <div id="instructions">Arrows/WASD to Move Camera • Space to Reset</div>
+    </div>
     <canvas id="canvas"></canvas>
     <script type="module" src="/src/main.js"></script>
 </body>
