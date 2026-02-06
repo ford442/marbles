@@ -350,6 +350,16 @@ class MarblesGame {
             pos: { x: 0.0, y: 10, z: -10 },
             radius: 0.75,
             restitution: 1.2
+        },
+        // Golden Marble: Heavy, Metallic, Shiny
+        {
+            color: [1.0, 0.84, 0.0],
+            pos: { x: 2.5, y: 10, z: -10 },
+            radius: 0.6,
+            restitution: 0.2,
+            density: 3.0,
+            roughness: 0.3,
+            metallic: 1.0
         }
     ];
 
@@ -365,13 +375,21 @@ class MarblesGame {
 
         const colliderDesc = RAPIER.ColliderDesc.ball(radius)
             .setRestitution(info.restitution || 0.5); // Default restitution roughly 0.5
+
+        if (info.density) {
+            colliderDesc.setDensity(info.density);
+        }
+
         this.world.createCollider(colliderDesc, rigidBody);
 
         // VISUALS
         const entity = this.Filament.EntityManager.get().create();
         const matInstance = this.material.createInstance();
         matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, info.color);
-        matInstance.setFloatParameter('roughness', 0.4);
+        matInstance.setFloatParameter('roughness', info.roughness !== undefined ? info.roughness : 0.4);
+        // if (info.metallic !== undefined) {
+        //     matInstance.setFloatParameter('metallic', info.metallic);
+        // }
 
         this.Filament.RenderableManager.Builder(1)
             .boundingBox({ center: [0, 0, 0], halfExtent: [radius, radius, radius] })
