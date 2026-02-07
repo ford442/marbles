@@ -93,6 +93,7 @@ class MarblesGame {
 
     // Camera Control Mode
     this.manualCamera = false;
+    this.cameraMode = 'orbit'; // 'orbit' or 'follow'
 
     // Game State
     this.score = 0;
@@ -101,7 +102,13 @@ class MarblesGame {
 
   async init() {
     // Input Listeners
-    window.addEventListener('keydown', (e) => { this.keys[e.code] = true; });
+    window.addEventListener('keydown', (e) => {
+        this.keys[e.code] = true;
+        if (e.code === 'KeyC') {
+            this.cameraMode = this.cameraMode === 'orbit' ? 'follow' : 'orbit';
+            console.log('Camera Mode:', this.cameraMode);
+        }
+    });
     window.addEventListener('keyup', (e) => { this.keys[e.code] = false; });
 
     // 1. Initialize Physics
@@ -520,6 +527,19 @@ class MarblesGame {
     }
   }
 
+  getLeader() {
+    let maxZ = -Infinity;
+    let leader = null;
+    for (const m of this.marbles) {
+        const t = m.rigidBody.translation();
+        if (t.z > maxZ) {
+            maxZ = t.z;
+            leader = m;
+        }
+    }
+    return leader;
+  }
+
   resetMarbles() {
     for (const m of this.marbles) {
         m.rigidBody.setTranslation(m.initialPos, true);
@@ -605,9 +625,22 @@ class MarblesGame {
 
     // Update Camera
     if (!this.manualCamera) {
-        const eyeX = this.camRadius * Math.sin(this.camAngle);
-        const eyeZ = this.camRadius * Math.cos(this.camAngle);
-        this.camera.lookAt([eyeX, this.camHeight, eyeZ], [0, 0, 0], [0, 1, 0]);
+        if (this.cameraMode === 'follow') {
+            const leader = this.getLeader();
+            if (leader) {
+                const t = leader.rigidBody.translation();
+                // Position camera behind and above. Since track goes +Z, behind is -Z.
+                // We want to look towards +Z (motion).
+                // Initial marble pos: Z=-12. Moving to Z=100.
+                // Camera at Z-20 = -32. Looking at -12. Vector = +20 Z. Correct.
+                this.camera.lookAt([t.x, t.y + 10, t.z - 20], [t.x, t.y, t.z], [0, 1, 0]);
+            }
+        } else {
+            // Orbit Mode
+            const eyeX = this.camRadius * Math.sin(this.camAngle);
+            const eyeZ = this.camRadius * Math.cos(this.camAngle);
+            this.camera.lookAt([eyeX, this.camHeight, eyeZ], [0, 0, 0], [0, 1, 0]);
+        }
     }
 
     // 1. Step Physics
