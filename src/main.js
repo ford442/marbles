@@ -91,6 +91,9 @@ class MarblesGame {
     // Input State
     this.keys = {};
 
+    // Camera Control Mode
+    this.manualCamera = false;
+
     // Game State
     this.score = 0;
     this.scoreEl = document.getElementById('score');
@@ -139,6 +142,7 @@ class MarblesGame {
     this.createTrack(); // Added track creation
     this.createLandingZone();
     this.createJumpZone();
+    this.createSlalomZone();
     this.createGoal();
     this.createMarbles();
 
@@ -361,6 +365,41 @@ class MarblesGame {
       );
   }
 
+  createSlalomZone() {
+      // 1. Base Floor (Z=65 to Z=105)
+      // Center: Z=85. Length: 40.
+      const floorQ = {x: 0, y: 0, z: 0, w: 1};
+      this.createStaticBox(
+          {x: 0, y: -2, z: 85},
+          floorQ,
+          {x: 6, y: 0.5, z: 20}, // Extents: x=6, z=20 (Size 12x40)
+          [0.3, 0.3, 0.5]
+      );
+
+      // 2. Oscillating Pillars
+      // Z: 70 to 100, step 5
+      for (let z = 70; z <= 100; z += 5) {
+          // Skip the goal area itself if needed, but spacing is 5
+          if (z === 100) continue;
+
+          const offset = ((z - 70) / 5) % 2 === 0 ? 3 : -3;
+          this.createStaticBox(
+              {x: offset, y: 0, z: z},
+              floorQ,
+              {x: 0.5, y: 1.5, z: 0.5},
+              [0.9, 0.1, 0.1]
+          );
+      }
+
+      // 3. Goal Platform at Z=100
+      this.createStaticBox(
+          {x: 0, y: -1.4, z: 100}, // Slightly above floor (-1.5)
+          floorQ,
+          {x: 6, y: 0.1, z: 2}, // Thin strip
+          [1.0, 1.0, 0.0]
+      );
+  }
+
   createGoal() {
       // Goal Platform at the end (Z=32.5)
       // Visual only here, logic will check bounds
@@ -486,7 +525,8 @@ class MarblesGame {
         m.rigidBody.setTranslation(m.initialPos, true);
         m.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
         m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
-        m.scored = false;
+        m.scoredGoal1 = false;
+        m.scoredGoal2 = false;
     }
     this.score = 0;
     this.scoreEl.innerText = 'Score: 0';
@@ -501,20 +541,33 @@ class MarblesGame {
             m.rigidBody.setTranslation(m.initialPos, true);
             m.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
             m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
-            m.scored = false; // Reset scored flag so they can score again
+            m.scoredGoal1 = false;
+            m.scoredGoal2 = false;
             continue;
         }
 
         // Scoring Logic
-        // Goal Area: X[-2, 2], Z[30.5, 34.5] (matches the visual box at Z=32.5, size 4x4)
-        if (!m.scored &&
+        // Goal 1 Area: X[-2, 2], Z[30.5, 34.5] (matches the visual box at Z=32.5, size 4x4)
+        if (!m.scoredGoal1 &&
             t.x > -2 && t.x < 2 &&
             t.z > 30.5 && t.z < 34.5 &&
             t.y > 0 && t.y < 2) {
 
             this.score++;
             this.scoreEl.innerText = 'Score: ' + this.score;
-            m.scored = true;
+            m.scoredGoal1 = true;
+        }
+
+        // Goal 2 Area (Slalom End): X[-2, 2], Z[98, 102]
+        // Goal platform Y is -1.4. So detection area Y > -2 && Y < 0.
+        if (!m.scoredGoal2 &&
+            t.x > -2 && t.x < 2 &&
+            t.z > 98 && t.z < 102 &&
+            t.y > -2 && t.y < 0) {
+
+            this.score++;
+            this.scoreEl.innerText = 'Score: ' + this.score;
+            m.scoredGoal2 = true;
         }
     }
   }
@@ -551,9 +604,11 @@ class MarblesGame {
     }
 
     // Update Camera
-    const eyeX = this.camRadius * Math.sin(this.camAngle);
-    const eyeZ = this.camRadius * Math.cos(this.camAngle);
-    this.camera.lookAt([eyeX, this.camHeight, eyeZ], [0, 0, 0], [0, 1, 0]);
+    if (!this.manualCamera) {
+        const eyeX = this.camRadius * Math.sin(this.camAngle);
+        const eyeZ = this.camRadius * Math.cos(this.camAngle);
+        this.camera.lookAt([eyeX, this.camHeight, eyeZ], [0, 0, 0], [0, 1, 0]);
+    }
 
     // 1. Step Physics
     this.world.step();
@@ -586,4 +641,5 @@ class MarblesGame {
   }
 }
 
-new MarblesGame().init();
+window.game = new MarblesGame();
+window.game.init();
