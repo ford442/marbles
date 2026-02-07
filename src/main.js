@@ -426,6 +426,15 @@ class MarblesGame {
             density: 3.0,
             roughness: 0.3,
             metallic: 1.0
+        },
+        // Ice Marble: Slippery, Low Friction
+        {
+            color: [0.0, 0.8, 1.0], // Cyan
+            pos: { x: -2.0, y: 10, z: -10 },
+            radius: 0.5,
+            friction: 0.05,
+            restitution: 0.5,
+            roughness: 0.1
         }
     ];
 
@@ -444,6 +453,9 @@ class MarblesGame {
 
         if (info.density) {
             colliderDesc.setDensity(info.density);
+        }
+        if (info.friction !== undefined) {
+            colliderDesc.setFriction(info.friction);
         }
 
         this.world.createCollider(colliderDesc, rigidBody);
