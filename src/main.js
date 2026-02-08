@@ -456,6 +456,15 @@ class MarblesGame {
     const marblesInfo = [
         { color: [1.0, 0.0, 0.0], pos: { x: -1.0, y: 8, z: -12 } }, // Standard Red
         { color: [0.0, 0.0, 1.0], pos: { x:  1.0, y: 8, z: -12 } }, // Standard Blue
+        // Speedster Marble: Small, Fast, Bouncy
+        {
+            color: [0.2, 1.0, 0.2], // Neon Green
+            pos: { x: -2.5, y: 12, z: -12 },
+            radius: 0.4,
+            friction: 0.1,
+            restitution: 0.8,
+            roughness: 0.2
+        },
         // New Variant: Bouncy Giant Purple Marble
         {
             color: [0.6, 0.1, 0.8],
