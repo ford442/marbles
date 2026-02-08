@@ -572,6 +572,7 @@ class MarblesGame {
 
         this.marbles.push({ rigidBody, entity, scale, initialPos: info.pos });
     }
+    this.playerMarble = this.marbles[0];
   }
 
   getLeader() {
@@ -668,28 +669,56 @@ class MarblesGame {
     const rotSpeed = 0.02;
     const zoomSpeed = 0.5;
 
-    if (this.keys['ArrowLeft'] || this.keys['KeyA']) {
-        this.camAngle -= rotSpeed;
-    }
-    if (this.keys['ArrowRight'] || this.keys['KeyD']) {
-        this.camAngle += rotSpeed;
-    }
-    if (this.keys['ArrowUp'] || this.keys['KeyW']) {
-        this.camRadius = Math.max(5, this.camRadius - zoomSpeed);
-    }
-    if (this.keys['ArrowDown'] || this.keys['KeyS']) {
-        this.camRadius = Math.min(50, this.camRadius + zoomSpeed);
-    }
-    if (this.keys['Space']) {
+    if (this.keys['KeyR']) {
         this.resetMarbles();
+    }
+
+    if (this.cameraMode === 'orbit') {
+        if (this.keys['ArrowLeft'] || this.keys['KeyA']) {
+            this.camAngle -= rotSpeed;
+        }
+        if (this.keys['ArrowRight'] || this.keys['KeyD']) {
+            this.camAngle += rotSpeed;
+        }
+        if (this.keys['ArrowUp'] || this.keys['KeyW']) {
+            this.camRadius = Math.max(5, this.camRadius - zoomSpeed);
+        }
+        if (this.keys['ArrowDown'] || this.keys['KeyS']) {
+            this.camRadius = Math.min(50, this.camRadius + zoomSpeed);
+        }
+    } else {
+        // Follow Mode: Control Player Marble
+        const impulseStrength = 0.5;
+        const jumpStrength = 1.0;
+
+        if (this.playerMarble) {
+            const rigidBody = this.playerMarble.rigidBody;
+
+            // Movement (+Z is forward down the track)
+            if (this.keys['ArrowUp'] || this.keys['KeyW']) {
+                rigidBody.applyImpulse({ x: 0, y: 0, z: impulseStrength }, true);
+            }
+            if (this.keys['ArrowDown'] || this.keys['KeyS']) {
+                rigidBody.applyImpulse({ x: 0, y: 0, z: -impulseStrength }, true);
+            }
+            if (this.keys['ArrowLeft'] || this.keys['KeyA']) {
+                rigidBody.applyImpulse({ x: -impulseStrength, y: 0, z: 0 }, true);
+            }
+            if (this.keys['ArrowRight'] || this.keys['KeyD']) {
+                rigidBody.applyImpulse({ x: impulseStrength, y: 0, z: 0 }, true);
+            }
+            if (this.keys['Space']) {
+                rigidBody.applyImpulse({ x: 0, y: jumpStrength, z: 0 }, true);
+            }
+        }
     }
 
     // Update Camera
     if (!this.manualCamera) {
         if (this.cameraMode === 'follow') {
-            const leader = this.getLeader();
-            if (leader) {
-                const t = leader.rigidBody.translation();
+            const target = this.playerMarble || this.getLeader();
+            if (target) {
+                const t = target.rigidBody.translation();
                 // Position camera behind and above. Since track goes +Z, behind is -Z.
                 // We want to look towards +Z (motion).
                 // Initial marble pos: Z=-12. Moving to Z=100.
