@@ -150,6 +150,7 @@ class MarblesGame {
     this.createLandingZone();
     this.createJumpZone();
     this.createSlalomZone();
+      this.createStaircaseZone();
     this.createGoal();
     this.createMarbles();
 
@@ -407,6 +408,43 @@ class MarblesGame {
       );
   }
 
+  createStaircaseZone() {
+      // Staircase from Z=110 to Z=150
+      const floorQ = {x: 0, y: 0, z: 0, w: 1};
+
+      // Initial platform
+      this.createStaticBox(
+          {x: 0, y: -2, z: 110},
+          floorQ,
+          {x: 4, y: 0.5, z: 4},
+          [0.4, 0.4, 0.6]
+      );
+
+      // Steps
+      let currentY = -2;
+      let currentZ = 110;
+
+      for (let i = 0; i < 10; i++) {
+          currentY += 1.0;
+          currentZ += 4.0;
+
+          this.createStaticBox(
+              {x: 0, y: currentY, z: currentZ},
+              floorQ,
+              {x: 2, y: 0.5, z: 1.5},
+              [0.2 + (i * 0.05), 0.5, 0.8 - (i * 0.05)]
+          );
+      }
+
+      // Final Goal Platform at Z=150 (approx)
+      this.createStaticBox(
+          {x: 0, y: currentY + 1, z: currentZ + 4},
+          floorQ,
+          {x: 3, y: 0.5, z: 3},
+          [1.0, 0.5, 0.0] // Orange goal
+      );
+  }
+
   createGoal() {
       // Goal Platform at the end (Z=32.5)
       // Visual only here, logic will check bounds
@@ -547,6 +585,7 @@ class MarblesGame {
         m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
         m.scoredGoal1 = false;
         m.scoredGoal2 = false;
+        m.scoredGoal3 = false;
     }
     this.score = 0;
     this.scoreEl.innerText = 'Score: 0';
@@ -563,6 +602,7 @@ class MarblesGame {
             m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
             m.scoredGoal1 = false;
             m.scoredGoal2 = false;
+            m.scoredGoal3 = false;
             continue;
         }
 
@@ -588,6 +628,18 @@ class MarblesGame {
             this.score++;
             this.scoreEl.innerText = 'Score: ' + this.score;
             m.scoredGoal2 = true;
+        }
+
+        // Goal 3 Area (Staircase End): Approx Z=154, Y=9
+        // Logic: Z > 152 && Z < 156
+        if (!m.scoredGoal3 &&
+            t.x > -3 && t.x < 3 &&
+            t.z > 152 && t.z < 156 &&
+            t.y > 7) {
+
+            this.score++;
+            this.scoreEl.innerText = 'Score: ' + this.score;
+            m.scoredGoal3 = true;
         }
     }
   }
