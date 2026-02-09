@@ -688,7 +688,8 @@ class MarblesGame {
             {color: [0.2, 1.0, 0.2], offset: {x: -2.5, y: 4, z: 0}, radius: 0.4, friction: 0.1, restitution: 0.8, roughness: 0.2},
             {color: [0.6, 0.1, 0.8], offset: {x: 0.0, y: 2, z: 2}, radius: 0.75, restitution: 1.2},
             {color: [1.0, 0.84, 0.0], offset: {x: 2.5, y: 2, z: 2}, radius: 0.6, restitution: 0.2, density: 3.0, roughness: 0.3},
-            {color: [0.0, 0.8, 1.0], offset: {x: -2.0, y: 2, z: 2}, radius: 0.5, friction: 0.05, restitution: 0.5, roughness: 0.1}
+            {color: [0.0, 0.8, 1.0], offset: {x: -2.0, y: 2, z: 2}, radius: 0.5, friction: 0.05, restitution: 0.5, roughness: 0.1},
+            {color: [0.1, 0.1, 0.1], offset: {x: 3.5, y: 4, z: 0}, radius: 0.55, density: 10.0, friction: 0.9, restitution: 0.1, roughness: 0.7}
         ];
 
         for (const info of marblesInfo) {
