@@ -112,6 +112,23 @@ const LEVELS = {
         spawn: { x: 0, y: 5, z: 0 },
         goals: [],
         camera: { mode: 'orbit', angle: 0, height: 15, radius: 40 }
+    },
+    extreme: {
+        name: 'Extreme Challenge',
+        description: 'Split paths and a forest of pillars',
+        zones: [
+            { type: 'floor', pos: {x: 0, y: -2, z: 0}, size: {x: 80, y: 0.5, z: 200} },
+            { type: 'track', pos: {x: 0, y: 3, z: 0} },
+            { type: 'landing', pos: {x: 0, y: 0, z: 25} },
+            { type: 'split', pos: {x: 0, y: 0, z: 40} },
+            { type: 'forest', pos: {x: 0, y: -4, z: 120} },
+            { type: 'goal', pos: {x: 0, y: -3.5, z: 160} }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-3, 3], z: [158, 162], y: [-5, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
     }
 };
 
@@ -395,6 +412,12 @@ class MarblesGame {
             case 'staircase':
                 this.createStaircaseZone(offset);
                 break;
+            case 'split':
+                this.createSplitZone(offset);
+                break;
+            case 'forest':
+                this.createForestZone(offset);
+                break;
             case 'goal':
                 this.createGoalZone(offset, zone.color);
                 break;
@@ -558,6 +581,81 @@ class MarblesGame {
                 floorQ,
                 {x: 2, y: 0.5, z: 1.5},
                 [0.2 + (i * 0.05), 0.5, 0.8 - (i * 0.05)]
+            );
+        }
+    }
+
+    createSplitZone(offset) {
+        const floorQ = {x: 0, y: 0, z: 0, w: 1};
+
+        // Start Platform
+        this.createStaticBox(
+            {x: offset.x, y: offset.y, z: offset.z},
+            floorQ,
+            {x: 4, y: 0.5, z: 4},
+            [0.4, 0.4, 0.4]
+        );
+
+        // Left Path (Narrow)
+        this.createStaticBox(
+            {x: offset.x - 2, y: offset.y, z: offset.z + 14},
+            floorQ,
+            {x: 1, y: 0.5, z: 10},
+            [0.6, 0.3, 0.3]
+        );
+
+        // Right Path (Jump)
+        // Ramp up
+        const angle = -0.3;
+        const sinA = Math.sin(angle / 2);
+        const cosA = Math.cos(angle / 2);
+        const rampQ = {x: sinA, y: 0, z: 0, w: cosA};
+
+        this.createStaticBox(
+            {x: offset.x + 2, y: offset.y + 1, z: offset.z + 8},
+            rampQ,
+            {x: 1, y: 0.5, z: 4},
+            [0.3, 0.3, 0.6]
+        );
+
+        // Landing pad further away
+        this.createStaticBox(
+            {x: offset.x + 2, y: offset.y, z: offset.z + 20},
+            floorQ,
+            {x: 1.5, y: 0.5, z: 4},
+            [0.3, 0.3, 0.6]
+        );
+
+        // Merge Platform
+        this.createStaticBox(
+            {x: offset.x, y: offset.y - 1, z: offset.z + 30},
+            floorQ,
+            {x: 4, y: 0.5, z: 4},
+            [0.4, 0.4, 0.4]
+        );
+    }
+
+    createForestZone(offset) {
+        const floorQ = {x: 0, y: 0, z: 0, w: 1};
+
+        // Floor
+        this.createStaticBox(
+            {x: offset.x, y: offset.y, z: offset.z},
+            floorQ,
+            {x: 10, y: 0.5, z: 20},
+            [0.2, 0.5, 0.2]
+        );
+
+        // Random Pillars
+        for (let i = 0; i < 20; i++) {
+            const rx = (Math.sin(i * 12.9898) * 9);
+            const rz = (Math.cos(i * 78.233) * 19);
+
+            this.createStaticBox(
+                {x: offset.x + rx, y: offset.y + 2, z: offset.z + rz},
+                floorQ,
+                {x: 0.5 + Math.sin(i)*0.2, y: 2 + Math.cos(i), z: 0.5 + Math.sin(i)*0.2},
+                [0.55, 0.27, 0.07]
             );
         }
     }
