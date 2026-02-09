@@ -225,6 +225,7 @@ class MarblesGame {
         this.pitchAngle = 0;  // FIX: Initialize pitchAngle
         this.chargePower = 0;
         this.charging = false;
+        this.isAiming = false;
         this.playerMarble = null;
         this.cueInst = null;  // FIX: Initialize cueInst
 
@@ -245,6 +246,33 @@ class MarblesGame {
             }
         });
         window.addEventListener('keyup', (e) => { this.keys[e.code] = false; });
+
+        window.addEventListener('contextmenu', (e) => e.preventDefault());
+        window.addEventListener('mousedown', (e) => {
+            if (e.button === 2) { // Right Click
+                this.isAiming = true;
+            } else if (e.button === 0) { // Left Click
+                this.charging = true;
+                this.chargePower = 0;
+            }
+        });
+        window.addEventListener('mouseup', (e) => {
+            if (e.button === 2) {
+                this.isAiming = false;
+            } else if (e.button === 0) {
+                if (this.charging) {
+                    this.shootMarble();
+                    this.charging = false;
+                }
+            }
+        });
+        window.addEventListener('mousemove', (e) => {
+            if (this.isAiming) {
+                this.aimYaw -= e.movementX * 0.005;
+                this.pitchAngle -= e.movementY * 0.005;
+                this.pitchAngle = Math.max(-0.5, Math.min(1.5, this.pitchAngle));
+            }
+        });
 
         // 1. Initialize Physics
         await RAPIER.init();
@@ -608,6 +636,52 @@ class MarblesGame {
             .bufferType(this.Filament.IndexBuffer$IndexType.USHORT)
             .build(this.engine);
         this.sphereIb.setBuffer(this.engine, sphereData.indices);
+
+        this.createCueStick();
+    }
+
+    createCueStick() {
+        this.cueEntity = this.Filament.EntityManager.get().create();
+        const cueColor = [1.0, 1.0, 0.0];
+        const matInstance = this.material.createInstance();
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, cueColor);
+        matInstance.setFloatParameter('roughness', 0.2);
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5]})
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .build(this.engine, this.cueEntity);
+
+        this.scene.addEntity(this.cueEntity);
+
+        const tcm = this.engine.getTransformManager();
+        this.cueInst = tcm.getInstance(this.cueEntity);
+
+        const zeroMat = new Float32Array(16);
+        zeroMat[15] = 1;
+        tcm.setTransform(this.cueInst, zeroMat);
+    }
+
+    shootMarble() {
+        if (!this.playerMarble) return;
+
+        const force = 50.0 + this.chargePower * 150.0;
+        const cosP = Math.cos(this.pitchAngle);
+        const sinP = Math.sin(this.pitchAngle);
+
+        const dirX = Math.sin(this.aimYaw) * cosP;
+        const dirY = sinP;
+        const dirZ = Math.cos(this.aimYaw) * cosP;
+
+        this.playerMarble.rigidBody.applyImpulse({
+            x: dirX * force,
+            y: dirY * force,
+            z: dirZ * force
+        }, true);
+
+        this.chargePower = 0;
+        this.powerbarEl.style.width = '0%';
     }
 
     createLight() {
@@ -881,6 +955,11 @@ class MarblesGame {
             this.returnToMenu();
         }
 
+        // Handle Charging
+        if (this.charging) {
+            this.chargePower = Math.min(1.0, this.chargePower + 0.02);
+        }
+
         if (this.cameraMode === 'orbit') {
             if (this.keys['ArrowLeft'] || this.keys['KeyA']) this.camAngle -= rotSpeed;
             if (this.keys['ArrowRight'] || this.keys['KeyD']) this.camAngle += rotSpeed;
@@ -912,9 +991,13 @@ class MarblesGame {
             const target = this.playerMarble || this.getLeader();
             if (target) {
                 const t = target.rigidBody.translation();
-                const offset = level?.camera?.offset || -20;
                 const height = level?.camera?.height || 10;
-                this.camera.lookAt([t.x, t.y + height, t.z + offset], [t.x, t.y, t.z], [0, 1, 0]);
+                const dist = 20;
+
+                const eyeX = t.x - Math.sin(this.aimYaw) * dist;
+                const eyeZ = t.z - Math.cos(this.aimYaw) * dist;
+
+                this.camera.lookAt([eyeX, t.y + height, eyeZ], [t.x, t.y, t.z], [0, 1, 0]);
             }
         } else {
             const eyeX = this.camRadius * Math.sin(this.camAngle);
