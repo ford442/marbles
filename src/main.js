@@ -1055,7 +1055,9 @@ class MarblesGame {
             // 2. Shadow Ninja Marble - Dark purple, ultra-smooth, sneaky low friction
             { color: [0.15, 0.05, 0.25], offset: { x: -3.5, y: 3, z: 0 }, radius: 0.45, friction: 0.02, restitution: 0.3, density: 1.2, roughness: 0.05 },
             // 3. Cosmic Nebula Marble - Deep space teal with silver shimmer, balanced all-rounder
-            { color: [0.3, 0.9, 0.7], offset: { x: 0.0, y: 5, z: -2 }, radius: 0.65, friction: 0.08, restitution: 0.7, density: 1.5, roughness: 0.15 }
+            { color: [0.3, 0.9, 0.7], offset: { x: 0.0, y: 5, z: -2 }, radius: 0.65, friction: 0.08, restitution: 0.7, density: 1.5, roughness: 0.15 },
+            // 4. Void Marble - Very dense and heavy, doesn't bounce much
+            { color: [0.1, 0.05, 0.2], offset: { x: 2.0, y: 5, z: -2 }, radius: 0.7, friction: 1.0, restitution: 0.1, density: 4.0, roughness: 0.9 }
         ];
 
         for (const info of marblesInfo) {
