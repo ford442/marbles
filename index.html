@@ -165,6 +165,24 @@
             transition: width 0.05s;
         }
 
+        #jumpbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #jumpbar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #00f 0%, #0ff 100%);
+            transition: width 0.05s;
+        }
+
         #instructions {
             font-size: 14px;
             opacity: 0.9;
@@ -268,9 +286,12 @@
         <div id="powerbar-container">
             <div id="powerbar"></div>
         </div>
+        <div id="jumpbar-container">
+            <div id="jumpbar"></div>
+        </div>
         <div id="instructions">
             <kbd>WASD</kbd> / <kbd>Arrows</kbd> Move &nbsp;|&nbsp;
-            <kbd>Space</kbd> Jump &nbsp;|&nbsp;
+            <kbd>Space</kbd> Jump (Hold) &nbsp;|&nbsp;
             <kbd>R</kbd> Reset &nbsp;|&nbsp;
             <kbd>C</kbd> Camera &nbsp;|&nbsp;
             <kbd>M</kbd> Menu &nbsp;|&nbsp;
