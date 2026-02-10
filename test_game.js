@@ -72,7 +72,8 @@ test('Level definitions are valid', () => {
         'staircase',
         'full_course',
         'sandbox',
-        'spiral_madness'
+        'spiral_madness',
+        'crystal_orchard'
     ];
     
     for (const level of expectedLevels) {
