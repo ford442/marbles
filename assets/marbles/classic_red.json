@@ -1,0 +1,19 @@
+{
+  "id": "classic_red",
+  "name": "Classic Red",
+  "description": "The original red marble. Balanced and reliable.",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": { "r": 1.0, "g": 0.0, "b": 0.0 },
+    "roughness": 0.4,
+    "metallic": 0.0
+  },
+  "physics": {
+    "radius": 0.5,
+    "density": 1.0,
+    "friction": 0.3,
+    "restitution": 0.5
+  }
+}

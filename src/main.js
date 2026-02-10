@@ -1,5 +1,6 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { createSphere } from './sphere.js';
+import { audio } from './audio.js';
 
 // --- LEVEL DEFINITIONS ---
 const LEVELS = {
@@ -7,9 +8,9 @@ const LEVELS = {
         name: 'Tutorial Ramp',
         description: 'Learn the basics on a simple ramp',
         zones: [
-            { type: 'floor', pos: {x: 0, y: -2, z: 0}, size: {x: 50, y: 0.5, z: 50} },
-            { type: 'track', pos: {x: 0, y: 3, z: 0} },
-            { type: 'goal', pos: {x: 0, y: 0.25, z: 32.5} }
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: 0.25, z: 32.5 } }
         ],
         spawn: { x: 0, y: 8, z: -12 },
         goals: [
@@ -21,10 +22,10 @@ const LEVELS = {
         name: 'Landing Zone',
         description: 'Navigate around pillars',
         zones: [
-            { type: 'floor', pos: {x: 0, y: -2, z: 0}, size: {x: 50, y: 0.5, z: 50} },
-            { type: 'track', pos: {x: 0, y: 3, z: 0} },
-            { type: 'landing', pos: {x: 0, y: 0, z: 25} },
-            { type: 'goal', pos: {x: 0, y: 0.25, z: 32.5} }
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'landing', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 0, y: 0.25, z: 32.5 } }
         ],
         spawn: { x: 0, y: 8, z: -12 },
         goals: [
@@ -36,11 +37,11 @@ const LEVELS = {
         name: 'The Jump',
         description: 'Make the big leap!',
         zones: [
-            { type: 'floor', pos: {x: 0, y: -2, z: 0}, size: {x: 60, y: 0.5, z: 80} },
-            { type: 'track', pos: {x: 0, y: 3, z: 0} },
-            { type: 'landing', pos: {x: 0, y: 0, z: 25} },
-            { type: 'jump', pos: {x: 0, y: 0, z: 37.5} },
-            { type: 'goal', pos: {x: 0, y: -1.4, z: 63} }
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 60, y: 0.5, z: 80 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'landing', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'jump', pos: { x: 0, y: 0, z: 37.5 } },
+            { type: 'goal', pos: { x: 0, y: -1.4, z: 63 } }
         ],
         spawn: { x: 0, y: 8, z: -12 },
         goals: [
@@ -52,11 +53,11 @@ const LEVELS = {
         name: 'Slalom Challenge',
         description: 'Weave through the pillars',
         zones: [
-            { type: 'floor', pos: {x: 0, y: -2, z: 0}, size: {x: 60, y: 0.5, z: 120} },
-            { type: 'track', pos: {x: 0, y: 3, z: 0} },
-            { type: 'landing', pos: {x: 0, y: 0, z: 25} },
-            { type: 'slalom', pos: {x: 0, y: -2, z: 85} },
-            { type: 'goal', pos: {x: 0, y: -1.4, z: 100} }
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 60, y: 0.5, z: 120 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'landing', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'slalom', pos: { x: 0, y: -2, z: 85 } },
+            { type: 'goal', pos: { x: 0, y: -1.4, z: 100 } }
         ],
         spawn: { x: 0, y: 8, z: -12 },
         goals: [
@@ -68,12 +69,12 @@ const LEVELS = {
         name: 'Stairway to Heaven',
         description: 'Climb the steps to victory',
         zones: [
-            { type: 'floor', pos: {x: 0, y: -2, z: 0}, size: {x: 80, y: 0.5, z: 180} },
-            { type: 'track', pos: {x: 0, y: 3, z: 0} },
-            { type: 'landing', pos: {x: 0, y: 0, z: 25} },
-            { type: 'slalom', pos: {x: 0, y: -2, z: 85} },
-            { type: 'staircase', pos: {x: 0, y: -2, z: 110} },
-            { type: 'goal', pos: {x: 0, y: 9, z: 154} }
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 80, y: 0.5, z: 180 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'landing', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'slalom', pos: { x: 0, y: -2, z: 85 } },
+            { type: 'staircase', pos: { x: 0, y: -2, z: 110 } },
+            { type: 'goal', pos: { x: 0, y: 9, z: 154 } }
         ],
         spawn: { x: 0, y: 8, z: -12 },
         goals: [
@@ -85,15 +86,15 @@ const LEVELS = {
         name: 'Full Course',
         description: 'The complete challenge - all zones!',
         zones: [
-            { type: 'floor', pos: {x: 0, y: -2, z: 50}, size: {x: 100, y: 0.5, z: 200} },
-            { type: 'track', pos: {x: 0, y: 3, z: 0} },
-            { type: 'landing', pos: {x: 0, y: 0, z: 25} },
-            { type: 'goal', pos: {x: 0, y: 0.25, z: 32.5}, color: [1, 0.84, 0] },
-            { type: 'jump', pos: {x: 0, y: 0, z: 37.5} },
-            { type: 'slalom', pos: {x: 0, y: -2, z: 85} },
-            { type: 'goal', pos: {x: 0, y: -1.4, z: 100}, color: [1, 0.84, 0] },
-            { type: 'staircase', pos: {x: 0, y: -2, z: 110} },
-            { type: 'goal', pos: {x: 0, y: 9, z: 154}, color: [1, 0.5, 0] }
+            { type: 'floor', pos: { x: 0, y: -2, z: 50 }, size: { x: 100, y: 0.5, z: 200 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'landing', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 0, y: 0.25, z: 32.5 }, color: [1, 0.84, 0] },
+            { type: 'jump', pos: { x: 0, y: 0, z: 37.5 } },
+            { type: 'slalom', pos: { x: 0, y: -2, z: 85 } },
+            { type: 'goal', pos: { x: 0, y: -1.4, z: 100 }, color: [1, 0.84, 0] },
+            { type: 'staircase', pos: { x: 0, y: -2, z: 110 } },
+            { type: 'goal', pos: { x: 0, y: 9, z: 154 }, color: [1, 0.5, 0] }
         ],
         spawn: { x: 0, y: 8, z: -12 },
         goals: [
@@ -107,29 +108,27 @@ const LEVELS = {
         name: 'Sandbox',
         description: 'Open area to test all marbles',
         zones: [
-            { type: 'floor', pos: {x: 0, y: -2, z: 0}, size: {x: 100, y: 0.5, z: 100} }
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 100, y: 0.5, z: 100 } }
         ],
         spawn: { x: 0, y: 5, z: 0 },
         goals: [],
         camera: { mode: 'orbit', angle: 0, height: 15, radius: 40 }
     },
-    extreme: {
-        name: 'Extreme Challenge',
-        description: 'Split paths and a forest of pillars',
+    crystal_orchard: {
+        name: 'Crystal Orchard',
+        description: 'Night falls on the glowing fruit trees',
         zones: [
-            { type: 'floor', pos: {x: 0, y: -2, z: 0}, size: {x: 80, y: 0.5, z: 200} },
-            { type: 'track', pos: {x: 0, y: 3, z: 0} },
-            { type: 'landing', pos: {x: 0, y: 0, z: 25} },
-            { type: 'split', pos: {x: 0, y: 0, z: 40} },
-            { type: 'forest', pos: {x: 0, y: -4, z: 120} },
-            { type: 'goal', pos: {x: 0, y: -3.5, z: 160} }
+            { type: 'orchard', center: { x: 0, y: -2, z: 0 }, radius: 60 }
         ],
-        spawn: { x: 0, y: 8, z: -12 },
+        spawn: { x: 0, y: 3, z: 0 },
         goals: [
-            { id: 1, range: { x: [-3, 3], z: [158, 162], y: [-5, 5] } }
+            { id: 1, range: { x: [-5, 5], z: [50, 60], y: [0, 10] } }
         ],
-        camera: { mode: 'follow', height: 15, offset: -25 }
+        camera: { mode: 'orbit', angle: 0, height: 20, radius: 50 },
+        nightMode: true,
+        backgroundColor: [0.02, 0.02, 0.08, 1.0]
     }
+}
 };
 
 // --- HELPER: Math for Transforms ---
@@ -205,8 +204,29 @@ const CUBE_INDICES = new Uint16Array([
 ]);
 
 async function loadFilament() {
-    const module = await import('filament');
-    return module.default;
+    // Wait for Filament to be loaded globally via script tag
+    let attempts = 0;
+    while (typeof Filament === 'undefined' && attempts < 100) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+        attempts++;
+    }
+
+    console.log('[INIT] Filament available after', attempts, 'attempts:', typeof Filament);
+    if (typeof Filament === 'undefined') {
+        throw new Error('Filament not loaded. Make sure filament.js is included as a script tag.');
+    }
+
+    // Initialize Filament if needed
+    if (typeof Filament.init === 'function' && !Filament.isReady) {
+        await new Promise(resolve => Filament.init([], resolve));
+    }
+
+    // Load extensions
+    if (Filament.loadGeneratedExtensions) Filament.loadGeneratedExtensions();
+    if (Filament.loadClassExtensions) Filament.loadClassExtensions();
+
+    console.log('[INIT] Filament loaded globally:', typeof Filament, Object.keys(Filament || {}).slice(0, 10));
+    return Filament;
 }
 
 class MarblesGame {
@@ -254,6 +274,8 @@ class MarblesGame {
     }
 
     async init() {
+        console.log('[INIT] Starting game initialization...');
+
         // Input Listeners
         window.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
@@ -264,81 +286,102 @@ class MarblesGame {
         });
         window.addEventListener('keyup', (e) => { this.keys[e.code] = false; });
 
-        window.addEventListener('contextmenu', (e) => e.preventDefault());
-        window.addEventListener('mousedown', (e) => {
-            if (e.button === 2) { // Right Click
-                this.isAiming = true;
-            } else if (e.button === 0) { // Left Click
-                this.charging = true;
-                this.chargePower = 0;
-            }
-        });
-        window.addEventListener('mouseup', (e) => {
-            if (e.button === 2) {
-                this.isAiming = false;
-            } else if (e.button === 0) {
-                if (this.charging) {
-                    this.shootMarble();
-                    this.charging = false;
-                }
-            }
-        });
-        window.addEventListener('mousemove', (e) => {
-            if (this.isAiming) {
-                this.aimYaw -= e.movementX * 0.005;
-                this.pitchAngle -= e.movementY * 0.005;
-                this.pitchAngle = Math.max(-0.5, Math.min(1.5, this.pitchAngle));
-            }
-        });
+        // Initialize audio on first user interaction (required by browsers)
+        const initAudio = () => {
+            audio.init();
+            audio.resume();
+        };
+        window.addEventListener('click', initAudio, { once: true });
+        window.addEventListener('keydown', initAudio, { once: true });
+
+        // Mute button
+        this.muteBtn = document.getElementById('mute-btn');
+        if (this.muteBtn) {
+            this.muteBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent triggering audio init again
+                audio.init(); // Ensure audio is initialized
+                const muted = audio.toggleMute();
+                this.muteBtn.textContent = muted ? '🔇' : '🔊';
+                this.muteBtn.classList.toggle('muted', muted);
+            });
+        }
 
         // 1. Initialize Physics
+        console.log('[INIT] Initializing Rapier physics...');
         await RAPIER.init();
         const gravity = { x: 0.0, y: -9.81, z: 0.0 };
         this.world = new RAPIER.World(gravity);
+        console.log('[INIT] Physics initialized');
 
         // 2. Initialize Filament
-        const Factory = await loadFilament();
-        let capturedModule = null;
-        const originalLoadClassExtensions = Factory.loadClassExtensions;
-        Factory.loadClassExtensions = function () {
-            capturedModule = this;
-            if (originalLoadClassExtensions) originalLoadClassExtensions();
-        };
-        await new Promise((resolve) => Factory.init([], resolve));
-        this.Filament = capturedModule;
+        console.log('[INIT] Initializing Filament rendering...');
+        this.Filament = await loadFilament();
+        console.log('[INIT] Filament loaded');
 
+        // Set initial canvas size before creating swap chain
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        this.canvas.width = width;
+        this.canvas.height = height;
+        console.log(`[INIT] Canvas sized to ${width}x${height}`);
+
+        // Create engine, scene, swap chain, renderer, view, camera
         this.engine = this.Filament.Engine.create(this.canvas);
         this.scene = this.engine.createScene();
         this.swapChain = this.engine.createSwapChain();
         this.renderer = this.engine.createRenderer();
+        console.log('[INIT] Filament engine created');
 
         // Camera setup
-        this.camera = this.engine.createCamera(this.Filament.EntityManager.get().create());
+        const cameraEntity = this.Filament.EntityManager.get().create();
+        this.camera = this.engine.createCamera(cameraEntity);
         this.view = this.engine.createView();
         this.view.setCamera(this.camera);
         this.view.setScene(this.scene);
+        this.view.setViewport([0, 0, width, height]);
+
+        // Camera projection - use VERTICAL FOV enum
+        const Fov = this.Filament.Camera$Fov;
+        const aspect = width / height;
+        this.camera.setProjectionFov(45, aspect, 0.1, 1000.0, Fov.VERTICAL);
+        this.camera.lookAt([0, 10, 20], [0, 0, 0], [0, 1, 0]);
+
         this.renderer.setClearOptions({ clearColor: [0.1, 0.1, 0.1, 1.0], clear: true });
+        console.log('[INIT] Camera and view configured');
 
         // 3. LOAD ASSETS
+        console.log('[INIT] Loading assets...');
         await this.setupAssets();
+        console.log('[INIT] Assets loaded');
 
         // 4. Create Light
         this.createLight();
+        console.log('[INIT] Lights created');
 
         // 5. Show Level Selection
         this.showLevelSelection();
+        console.log('[INIT] Level menu displayed');
+
+        // Hide loading screen
+        const loading = document.getElementById('loading');
+        if (loading) loading.style.display = 'none';
+        console.log('[INIT] Loading screen hidden');
 
         // 6. Resize & Start
         this.resize();
         window.addEventListener('resize', () => this.resize());
+        console.log('[INIT] Starting game loop');
+
+        // Start render loop
         this.loop();
+        console.log('[INIT] Initialization complete!');
     }
 
     showLevelSelection() {
         const menu = document.getElementById('level-menu');
         const levelGrid = document.getElementById('level-grid');
         const gameUI = document.getElementById('ui');
-        
+
         menu.style.display = 'flex';
         gameUI.style.display = 'none';
         levelGrid.innerHTML = '';
@@ -357,8 +400,12 @@ class MarblesGame {
     }
 
     async loadLevel(levelId) {
+        console.log(`[LEVEL] Loading level: ${levelId}`);
         const level = LEVELS[levelId];
-        if (!level) return;
+        if (!level) {
+            console.error(`[LEVEL] Level ${levelId} not found!`);
+            return;
+        }
 
         // Hide menu, show game UI
         document.getElementById('level-menu').style.display = 'none';
@@ -366,6 +413,7 @@ class MarblesGame {
 
         // Clear existing level
         this.clearLevel();
+        console.log('[LEVEL] Cleared previous level');
 
         // Set level state
         this.currentLevel = levelId;
@@ -376,6 +424,13 @@ class MarblesGame {
         this.levelStartTime = Date.now();
         this.levelComplete = false;
 
+        // Set night mode if enabled
+        if (level.nightMode) {
+            this.setNightMode(true, level.backgroundColor);
+        } else {
+            this.setNightMode(false);
+        }
+
         // Set camera defaults from level
         if (level.camera) {
             this.cameraMode = level.camera.mode || 'orbit';
@@ -385,12 +440,17 @@ class MarblesGame {
         }
 
         // Build zones
+        console.log(`[LEVEL] Creating ${level.zones.length} zones...`);
         for (const zone of level.zones) {
             await this.createZone(zone);
         }
+        console.log(`[LEVEL] Created ${this.staticEntities.length} static entities`);
 
         // Spawn marbles at level spawn point
+        console.log(`[LEVEL] Spawning marbles at ${JSON.stringify(level.spawn)}...`);
         this.createMarbles(level.spawn);
+        console.log(`[LEVEL] Created ${this.marbles.length} marbles`);
+        console.log('[LEVEL] Level loading complete!');
     }
 
     clearLevel() {
@@ -415,11 +475,14 @@ class MarblesGame {
             this.engine.destroyEntity(entity);
         }
         this.staticEntities = [];
+
+        // Reset lighting to day mode
+        this.setNightMode(false);
     }
 
     async createZone(zone) {
-        const pos = zone.pos || {x: 0, y: 0, z: 0};
-        const offset = {x: pos.x, y: pos.y, z: pos.z};
+        const pos = zone.pos || { x: 0, y: 0, z: 0 };
+        const offset = { x: pos.x, y: pos.y, z: pos.z };
 
         switch (zone.type) {
             case 'floor':
@@ -449,16 +512,20 @@ class MarblesGame {
             case 'goal':
                 this.createGoalZone(offset, zone.color);
                 break;
+            case 'orchard':
+                this.createOrchardZone(zone.center, zone.radius);
+                break;
         }
     }
 
     createFloorZone(offset, size) {
-        const sz = size || {x: 50, y: 0.5, z: 50};
+        const sz = size || { x: 50, y: 0.5, z: 50 };
         this.createStaticBox(
-            {x: offset.x, y: offset.y, z: offset.z},
-            {x: 0, y: 0, z: 0, w: 1},
-            {x: sz.x / 2, y: sz.y / 2, z: sz.z / 2},
-            [0.3, 0.3, 0.3]
+            { x: offset.x, y: offset.y, z: offset.z },
+            { x: 0, y: 0, z: 0, w: 1 },
+            { x: sz.x / 2, y: sz.y / 2, z: sz.z / 2 },
+            [0.3, 0.3, 0.3],
+            'concrete'  // Solid concrete floor
         );
     }
 
@@ -466,169 +533,184 @@ class MarblesGame {
         const angle = 0.2;
         const sinA = Math.sin(angle / 2);
         const cosA = Math.cos(angle / 2);
-        const q = {x: sinA, y: 0, z: 0, w: cosA};
+        const q = { x: sinA, y: 0, z: 0, w: cosA };
 
-        // Main ramp
+        // Main ramp (smooth wood)
         this.createStaticBox(
-            {x: offset.x, y: offset.y, z: offset.z},
+            { x: offset.x, y: offset.y, z: offset.z },
             q,
-            {x: 4, y: 0.2, z: 15},
-            [0.6, 0.6, 0.6]
+            { x: 4, y: 0.2, z: 15 },
+            [0.6, 0.6, 0.6],
+            'wood'
         );
 
-        // Side walls
+        // Side walls (wood)
         this.createStaticBox(
-            {x: offset.x - 3.5, y: offset.y + 1, z: offset.z},
+            { x: offset.x - 3.5, y: offset.y + 1, z: offset.z },
             q,
-            {x: 0.5, y: 1.5, z: 15},
-            [0.5, 0.3, 0.3]
+            { x: 0.5, y: 1.5, z: 15 },
+            [0.5, 0.3, 0.3],
+            'wood'
         );
         this.createStaticBox(
-            {x: offset.x + 3.5, y: offset.y + 1, z: offset.z},
+            { x: offset.x + 3.5, y: offset.y + 1, z: offset.z },
             q,
-            {x: 0.5, y: 1.5, z: 15},
-            [0.5, 0.3, 0.3]
+            { x: 0.5, y: 1.5, z: 15 },
+            [0.5, 0.3, 0.3],
+            'wood'
         );
     }
 
     createLandingZone(offset) {
-        const floorQ = {x: 0, y: 0, z: 0, w: 1};
+        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
-        // Floor
+        // Floor (concrete)
         this.createStaticBox(
-            {x: offset.x, y: offset.y, z: offset.z},
+            { x: offset.x, y: offset.y, z: offset.z },
             floorQ,
-            {x: 5, y: 0.25, z: 10},
-            [0.4, 0.4, 0.4]
+            { x: 5, y: 0.25, z: 10 },
+            [0.4, 0.4, 0.4],
+            'concrete'
         );
 
-        // Pillars
+        // Pillars (metal)
         this.createStaticBox(
-            {x: offset.x - 3, y: offset.y + 1.5, z: offset.z - 5},
+            { x: offset.x - 3, y: offset.y + 1.5, z: offset.z - 5 },
             floorQ,
-            {x: 0.5, y: 1.5, z: 0.5},
-            [0.8, 0.2, 0.2]
+            { x: 0.5, y: 1.5, z: 0.5 },
+            [0.8, 0.2, 0.2],
+            'metal'
         );
         this.createStaticBox(
-            {x: offset.x + 3, y: offset.y + 1.5, z: offset.z},
+            { x: offset.x + 3, y: offset.y + 1.5, z: offset.z },
             floorQ,
-            {x: 0.5, y: 1.5, z: 0.5},
-            [0.2, 0.2, 0.8]
+            { x: 0.5, y: 1.5, z: 0.5 },
+            [0.2, 0.2, 0.8],
+            'metal'
         );
         this.createStaticBox(
-            {x: offset.x, y: offset.y + 0.75, z: offset.z + 5},
+            { x: offset.x, y: offset.y + 0.75, z: offset.z + 5 },
             floorQ,
-            {x: 2, y: 0.5, z: 0.5},
-            [0.2, 0.8, 0.2]
+            { x: 2, y: 0.5, z: 0.5 },
+            [0.2, 0.8, 0.2],
+            'metal'
         );
     }
 
     createJumpZone(offset) {
-        const floorQ = {x: 0, y: 0, z: 0, w: 1};
+        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
-        // Approach
+        // Approach (concrete)
         this.createStaticBox(
-            {x: offset.x, y: offset.y, z: offset.z},
+            { x: offset.x, y: offset.y, z: offset.z },
             floorQ,
-            {x: 5, y: 0.25, z: 2.5},
-            [0.4, 0.4, 0.4]
+            { x: 5, y: 0.25, z: 2.5 },
+            [0.4, 0.4, 0.4],
+            'concrete'
         );
 
-        // Ramp
+        // Ramp (wood)
         const angle = -0.4;
         const sinA = Math.sin(angle / 2);
         const cosA = Math.cos(angle / 2);
-        const rampQ = {x: sinA, y: 0, z: 0, w: cosA};
+        const rampQ = { x: sinA, y: 0, z: 0, w: cosA };
         this.createStaticBox(
-            {x: offset.x, y: offset.y + 1.0, z: offset.z + 5},
+            { x: offset.x, y: offset.y + 1.0, z: offset.z + 5 },
             rampQ,
-            {x: 5, y: 0.25, z: 3},
-            [0.7, 0.3, 0.3]
+            { x: 5, y: 0.25, z: 3 },
+            [0.7, 0.3, 0.3],
+            'wood'
         );
 
-        // Landing
+        // Landing (soft foam-like, use wood as closest)
         this.createStaticBox(
-            {x: offset.x, y: offset.y - 2, z: offset.z + 22.5},
+            { x: offset.x, y: offset.y - 2, z: offset.z + 22.5 },
             floorQ,
-            {x: 8, y: 0.5, z: 5},
-            [0.3, 0.7, 0.3]
+            { x: 8, y: 0.5, z: 5 },
+            [0.3, 0.7, 0.3],
+            'wood'
         );
 
-        // Target
+        // Target (metal)
         this.createStaticBox(
-            {x: offset.x, y: offset.y - 1, z: offset.z + 25.5},
+            { x: offset.x, y: offset.y - 1, z: offset.z + 25.5 },
             floorQ,
-            {x: 1, y: 0.5, z: 1},
-            [0.8, 0.8, 0.2]
+            { x: 1, y: 0.5, z: 1 },
+            [0.8, 0.8, 0.2],
+            'metal'
         );
     }
 
     createSlalomZone(offset) {
-        const floorQ = {x: 0, y: 0, z: 0, w: 1};
+        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
-        // Floor
+        // Floor (concrete)
         this.createStaticBox(
-            {x: offset.x, y: offset.y, z: offset.z},
+            { x: offset.x, y: offset.y, z: offset.z },
             floorQ,
-            {x: 6, y: 0.5, z: 20},
-            [0.3, 0.3, 0.5]
+            { x: 6, y: 0.5, z: 20 },
+            [0.3, 0.3, 0.5],
+            'concrete'
         );
 
-        // Pillars (relative to offset)
+        // Pillars - metal cones (relative to offset)
         for (let z = -15; z <= 15; z += 5) {
             if (z === 15) continue;
             const pillarX = ((z + 15) / 5) % 2 === 0 ? 3 : -3;
             this.createStaticBox(
-                {x: offset.x + pillarX, y: offset.y + 2, z: offset.z + z},
+                { x: offset.x + pillarX, y: offset.y + 2, z: offset.z + z },
                 floorQ,
-                {x: 0.5, y: 1.5, z: 0.5},
-                [0.9, 0.1, 0.1]
+                { x: 0.5, y: 1.5, z: 0.5 },
+                [0.9, 0.1, 0.1],
+                'metal'
             );
         }
     }
 
     createStaircaseZone(offset) {
-        const floorQ = {x: 0, y: 0, z: 0, w: 1};
+        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
-        // Initial platform
+        // Initial platform (stone/concrete)
         this.createStaticBox(
-            {x: offset.x, y: offset.y, z: offset.z},
+            { x: offset.x, y: offset.y, z: offset.z },
             floorQ,
-            {x: 4, y: 0.5, z: 4},
-            [0.4, 0.4, 0.6]
+            { x: 4, y: 0.5, z: 4 },
+            [0.4, 0.4, 0.6],
+            'concrete'
         );
 
-        // Steps
+        // Steps (stone/concrete)
         let currentY = offset.y;
         let currentZ = offset.z;
         for (let i = 0; i < 10; i++) {
             currentY += 1.0;
             currentZ += 4.0;
             this.createStaticBox(
-                {x: offset.x, y: currentY, z: currentZ},
+                { x: offset.x, y: currentY, z: currentZ },
                 floorQ,
-                {x: 2, y: 0.5, z: 1.5},
-                [0.2 + (i * 0.05), 0.5, 0.8 - (i * 0.05)]
+                { x: 2, y: 0.5, z: 1.5 },
+                [0.2 + (i * 0.05), 0.5, 0.8 - (i * 0.05)],
+                'concrete'
             );
         }
     }
 
     createSplitZone(offset) {
-        const floorQ = {x: 0, y: 0, z: 0, w: 1};
+        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
         // Start Platform
         this.createStaticBox(
-            {x: offset.x, y: offset.y, z: offset.z},
+            { x: offset.x, y: offset.y, z: offset.z },
             floorQ,
-            {x: 4, y: 0.5, z: 4},
+            { x: 4, y: 0.5, z: 4 },
             [0.4, 0.4, 0.4]
         );
 
         // Left Path (Narrow)
         this.createStaticBox(
-            {x: offset.x - 2, y: offset.y, z: offset.z + 14},
+            { x: offset.x - 2, y: offset.y, z: offset.z + 14 },
             floorQ,
-            {x: 1, y: 0.5, z: 10},
+            { x: 1, y: 0.5, z: 10 },
             [0.6, 0.3, 0.3]
         );
 
@@ -637,40 +719,40 @@ class MarblesGame {
         const angle = -0.3;
         const sinA = Math.sin(angle / 2);
         const cosA = Math.cos(angle / 2);
-        const rampQ = {x: sinA, y: 0, z: 0, w: cosA};
+        const rampQ = { x: sinA, y: 0, z: 0, w: cosA };
 
         this.createStaticBox(
-            {x: offset.x + 2, y: offset.y + 1, z: offset.z + 8},
+            { x: offset.x + 2, y: offset.y + 1, z: offset.z + 8 },
             rampQ,
-            {x: 1, y: 0.5, z: 4},
+            { x: 1, y: 0.5, z: 4 },
             [0.3, 0.3, 0.6]
         );
 
         // Landing pad further away
         this.createStaticBox(
-            {x: offset.x + 2, y: offset.y, z: offset.z + 20},
+            { x: offset.x + 2, y: offset.y, z: offset.z + 20 },
             floorQ,
-            {x: 1.5, y: 0.5, z: 4},
+            { x: 1.5, y: 0.5, z: 4 },
             [0.3, 0.3, 0.6]
         );
 
         // Merge Platform
         this.createStaticBox(
-            {x: offset.x, y: offset.y - 1, z: offset.z + 30},
+            { x: offset.x, y: offset.y - 1, z: offset.z + 30 },
             floorQ,
-            {x: 4, y: 0.5, z: 4},
+            { x: 4, y: 0.5, z: 4 },
             [0.4, 0.4, 0.4]
         );
     }
 
     createForestZone(offset) {
-        const floorQ = {x: 0, y: 0, z: 0, w: 1};
+        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
         // Floor
         this.createStaticBox(
-            {x: offset.x, y: offset.y, z: offset.z},
+            { x: offset.x, y: offset.y, z: offset.z },
             floorQ,
-            {x: 10, y: 0.5, z: 20},
+            { x: 10, y: 0.5, z: 20 },
             [0.2, 0.5, 0.2]
         );
 
@@ -680,31 +762,134 @@ class MarblesGame {
             const rz = (Math.cos(i * 78.233) * 19);
 
             this.createStaticBox(
-                {x: offset.x + rx, y: offset.y + 2, z: offset.z + rz},
+                { x: offset.x + rx, y: offset.y + 2, z: offset.z + rz },
                 floorQ,
-                {x: 0.5 + Math.sin(i)*0.2, y: 2 + Math.cos(i), z: 0.5 + Math.sin(i)*0.2},
+                { x: 0.5 + Math.sin(i) * 0.2, y: 2 + Math.cos(i), z: 0.5 + Math.sin(i) * 0.2 },
                 [0.55, 0.27, 0.07]
             );
         }
     }
 
     createGoalZone(offset, color) {
-        const q = {x: 0, y: 0, z: 0, w: 1};
+        const q = { x: 0, y: 0, z: 0, w: 1 };
         this.createStaticBox(
-            {x: offset.x, y: offset.y, z: offset.z},
+            { x: offset.x, y: offset.y, z: offset.z },
             q,
-            {x: 2, y: 0.25, z: 2},
-            color || [1.0, 0.84, 0.0]
+            { x: 2, y: 0.25, z: 2 },
+            color || [1.0, 0.84, 0.0],
+            'glass'
         );
     }
 
-    async setupAssets() {
-        const response = await fetch('./baked_color.filmat');
-        const buffer = await response.arrayBuffer();
-        this.material = this.engine.createMaterial(new Uint8Array(buffer));
+    setNightMode(enabled, bgColor) {
+        if (enabled) {
+            this.currentClearColor = bgColor || [0.02, 0.02, 0.08, 1.0];
+            this.renderer.setClearOptions({ clearColor: this.currentClearColor, clear: true });
 
-        const VertexAttribute = this.Filament.VertexAttribute;
-        const AttributeType = this.Filament.VertexBuffer$AttributeType;
+            this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
+                .color([0.4, 0.5, 0.7])
+                .intensity(20000.0)
+                .direction([0.3, -1.0, -0.5])
+                .castShadows(true)
+                .build(this.engine, this.light);
+
+            this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
+                .color([0.3, 0.2, 0.5])
+                .intensity(5000.0)
+                .direction([-0.3, -0.3, 0.8])
+                .castShadows(false)
+                .build(this.engine, this.fillLight);
+
+            this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
+                .color([0.2, 0.2, 0.3])
+                .intensity(3000.0)
+                .direction([0.0, 1.0, 0.0])
+                .castShadows(false)
+                .build(this.engine, this.backLight);
+        } else {
+            this.currentClearColor = [0.1, 0.1, 0.1, 1.0];
+            this.renderer.setClearOptions({ clearColor: this.currentClearColor, clear: true });
+            this.createLight();
+        }
+    }
+
+    createOrchardZone(center, radius) {
+        const cx = center.x, cy = center.y, cz = center.z, r = radius || 60;
+        const ringRadius = r * 0.4, ringWidth = 8, segments = 24;
+
+        for (let i = 0; i < segments; i++) {
+            const angle = (i / segments) * Math.PI * 2;
+            const x = cx + Math.cos(angle) * ringRadius;
+            const z = cz + Math.sin(angle) * ringRadius;
+            this.createStaticBox(
+                { x, y: cy, z },
+                { x: 0, y: 0, z: 0, w: 1 },
+                { x: ringWidth / 2, y: 0.3, z: (2 * Math.PI * ringRadius / segments) / 2 + 1 },
+                [0.4, 0.25, 0.15]
+            );
+        }
+
+        this.createStaticBox({ x: cx, y: cy - 0.2, z: cz }, { x: 0, y: 0, z: 0, w: 1 }, { x: ringRadius - 2, y: 0.5, z: ringRadius - 2 }, [0.1, 0.25, 0.1]);
+
+        [[cx + r, cz, r * 0.4, r], [cx - r, cz, r * 0.4, r], [cx, cz + r, r, r * 0.4], [cx, cz - r, r, r * 0.4]].forEach(([x, z, sx, sz]) => {
+            this.createStaticBox({ x, y: cy - 0.2, z }, { x: 0, y: 0, z: 0, w: 1 }, { x: sx, y: 0.5, z: sz }, [0.08, 0.2, 0.08]);
+        });
+
+        const fruitColors = [[1.0, 0.2, 0.5], [0.2, 0.8, 1.0], [0.8, 0.3, 1.0], [1.0, 0.8, 0.2], [0.2, 1.0, 0.5]];
+        const treeSpacing = 15, rowCount = 3, treeDistance = 25;
+
+        for (let row = -rowCount; row <= rowCount; row++) {
+            for (let col = -2; col <= 2; col++) {
+                const tx = cx + col * treeSpacing, tz = cz + row * treeDistance + (col % 2) * 7;
+                const dist = Math.sqrt(tx * tx + tz * tz);
+                if (dist < ringRadius + 5 || dist > r - 5) continue;
+                this.createTree(tx, cy, tz, fruitColors[Math.abs((row + rowCount) * 3 + col) % fruitColors.length]);
+            }
+        }
+
+        this.createStaticBox({ x: cx, y: cy + 0.5, z: cz + ringRadius }, { x: 0, y: 0, z: 0, w: 1 }, { x: 4, y: 0.5, z: 4 }, [0.9, 0.9, 1.0]);
+
+        for (let i = 0; i < 4; i++) {
+            const angle = (i / 4) * Math.PI * 2;
+            this.createStaticBox({ x: cx + Math.cos(angle) * 3, y: cy + 2, z: cz + ringRadius + Math.sin(angle) * 3 }, { x: 0, y: 0, z: 0, w: 1 }, { x: 0.3, y: 0.3, z: 0.3 }, [1.0, 0.9, 0.5]);
+        }
+    }
+
+    createTree(x, y, z, fruitColor) {
+        for (let i = 0; i < 4; i++) {
+            const w = 0.8 - i * 0.1;
+            this.createStaticBox({ x, y: y + 1 + i * 1.5, z }, { x: 0, y: 0, z: 0, w: 1 }, { x: w, y: 0.8, z: w }, [0.25, 0.15, 0.08]);
+        }
+
+        const canopyY = y + 6;
+        [[0, 0, 0, 2], [1.5, 0.5, 0, 1.2], [-1.5, 0.5, 0, 1.2], [0, 0.5, 1.5, 1.2], [0, 0.5, -1.5, 1.2], [0, 1.5, 0, 1.5]].forEach(([px, py, pz, s]) => {
+            this.createStaticBox({ x: x + px, y: canopyY + py, z: z + pz }, { x: 0, y: 0, z: 0, w: 1 }, { x: s, y: s * 0.8, z: s }, [0.15, 0.35, 0.15]);
+        });
+
+        [[1.2, 0.5, 1.2], [-1.2, 0.5, -1.2], [1.2, -0.5, -1.2], [-1.2, -0.5, 1.2], [0, 2, 0], [0.8, 1, 0], [-0.8, 1, 0], [0, 1, 0.8]].forEach(([px, py, pz]) => {
+            this.createStaticBox({ x: x + px, y: canopyY + py, z: z + pz }, { x: 0, y: 0, z: 0, w: 1 }, { x: 0.25, y: 0.35, z: 0.25 }, fruitColor);
+        });
+    }
+
+    async setupAssets() {
+        console.log('[ASSETS] Loading baked_color.filmat...');
+        let response;
+        try {
+            response = await fetch('./baked_color.filmat');
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+        } catch (e) {
+            console.error('[ASSETS] Failed to fetch material:', e);
+            throw e;
+        }
+        const buffer = await response.arrayBuffer();
+        console.log(`[ASSETS] Loaded ${buffer.byteLength} bytes`);
+        this.material = this.engine.createMaterial(new Uint8Array(buffer));
+        console.log('[ASSETS] Material created successfully');
+
+        const VertexAttribute = this.Filament['VertexAttribute'];
+        const AttributeType = this.Filament['VertexBuffer$AttributeType'];
 
         this.vb = this.Filament.VertexBuffer.Builder()
             .vertexCount(24)
@@ -716,7 +901,7 @@ class MarblesGame {
 
         this.ib = this.Filament.IndexBuffer.Builder()
             .indexCount(36)
-            .bufferType(this.Filament.IndexBuffer$IndexType.USHORT)
+            .bufferType(this.Filament['IndexBuffer$IndexType'].USHORT)
             .build(this.engine);
         this.ib.setBuffer(this.engine, CUBE_INDICES);
 
@@ -731,7 +916,7 @@ class MarblesGame {
 
         this.sphereIb = this.Filament.IndexBuffer.Builder()
             .indexCount(sphereData.indices.length)
-            .bufferType(this.Filament.IndexBuffer$IndexType.USHORT)
+            .bufferType(this.Filament['IndexBuffer$IndexType'].USHORT)
             .build(this.engine);
         this.sphereIb.setBuffer(this.engine, sphereData.indices);
 
@@ -746,7 +931,7 @@ class MarblesGame {
         matInstance.setFloatParameter('roughness', 0.2);
 
         this.Filament.RenderableManager.Builder(1)
-            .boundingBox({center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5]})
+            .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
             .material(0, matInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
             .build(this.engine, this.cueEntity);
@@ -784,7 +969,7 @@ class MarblesGame {
 
     createLight() {
         this.light = this.Filament.EntityManager.get().create();
-        this.Filament.LightManager.Builder(this.Filament.LightManager$Type.DIRECTIONAL)
+        this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
             .color([0.98, 0.92, 0.89])
             .intensity(110000.0)
             .direction([0.6, -1.0, -0.8])
@@ -796,7 +981,7 @@ class MarblesGame {
         this.scene.addEntity(this.light);
 
         this.fillLight = this.Filament.EntityManager.get().create();
-        this.Filament.LightManager.Builder(this.Filament.LightManager$Type.DIRECTIONAL)
+        this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
             .color([0.8, 0.8, 1.0])
             .intensity(30000.0)
             .direction([-0.6, -0.5, 0.8])
@@ -805,7 +990,7 @@ class MarblesGame {
         this.scene.addEntity(this.fillLight);
 
         this.backLight = this.Filament.EntityManager.get().create();
-        this.Filament.LightManager.Builder(this.Filament.LightManager$Type.DIRECTIONAL)
+        this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
             .color([0.5, 0.5, 0.5])
             .intensity(20000.0)
             .direction([0.0, -1.0, 1.0])
@@ -814,7 +999,7 @@ class MarblesGame {
         this.scene.addEntity(this.backLight);
     }
 
-    createStaticBox(pos, rotation, halfExtents, color) {
+    createStaticBox(pos, rotation, halfExtents, color, material = 'wood') {
         const bodyDesc = RAPIER.RigidBodyDesc.fixed()
             .setTranslation(pos.x, pos.y, pos.z)
             .setRotation(rotation);
@@ -823,15 +1008,18 @@ class MarblesGame {
         this.world.createCollider(colliderDesc, body);
         this.staticBodies.push(body);
 
+        // Register material for collision sounds
+        audio.registerBodyMaterial(body, material);
+
         const entity = this.Filament.EntityManager.get().create();
         const matInstance = this.material.createInstance();
-        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color);
+        matInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, color);
         matInstance.setFloatParameter('roughness', 0.4);
 
         this.Filament.RenderableManager.Builder(1)
-            .boundingBox({center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5]})
+            .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
             .material(0, matInstance)
-            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.vb, this.ib)
             .build(this.engine, entity);
 
         const tcm = this.engine.getTransformManager();
@@ -852,16 +1040,22 @@ class MarblesGame {
     }
 
     createMarbles(spawnPos) {
-        const baseSpawn = spawnPos || {x: 0, y: 8, z: -12};
-        
+        const baseSpawn = spawnPos || { x: 0, y: 8, z: -12 };
+
         const marblesInfo = [
-            {color: [1.0, 0.0, 0.0], offset: {x: -1.0, y: 0, z: 0}},
-            {color: [0.0, 0.0, 1.0], offset: {x: 1.0, y: 0, z: 0}},
-            {color: [0.2, 1.0, 0.2], offset: {x: -2.5, y: 4, z: 0}, radius: 0.4, friction: 0.1, restitution: 0.8, roughness: 0.2},
-            {color: [0.6, 0.1, 0.8], offset: {x: 0.0, y: 2, z: 2}, radius: 0.75, restitution: 1.2},
-            {color: [1.0, 0.84, 0.0], offset: {x: 2.5, y: 2, z: 2}, radius: 0.6, restitution: 0.2, density: 3.0, roughness: 0.3},
-            {color: [0.0, 0.8, 1.0], offset: {x: -2.0, y: 2, z: 2}, radius: 0.5, friction: 0.05, restitution: 0.5, roughness: 0.1},
-            {color: [0.1, 0.1, 0.1], offset: {x: 3.5, y: 4, z: 0}, radius: 0.55, density: 10.0, friction: 0.9, restitution: 0.1, roughness: 0.7}
+            { color: [1.0, 0.0, 0.0], offset: { x: -1.0, y: 0, z: 0 } },
+            { color: [0.0, 0.0, 1.0], offset: { x: 1.0, y: 0, z: 0 } },
+            { color: [0.2, 1.0, 0.2], offset: { x: -2.5, y: 4, z: 0 }, radius: 0.4, friction: 0.1, restitution: 0.8, roughness: 0.2 },
+            { color: [0.6, 0.1, 0.8], offset: { x: 0.0, y: 2, z: 2 }, radius: 0.75, restitution: 1.2 },
+            { color: [1.0, 0.84, 0.0], offset: { x: 2.5, y: 2, z: 2 }, radius: 0.6, restitution: 0.2, density: 3.0, roughness: 0.3 },
+            { color: [0.0, 0.8, 1.0], offset: { x: -2.0, y: 2, z: 2 }, radius: 0.5, friction: 0.05, restitution: 0.5, roughness: 0.1 },
+            // --- NEW MARBLES ---
+            // 1. Volcanic Magma Marble - Glowing hot red-orange with extreme bounce
+            { color: [1.0, 0.25, 0.0], offset: { x: 3.5, y: 3, z: 0 }, radius: 0.55, friction: 0.15, restitution: 1.5, density: 0.8, roughness: 0.6 },
+            // 2. Shadow Ninja Marble - Dark purple, ultra-smooth, sneaky low friction
+            { color: [0.15, 0.05, 0.25], offset: { x: -3.5, y: 3, z: 0 }, radius: 0.45, friction: 0.02, restitution: 0.3, density: 1.2, roughness: 0.05 },
+            // 3. Cosmic Nebula Marble - Deep space teal with silver shimmer, balanced all-rounder
+            { color: [0.3, 0.9, 0.7], offset: { x: 0.0, y: 5, z: -2 }, radius: 0.65, friction: 0.08, restitution: 0.7, density: 1.5, roughness: 0.15 }
         ];
 
         for (const info of marblesInfo) {
@@ -892,9 +1086,9 @@ class MarblesGame {
             matInstance.setFloatParameter('roughness', info.roughness !== undefined ? info.roughness : 0.4);
 
             this.Filament.RenderableManager.Builder(1)
-                .boundingBox({center: [0, 0, 0], halfExtent: [radius, radius, radius]})
+                .boundingBox({ center: [0, 0, 0], halfExtent: [radius, radius, radius] })
                 .material(0, matInstance)
-                .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
+                .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.sphereVb, this.sphereIb)
                 .build(this.engine, entity);
 
             this.scene.addEntity(entity);
@@ -907,7 +1101,7 @@ class MarblesGame {
                 scoredGoals: new Set()
             });
         }
-        
+
         this.currentMarbleIndex = 0;
         this.playerMarble = this.marbles[0];
         this.selectedEl.textContent = 'Selected: 1';
@@ -927,10 +1121,13 @@ class MarblesGame {
     }
 
     resetMarbles() {
+        // Stop all rolling sounds
+        audio.stopAllRolling();
+
         for (const m of this.marbles) {
             m.rigidBody.setTranslation(m.initialPos, true);
-            m.rigidBody.setLinvel({x: 0, y: 0, z: 0}, true);
-            m.rigidBody.setAngvel({x: 0, y: 0, z: 0}, true);
+            m.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+            m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
             m.scoredGoals.clear();
         }
         this.score = 0;
@@ -946,8 +1143,79 @@ class MarblesGame {
     }
 
     returnToMenu() {
+        audio.stopAllRolling();
         this.clearLevel();
         this.showLevelSelection();
+    }
+
+    processCollisionEvents() {
+        if (!this.world) return;
+
+        // Track which collisions we've already processed this frame
+        const processedCollisions = new Set();
+
+        // Track which marbles are touching surfaces for rolling sounds
+        const touchingSurfaces = new Map(); // marbleIndex -> { material, speed }
+
+        for (let i = 0; i < this.marbles.length; i++) {
+            const marble = this.marbles[i];
+            const rb = marble.rigidBody;
+            const velocity = rb.linvel();
+            const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
+            const angVel = rb.angvel();
+            const angularSpeed = Math.hypot(angVel.x, angVel.y, angVel.z);
+
+            // Check if marble is touching any surfaces using intersection testing
+            const radius = marble.scale * 0.5 || 0.5;
+            const pos = rb.translation();
+
+            // Cast a small downward ray to detect ground/surface contact
+            const rayOrigin = { x: pos.x, y: pos.y, z: pos.z };
+            const rayDir = { x: 0, y: -1, z: 0 };
+            const ray = new RAPIER.Ray(rayOrigin, rayDir);
+            const maxToi = radius + 0.1; // Slightly beyond marble radius
+
+            const hit = this.world.castRay(ray, maxToi, true);
+            if (hit) {
+                const otherCollider = hit.collider;
+                const otherBody = otherCollider.parent();
+
+                if (otherBody && otherBody !== rb) {
+                    // Check if it's a static body (surface)
+                    if (otherBody.bodyType() === RAPIER.RigidBodyType.Fixed) {
+                        const material = audio.getMaterial(otherBody.handle);
+
+                        // Track for rolling sound
+                        touchingSurfaces.set(i, { material, speed, angularSpeed, radius });
+
+                        // Play impact sound for significant collisions (on first contact)
+                        const collisionId = `${rb.handle}-${otherBody.handle}`;
+                        if (!processedCollisions.has(collisionId) && speed > 2.5) {
+                            processedCollisions.add(collisionId);
+                            audio.playSurfaceHit(speed, radius, material, `surface-${rb.handle}`);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update rolling sounds
+        for (let i = 0; i < this.marbles.length; i++) {
+            const marbleId = `marble-${i}`;
+            const surfaceInfo = touchingSurfaces.get(i);
+
+            if (surfaceInfo && surfaceInfo.speed > 0.3) {
+                // Start or update rolling sound
+                const rollingId = `${marbleId}-rolling`;
+                if (!audio.rollingSounds || !audio.rollingSounds.has(rollingId)) {
+                    audio.startRolling(rollingId, surfaceInfo.radius, surfaceInfo.material);
+                }
+                audio.updateRolling(rollingId, surfaceInfo.speed, surfaceInfo.angularSpeed);
+            } else {
+                // Stop rolling sound if not touching or too slow
+                audio.stopRolling(`${marbleId}-rolling`);
+            }
+        }
     }
 
     checkGameLogic() {
@@ -962,8 +1230,8 @@ class MarblesGame {
             // Respawn logic
             if (t.y < -20) {
                 m.rigidBody.setTranslation(m.initialPos, true);
-                m.rigidBody.setLinvel({x: 0, y: 0, z: 0}, true);
-                m.rigidBody.setAngvel({x: 0, y: 0, z: 0}, true);
+                m.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+                m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
                 m.scoredGoals.clear();
                 continue;
             }
@@ -974,10 +1242,15 @@ class MarblesGame {
                     t.x > goal.range.x[0] && t.x < goal.range.x[1] &&
                     t.z > goal.range.z[0] && t.z < goal.range.z[1] &&
                     t.y > goal.range.y[0] && t.y < goal.range.y[1]) {
-                    
+
                     m.scoredGoals.add(goal.id);
                     this.score++;
                     this.scoreEl.textContent = 'Score: ' + this.score;
+
+                    // Play goal sound (only for first few to avoid spam)
+                    if (this.score <= 5) {
+                        audio.playGoal();
+                    }
                 }
             }
         }
@@ -999,29 +1272,36 @@ class MarblesGame {
 
         // Collision Scoring (player hits others)
         if (this.playerMarble) {
-          const pt = this.playerMarble.rigidBody.translation();
-          const pv = this.playerMarble.rigidBody.linvel();
-          for (const other of this.marbles) {
-            if (other === this.playerMarble) continue;
-            const ot = other.rigidBody.translation();
-            const ov = other.rigidBody.linvel();
-            const dx = pt.x - ot.x;
-            const dy = pt.y - ot.y;
-            const dz = pt.z - ot.z;
-            const dist = Math.hypot(dx, dy, dz);
-            if (dist < 1.0) {
-              const relSpeed = Math.hypot(pv.x - ov.x, pv.y - ov.y, pv.z - ov.z);
-              if (relSpeed > 4) {
-                this.score += Math.floor(relSpeed / 3);
-                this.scoreEl.innerText = `Score: ${this.score}`;
-                // Bonus push
-                const nx = dx / dist;
-                const ny = dy / dist;
-                const nz = dz / dist;
-                other.rigidBody.applyImpulse({ x: nx * 6, y: ny * 2 + 2, z: nz * 6 }, true);
-              }
+            const pt = this.playerMarble.rigidBody.translation();
+            const pv = this.playerMarble.rigidBody.linvel();
+            for (const other of this.marbles) {
+                if (other === this.playerMarble) continue;
+                const ot = other.rigidBody.translation();
+                const ov = other.rigidBody.linvel();
+                const dx = pt.x - ot.x;
+                const dy = pt.y - ot.y;
+                const dz = pt.z - ot.z;
+                const dist = Math.hypot(dx, dy, dz);
+                if (dist < 1.0) {
+                    const relSpeed = Math.hypot(pv.x - ov.x, pv.y - ov.y, pv.z - ov.z);
+                    if (relSpeed > 4) {
+                        this.score += Math.floor(relSpeed / 3);
+                        this.scoreEl.innerText = `Score: ${this.score}`;
+
+                        // Play marble clink sound (velocity-based volume, size-based pitch)
+                        const playerRadius = this.playerMarble.scale * 0.5 || 0.5;
+                        const otherRadius = other.scale * 0.5 || 0.5;
+                        audio.playClink(relSpeed, playerRadius, `player-${this.currentMarbleIndex}`);
+                        audio.playClink(relSpeed * 0.7, otherRadius, `other-${this.marbles.indexOf(other)}`);
+
+                        // Bonus push
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+                        const nz = dz / dist;
+                        other.rigidBody.applyImpulse({ x: nx * 6, y: ny * 2 + 2, z: nz * 6 }, true);
+                    }
+                }
             }
-          }
         }
 
         if (allGoalsScored && !this.levelComplete) {
@@ -1034,15 +1314,46 @@ class MarblesGame {
     }
 
     resize() {
-        const width = this.canvas.width = window.innerWidth;
-        const height = this.canvas.height = window.innerHeight;
-        this.view.setViewport([0, 0, width, height]);
-        const aspect = width / height;
-        this.camera.setProjectionFov(45, aspect, 1.0, 1000.0, this.Filament.Camera$Fov.VERTICAL);
-        this.camera.lookAt([0, 10, 20], [0, 0, 0], [0, 1, 0]);
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+
+        // Set canvas display size (CSS)
+        this.canvas.style.width = width + 'px';
+        this.canvas.style.height = height + 'px';
+        // Set canvas internal resolution
+        this.canvas.width = width;
+        this.canvas.height = height;
+
+        console.log(`[RESIZE] Canvas: ${width}x${height}`);
+
+        if (this.view && this.camera) {
+            this.view.setViewport([0, 0, width, height]);
+            const aspect = width / height;
+            const Fov = this.Filament.Camera$Fov;
+            this.camera.setProjectionFov(45, aspect, 0.1, 1000.0, Fov.VERTICAL);
+            this.camera.lookAt([0, 10, 20], [0, 0, 0], [0, 1, 0]);
+        }
     }
 
     loop() {
+        // Debug: Log first few frames
+        if (!this.frameCount) this.frameCount = 0;
+        this.frameCount++;
+        if (this.frameCount <= 3) {
+            console.log(`[RENDER] Frame ${this.frameCount}, Level: ${this.currentLevel || 'menu'}, Marbles: ${this.marbles.length}`);
+        }
+
+        // Update debug overlay (every 10 frames)
+        if (this.frameCount % 10 === 0) {
+            const debugOverlay = document.getElementById('debug-overlay');
+            if (debugOverlay && this.currentLevel) {
+                debugOverlay.style.display = 'block';
+                document.getElementById('debug-level').textContent = this.currentLevel;
+                document.getElementById('debug-marbles').textContent = this.marbles.length;
+                document.getElementById('debug-camera').textContent = this.cameraMode;
+            }
+        }
+
         const rotSpeed = 0.02;
         const zoomSpeed = 0.5;
 
@@ -1054,111 +1365,135 @@ class MarblesGame {
             this.returnToMenu();
         }
 
-        // Handle Charging
-        if (this.charging) {
-            this.chargePower = Math.min(1.0, this.chargePower + 0.02);
+        // Audio controls
+        if (this.keys['BracketLeft']) { // [ key - decrease volume
+            const currentVol = audio.masterGain ? audio.masterGain.gain.value : 0.4;
+            audio.setVolume(currentVol - 0.1);
+            this.keys['BracketLeft'] = false; // Prevent holding
         }
-
-        if (this.cameraMode === 'orbit') {
-            if (this.keys['ArrowLeft'] || this.keys['KeyA']) this.camAngle -= rotSpeed;
-            if (this.keys['ArrowRight'] || this.keys['KeyD']) this.camAngle += rotSpeed;
-            if (this.keys['ArrowUp'] || this.keys['KeyW']) this.camRadius = Math.max(5, this.camRadius - zoomSpeed);
-            if (this.keys['ArrowDown'] || this.keys['KeyS']) this.camRadius = Math.min(100, this.camRadius + zoomSpeed);
-        } else {
-            const impulseStrength = 0.5;
-            const jumpStrength = 1.0;
-
-            if (this.playerMarble) {
-                const rigidBody = this.playerMarble.rigidBody;
-                if (this.keys['ArrowUp'] || this.keys['KeyW']) rigidBody.applyImpulse({x: 0, y: 0, z: impulseStrength}, true);
-                if (this.keys['ArrowDown'] || this.keys['KeyS']) rigidBody.applyImpulse({x: 0, y: 0, z: -impulseStrength}, true);
-                if (this.keys['ArrowLeft'] || this.keys['KeyA']) rigidBody.applyImpulse({x: -impulseStrength, y: 0, z: 0}, true);
-                if (this.keys['ArrowRight'] || this.keys['KeyD']) rigidBody.applyImpulse({x: impulseStrength, y: 0, z: 0}, true);
-                if (this.keys['Space']) rigidBody.applyImpulse({x: 0, y: jumpStrength, z: 0}, true);
+        if (this.keys['BracketRight']) { // ] key - increase volume
+            const currentVol = audio.masterGain ? audio.masterGain.gain.value : 0.4;
+            audio.setVolume(currentVol + 0.1);
+            this.keys['BracketRight'] = false;
+        }
+        if (this.keys['KeyN']) { // N key - toggle mute
+            audio.init();
+            const muted = audio.toggleMute();
+            if (this.muteBtn) {
+                this.muteBtn.textContent = muted ? '🔇' : '🔊';
+                this.muteBtn.classList.toggle('muted', muted);
             }
+            this.keys['KeyN'] = false;
         }
+    }
 
-        // Update UI
-        const yawDeg = Math.round(this.aimYaw * 180 / Math.PI);
-        const pitchDeg = Math.round(this.pitchAngle * 180 / Math.PI);
-        this.aimEl.textContent = `Yaw: ${yawDeg}° Pitch: ${pitchDeg}°`;
-        this.powerbarEl.style.width = `${this.chargePower * 100}%`;
+    if(this.cameraMode === 'orbit') {
+    if (this.keys['ArrowLeft'] || this.keys['KeyA']) this.camAngle -= rotSpeed;
+    if (this.keys['ArrowRight'] || this.keys['KeyD']) this.camAngle += rotSpeed;
+    if (this.keys['ArrowUp'] || this.keys['KeyW']) this.camRadius = Math.max(5, this.camRadius - zoomSpeed);
+    if (this.keys['ArrowDown'] || this.keys['KeyS']) this.camRadius = Math.min(100, this.camRadius + zoomSpeed);
+} else {
+    const impulseStrength = 0.5;
+    const jumpStrength = 1.0;
 
-        // Update Camera
-        if (this.cameraMode === 'follow' && this.currentLevel) {
-            const level = LEVELS[this.currentLevel];
-            const target = this.playerMarble || this.getLeader();
-            if (target) {
-                const t = target.rigidBody.translation();
-                const height = level?.camera?.height || 10;
-                const dist = 20;
+    if (this.playerMarble) {
+        const rigidBody = this.playerMarble.rigidBody;
+        if (this.keys['ArrowUp'] || this.keys['KeyW']) rigidBody.applyImpulse({ x: 0, y: 0, z: impulseStrength }, true);
+        if (this.keys['ArrowDown'] || this.keys['KeyS']) rigidBody.applyImpulse({ x: 0, y: 0, z: -impulseStrength }, true);
+        if (this.keys['ArrowLeft'] || this.keys['KeyA']) rigidBody.applyImpulse({ x: -impulseStrength, y: 0, z: 0 }, true);
+        if (this.keys['ArrowRight'] || this.keys['KeyD']) rigidBody.applyImpulse({ x: impulseStrength, y: 0, z: 0 }, true);
+        if (this.keys['Space']) rigidBody.applyImpulse({ x: 0, y: jumpStrength, z: 0 }, true);
+    }
+}
 
-                const eyeX = t.x - Math.sin(this.aimYaw) * dist;
-                const eyeZ = t.z - Math.cos(this.aimYaw) * dist;
+// Update UI
+const yawDeg = Math.round(this.aimYaw * 180 / Math.PI);
+const pitchDeg = Math.round(this.pitchAngle * 180 / Math.PI);
+this.aimEl.textContent = `Yaw: ${yawDeg}° Pitch: ${pitchDeg}°`;
+this.powerbarEl.style.width = `${this.chargePower * 100}%`;
 
-                this.camera.lookAt([eyeX, t.y + height, eyeZ], [t.x, t.y, t.z], [0, 1, 0]);
-            }
-        } else {
-            const eyeX = this.camRadius * Math.sin(this.camAngle);
-            const eyeZ = this.camRadius * Math.cos(this.camAngle);
-            this.camera.lookAt([eyeX, this.camHeight, eyeZ], [0, 0, 0], [0, 1, 0]);
-        }
+// Update Camera
+if (this.cameraMode === 'follow' && this.currentLevel) {
+    const level = LEVELS[this.currentLevel];
+    const target = this.playerMarble || this.getLeader();
+    if (target) {
+        const t = target.rigidBody.translation();
+        const height = level?.camera?.height || 10;
+        const dist = 20;
 
-        // Step Physics
-        this.world.step();
-        this.checkGameLogic();
+        const eyeX = t.x - Math.sin(this.aimYaw) * dist;
+        const eyeZ = t.z - Math.cos(this.aimYaw) * dist;
 
-        // Sync Visuals
-        const tcm = this.engine.getTransformManager();
-        for (const m of this.marbles) {
-            const t = m.rigidBody.translation();
-            const r = m.rigidBody.rotation();
-            const mat = quaternionToMat4(t, r);
+        this.camera.lookAt([eyeX, t.y + height, eyeZ], [t.x, t.y, t.z], [0, 1, 0]);
+    }
+} else {
+    const eyeX = this.camRadius * Math.sin(this.camAngle);
+    const eyeZ = this.camRadius * Math.cos(this.camAngle);
+    this.camera.lookAt([eyeX, this.camHeight, eyeZ], [0, 0, 0], [0, 1, 0]);
+}
 
-            if (m.scale && m.scale !== 1.0) {
-                mat[0] *= m.scale; mat[1] *= m.scale; mat[2] *= m.scale;
-                mat[4] *= m.scale; mat[5] *= m.scale; mat[6] *= m.scale;
-                mat[8] *= m.scale; mat[9] *= m.scale; mat[10] *= m.scale;
-            }
+// Step Physics with event handling
+this.world.step();
 
-            const inst = tcm.getInstance(m.entity);
-            tcm.setTransform(inst, mat);
-        }
+// Process collision events for audio
+this.processCollisionEvents();
 
-        // Update Cue Stick (if charging)
-        if (this.cameraMode === 'follow' && this.playerMarble && this.charging && this.cueInst) {
-          const cosP = Math.cos(this.pitchAngle);
-          const sinP = Math.sin(this.pitchAngle);
-          const dirX = Math.sin(this.aimYaw) * cosP;
-          const dirY = sinP;
-          const dirZ = Math.cos(this.aimYaw) * cosP;
-          const length = 0.5 + this.chargePower * 2.5;
-          const r = this.playerMarble.scale * 0.5 || 0.5;
-          const marbleT = this.playerMarble.rigidBody.translation();
-          const cuePos = {
-            x: marbleT.x - dirX * (r + 0.2),
-            y: marbleT.y - dirY * (r + 0.2),
-            z: marbleT.z - dirZ * (r + 0.2)
-          };
-          const quat = quatFromEuler(this.aimYaw, this.pitchAngle, 0);
-          let mat = quaternionToMat4(cuePos, quat);
-          const thin = 0.04;
-          mat[0] *= thin; mat[1] *= thin; mat[2] *= thin;
-          mat[4] *= thin; mat[5] *= thin; mat[6] *= thin;
-          mat[8] *= length; mat[9] *= length; mat[10] *= length;
-          this.engine.getTransformManager().setTransform(this.cueInst, mat);
-        } else if (this.cueInst) {
-          const zeroMat = new Float32Array(16);
-          zeroMat[15] = 1;
-          this.engine.getTransformManager().setTransform(this.cueInst, zeroMat);
-        }
+this.checkGameLogic();
 
-        // Render
-        if (this.renderer.beginFrame(this.swapChain)) {
-            this.renderer.render(this.swapChain, this.view);
-            this.renderer.endFrame();
-        }
-        requestAnimationFrame(() => this.loop());
+// Sync Visuals
+const tcm = this.engine.getTransformManager();
+for (const m of this.marbles) {
+    const t = m.rigidBody.translation();
+    const r = m.rigidBody.rotation();
+    const mat = quaternionToMat4(t, r);
+
+    if (m.scale && m.scale !== 1.0) {
+        mat[0] *= m.scale; mat[1] *= m.scale; mat[2] *= m.scale;
+        mat[4] *= m.scale; mat[5] *= m.scale; mat[6] *= m.scale;
+        mat[8] *= m.scale; mat[9] *= m.scale; mat[10] *= m.scale;
+    }
+
+    const inst = tcm.getInstance(m.entity);
+    tcm.setTransform(inst, mat);
+}
+
+// Update Cue Stick (if charging)
+if (this.cameraMode === 'follow' && this.playerMarble && this.charging && this.cueInst) {
+    const cosP = Math.cos(this.pitchAngle);
+    const sinP = Math.sin(this.pitchAngle);
+    const dirX = Math.sin(this.aimYaw) * cosP;
+    const dirY = sinP;
+    const dirZ = Math.cos(this.aimYaw) * cosP;
+    const length = 0.5 + this.chargePower * 2.5;
+    const r = this.playerMarble.scale * 0.5 || 0.5;
+    const marbleT = this.playerMarble.rigidBody.translation();
+    const cuePos = {
+        x: marbleT.x - dirX * (r + 0.2),
+        y: marbleT.y - dirY * (r + 0.2),
+        z: marbleT.z - dirZ * (r + 0.2)
+    };
+    const quat = quatFromEuler(this.aimYaw, this.pitchAngle, 0);
+    let mat = quaternionToMat4(cuePos, quat);
+    const thin = 0.04;
+    mat[0] *= thin; mat[1] *= thin; mat[2] *= thin;
+    mat[4] *= thin; mat[5] *= thin; mat[6] *= thin;
+    mat[8] *= length; mat[9] *= length; mat[10] *= length;
+    this.engine.getTransformManager().setTransform(this.cueInst, mat);
+} else if (this.cueInst) {
+    const zeroMat = new Float32Array(16);
+    zeroMat[15] = 1;
+    this.engine.getTransformManager().setTransform(this.cueInst, zeroMat);
+}
+
+// Render
+if (this.renderer && this.swapChain && this.view) {
+    if (this.renderer.beginFrame(this.swapChain)) {
+        this.renderer.renderView(this.view);
+        this.renderer.endFrame();
+    }
+    this.engine.execute();
+}
+requestAnimationFrame(() => this.loop());
     }
 }
 

@@ -8,7 +8,7 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    exclude: ['filament', '@dimforge/rapier3d-compat']
+    exclude: ['@dimforge/rapier3d-compat', 'filament']
   },
-  assetsInclude: ['**/*.wasm']
+  assetsInclude: ['**/*.wasm', '**/*.filmat']
 });

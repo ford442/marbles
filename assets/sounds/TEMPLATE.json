@@ -1,0 +1,24 @@
+{
+  "_comment": "Copy this file and modify it to create your own sound!",
+  "id": "your_sound_id",
+  "name": "Your Sound Name",
+  "description": "Describe your sound here",
+  "version": "1.0.0",
+  "author": "Your Name",
+  "category": "sfx",
+  "files": [
+    { "path": "sounds/your_sound.mp3", "weight": 1 }
+  ],
+  "properties": {
+    "volume": 1.0,
+    "pitchMin": 1.0,
+    "pitchMax": 1.0,
+    "loop": false,
+    "spatial": false
+  },
+  "trigger": {
+    "event": "collision",
+    "threshold": 1.0,
+    "cooldown": 0.1
+  }
+}

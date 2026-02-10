@@ -1,0 +1,48 @@
+{
+  "id": "slalom",
+  "name": "Slalom Challenge",
+  "description": "Weave through the pillars",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "difficulty": "medium",
+  "zones": [
+    {
+      "type": "floor",
+      "pos": { "x": 0, "y": -2, "z": 0 },
+      "size": { "x": 60, "y": 0.5, "z": 120 }
+    },
+    {
+      "type": "track",
+      "pos": { "x": 0, "y": 3, "z": 0 }
+    },
+    {
+      "type": "landing",
+      "pos": { "x": 0, "y": 0, "z": 25 }
+    },
+    {
+      "type": "slalom",
+      "pos": { "x": 0, "y": -2, "z": 85 }
+    },
+    {
+      "type": "goal",
+      "pos": { "x": 0, "y": -1.4, "z": 100 },
+      "color": [1.0, 0.84, 0.0]
+    }
+  ],
+  "spawn": { "x": 0, "y": 8, "z": -12 },
+  "goals": [
+    {
+      "id": 1,
+      "range": {
+        "x": [-2, 2],
+        "y": [-2, 0],
+        "z": [98, 102]
+      }
+    }
+  ],
+  "camera": {
+    "mode": "follow",
+    "height": 15,
+    "offset": -25
+  }
+}

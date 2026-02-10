@@ -1,0 +1,19 @@
+{
+  "id": "classic_blue",
+  "name": "Classic Blue",
+  "description": "The classic blue marble. Steady and reliable.",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": { "r": 0.0, "g": 0.0, "b": 1.0 },
+    "roughness": 0.4,
+    "metallic": 0.0
+  },
+  "physics": {
+    "radius": 0.5,
+    "density": 1.0,
+    "friction": 0.3,
+    "restitution": 0.5
+  }
+}

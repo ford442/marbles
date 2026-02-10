@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Marble Game Map Schema",
+  "description": "Schema for defining marble game levels/maps",
+  "type": "object",
+  "required": ["id", "name", "version", "zones", "spawn", "goals"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the map",
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name for the map"
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief description of the map"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version of the map",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "author": {
+      "type": "string",
+      "description": "Author name or identifier"
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": ["easy", "medium", "hard", "expert"],
+      "description": "Difficulty level"
+    },
+    "zones": {
+      "type": "array",
+      "description": "List of zones/areas in the map",
+      "items": {
+        "type": "object",
+        "required": ["type", "pos"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["floor", "track", "landing", "jump", "slalom", "staircase", "goal", "custom"]
+          },
+          "pos": {
+            "type": "object",
+            "required": ["x", "y", "z"],
+            "properties": {
+              "x": { "type": "number" },
+              "y": { "type": "number" },
+              "z": { "type": "number" }
+            }
+          },
+          "size": {
+            "type": "object",
+            "properties": {
+              "x": { "type": "number" },
+              "y": { "type": "number" },
+              "z": { "type": "number" }
+            }
+          },
+          "color": {
+            "type": "array",
+            "items": { "type": "number", "minimum": 0, "maximum": 1 },
+            "minItems": 3,
+            "maxItems": 3
+          }
+        }
+      }
+    },
+    "spawn": {
+      "type": "object",
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "z": { "type": "number" }
+      }
+    },
+    "goals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "range"],
+        "properties": {
+          "id": { "type": "integer" },
+          "range": {
+            "type": "object",
+            "required": ["x", "y", "z"],
+            "properties": {
+              "x": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+              "y": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+              "z": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+            }
+          }
+        }
+      }
+    },
+    "camera": {
+      "type": "object",
+      "properties": {
+        "mode": { "type": "string", "enum": ["orbit", "follow"] },
+        "angle": { "type": "number" },
+        "height": { "type": "number" },
+        "radius": { "type": "number" },
+        "offset": { "type": "number" }
+      }
+    }
+  }
+}

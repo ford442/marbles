@@ -1,0 +1,47 @@
+{
+  "_comment": "Copy this file and modify it to create your own map!",
+  "id": "your_map_id",
+  "name": "Your Map Name",
+  "description": "Describe your map here",
+  "version": "1.0.0",
+  "author": "Your Name",
+  "difficulty": "medium",
+  "zones": [
+    {
+      "type": "floor",
+      "pos": { "x": 0, "y": -2, "z": 0 },
+      "size": { "x": 50, "y": 0.5, "z": 50 },
+      "color": [0.3, 0.3, 0.3]
+    },
+    {
+      "type": "track",
+      "pos": { "x": 0, "y": 3, "z": 0 }
+    },
+    {
+      "type": "landing",
+      "pos": { "x": 0, "y": 0, "z": 25 }
+    },
+    {
+      "type": "goal",
+      "pos": { "x": 0, "y": 0.25, "z": 32.5 },
+      "color": [1.0, 0.84, 0.0]
+    }
+  ],
+  "spawn": { "x": 0, "y": 8, "z": -12 },
+  "goals": [
+    {
+      "id": 1,
+      "range": {
+        "x": [-2, 2],
+        "y": [0, 2],
+        "z": [30.5, 34.5]
+      }
+    }
+  ],
+  "camera": {
+    "mode": "orbit",
+    "angle": 0,
+    "height": 10,
+    "radius": 25
+  }
+}

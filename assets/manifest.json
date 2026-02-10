@@ -1,0 +1,78 @@
+{
+  "version": "1.0.0",
+  "description": "Asset manifest for Marble Game",
+  "maps": {
+    "tutorial": {
+      "file": "maps/tutorial.json",
+      "name": "Tutorial Ramp",
+      "difficulty": "easy"
+    },
+    "landing": {
+      "file": "maps/landing.json",
+      "name": "Landing Zone",
+      "difficulty": "easy"
+    },
+    "jump": {
+      "file": "maps/jump.json",
+      "name": "The Jump",
+      "difficulty": "medium"
+    },
+    "slalom": {
+      "file": "maps/slalom.json",
+      "name": "Slalom Challenge",
+      "difficulty": "medium"
+    },
+    "staircase": {
+      "file": "maps/staircase.json",
+      "name": "Stairway to Heaven",
+      "difficulty": "hard"
+    },
+    "full_course": {
+      "file": "maps/full_course.json",
+      "name": "Full Course",
+      "difficulty": "expert"
+    },
+    "sandbox": {
+      "file": "maps/sandbox.json",
+      "name": "Sandbox",
+      "difficulty": "easy"
+    },
+    "volcano_run": {
+      "file": "maps/volcano_run.json",
+      "name": "Volcano Run",
+      "difficulty": "hard"
+    }
+  },
+  "marbles": {
+    "classic_red": {
+      "file": "marbles/classic_red.json",
+      "rarity": "common"
+    },
+    "classic_blue": {
+      "file": "marbles/classic_blue.json",
+      "rarity": "common"
+    },
+    "classic_green": {
+      "file": "marbles/classic_green.json",
+      "rarity": "common"
+    },
+    "volcanic_magma": {
+      "file": "marbles/volcanic_magma.json",
+      "rarity": "rare"
+    },
+    "shadow_ninja": {
+      "file": "marbles/shadow_ninja.json",
+      "rarity": "epic"
+    },
+    "cosmic_nebula": {
+      "file": "marbles/cosmic_nebula.json",
+      "rarity": "legendary"
+    }
+  },
+  "sounds": {
+    "collision_metal": {
+      "file": "sounds/collision_metal.json",
+      "category": "sfx"
+    }
+  }
+}

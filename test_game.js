@@ -134,12 +134,14 @@ test('Physics engine (Rapier3D) is integrated', () => {
 // Test 6: Check Filament rendering integration
 test('Filament rendering engine is integrated', () => {
     const mainJs = fs.readFileSync(join(__dirname, 'src/main.js'), 'utf-8');
+    const html = fs.readFileSync(join(__dirname, 'index.html'), 'utf-8');
     
-    assert(mainJs.includes("import('filament')"), 'Filament should be imported');
+    // Filament is loaded via script tag
+    assert(html.includes('filament.js'), 'Filament should be loaded via script tag');
     assert(mainJs.includes('Filament.Engine.create'), 'Filament engine should be created');
     assert(mainJs.includes('createScene()'), 'Scene should be created');
     assert(mainJs.includes('createCamera('), 'Camera should be created');
-    assert(mainJs.includes('renderer.render('), 'Render should be called');
+    assert(mainJs.includes('renderer.render'), 'Render should be called');
 });
 
 // Test 7: Check marble creation

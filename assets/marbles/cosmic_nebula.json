@@ -1,0 +1,33 @@
+{
+  "id": "cosmic_nebula",
+  "name": "Cosmic Nebula",
+  "description": "A beautiful all-rounder with nebula-like coloring. Balanced stats make it perfect for any challenge.",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "legendary",
+  "appearance": {
+    "color": { "r": 0.3, "g": 0.9, "b": 0.7 },
+    "roughness": 0.15,
+    "metallic": 0.4,
+    "emissive": {
+      "r": 0.1,
+      "g": 0.3,
+      "b": 0.25,
+      "intensity": 0.2
+    },
+    "particleEffect": "nebula_trail"
+  },
+  "physics": {
+    "radius": 0.65,
+    "density": 1.5,
+    "friction": 0.08,
+    "restitution": 0.7,
+    "linearDamping": 0.1,
+    "angularDamping": 0.1
+  },
+  "audio": {
+    "rollSound": "cosmic_hum",
+    "collisionSound": "nebula_impact",
+    "pitchVariation": 0.15
+  }
+}

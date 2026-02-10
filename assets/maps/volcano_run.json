@@ -1,0 +1,59 @@
+{
+  "id": "volcano_run",
+  "name": "Volcano Run",
+  "description": "Navigate through an active volcano! Watch out for lava and tight turns.",
+  "version": "1.0.0",
+  "author": "Community Contributor",
+  "difficulty": "hard",
+  "zones": [
+    {
+      "type": "floor",
+      "pos": { "x": 0, "y": -5, "z": 0 },
+      "size": { "x": 80, "y": 1, "z": 120 },
+      "color": [0.2, 0.15, 0.1]
+    },
+    {
+      "type": "track",
+      "pos": { "x": 0, "y": 5, "z": -20 },
+      "color": [0.4, 0.3, 0.25]
+    },
+    {
+      "type": "landing",
+      "pos": { "x": 0, "y": 2, "z": 10 },
+      "color": [0.5, 0.2, 0.1]
+    },
+    {
+      "type": "jump",
+      "pos": { "x": 0, "y": 0, "z": 35 },
+      "color": [0.6, 0.3, 0.1]
+    },
+    {
+      "type": "slalom",
+      "pos": { "x": 0, "y": -2, "z": 60 },
+      "color": [0.7, 0.2, 0.1]
+    },
+    {
+      "type": "goal",
+      "pos": { "x": 0, "y": -1, "z": 90 },
+      "color": [1.0, 0.2, 0.0]
+    }
+  ],
+  "spawn": { "x": 0, "y": 10, "z": -25 },
+  "goals": [
+    {
+      "id": 1,
+      "range": {
+        "x": [-2, 2],
+        "y": [-2, 0],
+        "z": [88, 92]
+      }
+    }
+  ],
+  "camera": {
+    "mode": "follow",
+    "height": 15,
+    "offset": -25
+  },
+  "music": "volcano_theme",
+  "ambientSounds": ["lava_bubble", "wind_howling"]
+}

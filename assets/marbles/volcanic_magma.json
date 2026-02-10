@@ -1,0 +1,31 @@
+{
+  "id": "volcanic_magma",
+  "name": "Volcanic Magma",
+  "description": "An unstable fire marble that bounces like crazy with its extreme elasticity. Handle with care!",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "rare",
+  "appearance": {
+    "color": { "r": 1.0, "g": 0.25, "b": 0.0 },
+    "roughness": 0.6,
+    "metallic": 0.2,
+    "emissive": {
+      "r": 0.5,
+      "g": 0.1,
+      "b": 0.0,
+      "intensity": 0.3
+    }
+  },
+  "physics": {
+    "radius": 0.55,
+    "density": 0.8,
+    "friction": 0.15,
+    "restitution": 1.5,
+    "linearDamping": 0.1,
+    "angularDamping": 0.1
+  },
+  "audio": {
+    "collisionSound": "magma_hit",
+    "pitchVariation": 0.2
+  }
+}
