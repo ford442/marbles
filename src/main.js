@@ -271,14 +271,17 @@ class MarblesGame {
         this.selectedEl = document.getElementById('selected');
         this.aimEl = document.getElementById('aim');
         this.powerbarEl = document.getElementById('powerbar');
+        this.jumpBarEl = document.getElementById('jumpbar');
         this.currentMarbleIndex = 0;
         this.aimYaw = 0;
-        this.pitchAngle = 0;  // FIX: Initialize pitchAngle
+        this.jumpCharge = 0;
+        this.isChargingJump = false;
+        this.pitchAngle = 0;
         this.chargePower = 0;
         this.charging = false;
         this.isAiming = false;
         this.playerMarble = null;
-        this.cueInst = null;  // FIX: Initialize cueInst
+        this.cueInst = null;
 
         // Level State
         this.currentLevel = null;
@@ -287,18 +290,51 @@ class MarblesGame {
         this.goalDefinitions = [];
     }
 
+    isGrounded(marble) {
+        if (!marble || !marble.rigidBody) return false;
+        const rb = marble.rigidBody;
+        const radius = marble.scale * 0.5 || 0.5;
+        const pos = rb.translation();
+
+        // Cast a small downward ray to detect ground/surface contact
+        const rayOrigin = { x: pos.x, y: pos.y, z: pos.z };
+        const rayDir = { x: 0, y: -1, z: 0 };
+        const ray = new RAPIER.Ray(rayOrigin, rayDir);
+        const maxToi = radius + 0.1; // Slightly beyond marble radius
+
+        const hit = this.world.castRay(ray, maxToi, true);
+        return !!hit;
+    }
+
     async init() {
         console.log('[INIT] Starting game initialization...');
 
         // Input Listeners
         window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !this.keys['Space']) {
+                if (this.playerMarble && this.isGrounded(this.playerMarble)) {
+                    this.isChargingJump = true;
+                    this.jumpCharge = 0;
+                }
+            }
             this.keys[e.code] = true;
             if (e.code === 'KeyC') {
                 this.cameraMode = this.cameraMode === 'orbit' ? 'follow' : 'orbit';
                 console.log('Camera Mode:', this.cameraMode);
             }
         });
-        window.addEventListener('keyup', (e) => { this.keys[e.code] = false; });
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space') {
+                if (this.isChargingJump && this.playerMarble) {
+                    const force = 5.0 + this.jumpCharge * 10.0;
+                    this.playerMarble.rigidBody.applyImpulse({ x: 0, y: force, z: 0 }, true);
+                }
+                this.isChargingJump = false;
+                this.jumpCharge = 0;
+                if (this.jumpBarEl) this.jumpBarEl.style.width = '0%';
+            }
+            this.keys[e.code] = false;
+        });
 
         // Initialize audio on first user interaction (required by browsers)
         const initAudio = () => {
@@ -1459,113 +1495,117 @@ class MarblesGame {
             this.keys['KeyN'] = false;
         }
 
-    if(this.cameraMode === 'orbit') {
-    if (this.keys['ArrowLeft'] || this.keys['KeyA']) this.camAngle -= rotSpeed;
-    if (this.keys['ArrowRight'] || this.keys['KeyD']) this.camAngle += rotSpeed;
-    if (this.keys['ArrowUp'] || this.keys['KeyW']) this.camRadius = Math.max(5, this.camRadius - zoomSpeed);
-    if (this.keys['ArrowDown'] || this.keys['KeyS']) this.camRadius = Math.min(100, this.camRadius + zoomSpeed);
-} else {
-    const impulseStrength = 0.5;
-    const jumpStrength = 1.0;
+        if (this.cameraMode === 'orbit') {
+            if (this.keys['ArrowLeft'] || this.keys['KeyA']) this.camAngle -= rotSpeed;
+            if (this.keys['ArrowRight'] || this.keys['KeyD']) this.camAngle += rotSpeed;
+            if (this.keys['ArrowUp'] || this.keys['KeyW']) this.camRadius = Math.max(5, this.camRadius - zoomSpeed);
+            if (this.keys['ArrowDown'] || this.keys['KeyS']) this.camRadius = Math.min(100, this.camRadius + zoomSpeed);
+        } else {
+            const impulseStrength = 0.5;
 
-    if (this.playerMarble) {
-        const rigidBody = this.playerMarble.rigidBody;
-        if (this.keys['ArrowUp'] || this.keys['KeyW']) rigidBody.applyImpulse({ x: 0, y: 0, z: impulseStrength }, true);
-        if (this.keys['ArrowDown'] || this.keys['KeyS']) rigidBody.applyImpulse({ x: 0, y: 0, z: -impulseStrength }, true);
-        if (this.keys['ArrowLeft'] || this.keys['KeyA']) rigidBody.applyImpulse({ x: -impulseStrength, y: 0, z: 0 }, true);
-        if (this.keys['ArrowRight'] || this.keys['KeyD']) rigidBody.applyImpulse({ x: impulseStrength, y: 0, z: 0 }, true);
-        if (this.keys['Space']) rigidBody.applyImpulse({ x: 0, y: jumpStrength, z: 0 }, true);
-    }
-}
+            if (this.playerMarble) {
+                const rigidBody = this.playerMarble.rigidBody;
+                if (this.keys['ArrowUp'] || this.keys['KeyW']) rigidBody.applyImpulse({ x: 0, y: 0, z: impulseStrength }, true);
+                if (this.keys['ArrowDown'] || this.keys['KeyS']) rigidBody.applyImpulse({ x: 0, y: 0, z: -impulseStrength }, true);
+                if (this.keys['ArrowLeft'] || this.keys['KeyA']) rigidBody.applyImpulse({ x: -impulseStrength, y: 0, z: 0 }, true);
+                if (this.keys['ArrowRight'] || this.keys['KeyD']) rigidBody.applyImpulse({ x: impulseStrength, y: 0, z: 0 }, true);
+            }
+        }
 
-// Update UI
-const yawDeg = Math.round(this.aimYaw * 180 / Math.PI);
-const pitchDeg = Math.round(this.pitchAngle * 180 / Math.PI);
-this.aimEl.textContent = `Yaw: ${yawDeg}° Pitch: ${pitchDeg}°`;
-this.powerbarEl.style.width = `${this.chargePower * 100}%`;
+        // Update Jump Charge
+        if (this.isChargingJump) {
+            this.jumpCharge = Math.min(1.0, this.jumpCharge + 0.03);
+            if (this.jumpBarEl) this.jumpBarEl.style.width = `${this.jumpCharge * 100}%`;
+        }
 
-// Update Camera
-if (this.cameraMode === 'follow' && this.currentLevel) {
-    const level = LEVELS[this.currentLevel];
-    const target = this.playerMarble || this.getLeader();
-    if (target) {
-        const t = target.rigidBody.translation();
-        const height = level?.camera?.height || 10;
-        const dist = 20;
+        // Update UI
+        const yawDeg = Math.round(this.aimYaw * 180 / Math.PI);
+        const pitchDeg = Math.round(this.pitchAngle * 180 / Math.PI);
+        this.aimEl.textContent = `Yaw: ${yawDeg}° Pitch: ${pitchDeg}°`;
+        this.powerbarEl.style.width = `${this.chargePower * 100}%`;
 
-        const eyeX = t.x - Math.sin(this.aimYaw) * dist;
-        const eyeZ = t.z - Math.cos(this.aimYaw) * dist;
+        // Update Camera
+        if (this.cameraMode === 'follow' && this.currentLevel) {
+            const level = LEVELS[this.currentLevel];
+            const target = this.playerMarble || this.getLeader();
+            if (target) {
+                const t = target.rigidBody.translation();
+                const height = level?.camera?.height || 10;
+                const dist = 20;
 
-        this.camera.lookAt([eyeX, t.y + height, eyeZ], [t.x, t.y, t.z], [0, 1, 0]);
-    }
-} else {
-    const eyeX = this.camRadius * Math.sin(this.camAngle);
-    const eyeZ = this.camRadius * Math.cos(this.camAngle);
-    this.camera.lookAt([eyeX, this.camHeight, eyeZ], [0, 0, 0], [0, 1, 0]);
-}
+                const eyeX = t.x - Math.sin(this.aimYaw) * dist;
+                const eyeZ = t.z - Math.cos(this.aimYaw) * dist;
 
-// Step Physics with event handling
-this.world.step();
+                this.camera.lookAt([eyeX, t.y + height, eyeZ], [t.x, t.y, t.z], [0, 1, 0]);
+            }
+        } else {
+            const eyeX = this.camRadius * Math.sin(this.camAngle);
+            const eyeZ = this.camRadius * Math.cos(this.camAngle);
+            this.camera.lookAt([eyeX, this.camHeight, eyeZ], [0, 0, 0], [0, 1, 0]);
+        }
 
-// Process collision events for audio
-this.processCollisionEvents();
+        // Step Physics with event handling
+        this.world.step();
 
-this.checkGameLogic();
+        // Process collision events for audio
+        this.processCollisionEvents();
 
-// Sync Visuals
-const tcm = this.engine.getTransformManager();
-for (const m of this.marbles) {
-    const t = m.rigidBody.translation();
-    const r = m.rigidBody.rotation();
-    const mat = quaternionToMat4(t, r);
+        this.checkGameLogic();
 
-    if (m.scale && m.scale !== 1.0) {
-        mat[0] *= m.scale; mat[1] *= m.scale; mat[2] *= m.scale;
-        mat[4] *= m.scale; mat[5] *= m.scale; mat[6] *= m.scale;
-        mat[8] *= m.scale; mat[9] *= m.scale; mat[10] *= m.scale;
-    }
+        // Sync Visuals
+        const tcm = this.engine.getTransformManager();
+        for (const m of this.marbles) {
+            const t = m.rigidBody.translation();
+            const r = m.rigidBody.rotation();
+            const mat = quaternionToMat4(t, r);
 
-    const inst = tcm.getInstance(m.entity);
-    tcm.setTransform(inst, mat);
-}
+            if (m.scale && m.scale !== 1.0) {
+                mat[0] *= m.scale; mat[1] *= m.scale; mat[2] *= m.scale;
+                mat[4] *= m.scale; mat[5] *= m.scale; mat[6] *= m.scale;
+                mat[8] *= m.scale; mat[9] *= m.scale; mat[10] *= m.scale;
+            }
 
-// Update Cue Stick (if charging)
-if (this.cameraMode === 'follow' && this.playerMarble && this.charging && this.cueInst) {
-    const cosP = Math.cos(this.pitchAngle);
-    const sinP = Math.sin(this.pitchAngle);
-    const dirX = Math.sin(this.aimYaw) * cosP;
-    const dirY = sinP;
-    const dirZ = Math.cos(this.aimYaw) * cosP;
-    const length = 0.5 + this.chargePower * 2.5;
-    const r = this.playerMarble.scale * 0.5 || 0.5;
-    const marbleT = this.playerMarble.rigidBody.translation();
-    const cuePos = {
-        x: marbleT.x - dirX * (r + 0.2),
-        y: marbleT.y - dirY * (r + 0.2),
-        z: marbleT.z - dirZ * (r + 0.2)
-    };
-    const quat = quatFromEuler(this.aimYaw, this.pitchAngle, 0);
-    let mat = quaternionToMat4(cuePos, quat);
-    const thin = 0.04;
-    mat[0] *= thin; mat[1] *= thin; mat[2] *= thin;
-    mat[4] *= thin; mat[5] *= thin; mat[6] *= thin;
-    mat[8] *= length; mat[9] *= length; mat[10] *= length;
-    this.engine.getTransformManager().setTransform(this.cueInst, mat);
-} else if (this.cueInst) {
-    const zeroMat = new Float32Array(16);
-    zeroMat[15] = 1;
-    this.engine.getTransformManager().setTransform(this.cueInst, zeroMat);
-}
+            const inst = tcm.getInstance(m.entity);
+            tcm.setTransform(inst, mat);
+        }
 
-// Render
-if (this.renderer && this.swapChain && this.view) {
-    if (this.renderer.beginFrame(this.swapChain)) {
-        this.renderer.renderView(this.view);
-        this.renderer.endFrame();
-    }
-    this.engine.execute();
-}
-requestAnimationFrame(() => this.loop());
+        // Update Cue Stick (if charging)
+        if (this.cameraMode === 'follow' && this.playerMarble && this.charging && this.cueInst) {
+            const cosP = Math.cos(this.pitchAngle);
+            const sinP = Math.sin(this.pitchAngle);
+            const dirX = Math.sin(this.aimYaw) * cosP;
+            const dirY = sinP;
+            const dirZ = Math.cos(this.aimYaw) * cosP;
+            const length = 0.5 + this.chargePower * 2.5;
+            const r = this.playerMarble.scale * 0.5 || 0.5;
+            const marbleT = this.playerMarble.rigidBody.translation();
+            const cuePos = {
+                x: marbleT.x - dirX * (r + 0.2),
+                y: marbleT.y - dirY * (r + 0.2),
+                z: marbleT.z - dirZ * (r + 0.2)
+            };
+            const quat = quatFromEuler(this.aimYaw, this.pitchAngle, 0);
+            let mat = quaternionToMat4(cuePos, quat);
+            const thin = 0.04;
+            mat[0] *= thin; mat[1] *= thin; mat[2] *= thin;
+            mat[4] *= thin; mat[5] *= thin; mat[6] *= thin;
+            mat[8] *= length; mat[9] *= length; mat[10] *= length;
+            this.engine.getTransformManager().setTransform(this.cueInst, mat);
+        } else if (this.cueInst) {
+            const zeroMat = new Float32Array(16);
+            zeroMat[15] = 1;
+            this.engine.getTransformManager().setTransform(this.cueInst, zeroMat);
+        }
+
+        // Render
+        if (this.renderer && this.swapChain && this.view) {
+            if (this.renderer.beginFrame(this.swapChain)) {
+                this.renderer.renderView(this.view);
+                this.renderer.endFrame();
+            }
+            this.engine.execute();
+        }
+        requestAnimationFrame(() => this.loop());
     }
 }
 
