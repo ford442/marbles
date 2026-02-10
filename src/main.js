@@ -127,8 +127,22 @@ const LEVELS = {
         camera: { mode: 'orbit', angle: 0, height: 20, radius: 50 },
         nightMode: true,
         backgroundColor: [0.02, 0.02, 0.08, 1.0]
+    },
+    spiral_madness: {
+        name: 'Spiral Madness',
+        description: 'Dizzying heights!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 100, y: 0.5, z: 100 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'spiral', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 3.8, y: 18.7, z: 25.8 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+             { id: 1, range: { x: [1, 7], z: [23, 29], y: [16, 20] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
     }
-}
 };
 
 // --- HELPER: Math for Transforms ---
@@ -515,6 +529,9 @@ class MarblesGame {
             case 'orchard':
                 this.createOrchardZone(zone.center, zone.radius);
                 break;
+            case 'spiral':
+                this.createSpiralZone(offset);
+                break;
         }
     }
 
@@ -558,6 +575,60 @@ class MarblesGame {
             { x: 0.5, y: 1.5, z: 15 },
             [0.5, 0.3, 0.3],
             'wood'
+        );
+    }
+
+    createSpiralZone(offset) {
+        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+        // Base platform
+        this.createStaticBox(
+            { x: offset.x, y: offset.y, z: offset.z },
+            floorQ,
+            { x: 4, y: 0.5, z: 4 },
+            [0.4, 0.4, 0.4],
+            'concrete'
+        );
+
+        const numSteps = 60;
+        const radius = 10;
+        const heightGain = 0.3;
+        const angleStep = 0.2;
+
+        for (let i = 0; i < numSteps; i++) {
+            const angle = i * angleStep;
+            const x = offset.x + Math.cos(angle) * radius;
+            const z = offset.z + 10 + Math.sin(angle) * radius;
+            const y = offset.y + i * heightGain;
+
+            // Yaw rotation to follow the spiral curve
+            const rotY = -angle;
+            // Pitch rotation to bank/slope up slightly
+            const pitch = -0.2;
+
+            const q = quatFromEuler(rotY, pitch, 0);
+
+            this.createStaticBox(
+                { x: x, y: y, z: z },
+                q,
+                { x: 1.5, y: 0.2, z: 1 },
+                [0.3 + (i / numSteps) * 0.5, 0.3, 0.6],
+                'wood'
+            );
+        }
+
+        // Top platform
+        const lastAngle = (numSteps - 1) * angleStep;
+        const lastX = offset.x + Math.cos(lastAngle) * radius;
+        const lastZ = offset.z + 10 + Math.sin(lastAngle) * radius;
+        const lastY = offset.y + (numSteps - 1) * heightGain;
+
+        this.createStaticBox(
+             { x: lastX, y: lastY, z: lastZ },
+             floorQ,
+             { x: 3, y: 0.5, z: 3 },
+             [0.8, 0.8, 0.2],
+             'metal'
         );
     }
 
@@ -1385,7 +1456,6 @@ class MarblesGame {
             }
             this.keys['KeyN'] = false;
         }
-    }
 
     if(this.cameraMode === 'orbit') {
     if (this.keys['ArrowLeft'] || this.keys['KeyA']) this.camAngle -= rotSpeed;

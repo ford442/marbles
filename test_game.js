@@ -72,7 +72,7 @@ test('Level definitions are valid', () => {
         'staircase',
         'full_course',
         'sandbox',
-        'extreme'
+        'spiral_madness'
     ];
     
     for (const level of expectedLevels) {
@@ -178,7 +178,8 @@ test('All zone types are implemented', () => {
         'createStaircaseZone',
         'createSplitZone',
         'createForestZone',
-        'createGoalZone'
+        'createGoalZone',
+        'createSpiralZone'
     ];
     
     for (const zone of zoneTypes) {
