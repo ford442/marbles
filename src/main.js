@@ -1164,7 +1164,11 @@ class MarblesGame {
             // 3. Cosmic Nebula Marble - Deep space teal with silver shimmer, balanced all-rounder
             { color: [0.3, 0.9, 0.7], offset: { x: 0.0, y: 5, z: -2 }, radius: 0.65, friction: 0.08, restitution: 0.7, density: 1.5, roughness: 0.15 },
             // 4. Void Marble - Very dense and heavy, doesn't bounce much
-            { color: [0.1, 0.05, 0.2], offset: { x: 2.0, y: 5, z: -2 }, radius: 0.7, friction: 1.0, restitution: 0.1, density: 4.0, roughness: 0.9 }
+            { color: [0.1, 0.05, 0.2], offset: { x: 2.0, y: 5, z: -2 }, radius: 0.7, friction: 1.0, restitution: 0.1, density: 4.0, roughness: 0.9 },
+            // 5. Ice Marble - Slippery and smooth
+            { color: [0.8, 0.9, 1.0], offset: { x: -5.0, y: 3, z: 0 }, radius: 0.48, friction: 0.005, restitution: 0.8, density: 0.9, roughness: 0.1 },
+            // 6. Super Bouncy Marble - Maximum bounce
+            { color: [1.0, 0.0, 0.8], offset: { x: 5.0, y: 3, z: 0 }, radius: 0.52, friction: 0.5, restitution: 1.8, density: 0.5, roughness: 0.3 }
         ];
 
         for (const info of marblesInfo) {
