@@ -142,6 +142,21 @@ const LEVELS = {
              { id: 1, range: { x: [1, 7], z: [23, 29], y: [16, 20] } }
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
+    },
+    zigzag: {
+        name: 'ZigZag Challenge',
+        description: 'Sharp turns ahead!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'zigzag', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 0, y: -2, z: 80 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [78, 82], y: [-5, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
     }
 };
 
@@ -568,6 +583,9 @@ class MarblesGame {
             case 'spiral':
                 this.createSpiralZone(offset);
                 break;
+            case 'zigzag':
+                this.createZigZagZone(offset);
+                break;
         }
     }
 
@@ -665,6 +683,65 @@ class MarblesGame {
              { x: 3, y: 0.5, z: 3 },
              [0.8, 0.8, 0.2],
              'metal'
+        );
+    }
+
+    createZigZagZone(offset) {
+        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+        // Start platform
+        this.createStaticBox(
+            { x: offset.x, y: offset.y, z: offset.z },
+            floorQ,
+            { x: 3, y: 0.5, z: 3 },
+            [0.4, 0.4, 0.4],
+            'concrete'
+        );
+
+        // ZigZag segments
+        // Segment 1: Forward
+        this.createStaticBox(
+            { x: offset.x, y: offset.y, z: offset.z + 8 },
+            floorQ,
+            { x: 1, y: 0.5, z: 5 },
+            [0.7, 0.3, 0.3], // Reddish
+            'wood'
+        );
+
+        // Segment 2: Right turn
+        this.createStaticBox(
+            { x: offset.x + 4, y: offset.y, z: offset.z + 13 },
+            { x: 0, y: 0.3826834, z: 0, w: 0.9238795 }, // ~45 deg
+            { x: 1, y: 0.5, z: 5 },
+            [0.3, 0.7, 0.3], // Greenish
+            'wood'
+        );
+
+        // Segment 3: Left turn
+         this.createStaticBox(
+            { x: offset.x + 4, y: offset.y, z: offset.z + 21 },
+             { x: 0, y: -0.3826834, z: 0, w: 0.9238795 }, // ~-45 deg
+            { x: 1, y: 0.5, z: 5 },
+            [0.3, 0.3, 0.7], // Blueish
+            'wood'
+        );
+
+         // Segment 4: Forward again
+        this.createStaticBox(
+            { x: offset.x, y: offset.y, z: offset.z + 30 },
+            floorQ,
+            { x: 1, y: 0.5, z: 5 },
+            [0.7, 0.7, 0.3], // Yellowish
+            'wood'
+        );
+
+        // End platform
+        this.createStaticBox(
+            { x: offset.x, y: offset.y, z: offset.z + 38 },
+            floorQ,
+            { x: 3, y: 0.5, z: 3 },
+            [0.4, 0.4, 0.4],
+            'concrete'
         );
     }
 
