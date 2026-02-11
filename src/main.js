@@ -290,6 +290,46 @@ class MarblesGame {
         this.goalDefinitions = [];
     }
 
+    initMouseControls() {
+        // Request pointer lock on click
+        this.canvas.addEventListener('click', () => {
+            if (document.pointerLockElement !== this.canvas) {
+                this.canvas.requestPointerLock();
+            }
+        });
+
+        // Handle mouse movement for aiming
+        document.addEventListener('mousemove', (e) => {
+            if (document.pointerLockElement === this.canvas) {
+                const sensitivity = 0.002;
+                this.aimYaw -= e.movementX * sensitivity;
+                this.pitchAngle -= e.movementY * sensitivity;
+
+                // Clamp pitch to avoid flipping (-80 to +80 degrees)
+                const maxPitch = 1.4;
+                this.pitchAngle = Math.max(-maxPitch, Math.min(maxPitch, this.pitchAngle));
+            }
+        });
+
+        // Handle charging (Left Click)
+        document.addEventListener('mousedown', (e) => {
+            if (document.pointerLockElement === this.canvas && e.button === 0) {
+                this.charging = true;
+                this.chargePower = 0;
+            }
+        });
+
+        // Handle shooting (Release Left Click)
+        document.addEventListener('mouseup', (e) => {
+            if (document.pointerLockElement === this.canvas && e.button === 0) {
+                if (this.charging) {
+                    this.charging = false;
+                    this.shootMarble();
+                }
+            }
+        });
+    }
+
     isGrounded(marble) {
         if (!marble || !marble.rigidBody) return false;
         const rb = marble.rigidBody;
@@ -355,6 +395,9 @@ class MarblesGame {
                 this.muteBtn.classList.toggle('muted', muted);
             });
         }
+
+        // Initialize mouse controls
+        this.initMouseControls();
 
         // 1. Initialize Physics
         console.log('[INIT] Initializing Rapier physics...');
@@ -1516,6 +1559,11 @@ class MarblesGame {
         if (this.isChargingJump) {
             this.jumpCharge = Math.min(1.0, this.jumpCharge + 0.03);
             if (this.jumpBarEl) this.jumpBarEl.style.width = `${this.jumpCharge * 100}%`;
+        }
+
+        // Update Shot Charge
+        if (this.charging) {
+            this.chargePower = Math.min(1.0, this.chargePower + 0.015);
         }
 
         // Update UI
