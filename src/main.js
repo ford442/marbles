@@ -298,6 +298,11 @@ class MarblesGame {
         this.playerMarble = null;
         this.cueInst = null;
 
+        // Boost State
+        this.lastBoostTime = 0;
+        this.boostCooldownDuration = 3000;
+        this.boostBarEl = document.getElementById('boostbar');
+
         // Level State
         this.currentLevel = null;
         this.levelStartTime = 0;
@@ -372,6 +377,43 @@ class MarblesGame {
                     this.jumpCharge = 0;
                 }
             }
+
+            // Boost Mechanic
+            if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight') && !this.keys[e.code]) {
+                const now = Date.now();
+                if (now - this.lastBoostTime > this.boostCooldownDuration && this.playerMarble) {
+                    const rb = this.playerMarble.rigidBody;
+                    const linvel = rb.linvel();
+                    const speed = Math.hypot(linvel.x, linvel.y, linvel.z);
+
+                    let dirX, dirY, dirZ;
+
+                    if (speed > 0.5) {
+                        // Boost in direction of movement
+                        dirX = linvel.x / speed;
+                        dirY = linvel.y / speed;
+                        dirZ = linvel.z / speed;
+                    } else {
+                        // Boost forward relative to camera aim
+                        dirX = Math.sin(this.aimYaw);
+                        dirY = 0.2; // Slight upward pop
+                        dirZ = Math.cos(this.aimYaw);
+                    }
+
+                    // Apply Impulse
+                    const boostForce = 80.0;
+                    rb.applyImpulse({
+                        x: dirX * boostForce,
+                        y: dirY * boostForce,
+                        z: dirZ * boostForce
+                    }, true);
+
+                    // Audio and State
+                    audio.playBoost();
+                    this.lastBoostTime = now;
+                }
+            }
+
             this.keys[e.code] = true;
             if (e.code === 'KeyC') {
                 this.cameraMode = this.cameraMode === 'orbit' ? 'follow' : 'orbit';
@@ -1645,6 +1687,13 @@ class MarblesGame {
         // Update Shot Charge
         if (this.charging) {
             this.chargePower = Math.min(1.0, this.chargePower + 0.015);
+        }
+
+        // Update Boost UI
+        if (this.boostBarEl) {
+            const elapsed = Date.now() - this.lastBoostTime;
+            const percentage = Math.min(100, (elapsed / this.boostCooldownDuration) * 100);
+            this.boostBarEl.style.width = `${percentage}%`;
         }
 
         // Update UI
