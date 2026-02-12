@@ -157,6 +157,23 @@ const LEVELS = {
             { id: 1, range: { x: [-5, 5], z: [78, 82], y: [-5, 5] } }
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
+    },
+    neon_dash: {
+        name: 'Neon Dash',
+        description: 'Race through the glowing city!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 60, y: 0.5, z: 100 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'neon_city', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 0, y: 4, z: 90 }, color: [0.0, 1.0, 1.0] }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-3, 3], z: [88, 92], y: [2, 6] } }
+        ],
+        camera: { mode: 'follow', height: 12, offset: -20 },
+        nightMode: true,
+        backgroundColor: [0.05, 0.05, 0.1, 1.0]
     }
 };
 
@@ -629,6 +646,9 @@ class MarblesGame {
             case 'zigzag':
                 this.createZigZagZone(offset);
                 break;
+            case 'neon_city':
+                this.createNeonCityZone(offset);
+                break;
         }
     }
 
@@ -784,6 +804,79 @@ class MarblesGame {
             floorQ,
             { x: 3, y: 0.5, z: 3 },
             [0.4, 0.4, 0.4],
+            'concrete'
+        );
+    }
+
+    createNeonCityZone(offset) {
+        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+        const buildingColors = [
+            [0.0, 1.0, 1.0], // Cyan
+            [1.0, 0.0, 1.0], // Magenta
+            [0.7, 1.0, 0.0], // Lime
+            [1.0, 0.5, 0.0]  // Orange
+        ];
+
+        // Base path
+        this.createStaticBox(
+            { x: offset.x, y: offset.y, z: offset.z },
+            floorQ,
+            { x: 4, y: 0.5, z: 5 },
+            [0.1, 0.1, 0.2],
+            'concrete'
+        );
+
+        // City Run
+        for (let i = 0; i < 15; i++) {
+            const z = offset.z + 8 + i * 4;
+            // Pseudo-random x: -3 or 3 based on i
+            const side = (i % 2 === 0) ? 1 : -1;
+            const x = offset.x + side * 3.5;
+
+            // Pseudo-random height
+            const h = 1.5 + Math.abs(Math.sin(i * 12.9898)) * 2.5;
+            const color = buildingColors[i % buildingColors.length];
+
+            // The building (obstacle)
+            this.createStaticBox(
+                { x: x, y: offset.y + h/2, z: z },
+                floorQ,
+                { x: 1.5, y: h/2, z: 1.5 },
+                color,
+                'metal'
+            );
+
+            // The floor path in the center
+            this.createStaticBox(
+                { x: offset.x, y: offset.y, z: z },
+                floorQ,
+                { x: 2, y: 0.5, z: 2 },
+                [0.1, 0.1, 0.2],
+                'concrete'
+            );
+        }
+
+        // Ramp
+        const rampZ = offset.z + 72;
+        const angle = -0.35; // Steep ramp
+        const sinA = Math.sin(angle / 2);
+        const cosA = Math.cos(angle / 2);
+        const rampQ = { x: sinA, y: 0, z: 0, w: cosA };
+
+        this.createStaticBox(
+            { x: offset.x, y: offset.y + 1.5, z: rampZ },
+            rampQ,
+            { x: 2, y: 0.2, z: 5 },
+            [1.0, 0.0, 0.5],
+            'wood'
+        );
+
+        // Landing pad
+        this.createStaticBox(
+            { x: offset.x, y: offset.y + 2, z: rampZ + 12 },
+            floorQ,
+            { x: 3, y: 0.5, z: 5 },
+            [0.2, 0.2, 0.4],
             'concrete'
         );
     }
