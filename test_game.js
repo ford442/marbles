@@ -220,6 +220,21 @@ test('Camera modes are implemented', () => {
     assert(mainJs.includes('lookAt('), 'Camera lookAt should be used');
 });
 
+// Test 13: Check boost mechanic
+test('Boost mechanic is implemented', () => {
+    const mainJs = fs.readFileSync(join(__dirname, 'src/main.js'), 'utf-8');
+    const audioJs = fs.readFileSync(join(__dirname, 'src/audio.js'), 'utf-8');
+    const html = fs.readFileSync(join(__dirname, 'index.html'), 'utf-8');
+
+    assert(mainJs.includes('boostCooldownDuration'), 'Boost cooldown should be defined');
+    assert(mainJs.includes('audio.playBoost()'), 'Boost audio should be triggered');
+    assert(mainJs.includes('ShiftLeft'), 'Shift key should be handled');
+
+    assert(audioJs.includes('playBoost()'), 'playBoost method should exist in audio.js');
+
+    assert(html.includes('id="boostbar"'), 'Boost bar element should exist in HTML');
+});
+
 // Summary
 console.log('\n' + '='.repeat(50));
 console.log(`\nTest Results:`);
