@@ -304,9 +304,12 @@ class MarblesGame {
         this.aimEl = document.getElementById('aim');
         this.powerbarEl = document.getElementById('powerbar');
         this.jumpBarEl = document.getElementById('jumpbar');
+        this.boostBarEl = document.getElementById('boostbar');
         this.currentMarbleIndex = 0;
         this.aimYaw = 0;
         this.jumpCharge = 0;
+        this.lastBoostTime = 0;
+        this.boostCooldown = 3000;
         this.isChargingJump = false;
         this.pitchAngle = 0;
         this.chargePower = 0;
@@ -1728,6 +1731,47 @@ class MarblesGame {
                 if (this.keys['ArrowDown'] || this.keys['KeyS']) rigidBody.applyImpulse({ x: 0, y: 0, z: -impulseStrength }, true);
                 if (this.keys['ArrowLeft'] || this.keys['KeyA']) rigidBody.applyImpulse({ x: -impulseStrength, y: 0, z: 0 }, true);
                 if (this.keys['ArrowRight'] || this.keys['KeyD']) rigidBody.applyImpulse({ x: impulseStrength, y: 0, z: 0 }, true);
+            }
+        }
+
+        // Handle Boost
+        if (this.keys['ShiftLeft'] || this.keys['ShiftRight']) {
+            const now = Date.now();
+            if (this.playerMarble && now - this.lastBoostTime > this.boostCooldown) {
+                // Boost magnitude
+                const force = 60.0;
+
+                // Determine boost direction (horizontal)
+                // Default: camera aim direction
+                let boostYaw = this.aimYaw;
+
+                // Calculate vector
+                const dirX = Math.sin(boostYaw);
+                const dirZ = Math.cos(boostYaw);
+
+                this.playerMarble.rigidBody.applyImpulse({
+                    x: dirX * force,
+                    y: 0,
+                    z: dirZ * force
+                }, true);
+
+                this.lastBoostTime = now;
+                audio.playBoost();
+            }
+        }
+
+        // Update Boost UI
+        if (this.boostBarEl) {
+            const now = Date.now();
+            const timeSince = now - this.lastBoostTime;
+            const progress = Math.min(1.0, timeSince / this.boostCooldown);
+            this.boostBarEl.style.width = `${progress * 100}%`;
+
+            // Visual feedback when ready
+            if (progress >= 1.0) {
+               this.boostBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #f0f)';
+            } else {
+               this.boostBarEl.style.filter = 'brightness(0.7)';
             }
         }
 
