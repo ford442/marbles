@@ -174,6 +174,21 @@ const LEVELS = {
         camera: { mode: 'follow', height: 12, offset: -20 },
         nightMode: true,
         backgroundColor: [0.05, 0.05, 0.1, 1.0]
+    },
+    loop_challenge: {
+        name: 'Loop-the-Loop',
+        description: 'Defy gravity!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 100 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'loop', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 4, y: -2, z: 80 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-1, 9], z: [78, 82], y: [-5, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
     }
 };
 
@@ -649,6 +664,9 @@ class MarblesGame {
             case 'neon_city':
                 this.createNeonCityZone(offset);
                 break;
+            case 'loop':
+                this.createLoopZone(offset);
+                break;
         }
     }
 
@@ -746,6 +764,80 @@ class MarblesGame {
              { x: 3, y: 0.5, z: 3 },
              [0.8, 0.8, 0.2],
              'metal'
+        );
+    }
+
+    createLoopZone(offset) {
+        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+        // Approach ramp
+        this.createStaticBox(
+            { x: offset.x, y: offset.y, z: offset.z },
+            floorQ,
+            { x: 3, y: 0.5, z: 5 },
+            [0.4, 0.4, 0.4],
+            'concrete'
+        );
+
+        const radius = 15;
+        const segments = 32;
+        const centerX = offset.x;
+        const centerY = offset.y + radius;
+        const centerZ = offset.z + 5 + radius;
+
+        for (let i = 0; i < segments; i++) {
+            const angle = (i / segments) * Math.PI * 2;
+            // Angle 0 at bottom.
+            const theta = angle - Math.PI / 2;
+
+            // Helical offset to avoid collision at end
+            const xShift = (i / segments) * 4;
+            const x = centerX + xShift;
+
+            const y = centerY + Math.sin(theta) * radius;
+            const z = centerZ + Math.cos(theta) * radius;
+
+            // Rotation around X axis to match tangent
+            const alpha = -(theta + Math.PI/2);
+            const sinA = Math.sin(alpha / 2);
+            const cosA = Math.cos(alpha / 2);
+            const q = { x: sinA, y: 0, z: 0, w: cosA };
+
+            const segmentLength = (2 * Math.PI * radius / segments);
+
+            // Track segment
+            this.createStaticBox(
+                { x: x, y: y, z: z },
+                q,
+                { x: 2, y: 0.2, z: segmentLength / 2 + 0.1 },
+                [0.8, 0.2 + (i/segments)*0.8, 0.2],
+                'metal'
+            );
+
+             // Side walls
+             this.createStaticBox(
+                { x: x - 2.2, y: y, z: z },
+                q,
+                { x: 0.2, y: 1.0, z: segmentLength / 2 + 0.1 },
+                [0.6, 0.6, 0.6],
+                'metal'
+             );
+             this.createStaticBox(
+                { x: x + 2.2, y: y, z: z },
+                q,
+                { x: 0.2, y: 1.0, z: segmentLength / 2 + 0.1 },
+                [0.6, 0.6, 0.6],
+                'metal'
+             );
+        }
+
+        // Exit ramp (shifted by 4 units due to helix)
+        this.createStaticBox(
+            { x: offset.x + 4, y: offset.y, z: offset.z + 5 + radius * 2 + 5 },
+            floorQ,
+            { x: 3, y: 0.5, z: 5 },
+            [0.4, 0.4, 0.4],
+            'concrete'
         );
     }
 
