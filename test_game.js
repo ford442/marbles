@@ -75,7 +75,8 @@ test('Level definitions are valid', () => {
         'spiral_madness',
         'crystal_orchard',
         'zigzag',
-        'neon_dash'
+        'neon_dash',
+        'loop_challenge'
     ];
     
     for (const level of expectedLevels) {
@@ -184,7 +185,8 @@ test('All zone types are implemented', () => {
         'createGoalZone',
         'createSpiralZone',
         'createZigZagZone',
-        'createNeonCityZone'
+        'createNeonCityZone',
+        'createLoopZone'
     ];
     
     for (const zone of zoneTypes) {
