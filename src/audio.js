@@ -549,6 +549,39 @@ export class MarbleAudio {
             this.stopRolling(id);
         }
     }
+
+    /**
+     * Play boost sound effect (whoosh)
+     */
+    playBoost() {
+        if (!this.enabled || !this.ctx || this.muted) return;
+
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        // Sawtooth for a bit of buzz/energy
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(100, t);
+        osc.frequency.exponentialRampToValueAtTime(800, t + 0.3);
+
+        // Lowpass filter sweep to make it a "whoosh"
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(200, t);
+        filter.frequency.linearRampToValueAtTime(3000, t + 0.2);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+
+        // Envelope
+        gain.gain.setValueAtTime(0.25, t); // Not too loud
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+
+        osc.start(t);
+        osc.stop(t + 0.5);
+    }
 }
 
 // Singleton instance for easy importing

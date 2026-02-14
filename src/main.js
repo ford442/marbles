@@ -314,6 +314,9 @@ class MarblesGame {
         this.isAiming = false;
         this.playerMarble = null;
         this.cueInst = null;
+        this.lastBoostTime = 0;
+        this.boostCooldown = 3000;
+        this.boostBarEl = document.getElementById('boostbar');
 
         // Level State
         this.currentLevel = null;
@@ -1740,6 +1743,43 @@ class MarblesGame {
         // Update Shot Charge
         if (this.charging) {
             this.chargePower = Math.min(1.0, this.chargePower + 0.015);
+        }
+
+        // Handle Boost
+        const now = Date.now();
+        if ((this.keys['ShiftLeft'] || this.keys['ShiftRight']) && now - this.lastBoostTime > this.boostCooldown) {
+            if (this.playerMarble) {
+                this.lastBoostTime = now;
+                audio.playBoost();
+
+                let dirX = 0, dirZ = 0;
+
+                if (this.cameraMode === 'follow') {
+                    dirX = Math.sin(this.aimYaw);
+                    dirZ = Math.cos(this.aimYaw);
+                } else {
+                    const vel = this.playerMarble.rigidBody.linvel();
+                    const speed = Math.hypot(vel.x, vel.z);
+                    if (speed > 0.1) {
+                        dirX = vel.x / speed;
+                        dirZ = vel.z / speed;
+                    } else {
+                        // Default forward
+                        dirX = 0;
+                        dirZ = 1;
+                    }
+                }
+
+                const boostForce = 80.0;
+                this.playerMarble.rigidBody.applyImpulse({ x: dirX * boostForce, y: 0, z: dirZ * boostForce }, true);
+            }
+        }
+
+        // Update Boost Bar
+        const boostProgress = Math.min(1.0, (now - this.lastBoostTime) / this.boostCooldown);
+        if (this.boostBarEl) {
+            this.boostBarEl.style.width = `${boostProgress * 100}%`;
+            this.boostBarEl.style.backgroundColor = boostProgress >= 1.0 ? '#0ff' : '#555';
         }
 
         // Update UI
