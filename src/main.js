@@ -407,6 +407,16 @@ class MarblesGame {
                     this.jumpCharge = 0;
                 }
             }
+            // Switch Marble
+            if (e.code === 'Tab') {
+                e.preventDefault();
+                if (this.marbles.length > 0) {
+                    this.currentMarbleIndex = (this.currentMarbleIndex + 1) % this.marbles.length;
+                    this.playerMarble = this.marbles[this.currentMarbleIndex];
+                    this.selectedEl.textContent = `Selected: ${this.playerMarble.name}`;
+                    console.log(`[GAME] Switched to marble ${this.currentMarbleIndex}: ${this.playerMarble.name}`);
+                }
+            }
             this.keys[e.code] = true;
             if (e.code === 'KeyC') {
                 this.cameraMode = this.cameraMode === 'orbit' ? 'follow' : 'orbit';
@@ -1533,33 +1543,33 @@ class MarblesGame {
         const baseSpawn = spawnPos || { x: 0, y: 8, z: -12 };
 
         const marblesInfo = [
-            { color: [1.0, 0.0, 0.0], offset: { x: -1.0, y: 0, z: 0 } },
-            { color: [0.0, 0.0, 1.0], offset: { x: 1.0, y: 0, z: 0 } },
-            { color: [0.2, 1.0, 0.2], offset: { x: -2.5, y: 4, z: 0 }, radius: 0.4, friction: 0.1, restitution: 0.8, roughness: 0.2 },
-            { color: [0.6, 0.1, 0.8], offset: { x: 0.0, y: 2, z: 2 }, radius: 0.75, restitution: 1.2 },
-            { color: [1.0, 0.84, 0.0], offset: { x: 2.5, y: 2, z: 2 }, radius: 0.6, restitution: 0.2, density: 3.0, roughness: 0.3 },
-            { color: [0.0, 0.8, 1.0], offset: { x: -2.0, y: 2, z: 2 }, radius: 0.5, friction: 0.05, restitution: 0.5, roughness: 0.1 },
+            { name: "Red Standard", color: [1.0, 0.0, 0.0], offset: { x: -1.0, y: 0, z: 0 } },
+            { name: "Blue Standard", color: [0.0, 0.0, 1.0], offset: { x: 1.0, y: 0, z: 0 } },
+            { name: "Green Bouncy", color: [0.2, 1.0, 0.2], offset: { x: -2.5, y: 4, z: 0 }, radius: 0.4, friction: 0.1, restitution: 0.8, roughness: 0.2 },
+            { name: "Purple Heavy", color: [0.6, 0.1, 0.8], offset: { x: 0.0, y: 2, z: 2 }, radius: 0.75, restitution: 1.2 },
+            { name: "Gold Heavy", color: [1.0, 0.84, 0.0], offset: { x: 2.5, y: 2, z: 2 }, radius: 0.6, restitution: 0.2, density: 3.0, roughness: 0.3 },
+            { name: "Cyan Slick", color: [0.0, 0.8, 1.0], offset: { x: -2.0, y: 2, z: 2 }, radius: 0.5, friction: 0.05, restitution: 0.5, roughness: 0.1 },
             // --- NEW MARBLES ---
             // 1. Volcanic Magma Marble - Glowing hot red-orange with extreme bounce
-            { color: [1.0, 0.25, 0.0], offset: { x: 3.5, y: 3, z: 0 }, radius: 0.55, friction: 0.15, restitution: 1.5, density: 0.8, roughness: 0.6 },
+            { name: "Volcanic Magma", color: [1.0, 0.25, 0.0], offset: { x: 3.5, y: 3, z: 0 }, radius: 0.55, friction: 0.15, restitution: 1.5, density: 0.8, roughness: 0.6 },
             // 2. Shadow Ninja Marble - Dark purple, ultra-smooth, sneaky low friction
-            { color: [0.15, 0.05, 0.25], offset: { x: -3.5, y: 3, z: 0 }, radius: 0.45, friction: 0.02, restitution: 0.3, density: 1.2, roughness: 0.05 },
+            { name: "Shadow Ninja", color: [0.15, 0.05, 0.25], offset: { x: -3.5, y: 3, z: 0 }, radius: 0.45, friction: 0.02, restitution: 0.3, density: 1.2, roughness: 0.05 },
             // 3. Cosmic Nebula Marble - Deep space teal with silver shimmer, balanced all-rounder
-            { color: [0.3, 0.9, 0.7], offset: { x: 0.0, y: 5, z: -2 }, radius: 0.65, friction: 0.08, restitution: 0.7, density: 1.5, roughness: 0.15 },
+            { name: "Cosmic Nebula", color: [0.3, 0.9, 0.7], offset: { x: 0.0, y: 5, z: -2 }, radius: 0.65, friction: 0.08, restitution: 0.7, density: 1.5, roughness: 0.15 },
             // 4. Void Marble - Very dense and heavy, doesn't bounce much
-            { color: [0.1, 0.05, 0.2], offset: { x: 2.0, y: 5, z: -2 }, radius: 0.7, friction: 1.0, restitution: 0.1, density: 4.0, roughness: 0.9 },
+            { name: "Void Heavy", color: [0.1, 0.05, 0.2], offset: { x: 2.0, y: 5, z: -2 }, radius: 0.7, friction: 1.0, restitution: 0.1, density: 4.0, roughness: 0.9 },
             // 5. Ice Marble - Slippery and smooth
-            { color: [0.8, 0.9, 1.0], offset: { x: -5.0, y: 3, z: 0 }, radius: 0.48, friction: 0.005, restitution: 0.8, density: 0.9, roughness: 0.1 },
+            { name: "Ice Slick", color: [0.8, 0.9, 1.0], offset: { x: -5.0, y: 3, z: 0 }, radius: 0.48, friction: 0.005, restitution: 0.8, density: 0.9, roughness: 0.1 },
             // 6. Super Bouncy Marble - Maximum bounce
-            { color: [1.0, 0.0, 0.8], offset: { x: 5.0, y: 3, z: 0 }, radius: 0.52, friction: 0.5, restitution: 1.8, density: 0.5, roughness: 0.3 },
+            { name: "Super Bouncy", color: [1.0, 0.0, 0.8], offset: { x: 5.0, y: 3, z: 0 }, radius: 0.52, friction: 0.5, restitution: 1.8, density: 0.5, roughness: 0.3 },
             // 7. Mud Marble - Sticky, heavy, no bounce
-            { color: [0.35, 0.25, 0.2], offset: { x: 0.0, y: 3, z: 4 }, radius: 0.5, friction: 2.0, restitution: 0.0, density: 3.0, roughness: 0.9 },
+            { name: "Mud Sticky", color: [0.35, 0.25, 0.2], offset: { x: 0.0, y: 3, z: 4 }, radius: 0.5, friction: 2.0, restitution: 0.0, density: 3.0, roughness: 0.9 },
             // 8. Tiny Dense Marble - Small, heavy, and fast
-            { color: [1.0, 1.0, 1.0], offset: { x: 3.5, y: 3, z: 4 }, radius: 0.3, density: 10.0, friction: 0.1, restitution: 0.5 }
-            // 8. Nano Marble - Tiny and dense
-            { color: [1.0, 0.4, 0.7], offset: { x: 1.5, y: 4, z: 4 }, radius: 0.25, density: 2.0, roughness: 0.2 },
-            // 9. Giant Marble - Huge, hollow-ish, slow rolling
-            { color: [0.2, 0.8, 0.2], offset: { x: -3.0, y: 4, z: 4 }, radius: 1.2, density: 0.5, friction: 0.5, roughness: 0.8 }
+            { name: "Tiny Dense", color: [1.0, 1.0, 1.0], offset: { x: 3.5, y: 3, z: 4 }, radius: 0.3, density: 10.0, friction: 0.1, restitution: 0.5 },
+            // 9. Nano Marble - Tiny and dense
+            { name: "Nano", color: [1.0, 0.4, 0.7], offset: { x: 1.5, y: 4, z: 4 }, radius: 0.25, density: 2.0, roughness: 0.2 },
+            // 10. Giant Marble - Huge, hollow-ish, slow rolling
+            { name: "Giant", color: [0.2, 0.8, 0.2], offset: { x: -3.0, y: 4, z: 4 }, radius: 1.2, density: 0.5, friction: 0.5, roughness: 0.8 }
         ];
 
         for (const info of marblesInfo) {
@@ -1598,6 +1608,7 @@ class MarblesGame {
             this.scene.addEntity(entity);
 
             this.marbles.push({
+                name: info.name || `Marble ${this.marbles.length + 1}`,
                 rigidBody,
                 entity,
                 scale,
@@ -1608,7 +1619,7 @@ class MarblesGame {
 
         this.currentMarbleIndex = 0;
         this.playerMarble = this.marbles[0];
-        this.selectedEl.textContent = 'Selected: 1';
+        this.selectedEl.textContent = `Selected: ${this.playerMarble.name}`;
     }
 
     getLeader() {
@@ -1638,7 +1649,7 @@ class MarblesGame {
         this.scoreEl.textContent = 'Score: 0';
         this.currentMarbleIndex = 0;
         this.playerMarble = this.marbles[0];
-        this.selectedEl.textContent = 'Selected: 1';
+        this.selectedEl.textContent = `Selected: ${this.playerMarble ? this.playerMarble.name : 'None'}`;
         this.aimYaw = 0;
         this.chargePower = 0;
         this.charging = false;
