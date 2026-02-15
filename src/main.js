@@ -179,14 +179,14 @@ const LEVELS = {
         name: 'Loop-the-Loop',
         description: 'Defy gravity!',
         zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 100 } },
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
             { type: 'track', pos: { x: 0, y: 3, z: 0 } },
             { type: 'loop', pos: { x: 0, y: 0, z: 25 } },
-            { type: 'goal', pos: { x: 4, y: -2, z: 80 } }
+            { type: 'goal', pos: { x: 0, y: 0.25, z: 60 } }
         ],
         spawn: { x: 0, y: 8, z: -12 },
         goals: [
-            { id: 1, range: { x: [-1, 9], z: [78, 82], y: [-5, 5] } }
+            { id: 1, range: { x: [-2, 2], z: [58, 62], y: [0, 2] } }
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     }
@@ -898,6 +898,81 @@ class MarblesGame {
             { x: offset.x, y: offset.y, z: offset.z + 38 },
             floorQ,
             { x: 3, y: 0.5, z: 3 },
+            [0.4, 0.4, 0.4],
+            'concrete'
+        );
+    }
+
+    createLoopZone(offset) {
+        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+        // Approach ramp
+        this.createStaticBox(
+            { x: offset.x, y: offset.y, z: offset.z },
+            floorQ,
+            { x: 4, y: 0.5, z: 5 },
+            [0.4, 0.4, 0.4],
+            'concrete'
+        );
+
+        const radius = 12;
+        const segments = 32;
+        const loopCenterZ = offset.z + 15;
+        const loopCenterY = offset.y + radius;
+
+        // Create the loop
+        for (let i = 0; i < segments; i++) {
+            // Angle from -PI/2 (bottom) to 3PI/2 (bottom again)
+            // But we want to start from flat and go up
+            // Let's go from -PI/2 to 3PI/2
+            const t = i / segments;
+            const angle = -Math.PI / 2 + t * 2 * Math.PI;
+
+            const y = loopCenterY + Math.sin(angle) * radius;
+            const z = loopCenterZ + Math.cos(angle) * radius;
+
+            // Rotation: Tangent to the circle
+            // At bottom (-PI/2), tangent is horizontal (0 pitch)
+            // At back (0), tangent is vertical (-PI/2 pitch)
+            // Slope = cos(angle) / -sin(angle)
+            // Or just rotate the box by 'angle' around X axis?
+            // If angle is -PI/2 (bottom), we want 0 rotation.
+            // If angle is 0 (back), we want -PI/2 rotation.
+            // So rotation = -(angle + PI/2) ?
+            const rotX = -(angle + Math.PI / 2);
+
+            const q = quatFromEuler(0, rotX, 0);
+
+            this.createStaticBox(
+                { x: offset.x, y: y, z: z },
+                q,
+                { x: 3, y: 0.2, z: (2 * Math.PI * radius / segments) / 2 + 0.2 },
+                [0.2 + t * 0.8, 0.5, 0.8 - t * 0.8], // Gradient color
+                'metal'
+            );
+
+            // Side guards for the loop
+             this.createStaticBox(
+                { x: offset.x - 3, y: y, z: z },
+                q,
+                { x: 0.2, y: 1.0, z: (2 * Math.PI * radius / segments) / 2 + 0.2 },
+                [0.8, 0.2, 0.2],
+                'metal'
+            );
+             this.createStaticBox(
+                { x: offset.x + 3, y: y, z: z },
+                q,
+                { x: 0.2, y: 1.0, z: (2 * Math.PI * radius / segments) / 2 + 0.2 },
+                [0.8, 0.2, 0.2],
+                'metal'
+            );
+        }
+
+        // Exit ramp
+        this.createStaticBox(
+            { x: offset.x, y: offset.y, z: offset.z + 30 },
+            floorQ,
+            { x: 4, y: 0.5, z: 5 },
             [0.4, 0.4, 0.4],
             'concrete'
         );
