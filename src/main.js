@@ -1555,11 +1555,13 @@ class MarblesGame {
             // 7. Mud Marble - Sticky, heavy, no bounce
             { color: [0.35, 0.25, 0.2], offset: { x: 0.0, y: 3, z: 4 }, radius: 0.5, friction: 2.0, restitution: 0.0, density: 3.0, roughness: 0.9 },
             // 8. Tiny Dense Marble - Small, heavy, and fast
-            { color: [1.0, 1.0, 1.0], offset: { x: 3.5, y: 3, z: 4 }, radius: 0.3, density: 10.0, friction: 0.1, restitution: 0.5 }
-            // 8. Nano Marble - Tiny and dense
+            { color: [1.0, 1.0, 1.0], offset: { x: 3.5, y: 3, z: 4 }, radius: 0.3, density: 10.0, friction: 0.1, restitution: 0.5 },
+            // 9. Nano Marble - Tiny and dense
             { color: [1.0, 0.4, 0.7], offset: { x: 1.5, y: 4, z: 4 }, radius: 0.25, density: 2.0, roughness: 0.2 },
-            // 9. Giant Marble - Huge, hollow-ish, slow rolling
-            { color: [0.2, 0.8, 0.2], offset: { x: -3.0, y: 4, z: 4 }, radius: 1.2, density: 0.5, friction: 0.5, roughness: 0.8 }
+            // 10. Giant Marble - Huge, hollow-ish, slow rolling
+            { color: [0.2, 0.8, 0.2], offset: { x: -3.0, y: 4, z: 4 }, radius: 1.2, density: 0.5, friction: 0.5, roughness: 0.8 },
+            // 11. Mercury Marble - Heavy liquid metal, low friction
+            { color: [0.7, 0.7, 0.7], offset: { x: -5.0, y: 3, z: 4 }, radius: 0.55, density: 5.0, friction: 0.05, restitution: 0.2, roughness: 0.1 }
         ];
 
         for (const info of marblesInfo) {
