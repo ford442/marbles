@@ -189,6 +189,21 @@ const LEVELS = {
             { id: 1, range: { x: [-2, 2], z: [58, 62], y: [0, 2] } }
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
+    },
+    block_challenge: {
+        name: 'Block Challenge',
+        description: 'Navigate through the field of blocks!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'block', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 0, y: 0.25, z: 70 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-2, 2], z: [68, 72], y: [0, 2] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
     }
 };
 
@@ -670,6 +685,9 @@ class MarblesGame {
             case 'loop':
                 this.createLoopZone(offset);
                 break;
+            case 'block':
+                this.createBlockZone(offset);
+                break;
         }
     }
 
@@ -1085,6 +1103,40 @@ class MarblesGame {
             [0.2, 0.8, 0.2],
             'metal'
         );
+    }
+
+    createBlockZone(offset) {
+        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+        // Floor
+        this.createStaticBox(
+            { x: offset.x, y: offset.y, z: offset.z },
+            floorQ,
+            { x: 10, y: 0.5, z: 25 },
+            [0.5, 0.5, 0.5],
+            'concrete'
+        );
+
+        // Blocks
+        for (let i = 0; i < 30; i++) {
+            // Deterministic positions
+            const x = offset.x + (Math.sin(i * 123.45) * 8);
+            const z = offset.z - 20 + (i * 1.5); // Spread along Z
+            const h = 1.0 + Math.abs(Math.cos(i * 67.89)) * 2.0;
+
+            // Deterministic color
+            const r = 0.5 + Math.sin(i) * 0.5;
+            const g = 0.5 + Math.cos(i) * 0.5;
+            const b = 0.5 + Math.sin(i * 0.5) * 0.5;
+
+            this.createStaticBox(
+                { x: x, y: offset.y + h / 2, z: z },
+                floorQ,
+                { x: 0.8, y: h / 2, z: 0.8 },
+                [r, g, b],
+                'metal'
+            );
+        }
     }
 
     createJumpZone(offset) {
@@ -1555,7 +1607,7 @@ class MarblesGame {
             // 7. Mud Marble - Sticky, heavy, no bounce
             { color: [0.35, 0.25, 0.2], offset: { x: 0.0, y: 3, z: 4 }, radius: 0.5, friction: 2.0, restitution: 0.0, density: 3.0, roughness: 0.9 },
             // 8. Tiny Dense Marble - Small, heavy, and fast
-            { color: [1.0, 1.0, 1.0], offset: { x: 3.5, y: 3, z: 4 }, radius: 0.3, density: 10.0, friction: 0.1, restitution: 0.5 }
+            { color: [1.0, 1.0, 1.0], offset: { x: 3.5, y: 3, z: 4 }, radius: 0.3, density: 10.0, friction: 0.1, restitution: 0.5 },
             // 8. Nano Marble - Tiny and dense
             { color: [1.0, 0.4, 0.7], offset: { x: 1.5, y: 4, z: 4 }, radius: 0.25, density: 2.0, roughness: 0.2 },
             // 9. Giant Marble - Huge, hollow-ish, slow rolling
