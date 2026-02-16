@@ -192,16 +192,16 @@ const LEVELS = {
     },
     block_challenge: {
         name: 'Block Challenge',
-        description: 'Navigate through the field of blocks!',
+        description: 'Navigate through the obstacle course',
         zones: [
             { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
             { type: 'track', pos: { x: 0, y: 3, z: 0 } },
             { type: 'block', pos: { x: 0, y: 0, z: 25 } },
-            { type: 'goal', pos: { x: 0, y: 0.25, z: 70 } }
+            { type: 'goal', pos: { x: 0, y: 0.25, z: 50 } }
         ],
         spawn: { x: 0, y: 8, z: -12 },
         goals: [
-            { id: 1, range: { x: [-2, 2], z: [68, 72], y: [0, 2] } }
+            { id: 1, range: { x: [-2, 2], z: [48, 52], y: [0, 2] } }
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     }
@@ -796,6 +796,35 @@ class MarblesGame {
              [0.8, 0.8, 0.2],
              'metal'
         );
+    }
+
+    createBlockZone(offset) {
+        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+        // Floor
+        this.createStaticBox(
+            { x: offset.x, y: offset.y, z: offset.z },
+            floorQ,
+            { x: 10, y: 0.5, z: 20 },
+            [0.5, 0.5, 0.5],
+            'concrete'
+        );
+
+        // Blocks
+        for (let i = 0; i < 30; i++) {
+            // Deterministic placement
+            const x = offset.x + (Math.sin(i * 12.9898) * 8);
+            const z = offset.z + (Math.cos(i * 78.233) * 18);
+            const h = 1.0 + (i % 3) * 0.5;
+
+            this.createStaticBox(
+                { x: x, y: offset.y + h/2, z: z },
+                floorQ,
+                { x: 0.5, y: h/2, z: 0.5 },
+                [0.7, 0.3, 0.3], // Reddish blocks
+                'concrete'
+            );
+        }
     }
 
     createLoopZone(offset) {
