@@ -249,6 +249,33 @@ export class MarbleAudio {
     }
 
     /**
+     * Play a collectible pickup sound (coin/ding)
+     */
+    playCollect() {
+        if (!this.enabled || !this.ctx) return;
+
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        // High-pitched sine sweep
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200, t);
+        osc.frequency.exponentialRampToValueAtTime(1800, t + 0.1);
+
+        // Short envelope
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.3, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+
+        osc.start(t);
+        osc.stop(t + 0.3);
+    }
+
+    /**
      * Play a boost/dash sound
      */
     playBoost() {

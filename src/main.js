@@ -338,6 +338,8 @@ class MarblesGame {
         this.levelStartTime = 0;
         this.levelComplete = false;
         this.goalDefinitions = [];
+        this.collectibles = [];
+        this.collectibleRotation = 0;
     }
 
     initMouseControls() {
@@ -619,8 +621,55 @@ class MarblesGame {
         }
         this.staticEntities = [];
 
+        // Remove all collectibles
+        for (const c of this.collectibles) {
+            this.scene.remove(c.entity);
+            this.engine.destroyEntity(c.entity);
+        }
+        this.collectibles = [];
+
         // Reset lighting to day mode
         this.setNightMode(false);
+    }
+
+    createCollectible(pos) {
+        // Create a visual cube for the collectible
+        const entity = this.Filament.EntityManager.get().create();
+        const matInstance = this.material.createInstance();
+
+        // Gold color [1.0, 0.84, 0.0]
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 0.84, 0.0]);
+        matInstance.setFloatParameter('roughness', 0.1); // Shiny
+
+        // Small cube (0.5 x 0.5 x 0.5)
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [0.25, 0.25, 0.25] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .build(this.engine, entity);
+
+        // Initial transform
+        const tcm = this.engine.getTransformManager();
+        const inst = tcm.getInstance(entity);
+
+        // Rotate 45 degrees to look like a diamond
+        const q = quatFromEuler(0, 0, Math.PI / 4);
+        const mat = quaternionToMat4(pos, q);
+
+        // Scale down to 0.5 size
+        const scale = 0.5;
+        mat[0] *= scale; mat[1] *= scale; mat[2] *= scale;
+        mat[4] *= scale; mat[5] *= scale; mat[6] *= scale;
+        mat[8] *= scale; mat[9] *= scale; mat[10] *= scale;
+
+        tcm.setTransform(inst, mat);
+        this.scene.addEntity(entity);
+
+        this.collectibles.push({
+            entity: entity,
+            pos: pos,
+            baseY: pos.y
+        });
     }
 
     async createZone(zone) {
@@ -714,6 +763,11 @@ class MarblesGame {
             [0.5, 0.3, 0.3],
             'wood'
         );
+
+        // Collectibles
+        this.createCollectible({ x: offset.x, y: offset.y + 1.0, z: offset.z + 5 });
+        this.createCollectible({ x: offset.x, y: offset.y + 1.5, z: offset.z + 10 });
+        this.createCollectible({ x: offset.x, y: offset.y + 2.0, z: offset.z + 15 });
     }
 
     createSpiralZone(offset) {
@@ -1129,6 +1183,9 @@ class MarblesGame {
             [0.8, 0.8, 0.2],
             'metal'
         );
+
+        // Collectible at peak
+        this.createCollectible({ x: offset.x, y: offset.y + 6, z: offset.z + 15 });
     }
 
     createSlalomZone(offset) {
@@ -1155,6 +1212,11 @@ class MarblesGame {
                 'metal'
             );
         }
+
+        // Collectibles between pillars
+        this.createCollectible({ x: offset.x, y: offset.y + 0.5, z: offset.z - 10 });
+        this.createCollectible({ x: offset.x, y: offset.y + 0.5, z: offset.z });
+        this.createCollectible({ x: offset.x, y: offset.y + 0.5, z: offset.z + 10 });
     }
 
     createStaircaseZone(offset) {
@@ -1555,7 +1617,7 @@ class MarblesGame {
             // 7. Mud Marble - Sticky, heavy, no bounce
             { color: [0.35, 0.25, 0.2], offset: { x: 0.0, y: 3, z: 4 }, radius: 0.5, friction: 2.0, restitution: 0.0, density: 3.0, roughness: 0.9 },
             // 8. Tiny Dense Marble - Small, heavy, and fast
-            { color: [1.0, 1.0, 1.0], offset: { x: 3.5, y: 3, z: 4 }, radius: 0.3, density: 10.0, friction: 0.1, restitution: 0.5 }
+            { color: [1.0, 1.0, 1.0], offset: { x: 3.5, y: 3, z: 4 }, radius: 0.3, density: 10.0, friction: 0.1, restitution: 0.5 },
             // 8. Nano Marble - Tiny and dense
             { color: [1.0, 0.4, 0.7], offset: { x: 1.5, y: 4, z: 4 }, radius: 0.25, density: 2.0, roughness: 0.2 },
             // 9. Giant Marble - Huge, hollow-ish, slow rolling
@@ -1983,6 +2045,51 @@ class MarblesGame {
             const eyeX = this.camRadius * Math.sin(this.camAngle);
             const eyeZ = this.camRadius * Math.cos(this.camAngle);
             this.camera.lookAt([eyeX, this.camHeight, eyeZ], [0, 0, 0], [0, 1, 0]);
+        }
+
+        // Update Collectibles
+        this.collectibleRotation += 0.05;
+        if (this.collectibles && this.collectibles.length > 0) {
+            const tcm = this.engine.getTransformManager();
+            for (let i = this.collectibles.length - 1; i >= 0; i--) {
+                const c = this.collectibles[i];
+
+                // Animate: Rotate + Bob up and down
+                const bobOffset = Math.sin(this.collectibleRotation * 2) * 0.2;
+                const newY = c.baseY + bobOffset;
+                const q = quatFromEuler(this.collectibleRotation, 0, Math.PI / 4);
+
+                // Construct matrix manually to include scale
+                const mat = quaternionToMat4({ x: c.pos.x, y: newY, z: c.pos.z }, q);
+                const scale = 0.5;
+                mat[0] *= scale; mat[1] *= scale; mat[2] *= scale;
+                mat[4] *= scale; mat[5] *= scale; mat[6] *= scale;
+                mat[8] *= scale; mat[9] *= scale; mat[10] *= scale;
+
+                const inst = tcm.getInstance(c.entity);
+                tcm.setTransform(inst, mat);
+
+                // Check collision with player
+                if (this.playerMarble) {
+                    const pt = this.playerMarble.rigidBody.translation();
+                    const dx = pt.x - c.pos.x;
+                    const dy = pt.y - newY; // approximate
+                    const dz = pt.z - c.pos.z;
+                    const distSq = dx*dx + dy*dy + dz*dz;
+
+                    if (distSq < 2.25) { // 1.5 distance squared
+                        // Collected!
+                        audio.playCollect();
+                        this.score += 10;
+                        this.scoreEl.textContent = 'Score: ' + this.score;
+
+                        // Remove
+                        this.scene.remove(c.entity);
+                        this.engine.destroyEntity(c.entity);
+                        this.collectibles.splice(i, 1);
+                    }
+                }
+            }
         }
 
         // Step Physics with event handling
