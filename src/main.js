@@ -347,6 +347,8 @@ class MarblesGame {
         this.isAiming = false;
         this.playerMarble = null;
         this.cueInst = null;
+        this.jumpCount = 0;
+        this.maxJumps = 2;
 
         // Level State
         this.currentLevel = null;
@@ -417,9 +419,18 @@ class MarblesGame {
         // Input Listeners
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space' && !this.keys['Space']) {
-                if (this.playerMarble && this.isGrounded(this.playerMarble)) {
-                    this.isChargingJump = true;
-                    this.jumpCharge = 0;
+                if (this.playerMarble) {
+                    if (this.isGrounded(this.playerMarble)) {
+                        this.isChargingJump = true;
+                        this.jumpCharge = 0;
+                    } else if (this.jumpCount < this.maxJumps) {
+                        // Double Jump
+                        const linvel = this.playerMarble.rigidBody.linvel();
+                        this.playerMarble.rigidBody.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true);
+                        this.playerMarble.rigidBody.applyImpulse({ x: 0, y: 10.0, z: 0 }, true);
+                        this.jumpCount++;
+                        audio.playJump();
+                    }
                 }
             }
             // Switch Marble
@@ -443,6 +454,8 @@ class MarblesGame {
                 if (this.isChargingJump && this.playerMarble) {
                     const force = 5.0 + this.jumpCharge * 10.0;
                     this.playerMarble.rigidBody.applyImpulse({ x: 0, y: force, z: 0 }, true);
+                    audio.playJump();
+                    this.jumpCount = 1; // Used ground jump
                 }
                 this.isChargingJump = false;
                 this.jumpCharge = 0;
@@ -1818,6 +1831,14 @@ class MarblesGame {
 
     checkGameLogic() {
         if (!this.currentLevel || this.levelComplete) return;
+
+        // Reset jump count if grounded and not moving up too fast
+        if (this.playerMarble && this.isGrounded(this.playerMarble)) {
+            const linvel = this.playerMarble.rigidBody.linvel();
+            if (linvel.y <= 0.1) {
+                this.jumpCount = 0;
+            }
+        }
 
         const level = LEVELS[this.currentLevel];
         let allGoalsScored = level.goals.length > 0;
