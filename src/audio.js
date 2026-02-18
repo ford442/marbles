@@ -249,6 +249,40 @@ export class MarbleAudio {
     }
 
     /**
+     * Play a jump sound
+     */
+    playJump() {
+        if (!this.enabled || !this.ctx) return;
+
+        const t = this.ctx.currentTime;
+        const gain = this.ctx.createGain();
+        gain.connect(this.masterGain);
+
+        // "Boing" effect using filtered saw wave
+        const osc = this.ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, t);
+        osc.frequency.exponentialRampToValueAtTime(600, t + 0.15);
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(200, t);
+        filter.frequency.exponentialRampToValueAtTime(1500, t + 0.1);
+        filter.Q.value = 5;
+
+        osc.connect(filter);
+        filter.connect(gain);
+
+        // Envelope
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.3, t + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+
+        osc.start(t);
+        osc.stop(t + 0.35);
+    }
+
+    /**
      * Play a boost/dash sound
      */
     playBoost() {
