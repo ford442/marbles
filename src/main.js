@@ -204,6 +204,21 @@ const LEVELS = {
             { id: 1, range: { x: [-2, 2], z: [48, 52], y: [0, 2] } }
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
+    },
+    bowling_alley: {
+        name: 'Bowling Alley',
+        description: 'Knock down the pins!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'bowling', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 0, y: 0.25, z: 55 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [53, 57], y: [0, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
     }
 };
 
@@ -311,6 +326,7 @@ class MarblesGame {
         this.marbles = [];
         this.staticBodies = []; // Track for cleanup
         this.staticEntities = []; // Track for cleanup
+        this.dynamicObjects = []; // Track for cleanup (pins, dominos, etc)
         this.Filament = null;
         this.material = null;
         this.cubeMesh = null;
@@ -644,6 +660,14 @@ class MarblesGame {
         }
         this.staticEntities = [];
 
+        // Remove all dynamic objects (pins, blocks, etc)
+        for (const obj of this.dynamicObjects) {
+            this.world.removeRigidBody(obj.rigidBody);
+            this.scene.remove(obj.entity);
+            this.engine.destroyEntity(obj.entity);
+        }
+        this.dynamicObjects = [];
+
         // Reset lighting to day mode
         this.setNightMode(false);
     }
@@ -697,6 +721,9 @@ class MarblesGame {
                 break;
             case 'block':
                 this.createBlockZone(offset);
+                break;
+            case 'bowling':
+                this.createBowlingZone(offset);
                 break;
         }
     }
@@ -1178,6 +1205,120 @@ class MarblesGame {
         }
     }
 
+    createBowlingZone(offset) {
+        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+        // Lane Dimensions
+        const laneWidth = 4;
+        const laneLength = 25;
+        const laneThickness = 0.5;
+
+        // Lane Surface (Wood)
+        this.createStaticBox(
+            { x: offset.x, y: offset.y, z: offset.z },
+            floorQ,
+            { x: laneWidth / 2, y: laneThickness / 2, z: laneLength / 2 },
+            [0.8, 0.6, 0.4],
+            'wood'
+        );
+
+        // Gutters (Lower and to the side)
+        const gutterWidth = 1.0;
+        this.createStaticBox(
+            { x: offset.x - (laneWidth/2 + gutterWidth/2), y: offset.y - 0.2, z: offset.z },
+            floorQ,
+            { x: gutterWidth / 2, y: laneThickness / 2, z: laneLength / 2 },
+            [0.3, 0.3, 0.3],
+            'concrete'
+        );
+        this.createStaticBox(
+            { x: offset.x + (laneWidth/2 + gutterWidth/2), y: offset.y - 0.2, z: offset.z },
+            floorQ,
+            { x: gutterWidth / 2, y: laneThickness / 2, z: laneLength / 2 },
+            [0.3, 0.3, 0.3],
+            'concrete'
+        );
+
+        // Side Bumpers (Walls)
+        this.createStaticBox(
+            { x: offset.x - (laneWidth/2 + gutterWidth + 0.2), y: offset.y + 0.5, z: offset.z },
+            floorQ,
+            { x: 0.2, y: 1.0, z: laneLength / 2 },
+            [0.5, 0.5, 0.5],
+            'metal'
+        );
+        this.createStaticBox(
+            { x: offset.x + (laneWidth/2 + gutterWidth + 0.2), y: offset.y + 0.5, z: offset.z },
+            floorQ,
+            { x: 0.2, y: 1.0, z: laneLength / 2 },
+            [0.5, 0.5, 0.5],
+            'metal'
+        );
+
+        // Pins (Dynamic Boxes)
+        // Standard 10-pin setup
+        const pinSize = { x: 0.15, y: 0.5, z: 0.15 };
+        const pinSpacing = 0.6; // 60cm spacing
+        const startZ = offset.z + laneLength / 2 - 2; // Near the end
+
+        // Row 1 (1 pin)
+        this.createDynamicBox(
+            { x: offset.x, y: offset.y + pinSize.y + 0.1, z: startZ },
+            floorQ, pinSize, [1, 1, 1], 0.8, 'wood'
+        );
+
+        // Row 2 (2 pins)
+        this.createDynamicBox(
+            { x: offset.x - pinSpacing/2, y: offset.y + pinSize.y + 0.1, z: startZ + pinSpacing },
+            floorQ, pinSize, [1, 1, 1], 0.8, 'wood'
+        );
+        this.createDynamicBox(
+            { x: offset.x + pinSpacing/2, y: offset.y + pinSize.y + 0.1, z: startZ + pinSpacing },
+            floorQ, pinSize, [1, 1, 1], 0.8, 'wood'
+        );
+
+        // Row 3 (3 pins)
+        this.createDynamicBox(
+            { x: offset.x - pinSpacing, y: offset.y + pinSize.y + 0.1, z: startZ + pinSpacing * 2 },
+            floorQ, pinSize, [1, 1, 1], 0.8, 'wood'
+        );
+        this.createDynamicBox(
+            { x: offset.x, y: offset.y + pinSize.y + 0.1, z: startZ + pinSpacing * 2 },
+            floorQ, pinSize, [1, 1, 1], 0.8, 'wood'
+        );
+        this.createDynamicBox(
+            { x: offset.x + pinSpacing, y: offset.y + pinSize.y + 0.1, z: startZ + pinSpacing * 2 },
+            floorQ, pinSize, [1, 1, 1], 0.8, 'wood'
+        );
+
+        // Row 4 (4 pins)
+        this.createDynamicBox(
+            { x: offset.x - pinSpacing * 1.5, y: offset.y + pinSize.y + 0.1, z: startZ + pinSpacing * 3 },
+            floorQ, pinSize, [1, 1, 1], 0.8, 'wood'
+        );
+        this.createDynamicBox(
+            { x: offset.x - pinSpacing * 0.5, y: offset.y + pinSize.y + 0.1, z: startZ + pinSpacing * 3 },
+            floorQ, pinSize, [1, 1, 1], 0.8, 'wood'
+        );
+        this.createDynamicBox(
+            { x: offset.x + pinSpacing * 0.5, y: offset.y + pinSize.y + 0.1, z: startZ + pinSpacing * 3 },
+            floorQ, pinSize, [1, 1, 1], 0.8, 'wood'
+        );
+        this.createDynamicBox(
+            { x: offset.x + pinSpacing * 1.5, y: offset.y + pinSize.y + 0.1, z: startZ + pinSpacing * 3 },
+            floorQ, pinSize, [1, 1, 1], 0.8, 'wood'
+        );
+
+        // Backstop (to catch pins)
+        this.createStaticBox(
+             { x: offset.x, y: offset.y + 1, z: offset.z + laneLength/2 + 2 },
+             floorQ,
+             { x: laneWidth/2 + gutterWidth + 0.5, y: 2, z: 0.5 },
+             [0.2, 0.2, 0.2],
+             'metal'
+        );
+    }
+
     createJumpZone(offset) {
         const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
@@ -1618,6 +1759,40 @@ class MarblesGame {
         tcm.setTransform(inst, mat);
         this.scene.addEntity(entity);
         this.staticEntities.push(entity);
+    }
+
+    createDynamicBox(pos, rotation, halfExtents, color, density = 1.0, material = 'wood') {
+        const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+            .setTranslation(pos.x, pos.y, pos.z)
+            .setRotation(rotation);
+        const body = this.world.createRigidBody(bodyDesc);
+
+        const colliderDesc = RAPIER.ColliderDesc.cuboid(halfExtents.x, halfExtents.y, halfExtents.z)
+            .setDensity(density);
+        this.world.createCollider(colliderDesc, body);
+
+        // Register material for collision sounds
+        audio.registerBodyMaterial(body, material);
+
+        const entity = this.Filament.EntityManager.get().create();
+        const matInstance = this.material.createInstance();
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color);
+        matInstance.setFloatParameter('roughness', 0.4);
+
+        // Bounding box for culling - can be approximate
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .build(this.engine, entity);
+
+        this.scene.addEntity(entity);
+
+        this.dynamicObjects.push({
+            rigidBody: body,
+            entity: entity,
+            halfExtents: halfExtents
+        });
     }
 
     createMarbles(spawnPos) {
@@ -2105,6 +2280,25 @@ class MarblesGame {
             }
 
             const inst = tcm.getInstance(m.entity);
+            tcm.setTransform(inst, mat);
+        }
+
+        // Sync Dynamic Objects (Pins, Dominos, etc)
+        for (const obj of this.dynamicObjects) {
+            const t = obj.rigidBody.translation();
+            const r = obj.rigidBody.rotation();
+            const mat = quaternionToMat4(t, r);
+
+            if (obj.halfExtents) {
+                const sx = obj.halfExtents.x * 2;
+                const sy = obj.halfExtents.y * 2;
+                const sz = obj.halfExtents.z * 2;
+                mat[0] *= sx; mat[1] *= sx; mat[2] *= sx;
+                mat[4] *= sy; mat[5] *= sy; mat[6] *= sy;
+                mat[8] *= sz; mat[9] *= sz; mat[10] *= sz;
+            }
+
+            const inst = tcm.getInstance(obj.entity);
             tcm.setTransform(inst, mat);
         }
 

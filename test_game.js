@@ -77,7 +77,8 @@ test('Level definitions are valid', () => {
         'zigzag',
         'neon_dash',
         'loop_challenge',
-        'block_challenge'
+        'block_challenge',
+        'bowling_alley'
     ];
     
     for (const level of expectedLevels) {
@@ -188,7 +189,8 @@ test('All zone types are implemented', () => {
         'createZigZagZone',
         'createNeonCityZone',
         'createLoopZone',
-        'createBlockZone'
+        'createBlockZone',
+        'createBowlingZone'
     ];
     
     for (const zone of zoneTypes) {
