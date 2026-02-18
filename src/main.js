@@ -73,6 +73,7 @@ const LEVELS = {
             { type: 'track', pos: { x: 0, y: 3, z: 0 } },
             { type: 'landing', pos: { x: 0, y: 0, z: 25 } },
             { type: 'slalom', pos: { x: 0, y: -2, z: 85 } },
+            { type: 'checkpoint', pos: { x: 0, y: -1.5, z: 110 }, size: { x: 10, y: 4, z: 2 } },
             { type: 'staircase', pos: { x: 0, y: -2, z: 110 } },
             { type: 'goal', pos: { x: 0, y: 9, z: 154 } }
         ],
@@ -327,6 +328,7 @@ class MarblesGame {
         this.staticBodies = []; // Track for cleanup
         this.staticEntities = []; // Track for cleanup
         this.dynamicObjects = []; // Track for cleanup (pins, dominos, etc)
+        this.checkpoints = []; // Track active checkpoints
         this.Filament = null;
         this.material = null;
         this.cubeMesh = null;
@@ -681,6 +683,13 @@ class MarblesGame {
         }
         this.dynamicObjects = [];
 
+        // Remove all checkpoints
+        for (const cp of this.checkpoints) {
+            this.scene.remove(cp.entity);
+            this.engine.destroyEntity(cp.entity);
+        }
+        this.checkpoints = [];
+
         // Reset lighting to day mode
         this.setNightMode(false);
     }
@@ -738,7 +747,49 @@ class MarblesGame {
             case 'bowling':
                 this.createBowlingZone(offset);
                 break;
+            case 'checkpoint':
+                this.createCheckpointZone(offset, zone.size);
+                break;
         }
+    }
+
+    createCheckpointZone(offset, size) {
+        const sz = size || { x: 10, y: 5, z: 2 };
+        const center = { x: offset.x, y: offset.y + sz.y / 2, z: offset.z };
+        const q = { x: 0, y: 0, z: 0, w: 1 };
+
+        const entity = this.Filament.EntityManager.get().create();
+        const matInstance = this.material.createInstance();
+
+        // Checkpoint inactive: Cyan [0, 1, 1]
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.0, 1.0, 1.0]);
+        matInstance.setFloatParameter('roughness', 0.1);
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [sz.x / 2, sz.y / 2, sz.z / 2] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .build(this.engine, entity);
+
+        const tcm = this.engine.getTransformManager();
+        const inst = tcm.getInstance(entity);
+
+        const mat = quaternionToMat4(center, q);
+        mat[0] *= sz.x; mat[1] *= sz.x; mat[2] *= sz.x;
+        mat[4] *= sz.y; mat[5] *= sz.y; mat[6] *= sz.y;
+        mat[8] *= sz.z; mat[9] *= sz.z; mat[10] *= sz.z;
+
+        tcm.setTransform(inst, mat);
+        this.scene.addEntity(entity);
+
+        // Track as checkpoint (no physics body, just visual + logic)
+        this.checkpoints.push({
+            pos: center,
+            halfExtents: { x: sz.x / 2, y: sz.y / 2, z: sz.z / 2 },
+            entity: entity,
+            matInstance: matInstance,
+            activated: false
+        });
     }
 
     createFloorZone(offset, size) {
@@ -1888,6 +1939,7 @@ class MarblesGame {
                 entity,
                 scale,
                 initialPos: pos,
+                respawnPos: { ...pos },
                 scoredGoals: new Set()
             });
         }
@@ -1919,7 +1971,17 @@ class MarblesGame {
             m.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
             m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
             m.scoredGoals.clear();
+            m.respawnPos = { ...m.initialPos };
         }
+
+        // Reset checkpoints
+        for (const cp of this.checkpoints) {
+            cp.activated = false;
+            if (cp.matInstance) {
+                cp.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.0, 1.0, 1.0]);
+            }
+        }
+
         this.score = 0;
         this.scoreEl.textContent = 'Score: 0';
         this.currentMarbleIndex = 0;
@@ -2027,11 +2089,48 @@ class MarblesGame {
 
             // Respawn logic
             if (t.y < -20) {
-                m.rigidBody.setTranslation(m.initialPos, true);
+                const respawn = m.respawnPos || m.initialPos;
+                m.rigidBody.setTranslation(respawn, true);
                 m.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
                 m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
                 m.scoredGoals.clear();
                 continue;
+            }
+
+            // Check checkpoints
+            for (const cp of this.checkpoints) {
+                if (cp.activated) continue;
+
+                // Simple AABB overlap check
+                // Checkpoint is centered at cp.pos with halfExtents cp.halfExtents
+                // Marble is at t with radius m.scale * 0.5
+                const radius = m.scale * 0.5 || 0.5;
+
+                const minX = cp.pos.x - cp.halfExtents.x;
+                const maxX = cp.pos.x + cp.halfExtents.x;
+                const minZ = cp.pos.z - cp.halfExtents.z;
+                const maxZ = cp.pos.z + cp.halfExtents.z;
+                const minY = cp.pos.y - cp.halfExtents.y;
+                const maxY = cp.pos.y + cp.halfExtents.y;
+
+                if (t.x + radius > minX && t.x - radius < maxX &&
+                    t.z + radius > minZ && t.z - radius < maxZ &&
+                    t.y + radius > minY && t.y - radius < maxY) {
+
+                    cp.activated = true;
+                    // Visual feedback: Green
+                    if (cp.matInstance) {
+                        cp.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.0, 1.0, 0.0]);
+                    }
+                    // Audio feedback
+                    audio.playGoal();
+
+                    // Update respawn for THIS marble
+                    // Spawn slightly above the checkpoint center to avoid clipping
+                    m.respawnPos = { x: cp.pos.x, y: cp.pos.y + 1.0, z: cp.pos.z };
+
+                    console.log(`[GAME] Checkpoint activated by ${m.name}! New respawn set.`);
+                }
             }
 
             // Check goals

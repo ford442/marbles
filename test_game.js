@@ -190,7 +190,8 @@ test('All zone types are implemented', () => {
         'createNeonCityZone',
         'createLoopZone',
         'createBlockZone',
-        'createBowlingZone'
+        'createBowlingZone',
+        'createCheckpointZone'
     ];
     
     for (const zone of zoneTypes) {
