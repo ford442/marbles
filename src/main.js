@@ -219,6 +219,21 @@ const LEVELS = {
             { id: 1, range: { x: [-10, 10], z: [53, 57], y: [0, 5] } }
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
+    },
+    castle_siege: {
+        name: 'Castle Siege',
+        description: 'Storm the castle!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'castle', pos: { x: 0, y: 0, z: 35 } },
+            { type: 'goal', pos: { x: 0, y: 0.25, z: 65 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-2, 2], z: [63, 67], y: [0, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
     }
 };
 
@@ -737,6 +752,9 @@ class MarblesGame {
                 break;
             case 'bowling':
                 this.createBowlingZone(offset);
+                break;
+            case 'castle':
+                this.createCastleZone(offset);
                 break;
         }
     }
@@ -1330,6 +1348,96 @@ class MarblesGame {
              [0.2, 0.2, 0.2],
              'metal'
         );
+    }
+
+    createCastleZone(offset) {
+        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+        // Castle Grounds
+        this.createStaticBox(
+            { x: offset.x, y: offset.y, z: offset.z },
+            floorQ,
+            { x: 15, y: 0.5, z: 25 },
+            [0.4, 0.4, 0.35], // Dirty ground
+            'concrete'
+        );
+
+        // Walls
+        const wallHeight = 3;
+        const wallThick = 0.5;
+        const wallColor = [0.5, 0.5, 0.55]; // Stone grey
+
+        // Left Wall
+        this.createStaticBox(
+            { x: offset.x - 10, y: offset.y + wallHeight/2, z: offset.z },
+            floorQ,
+            { x: wallThick, y: wallHeight/2, z: 25 },
+            wallColor,
+            'concrete'
+        );
+        // Right Wall
+        this.createStaticBox(
+            { x: offset.x + 10, y: offset.y + wallHeight/2, z: offset.z },
+            floorQ,
+            { x: wallThick, y: wallHeight/2, z: 25 },
+            wallColor,
+            'concrete'
+        );
+
+        // Gatehouse
+        const gateZ = offset.z + 15;
+        // Left Tower
+        this.createStaticBox(
+            { x: offset.x - 4, y: offset.y + 3, z: gateZ },
+            floorQ,
+            { x: 2, y: 3, z: 2 },
+            wallColor,
+            'concrete'
+        );
+        // Right Tower
+        this.createStaticBox(
+            { x: offset.x + 4, y: offset.y + 3, z: gateZ },
+            floorQ,
+            { x: 2, y: 3, z: 2 },
+            wallColor,
+            'concrete'
+        );
+        // Archway Top
+        this.createStaticBox(
+            { x: offset.x, y: offset.y + 5, z: gateZ },
+            floorQ,
+            { x: 2, y: 1, z: 1 },
+            wallColor,
+            'concrete'
+        );
+
+        // Drawbridge (Ramp)
+        const rampAngle = -0.2;
+        const sinA = Math.sin(rampAngle / 2);
+        const cosA = Math.cos(rampAngle / 2);
+        const rampQ = { x: sinA, y: 0, z: 0, w: cosA };
+
+        this.createStaticBox(
+             { x: offset.x, y: offset.y + 1, z: gateZ - 6 },
+             rampQ,
+             { x: 2, y: 0.2, z: 4 },
+             [0.4, 0.25, 0.1], // Wood
+             'wood'
+        );
+
+        // Crates (Dynamic obstacles) inside
+        for (let i = 0; i < 10; i++) {
+            const cx = offset.x + (Math.random() * 8 - 4);
+            const cz = offset.z + (Math.random() * 10 - 5);
+            this.createDynamicBox(
+                { x: cx, y: offset.y + 1.5, z: cz },
+                floorQ,
+                { x: 0.5, y: 0.5, z: 0.5 },
+                [0.6, 0.4, 0.2],
+                0.5,
+                'wood'
+            );
+        }
     }
 
     createJumpZone(offset) {
