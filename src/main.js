@@ -1844,7 +1844,9 @@ class MarblesGame {
             // 12. Neutron Star - Extremely dense, small, hard to move
             { name: "Neutron Star", color: [0.9, 0.9, 1.0], offset: { x: 0.0, y: 3, z: 6 }, radius: 0.3, density: 50.0, friction: 0.5, restitution: 0.1, roughness: 0.2 },
             // 13. Balloon - Very light, easily pushed
-            { name: "Balloon", color: [1.0, 0.4, 0.7], offset: { x: 2.0, y: 3, z: 6 }, radius: 0.5, density: 0.05, friction: 0.3, restitution: 0.9, roughness: 0.8 }
+            { name: "Balloon", color: [1.0, 0.4, 0.7], offset: { x: 2.0, y: 3, z: 6 }, radius: 0.5, density: 0.05, friction: 0.3, restitution: 0.9, roughness: 0.8 },
+            // 14. Plasma - Energy ball, frictionless, high bounce
+            { name: "Plasma", color: [0.9, 0.2, 0.9], offset: { x: -2.0, y: 3, z: 6 }, radius: 0.6, density: 0.2, friction: 0.0, restitution: 1.1, roughness: 0.0 }
         ];
 
         for (const info of marblesInfo) {
