@@ -150,9 +150,13 @@ const LEVELS = {
             { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
             { type: 'track', pos: { x: 0, y: 3, z: 0 } },
             { type: 'zigzag', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'checkpoint', pos: { x: 0, y: 0, z: 38 } },
             { type: 'goal', pos: { x: 0, y: -2, z: 80 } }
         ],
         spawn: { x: 0, y: 8, z: -12 },
+        checkpoints: [
+            { id: 1, range: { x: [-5, 5], z: [36, 40], y: [-2, 2] }, respawn: { x: 0, y: 5, z: 38 } }
+        ],
         goals: [
             { id: 1, range: { x: [-5, 5], z: [78, 82], y: [-5, 5] } }
         ],
@@ -401,6 +405,7 @@ class MarblesGame {
         this.levelStartTime = 0;
         this.levelComplete = false;
         this.goalDefinitions = [];
+        this.checkpointDefinitions = [];
     }
 
     initMouseControls() {
@@ -646,6 +651,7 @@ class MarblesGame {
         this.currentLevel = levelId;
         this.levelNameEl.textContent = level.name;
         this.goalDefinitions = level.goals;
+        this.checkpointDefinitions = level.checkpoints || [];
         this.score = 0;
         this.scoreEl.textContent = 'Score: 0';
         this.levelStartTime = Date.now();
@@ -771,10 +777,24 @@ class MarblesGame {
             case 'castle':
                 this.createCastleZone(offset);
                 break;
+            case 'checkpoint':
+                this.createCheckpointZone(offset);
             case 'domino':
                 this.createDominoZone(offset);
                 break;
         }
+    }
+
+    createCheckpointZone(offset) {
+        const q = { x: 0, y: 0, z: 0, w: 1 };
+        // Create a semi-transparent cyan box to visualize the checkpoint
+        this.createStaticBox(
+            { x: offset.x, y: offset.y, z: offset.z },
+            q,
+            { x: 2, y: 0.25, z: 2 },
+            [0.0, 1.0, 1.0], // Cyan
+            'glass'
+        );
     }
 
     createFloorZone(offset, size) {
@@ -2084,6 +2104,7 @@ class MarblesGame {
                 entity,
                 scale,
                 initialPos: pos,
+                currentRespawnPos: { ...pos },
                 scoredGoals: new Set()
             });
         }
@@ -2111,6 +2132,7 @@ class MarblesGame {
         audio.stopAllRolling();
 
         for (const m of this.marbles) {
+            m.currentRespawnPos = { ...m.initialPos };
             m.rigidBody.setTranslation(m.initialPos, true);
             m.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
             m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
@@ -2223,11 +2245,36 @@ class MarblesGame {
 
             // Respawn logic
             if (t.y < -20) {
-                m.rigidBody.setTranslation(m.initialPos, true);
+                const respawnPos = m.currentRespawnPos || m.initialPos;
+                m.rigidBody.setTranslation(respawnPos, true);
                 m.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
                 m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
-                m.scoredGoals.clear();
+
+                // Only clear progress if we are respawning at the very start
+                const isStart = Math.abs(respawnPos.x - m.initialPos.x) < 0.001 &&
+                                Math.abs(respawnPos.y - m.initialPos.y) < 0.001 &&
+                                Math.abs(respawnPos.z - m.initialPos.z) < 0.001;
+
+                if (isStart) {
+                    m.scoredGoals.clear();
+                }
                 continue;
+            }
+
+            // Check checkpoints
+            for (const checkpoint of this.checkpointDefinitions) {
+                if (t.x > checkpoint.range.x[0] && t.x < checkpoint.range.x[1] &&
+                    t.z > checkpoint.range.z[0] && t.z < checkpoint.range.z[1] &&
+                    t.y > checkpoint.range.y[0] && t.y < checkpoint.range.y[1]) {
+
+                    // Update respawn position if different
+                    if (m.currentRespawnPos.x !== checkpoint.respawn.x ||
+                        m.currentRespawnPos.z !== checkpoint.respawn.z) {
+                         m.currentRespawnPos = { ...checkpoint.respawn };
+                         console.log(`[GAME] Marble ${m.name} reached checkpoint ${checkpoint.id}`);
+                         audio.playGoal(); // Reuse goal sound for feedback
+                    }
+                }
             }
 
             // Check goals
