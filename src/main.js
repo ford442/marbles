@@ -1954,7 +1954,11 @@ class MarblesGame {
             // 13. Balloon - Very light, easily pushed
             { name: "Balloon", color: [1.0, 0.4, 0.7], offset: { x: 2.0, y: 3, z: 6 }, radius: 0.5, density: 0.05, friction: 0.3, restitution: 0.9, roughness: 0.8 },
             // 14. Plasma - Energy ball, frictionless, high bounce
-            { name: "Plasma", color: [0.9, 0.2, 0.9], offset: { x: -2.0, y: 3, z: 6 }, radius: 0.6, density: 0.2, friction: 0.0, restitution: 1.1, roughness: 0.0 }
+            { name: "Plasma", color: [0.9, 0.2, 0.9], offset: { x: -2.0, y: 3, z: 6 }, radius: 0.6, density: 0.2, friction: 0.0, restitution: 1.1, roughness: 0.0 },
+            // 15. Zero G - Almost weightless, floats
+            { name: "Zero G", color: [0.8, 1.0, 1.0], offset: { x: 5.0, y: 5, z: 2 }, radius: 0.5, gravityScale: 0.1, friction: 0.1, restitution: 0.9, density: 0.1, roughness: 0.1 },
+            // 16. Meteor - Heavy, fast falling
+            { name: "Meteor", color: [0.4, 0.1, 0.0], offset: { x: -5.0, y: 5, z: 2 }, radius: 0.6, gravityScale: 3.0, density: 5.0, friction: 0.5, restitution: 0.2, roughness: 0.8 }
         ];
 
         for (const info of marblesInfo) {
@@ -1969,6 +1973,11 @@ class MarblesGame {
             const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
                 .setTranslation(pos.x, pos.y, pos.z)
                 .setCanSleep(false);
+
+            if (info.gravityScale !== undefined) bodyDesc.setGravityScale(info.gravityScale);
+            if (info.linearDamping !== undefined) bodyDesc.setLinearDamping(info.linearDamping);
+            if (info.angularDamping !== undefined) bodyDesc.setAngularDamping(info.angularDamping);
+
             const rigidBody = this.world.createRigidBody(bodyDesc);
 
             const colliderDesc = RAPIER.ColliderDesc.ball(radius)
