@@ -234,6 +234,21 @@ const LEVELS = {
             { id: 1, range: { x: [-2, 2], z: [63, 67], y: [0, 5] } }
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
+    },
+    domino_effect: {
+        name: 'Domino Effect',
+        description: 'Set off the chain reaction!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'domino', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 0, y: 0.25, z: 60 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-2, 2], z: [58, 62], y: [0, 2] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
     }
 };
 
@@ -756,6 +771,9 @@ class MarblesGame {
             case 'castle':
                 this.createCastleZone(offset);
                 break;
+            case 'domino':
+                this.createDominoZone(offset);
+                break;
         }
     }
 
@@ -883,6 +901,65 @@ class MarblesGame {
                 'concrete'
             );
         }
+    }
+
+    createDominoZone(offset) {
+        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+        // Floor
+        this.createStaticBox(
+            { x: offset.x, y: offset.y, z: offset.z },
+            floorQ,
+            { x: 10, y: 0.5, z: 40 },
+            [0.5, 0.5, 0.5],
+            'concrete'
+        );
+
+        // Ramp to build speed
+        const rampAngle = -0.3;
+        const sinA = Math.sin(rampAngle / 2);
+        const cosA = Math.cos(rampAngle / 2);
+        const rampQ = { x: sinA, y: 0, z: 0, w: cosA };
+
+        this.createStaticBox(
+            { x: offset.x, y: offset.y + 2, z: offset.z - 15 },
+            rampQ,
+            { x: 2, y: 0.2, z: 8 },
+            [0.6, 0.6, 0.8],
+            'wood'
+        );
+
+        // Dominoes
+        const startZ = offset.z - 5;
+        const numDominos = 20;
+        const spacing = 1.5;
+
+        for (let i = 0; i < numDominos; i++) {
+            const angle = i * 0.1;
+            const z = startZ + i * spacing * Math.cos(angle * 0.5);
+            const x = offset.x + Math.sin(angle) * 3;
+
+            const q = quatFromEuler(angle * 0.5, 0, 0);
+
+            this.createDynamicBox(
+                { x: x, y: offset.y + 1.0, z: z },
+                q,
+                { x: 0.8, y: 1.0, z: 0.1 },
+                [1.0, 1.0 - (i/numDominos), i/numDominos],
+                0.5,
+                'wood'
+            );
+        }
+
+        // A big block at the end to knock over
+        this.createDynamicBox(
+            { x: offset.x + Math.sin(numDominos * 0.1) * 3, y: offset.y + 2, z: startZ + numDominos * spacing * Math.cos(numDominos * 0.05) + 2 },
+            floorQ,
+            { x: 1, y: 2, z: 1 },
+            [0.2, 0.8, 0.2],
+            0.2,
+            'wood'
+        );
     }
 
     createLoopZone(offset) {
