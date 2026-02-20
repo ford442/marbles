@@ -385,6 +385,7 @@ class MarblesGame {
         this.powerbarEl = document.getElementById('powerbar');
         this.jumpBarEl = document.getElementById('jumpbar');
         this.boostBarEl = document.getElementById('boostbar');
+        this.magnetBarEl = document.getElementById('magnetbar');
         this.currentMarbleIndex = 0;
         this.aimYaw = 0;
         this.jumpCharge = 0;
@@ -399,6 +400,11 @@ class MarblesGame {
         this.cueInst = null;
         this.jumpCount = 0;
         this.maxJumps = 2;
+
+        // Magnet State
+        this.magnetPower = 1.0;
+        this.magnetActive = false;
+        this.magnetMode = null; // 'attract' or 'repel'
 
         // Level State
         this.currentLevel = null;
@@ -499,8 +505,21 @@ class MarblesGame {
                 this.cameraMode = this.cameraMode === 'orbit' ? 'follow' : 'orbit';
                 console.log('Camera Mode:', this.cameraMode);
             }
+            // Magnet Input
+            if (e.code === 'KeyE') {
+                this.magnetMode = 'attract';
+                this.magnetActive = true;
+            }
+            if (e.code === 'KeyQ') {
+                this.magnetMode = 'repel';
+                this.magnetActive = true;
+            }
         });
         window.addEventListener('keyup', (e) => {
+            if (e.code === 'KeyE' || e.code === 'KeyQ') {
+                this.magnetActive = false;
+                this.magnetMode = null;
+            }
             if (e.code === 'Space') {
                 if (this.isChargingJump && this.playerMarble) {
                     const force = 5.0 + this.jumpCharge * 10.0;
@@ -2494,6 +2513,75 @@ class MarblesGame {
         // Update Shot Charge
         if (this.charging) {
             this.chargePower = Math.min(1.0, this.chargePower + 0.015);
+        }
+
+        // Magnet Logic
+        if (this.magnetActive && this.magnetPower > 0 && this.playerMarble) {
+            // Drain power
+            this.magnetPower = Math.max(0, this.magnetPower - 0.005);
+
+            const pt = this.playerMarble.rigidBody.translation();
+            const range = 20.0;
+            const forceStrength = 150.0; // Adjustable strength
+
+            // Helper to apply force
+            const applyMagnetForce = (body) => {
+                const bt = body.translation();
+                const dx = pt.x - bt.x;
+                const dy = pt.y - bt.y;
+                const dz = pt.z - bt.z;
+                const dist = Math.hypot(dx, dy, dz);
+
+                if (dist > 0.5 && dist < range) {
+                    // Force inversely proportional to distance squared (like gravity/magnetism)
+                    // but clamped to avoid infinite forces
+                    const factor = forceStrength / (dist * dist + 1.0);
+
+                    const dirX = dx / dist;
+                    const dirY = dy / dist;
+                    const dirZ = dz / dist;
+
+                    let fx = dirX * factor;
+                    let fy = dirY * factor;
+                    let fz = dirZ * factor;
+
+                    if (this.magnetMode === 'repel') {
+                        fx = -fx;
+                        fy = -fy;
+                        fz = -fz;
+                    }
+
+                    body.applyImpulse({ x: fx, y: fy, z: fz }, true);
+                }
+            };
+
+            // Apply to other marbles
+            for (const m of this.marbles) {
+                if (m !== this.playerMarble) {
+                    applyMagnetForce(m.rigidBody);
+                }
+            }
+            // Apply to dynamic objects
+            for (const obj of this.dynamicObjects) {
+                applyMagnetForce(obj.rigidBody);
+            }
+
+        } else if (!this.magnetActive && this.magnetPower < 1.0) {
+            // Regenerate power
+            this.magnetPower = Math.min(1.0, this.magnetPower + 0.002);
+        }
+
+        // Update Magnet UI
+        if (this.magnetBarEl) {
+            this.magnetBarEl.style.width = `${this.magnetPower * 100}%`;
+            if (this.magnetActive) {
+                const color = this.magnetMode === 'attract' ? '#00ffff' : '#ff00ff';
+                this.magnetBarEl.style.background = color;
+                this.magnetBarEl.style.boxShadow = `0 0 10px ${color}`;
+            } else {
+                this.magnetBarEl.style.background = 'linear-gradient(90deg, #00ffff 0%, #ff00ff 100%)';
+                this.magnetBarEl.style.boxShadow = 'none';
+            }
         }
 
         // Update UI

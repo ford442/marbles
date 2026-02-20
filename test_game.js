@@ -194,7 +194,7 @@ test('All zone types are implemented', () => {
         'createBlockZone',
         'createBowlingZone',
         'createCastleZone',
-        'createCheckpointZone'
+        'createCheckpointZone',
         'createDominoZone'
     ];
     
@@ -231,6 +231,23 @@ test('Camera modes are implemented', () => {
     assert(mainJs.includes("'orbit'"), 'Orbit camera should exist');
     assert(mainJs.includes("'follow'"), 'Follow camera should exist');
     assert(mainJs.includes('lookAt('), 'Camera lookAt should be used');
+});
+
+// Test 13: Check magnet mechanic
+test('Magnet mechanic is implemented', () => {
+    const mainJs = fs.readFileSync(join(__dirname, 'src/main.js'), 'utf-8');
+    const html = fs.readFileSync(join(__dirname, 'index.html'), 'utf-8');
+
+    // UI
+    assert(html.includes('magnetbar-container'), 'Magnet bar container should exist in HTML');
+    assert(html.includes('magnetbar'), 'Magnet bar should exist in HTML');
+
+    // Logic
+    assert(mainJs.includes('this.magnetPower ='), 'Magnet power should be initialized');
+    assert(mainJs.includes('this.magnetActive ='), 'Magnet active state should be initialized');
+    assert(mainJs.includes("'KeyE'"), 'Key E should be handled');
+    assert(mainJs.includes("'KeyQ'"), 'Key Q should be handled');
+    assert(mainJs.includes('magnetMode'), 'Magnet mode should be tracked');
 });
 
 // Summary
