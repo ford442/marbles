@@ -268,6 +268,21 @@ const LEVELS = {
             { id: 1, range: { x: [-2, 2], z: [33, 37], y: [6, 10] } }
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
+    },
+    moving_madness: {
+        name: 'Moving Madness',
+        description: 'Timing is everything!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'moving_zone', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 0, y: 0.25, z: 65 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-2, 2], z: [63, 67], y: [0, 2] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
     }
 };
 
@@ -376,6 +391,7 @@ class MarblesGame {
         this.staticBodies = []; // Track for cleanup
         this.staticEntities = []; // Track for cleanup
         this.dynamicObjects = []; // Track for cleanup (pins, dominos, etc)
+        this.movingPlatforms = []; // Track for cleanup and update
         this.Filament = null;
         this.material = null;
         this.cubeMesh = null;
@@ -732,6 +748,14 @@ class MarblesGame {
         }
         this.dynamicObjects = [];
 
+        // Remove all moving platforms
+        for (const p of this.movingPlatforms) {
+            this.world.removeRigidBody(p.rigidBody);
+            this.scene.remove(p.entity);
+            this.engine.destroyEntity(p.entity);
+        }
+        this.movingPlatforms = [];
+
         // Reset lighting to day mode
         this.setNightMode(false);
     }
@@ -801,7 +825,63 @@ class MarblesGame {
             case 'pyramid':
                 this.createPyramidZone(offset);
                 break;
+            case 'moving_zone':
+                this.createMovingZone(offset);
+                break;
         }
+    }
+
+    createMovingZone(offset) {
+        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+        // Start Platform
+        this.createStaticBox(
+            { x: offset.x, y: offset.y, z: offset.z },
+            floorQ,
+            { x: 4, y: 0.5, z: 4 },
+            [0.4, 0.4, 0.4],
+            'concrete'
+        );
+
+        // Gap 1: Horizontal Moving Platform
+        // Moves between x=-5 and x=5 at z+10
+        this.createKinematicBox(
+            { x: offset.x - 5, y: offset.y, z: offset.z + 10 },
+            { x: offset.x + 5, y: offset.y, z: offset.z + 10 },
+            { x: 2, y: 0.25, z: 2 },
+            [0.8, 0.5, 0.2],
+            2.0,
+            'metal'
+        );
+
+        // Landing Platform 1
+        this.createStaticBox(
+            { x: offset.x, y: offset.y, z: offset.z + 20 },
+            floorQ,
+            { x: 4, y: 0.5, z: 4 },
+            [0.4, 0.4, 0.4],
+            'concrete'
+        );
+
+        // Gap 2: Vertical Moving Platform (Elevator)
+        // Moves between y=0 and y=5 at z+30
+        this.createKinematicBox(
+            { x: offset.x, y: offset.y, z: offset.z + 30 },
+            { x: offset.x, y: offset.y + 5, z: offset.z + 30 },
+            { x: 2, y: 0.25, z: 2 },
+            [0.2, 0.5, 0.8],
+            1.5,
+            'metal'
+        );
+
+        // Landing Platform 2 (High)
+        this.createStaticBox(
+            { x: offset.x, y: offset.y + 5, z: offset.z + 40 },
+            floorQ,
+            { x: 4, y: 0.5, z: 4 },
+            [0.4, 0.4, 0.4],
+            'concrete'
+        );
     }
 
     createPyramidZone(offset) {
@@ -2073,6 +2153,43 @@ class MarblesGame {
         });
     }
 
+    createKinematicBox(startPos, endPos, halfExtents, color, speed = 1.0, material = 'metal') {
+        // Kinematic Position Based Body
+        const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
+            .setTranslation(startPos.x, startPos.y, startPos.z);
+
+        const body = this.world.createRigidBody(bodyDesc);
+
+        const colliderDesc = RAPIER.ColliderDesc.cuboid(halfExtents.x, halfExtents.y, halfExtents.z);
+        this.world.createCollider(colliderDesc, body);
+
+        // Register material for collision sounds
+        audio.registerBodyMaterial(body, material);
+
+        const entity = this.Filament.EntityManager.get().create();
+        const matInstance = this.material.createInstance();
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color);
+        matInstance.setFloatParameter('roughness', 0.2);
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .build(this.engine, entity);
+
+        this.scene.addEntity(entity);
+
+        this.movingPlatforms.push({
+            rigidBody: body,
+            entity: entity,
+            halfExtents: halfExtents,
+            start: { ...startPos },
+            end: { ...endPos },
+            speed: speed,
+            time: 0
+        });
+    }
+
     createMarbles(spawnPos) {
         const baseSpawn = spawnPos || { x: 0, y: 8, z: -12 };
 
@@ -2586,6 +2703,16 @@ class MarblesGame {
             this.camera.lookAt([eyeX, this.camHeight, eyeZ], [0, 0, 0], [0, 1, 0]);
         }
 
+        // Update Moving Platforms (Physics)
+        for (const platform of this.movingPlatforms) {
+            platform.time += 0.016;
+            const t = (Math.sin(platform.time * platform.speed) + 1) / 2;
+            const x = platform.start.x + (platform.end.x - platform.start.x) * t;
+            const y = platform.start.y + (platform.end.y - platform.start.y) * t;
+            const z = platform.start.z + (platform.end.z - platform.start.z) * t;
+            platform.rigidBody.setNextKinematicTranslation({ x, y, z });
+        }
+
         // Step Physics with event handling
         this.world.step();
 
@@ -2627,6 +2754,23 @@ class MarblesGame {
             }
 
             const inst = tcm.getInstance(obj.entity);
+            tcm.setTransform(inst, mat);
+        }
+
+        // Sync Moving Platforms
+        for (const p of this.movingPlatforms) {
+            const t = p.rigidBody.translation();
+            const r = p.rigidBody.rotation();
+            const mat = quaternionToMat4(t, r);
+
+            const sx = p.halfExtents.x * 2;
+            const sy = p.halfExtents.y * 2;
+            const sz = p.halfExtents.z * 2;
+            mat[0] *= sx; mat[1] *= sx; mat[2] *= sx;
+            mat[4] *= sy; mat[5] *= sy; mat[6] *= sy;
+            mat[8] *= sz; mat[9] *= sz; mat[10] *= sz;
+
+            const inst = tcm.getInstance(p.entity);
             tcm.setTransform(inst, mat);
         }
 
