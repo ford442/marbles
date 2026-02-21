@@ -2117,7 +2117,9 @@ class MarblesGame {
             // 16. Meteor - Heavy, fast falling
             { name: "Meteor", color: [0.4, 0.1, 0.0], offset: { x: -5.0, y: 5, z: 2 }, radius: 0.6, gravityScale: 3.0, density: 5.0, friction: 0.5, restitution: 0.2, roughness: 0.8 },
             // 17. Pinball - Steel ball, heavy, smooth, bouncy
-            { name: "Pinball", color: [0.75, 0.75, 0.8], offset: { x: 0.0, y: 5, z: -4 }, radius: 0.4, density: 8.0, friction: 0.1, restitution: 0.7, roughness: 0.0 }
+            { name: "Pinball", color: [0.75, 0.75, 0.8], offset: { x: 0.0, y: 5, z: -4 }, radius: 0.4, density: 8.0, friction: 0.1, restitution: 0.7, roughness: 0.0 },
+            // 18. Obsidian - Dark, shiny, brittle feel
+            { name: "Obsidian", color: [0.05, 0.05, 0.05], offset: { x: 2.5, y: 5, z: -4 }, radius: 0.5, density: 4.0, friction: 0.1, restitution: 0.1, roughness: 0.0 }
         ];
 
         for (const info of marblesInfo) {
