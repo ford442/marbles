@@ -235,6 +235,17 @@ test('Camera modes are implemented', () => {
     assert(mainJs.includes('lookAt('), 'Camera lookAt should be used');
 });
 
+// Test 13: Check Power-up system
+test('Power-up system is implemented', () => {
+    const mainJs = fs.readFileSync(join(__dirname, 'src/main.js'), 'utf-8');
+
+    assert(mainJs.includes('createPowerUp('), 'createPowerUp method should exist');
+    assert(mainJs.includes('createPowerUpZone('), 'createPowerUpZone method should exist');
+    assert(mainJs.includes('this.powerUps = []'), 'powerUps array should be initialized');
+    assert(mainJs.includes('this.activeEffects = {}'), 'activeEffects object should be initialized');
+    assert(mainJs.includes('powerup_park:'), 'powerup_park level should be defined');
+});
+
 // Summary
 console.log('\n' + '='.repeat(50));
 console.log(`\nTest Results:`);
