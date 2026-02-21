@@ -268,6 +268,19 @@ const LEVELS = {
             { id: 1, range: { x: [-2, 2], z: [33, 37], y: [6, 10] } }
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
+    },
+    powerup_park: {
+        name: 'Power-Up Park',
+        description: 'Test the new power-ups!',
+        zones: [
+            { type: 'powerup', pos: { x: 0, y: -2, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: 0.25, z: 25 } }
+        ],
+        spawn: { x: 0, y: 5, z: 0 },
+        goals: [
+            { id: 1, range: { x: [-2, 2], z: [23, 27], y: [0, 2] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
     }
 };
 
@@ -421,6 +434,22 @@ class MarblesGame {
         this.levelComplete = false;
         this.goalDefinitions = [];
         this.checkpointDefinitions = [];
+        this.powerUps = [];
+        this.activeEffects = {};
+
+        // Create UI for active effects
+        this.effectEl = document.createElement('div');
+        this.effectEl.id = 'active-effects';
+        this.effectEl.style.position = 'absolute';
+        this.effectEl.style.top = '100px';
+        this.effectEl.style.right = '20px';
+        this.effectEl.style.color = '#fff';
+        this.effectEl.style.fontSize = '24px';
+        this.effectEl.style.fontWeight = 'bold';
+        this.effectEl.style.textAlign = 'right';
+        this.effectEl.style.textShadow = '2px 2px 0px #000';
+        this.effectEl.style.pointerEvents = 'none';
+        document.getElementById('ui').appendChild(this.effectEl);
     }
 
     initMouseControls() {
@@ -493,7 +522,13 @@ class MarblesGame {
                         // Double Jump
                         const linvel = this.playerMarble.rigidBody.linvel();
                         this.playerMarble.rigidBody.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true);
-                        this.playerMarble.rigidBody.applyImpulse({ x: 0, y: 10.0, z: 0 }, true);
+
+                        let force = 10.0;
+                        if (this.activeEffects.jump && this.activeEffects.jump > Date.now()) {
+                            force *= 1.5;
+                        }
+
+                        this.playerMarble.rigidBody.applyImpulse({ x: 0, y: force, z: 0 }, true);
                         this.jumpCount++;
                         audio.playJump();
                     }
@@ -518,7 +553,10 @@ class MarblesGame {
         window.addEventListener('keyup', (e) => {
             if (e.code === 'Space') {
                 if (this.isChargingJump && this.playerMarble) {
-                    const force = 5.0 + this.jumpCharge * 10.0;
+                    let force = 5.0 + this.jumpCharge * 10.0;
+                    if (this.activeEffects.jump && this.activeEffects.jump > Date.now()) {
+                        force *= 1.5;
+                    }
                     this.playerMarble.rigidBody.applyImpulse({ x: 0, y: force, z: 0 }, true);
                     audio.playJump();
                     this.jumpCount = 1; // Used ground jump
@@ -732,6 +770,16 @@ class MarblesGame {
         }
         this.dynamicObjects = [];
 
+        // Remove all power-ups
+        for (const p of this.powerUps) {
+            this.world.removeRigidBody(p.rigidBody);
+            this.scene.remove(p.entity);
+            this.engine.destroyEntity(p.entity);
+        }
+        this.powerUps = [];
+        this.activeEffects = {};
+        if (this.effectEl) this.effectEl.innerHTML = '';
+
         // Reset lighting to day mode
         this.setNightMode(false);
     }
@@ -801,6 +849,9 @@ class MarblesGame {
             case 'pyramid':
                 this.createPyramidZone(offset);
                 break;
+            case 'powerup':
+                this.createPowerUpZone(offset);
+                break;
         }
     }
 
@@ -842,6 +893,80 @@ class MarblesGame {
             { x: 2, y: 0.2, z: 2 },
             [1.0, 0.8, 0.0], // Gold
             'metal'
+        );
+    }
+
+    createPowerUp(pos, type) {
+        const bodyDesc = RAPIER.RigidBodyDesc.fixed()
+            .setTranslation(pos.x, pos.y, pos.z);
+        const body = this.world.createRigidBody(bodyDesc);
+        // Sensor collider
+        const colliderDesc = RAPIER.ColliderDesc.cuboid(0.5, 0.5, 0.5)
+            .setSensor(true);
+        this.world.createCollider(colliderDesc, body);
+
+        // Visuals
+        const color = type === 'speed' ? [1.0, 0.8, 0.0] : [0.0, 1.0, 0.0]; // Yellow for Speed, Green for Jump
+
+        const entity = this.Filament.EntityManager.get().create();
+        const matInstance = this.material.createInstance();
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color);
+        matInstance.setFloatParameter('roughness', 0.2); // Shiny
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .build(this.engine, entity);
+
+        // Scale down to look like a small box
+        const tcm = this.engine.getTransformManager();
+        const inst = tcm.getInstance(entity);
+        const mat = quaternionToMat4(pos, { x: 0, y: 0, z: 0, w: 1 });
+        const s = 0.6; // Slightly smaller than unit cube
+        mat[0] *= s; mat[1] *= s; mat[2] *= s;
+        mat[4] *= s; mat[5] *= s; mat[6] *= s;
+        mat[8] *= s; mat[9] *= s; mat[10] *= s;
+        tcm.setTransform(inst, mat);
+
+        this.scene.addEntity(entity);
+
+        this.powerUps.push({
+            type,
+            rigidBody: body,
+            entity,
+            pos: { ...pos },
+            rotation: 0
+        });
+    }
+
+    createPowerUpZone(offset) {
+        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+        // Floor
+        this.createStaticBox(
+            { x: offset.x, y: offset.y, z: offset.z },
+            floorQ,
+            { x: 20, y: 0.5, z: 30 },
+            [0.2, 0.2, 0.25],
+            'concrete'
+        );
+
+        // PowerUps
+        // Speed boosts
+        this.createPowerUp({ x: offset.x - 5, y: offset.y + 1, z: offset.z + 5 }, 'speed');
+        this.createPowerUp({ x: offset.x + 5, y: offset.y + 1, z: offset.z + 5 }, 'speed');
+
+        // Jump boosts
+        this.createPowerUp({ x: offset.x, y: offset.y + 1, z: offset.z + 15 }, 'jump');
+
+        // Obstacles to jump over
+        this.createStaticBox(
+            { x: offset.x, y: offset.y + 1, z: offset.z + 20 },
+            floorQ,
+            { x: 10, y: 1, z: 1 },
+            [0.5, 0.5, 0.5],
+            'concrete'
         );
     }
 
@@ -1949,7 +2074,11 @@ class MarblesGame {
     shootMarble() {
         if (!this.playerMarble) return;
 
-        const force = 50.0 + this.chargePower * 150.0;
+        let force = 50.0 + this.chargePower * 150.0;
+        if (this.activeEffects.speed && this.activeEffects.speed > Date.now()) {
+            force *= 2.0;
+        }
+
         const cosP = Math.cos(this.pitchAngle);
         const sinP = Math.sin(this.pitchAngle);
 
@@ -2302,6 +2431,35 @@ class MarblesGame {
         const level = LEVELS[this.currentLevel];
         let allGoalsScored = level.goals.length > 0;
 
+        // Check power-ups
+        for (let i = this.powerUps.length - 1; i >= 0; i--) {
+            const p = this.powerUps[i];
+            let collected = false;
+
+            for (const m of this.marbles) {
+                const t = m.rigidBody.translation();
+                const dx = t.x - p.pos.x;
+                const dy = t.y - p.pos.y;
+                const dz = t.z - p.pos.z;
+                if (Math.hypot(dx, dy, dz) < 1.5) {
+                    collected = true;
+                    break;
+                }
+            }
+
+            if (collected) {
+                const duration = 5000;
+                this.activeEffects[p.type] = Date.now() + duration;
+                audio.playGoal();
+                console.log(`[GAME] Collected ${p.type} power-up!`);
+
+                this.world.removeRigidBody(p.rigidBody);
+                this.scene.remove(p.entity);
+                this.engine.destroyEntity(p.entity);
+                this.powerUps.splice(i, 1);
+            }
+        }
+
         for (const m of this.marbles) {
             const t = m.rigidBody.translation();
 
@@ -2583,6 +2741,35 @@ class MarblesGame {
             const eyeZ = this.camRadius * Math.cos(this.camAngle);
             this.camera.lookAt([eyeX, this.camHeight, eyeZ], [0, 0, 0], [0, 1, 0]);
         }
+
+        // Update PowerUps
+        const now = Date.now();
+
+        // Rotate visuals
+        for (const p of this.powerUps) {
+            p.rotation += 0.05;
+            const q = quatFromEuler(p.rotation, 0, 0);
+            const mat = quaternionToMat4(p.pos, q);
+            // Scale
+            const s = 0.6;
+            mat[0] *= s; mat[1] *= s; mat[2] *= s;
+            mat[4] *= s; mat[5] *= s; mat[6] *= s;
+            mat[8] *= s; mat[9] *= s; mat[10] *= s;
+
+            const tcm = this.engine.getTransformManager();
+            const inst = tcm.getInstance(p.entity);
+            tcm.setTransform(inst, mat);
+        }
+
+        // Update active effects UI
+        let effectsText = '';
+        if (this.activeEffects.speed && this.activeEffects.speed > now) {
+            effectsText += '<div style="color: #ffcc00">SPEED BOOST!</div>';
+        }
+        if (this.activeEffects.jump && this.activeEffects.jump > now) {
+            effectsText += '<div style="color: #00ff00">JUMP BOOST!</div>';
+        }
+        if (this.effectEl) this.effectEl.innerHTML = effectsText;
 
         // Step Physics with event handling
         this.world.step();
