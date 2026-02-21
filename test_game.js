@@ -80,7 +80,8 @@ test('Level definitions are valid', () => {
         'block_challenge',
         'bowling_alley',
         'castle_siege',
-        'domino_effect'
+        'domino_effect',
+        'pyramid_climb'
     ];
     
     for (const level of expectedLevels) {
@@ -195,7 +196,8 @@ test('All zone types are implemented', () => {
         'createBowlingZone',
         'createCastleZone',
         'createCheckpointZone',
-        'createDominoZone'
+        'createDominoZone',
+        'createPyramidZone'
     ];
     
     for (const zone of zoneTypes) {

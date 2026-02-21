@@ -253,6 +253,21 @@ const LEVELS = {
             { id: 1, range: { x: [-2, 2], z: [58, 62], y: [0, 2] } }
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
+    },
+    pyramid_climb: {
+        name: 'Pyramid Climb',
+        description: 'Ascend the ancient structure',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 60, y: 0.5, z: 60 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'pyramid', pos: { x: 0, y: 0, z: 35 } },
+            { type: 'goal', pos: { x: 0, y: 6.5, z: 35 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-2, 2], z: [33, 37], y: [6, 10] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
     }
 };
 
@@ -779,10 +794,55 @@ class MarblesGame {
                 break;
             case 'checkpoint':
                 this.createCheckpointZone(offset);
+                break;
             case 'domino':
                 this.createDominoZone(offset);
                 break;
+            case 'pyramid':
+                this.createPyramidZone(offset);
+                break;
         }
+    }
+
+    createPyramidZone(offset) {
+        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+        // Base
+        this.createStaticBox(
+            { x: offset.x, y: offset.y, z: offset.z },
+            floorQ,
+            { x: 15, y: 0.5, z: 15 },
+            [0.6, 0.5, 0.3], // Sand color
+            'concrete'
+        );
+
+        // Steps
+        const steps = 6;
+        const stepHeight = 0.8;
+        const sizeStep = 2.0;
+
+        for (let i = 0; i < steps; i++) {
+            const currentSize = 12 - i * sizeStep;
+            const y = offset.y + 0.5 + i * stepHeight + stepHeight/2;
+
+            this.createStaticBox(
+                { x: offset.x, y: y, z: offset.z },
+                floorQ,
+                { x: currentSize/2, y: stepHeight/2, z: currentSize/2 },
+                [0.7 - i*0.05, 0.6 - i*0.05, 0.4 - i*0.05],
+                'concrete'
+            );
+        }
+
+        // Top Platform
+        const topY = offset.y + 0.5 + steps * stepHeight;
+        this.createStaticBox(
+            { x: offset.x, y: topY, z: offset.z },
+            floorQ,
+            { x: 2, y: 0.2, z: 2 },
+            [1.0, 0.8, 0.0], // Gold
+            'metal'
+        );
     }
 
     createCheckpointZone(offset) {
