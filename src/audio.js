@@ -300,6 +300,32 @@ export class MarbleAudio {
     }
 
     /**
+     * Play collect sound (short high chime)
+     */
+    playCollect() {
+        if (!this.enabled || !this.ctx) return;
+
+        const t = this.ctx.currentTime;
+        const gain = this.ctx.createGain();
+        gain.connect(this.masterGain);
+
+        const osc = this.ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200, t);
+        osc.frequency.exponentialRampToValueAtTime(2000, t + 0.1);
+
+        osc.connect(gain);
+
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.15, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+
+        osc.start(t);
+        osc.stop(t + 0.25);
+    }
+
+    /**
+     * Play a jump sound
      * Play a collectible pickup sound (coin/ding)
      */
     playCollect() {
