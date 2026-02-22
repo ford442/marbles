@@ -1,3 +1,5 @@
+import { spaceStationLevel } from './space_station.js';
+
 export const LEVELS = {
     tutorial: {
         name: 'Tutorial Ramp',
@@ -294,5 +296,6 @@ export const LEVELS = {
             { id: 1, range: { x: [-2, 2], z: [68, 72], y: [0, 2] } }
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
-    }
+    },
+    space_station: spaceStationLevel
 };
