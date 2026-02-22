@@ -194,6 +194,8 @@ test('All zone types are implemented', () => {
         'createLoopZone',
         'createBlockZone',
         'createBowlingZone',
+        'createCheckpointZone'
+        'createCastleZone'
         'createCastleZone',
         'createCheckpointZone',
         'createDominoZone',
@@ -235,6 +237,34 @@ test('Camera modes are implemented', () => {
     assert(mainJs.includes('lookAt('), 'Camera lookAt should be used');
 });
 
+// Test 13: Check magnet mechanic
+test('Magnet mechanic is implemented', () => {
+    const mainJs = fs.readFileSync(join(__dirname, 'src/main.js'), 'utf-8');
+    const html = fs.readFileSync(join(__dirname, 'index.html'), 'utf-8');
+
+    // UI
+    assert(html.includes('magnetbar-container'), 'Magnet bar container should exist in HTML');
+    assert(html.includes('magnetbar'), 'Magnet bar should exist in HTML');
+
+    // Logic
+    assert(mainJs.includes('this.magnetPower ='), 'Magnet power should be initialized');
+    assert(mainJs.includes('this.magnetActive ='), 'Magnet active state should be initialized');
+    assert(mainJs.includes("'KeyE'"), 'Key E should be handled');
+    assert(mainJs.includes("'KeyQ'"), 'Key Q should be handled');
+    assert(mainJs.includes('magnetMode'), 'Magnet mode should be tracked');
+// Test 13: Check boost mechanic
+test('Boost mechanic is implemented', () => {
+    const mainJs = fs.readFileSync(join(__dirname, 'src/main.js'), 'utf-8');
+    const audioJs = fs.readFileSync(join(__dirname, 'src/audio.js'), 'utf-8');
+    const html = fs.readFileSync(join(__dirname, 'index.html'), 'utf-8');
+
+    assert(mainJs.includes('boostCooldownDuration'), 'Boost cooldown should be defined');
+    assert(mainJs.includes('audio.playBoost()'), 'Boost audio should be triggered');
+    assert(mainJs.includes('ShiftLeft'), 'Shift key should be handled');
+
+    assert(audioJs.includes('playBoost()'), 'playBoost method should exist in audio.js');
+
+    assert(html.includes('id="boostbar"'), 'Boost bar element should exist in HTML');
 // Test 13: Check Power-up system
 test('Power-up system is implemented', () => {
     const mainJs = fs.readFileSync(join(__dirname, 'src/main.js'), 'utf-8');
