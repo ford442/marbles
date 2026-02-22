@@ -194,6 +194,8 @@ test('All zone types are implemented', () => {
         'createLoopZone',
         'createBlockZone',
         'createBowlingZone',
+        'createCheckpointZone'
+        'createCastleZone'
         'createCastleZone',
         'createCheckpointZone',
         'createDominoZone',
