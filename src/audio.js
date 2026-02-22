@@ -300,6 +300,33 @@ export class MarbleAudio {
     }
 
     /**
+     * Play a collectible pickup sound (coin/ding)
+     */
+    playCollect() {
+        if (!this.enabled || !this.ctx) return;
+
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        // High-pitched sine sweep
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200, t);
+        osc.frequency.exponentialRampToValueAtTime(1800, t + 0.1);
+
+        // Short envelope
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.3, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+
+        osc.start(t);
+        osc.stop(t + 0.3);
+    }
+
+    /**
      * Play a jump sound
      */
     playJump() {
@@ -331,62 +358,6 @@ export class MarbleAudio {
 
         osc.start(t);
         osc.stop(t + 0.35);
-    }
-
-    /**
-     * Play a boost/dash sound
-     */
-    playBoost() {
-        if (!this.enabled || !this.ctx) return;
-
-        const t = this.ctx.currentTime;
-        const gain = this.ctx.createGain();
-        gain.connect(this.masterGain);
-
-        // White noise for whoosh
-        const bufferSize = this.ctx.sampleRate * 0.5;
-        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-            data[i] = Math.random() * 2 - 1;
-        }
-
-        const noise = this.ctx.createBufferSource();
-        noise.buffer = buffer;
-
-        const filter = this.ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(200, t);
-        filter.frequency.exponentialRampToValueAtTime(3000, t + 0.2);
-        filter.Q.value = 1;
-
-        noise.connect(filter);
-        filter.connect(gain);
-
-        gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(0.3, t + 0.1);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
-
-        noise.start(t);
-        noise.stop(t + 0.5);
-
-        // Add a rising sine wave for "energy" feel
-        const osc = this.ctx.createOscillator();
-        const oscGain = this.ctx.createGain();
-
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(200, t);
-        osc.frequency.exponentialRampToValueAtTime(800, t + 0.3);
-
-        osc.connect(oscGain);
-        oscGain.connect(this.masterGain);
-
-        oscGain.gain.setValueAtTime(0, t);
-        oscGain.gain.linearRampToValueAtTime(0.2, t + 0.1);
-        oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
-
-        osc.start(t);
-        osc.stop(t + 0.4);
     }
 
     /**
@@ -689,39 +660,6 @@ export class MarbleAudio {
         for (const id of this.rollingSounds.keys()) {
             this.stopRolling(id);
         }
-    }
-
-    /**
-     * Play boost sound effect (whoosh)
-     */
-    playBoost() {
-        if (!this.enabled || !this.ctx || this.muted) return;
-
-        const t = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-
-        // Sawtooth for a bit of buzz/energy
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(100, t);
-        osc.frequency.exponentialRampToValueAtTime(800, t + 0.3);
-
-        // Lowpass filter sweep to make it a "whoosh"
-        const filter = this.ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(200, t);
-        filter.frequency.linearRampToValueAtTime(3000, t + 0.2);
-
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(this.masterGain);
-
-        // Envelope
-        gain.gain.setValueAtTime(0.25, t); // Not too loud
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-
-        osc.start(t);
-        osc.stop(t + 0.5);
     }
 }
 

@@ -27,7 +27,7 @@
         this.powerbarEl = document.getElementById('powerbar');
         this.jumpBarEl = document.getElementById('jumpbar');
         this.boostBarEl = document.getElementById('boostbar');
-        this.effectEl = document.getElementById('effects'); // From main
+        this.effectEl = document.getElementById('effects');
         this.currentMarbleIndex = 0;
         this.aimYaw = 0;
         this.jumpCharge = 0;
@@ -46,46 +46,91 @@
         this.levelStartTime = 0;
         this.levelComplete = false;
         this.goalDefinitions = [];
-
-        // Main branch additions
+        
+        // Feature branch: Collectibles
+        this.collectibles = [];
+        this.collectibleRotation = 0;
+        
+        // Main branch: Powerups and Platforms
         this.powerUps = [];
         this.activeEffects = { speed: 0, jump: 0 };
         this.movingPlatforms = [];
     }
 
-    // ... keep all other methods ...
+    // ... keep initMouseControls, isGrounded, init, showLevelSelection, loadLevel from feature branch ...
+
+    clearLevel() {
+        // Remove all marbles
+        for (const m of this.marbles) {
+            this.world.removeRigidBody(m.rigidBody);
+            this.scene.remove(m.entity);
+            this.engine.destroyEntity(m.entity);
+        }
+        this.marbles = [];
+        this.playerMarble = null;
+
+        // Remove all static bodies
+        for (const body of this.staticBodies) {
+            this.world.removeRigidBody(body);
+        }
+        this.staticBodies = [];
+
+        // Remove all static entities
+        for (const entity of this.staticEntities) {
+            this.scene.remove(entity);
+            this.engine.destroyEntity(entity);
+        }
+        this.staticEntities = [];
+
+        // Remove all collectibles (from feature)
+        for (const c of this.collectibles) {
+            this.scene.remove(c.entity);
+            this.engine.destroyEntity(c.entity);
+        }
+        this.collectibles = [];
+
+        // Remove all powerups (from main)
+        for (const p of this.powerUps) {
+            this.scene.remove(p.entity);
+            this.engine.destroyEntity(p.entity);
+        }
+        this.powerUps = [];
+
+        // Remove all moving platforms (from main)
+        for (const platform of this.movingPlatforms) {
+            this.world.removeRigidBody(platform.rigidBody);
+            this.scene.remove(platform.entity);
+            this.engine.destroyEntity(platform.entity);
+        }
+        this.movingPlatforms = [];
+
+        // Reset lighting to day mode
+        this.setNightMode(false);
+    }
+
+    // ... keep createCollectible, createZone, and all createXxxZone methods from feature branch ...
+
     createMarbles(spawnPos) {
         const baseSpawn = spawnPos || { x: 0, y: 8, z: -12 };
 
         const marblesInfo = [
-            { color: [1.0, 0.0, 0.0], offset: { x: -1.0, y: 0, z: 0 } },
-            { color: [0.0, 0.0, 1.0], offset: { x: 1.0, y: 0, z: 0 } },
-            { color: [0.2, 1.0, 0.2], offset: { x: -2.5, y: 4, z: 0 }, radius: 0.4, friction: 0.1, restitution: 0.8, roughness: 0.2 },
-            { color: [0.6, 0.1, 0.8], offset: { x: 0.0, y: 2, z: 2 }, radius: 0.75, restitution: 1.2 },
-            { color: [1.0, 0.84, 0.0], offset: { x: 2.5, y: 2, z: 2 }, radius: 0.6, restitution: 0.2, density: 3.0, roughness: 0.3 },
-            { color: [0.0, 0.8, 1.0], offset: { x: -2.0, y: 2, z: 2 }, radius: 0.5, friction: 0.05, restitution: 0.5, roughness: 0.1 },
+            { name: "Red Classic", color: [1.0, 0.0, 0.0], offset: { x: -1.0, y: 0, z: 0 } },
+            { name: "Blue Classic", color: [0.0, 0.0, 1.0], offset: { x: 1.0, y: 0, z: 0 } },
+            { name: "Green Flash", color: [0.2, 1.0, 0.2], offset: { x: -2.5, y: 4, z: 0 }, radius: 0.4, friction: 0.1, restitution: 0.8, roughness: 0.2 },
+            { name: "Purple Haze", color: [0.6, 0.1, 0.8], offset: { x: 0.0, y: 2, z: 2 }, radius: 0.75, restitution: 1.2 },
+            { name: "Golden Orb", color: [1.0, 0.84, 0.0], offset: { x: 2.5, y: 2, z: 2 }, radius: 0.6, restitution: 0.2, density: 3.0, roughness: 0.3 },
+            { name: "Cyan Surfer", color: [0.0, 0.8, 1.0], offset: { x: -2.0, y: 2, z: 2 }, radius: 0.5, friction: 0.05, restitution: 0.5, roughness: 0.1 },
             // --- NEW MARBLES ---
-            // 1. Volcanic Magma Marble - Glowing hot red-orange with extreme bounce
             { name: "Volcanic Magma", color: [1.0, 0.25, 0.0], offset: { x: 3.5, y: 3, z: 0 }, radius: 0.55, friction: 0.15, restitution: 1.5, density: 0.8, roughness: 0.6 },
-            // 2. Shadow Ninja Marble - Dark purple, ultra-smooth, sneaky low friction
             { name: "Shadow Ninja", color: [0.15, 0.05, 0.25], offset: { x: -3.5, y: 3, z: 0 }, radius: 0.45, friction: 0.02, restitution: 0.3, density: 1.2, roughness: 0.05 },
-            // 3. Cosmic Nebula Marble - Deep space teal with silver shimmer, balanced all-rounder
             { name: "Cosmic Nebula", color: [0.3, 0.9, 0.7], offset: { x: 0.0, y: 5, z: -2 }, radius: 0.65, friction: 0.08, restitution: 0.7, density: 1.5, roughness: 0.15 },
-            // 4. Void Marble - Very dense and heavy, doesn't bounce much
             { name: "Void Heavy", color: [0.1, 0.05, 0.2], offset: { x: 2.0, y: 5, z: -2 }, radius: 0.7, friction: 1.0, restitution: 0.1, density: 4.0, roughness: 0.9 },
-            // 5. Ice Marble - Slippery and smooth
             { name: "Ice Slick", color: [0.8, 0.9, 1.0], offset: { x: -5.0, y: 3, z: 0 }, radius: 0.48, friction: 0.005, restitution: 0.8, density: 0.9, roughness: 0.1 },
-            // 6. Super Bouncy Marble - Maximum bounce
             { name: "Super Bouncy", color: [1.0, 0.0, 0.8], offset: { x: 5.0, y: 3, z: 0 }, radius: 0.52, friction: 0.5, restitution: 1.8, density: 0.5, roughness: 0.3 },
-            // 7. Mud Marble - Sticky, heavy, no bounce
             { name: "Mud Sticky", color: [0.35, 0.25, 0.2], offset: { x: 0.0, y: 3, z: 4 }, radius: 0.5, friction: 2.0, restitution: 0.0, density: 3.0, roughness: 0.9 },
-            // 8. Tiny Dense Marble - Small, heavy, and fast
             { name: "Tiny Dense", color: [1.0, 1.0, 1.0], offset: { x: 3.5, y: 3, z: 4 }, radius: 0.3, density: 10.0, friction: 0.1, restitution: 0.5 },
-            // 9. Nano Marble - Tiny and dense
             { name: "Nano", color: [1.0, 0.4, 0.7], offset: { x: 1.5, y: 4, z: 4 }, radius: 0.25, density: 2.0, roughness: 0.2 },
-            // 10. Giant Marble - Huge, hollow-ish, slow rolling
             { name: "Giant", color: [0.2, 0.8, 0.2], offset: { x: -3.0, y: 4, z: 4 }, radius: 1.2, density: 0.5, friction: 0.5, roughness: 0.8 },
-            // 11. Mercury Marble - Heavy liquid metal, low friction
             { name: "Mercury", color: [0.7, 0.7, 0.7], offset: { x: -5.0, y: 3, z: 4 }, radius: 0.55, density: 5.0, friction: 0.05, restitution: 0.2, roughness: 0.1 }
         ];
 
@@ -125,6 +170,7 @@
             this.scene.addEntity(entity);
 
             this.marbles.push({
+                name: info.name || `Marble ${this.marbles.length + 1}`,
                 rigidBody,
                 entity,
                 scale,
@@ -135,8 +181,11 @@
 
         this.currentMarbleIndex = 0;
         this.playerMarble = this.marbles[0];
-        this.selectedEl.textContent = 'Selected: 1';
+        this.selectedEl.textContent = `Selected: ${this.playerMarble.name}`;
     }
+
+    // ... keep getLeader, resetMarbles, returnToMenu, processCollisionEvents, checkGameLogic, resize ...
+
     loop() {
         // Debug: Log first few frames
         if (!this.frameCount) this.frameCount = 0;
@@ -205,7 +254,7 @@
             }
         }
 
-        // Handle Boost (consolidated from feature branch)
+        // Handle Boost
         const now = Date.now();
         if ((this.keys['ShiftLeft'] || this.keys['ShiftRight']) && now - this.lastBoostTime > this.boostCooldown) {
             if (this.playerMarble) {
@@ -244,7 +293,7 @@
             this.chargePower = Math.min(1.0, this.chargePower + 0.015);
         }
 
-        // Update Boost Bar (consolidated)
+        // Update Boost Bar
         const boostProgress = Math.min(1.0, (now - this.lastBoostTime) / this.boostCooldown);
         if (this.boostBarEl) {
             this.boostBarEl.style.width = `${boostProgress * 100}%`;
@@ -274,6 +323,51 @@
             const eyeX = this.camRadius * Math.sin(this.camAngle);
             const eyeZ = this.camRadius * Math.cos(this.camAngle);
             this.camera.lookAt([eyeX, this.camHeight, eyeZ], [0, 0, 0], [0, 1, 0]);
+        }
+
+        // Update Collectibles (from feature branch)
+        this.collectibleRotation += 0.05;
+        if (this.collectibles && this.collectibles.length > 0) {
+            const tcm = this.engine.getTransformManager();
+            for (let i = this.collectibles.length - 1; i >= 0; i--) {
+                const c = this.collectibles[i];
+
+                // Animate: Rotate + Bob up and down
+                const bobOffset = Math.sin(this.collectibleRotation * 2) * 0.2;
+                const newY = c.baseY + bobOffset;
+                const q = quatFromEuler(this.collectibleRotation, 0, Math.PI / 4);
+
+                // Construct matrix manually to include scale
+                const mat = quaternionToMat4({ x: c.pos.x, y: newY, z: c.pos.z }, q);
+                const scale = 0.5;
+                mat[0] *= scale; mat[1] *= scale; mat[2] *= scale;
+                mat[4] *= scale; mat[5] *= scale; mat[6] *= scale;
+                mat[8] *= scale; mat[9] *= scale; mat[10] *= scale;
+
+                const inst = tcm.getInstance(c.entity);
+                tcm.setTransform(inst, mat);
+
+                // Check collision with player
+                if (this.playerMarble) {
+                    const pt = this.playerMarble.rigidBody.translation();
+                    const dx = pt.x - c.pos.x;
+                    const dy = pt.y - newY;
+                    const dz = pt.z - c.pos.z;
+                    const distSq = dx*dx + dy*dy + dz*dz;
+
+                    if (distSq < 2.25) { // 1.5 distance squared
+                        // Collected!
+                        audio.playCollect();
+                        this.score += 10;
+                        this.scoreEl.textContent = 'Score: ' + this.score;
+
+                        // Remove
+                        this.scene.remove(c.entity);
+                        this.engine.destroyEntity(c.entity);
+                        this.collectibles.splice(i, 1);
+                    }
+                }
+            }
         }
 
         // Step Physics with event handling
