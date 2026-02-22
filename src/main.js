@@ -54,7 +54,6 @@
     }
 
     // ... keep all other methods ...
-
     createMarbles(spawnPos) {
         const baseSpawn = spawnPos || { x: 0, y: 8, z: -12 };
 
@@ -66,21 +65,78 @@
             { color: [1.0, 0.84, 0.0], offset: { x: 2.5, y: 2, z: 2 }, radius: 0.6, restitution: 0.2, density: 3.0, roughness: 0.3 },
             { color: [0.0, 0.8, 1.0], offset: { x: -2.0, y: 2, z: 2 }, radius: 0.5, friction: 0.05, restitution: 0.5, roughness: 0.1 },
             // --- NEW MARBLES ---
-            { color: [1.0, 0.25, 0.0], offset: { x: 3.5, y: 3, z: 0 }, radius: 0.55, friction: 0.15, restitution: 1.5, density: 0.8, roughness: 0.6 },
-            { color: [0.15, 0.05, 0.25], offset: { x: -3.5, y: 3, z: 0 }, radius: 0.45, friction: 0.02, restitution: 0.3, density: 1.2, roughness: 0.05 },
-            { color: [0.3, 0.9, 0.7], offset: { x: 0.0, y: 5, z: -2 }, radius: 0.65, friction: 0.08, restitution: 0.7, density: 1.5, roughness: 0.15 },
-            { color: [0.1, 0.05, 0.2], offset: { x: 2.0, y: 5, z: -2 }, radius: 0.7, friction: 1.0, restitution: 0.1, density: 4.0, roughness: 0.9 },
-            { color: [0.8, 0.9, 1.0], offset: { x: -5.0, y: 3, z: 0 }, radius: 0.48, friction: 0.005, restitution: 0.8, density: 0.9, roughness: 0.1 },
-            { color: [1.0, 0.0, 0.8], offset: { x: 5.0, y: 3, z: 0 }, radius: 0.52, friction: 0.5, restitution: 1.8, density: 0.5, roughness: 0.3 },
-            { color: [0.35, 0.25, 0.2], offset: { x: 0.0, y: 3, z: 4 }, radius: 0.5, friction: 2.0, restitution: 0.0, density: 3.0, roughness: 0.9 },
-            { color: [1.0, 1.0, 1.0], offset: { x: 3.5, y: 3, z: 4 }, radius: 0.3, density: 10.0, friction: 0.1, restitution: 0.5 },
-            { color: [1.0, 0.4, 0.7], offset: { x: 1.5, y: 4, z: 4 }, radius: 0.25, density: 2.0, roughness: 0.2 },
-            { color: [0.2, 0.8, 0.2], offset: { x: -3.0, y: 4, z: 4 }, radius: 1.2, density: 0.5, friction: 0.5, roughness: 0.8 }
+            // 1. Volcanic Magma Marble - Glowing hot red-orange with extreme bounce
+            { name: "Volcanic Magma", color: [1.0, 0.25, 0.0], offset: { x: 3.5, y: 3, z: 0 }, radius: 0.55, friction: 0.15, restitution: 1.5, density: 0.8, roughness: 0.6 },
+            // 2. Shadow Ninja Marble - Dark purple, ultra-smooth, sneaky low friction
+            { name: "Shadow Ninja", color: [0.15, 0.05, 0.25], offset: { x: -3.5, y: 3, z: 0 }, radius: 0.45, friction: 0.02, restitution: 0.3, density: 1.2, roughness: 0.05 },
+            // 3. Cosmic Nebula Marble - Deep space teal with silver shimmer, balanced all-rounder
+            { name: "Cosmic Nebula", color: [0.3, 0.9, 0.7], offset: { x: 0.0, y: 5, z: -2 }, radius: 0.65, friction: 0.08, restitution: 0.7, density: 1.5, roughness: 0.15 },
+            // 4. Void Marble - Very dense and heavy, doesn't bounce much
+            { name: "Void Heavy", color: [0.1, 0.05, 0.2], offset: { x: 2.0, y: 5, z: -2 }, radius: 0.7, friction: 1.0, restitution: 0.1, density: 4.0, roughness: 0.9 },
+            // 5. Ice Marble - Slippery and smooth
+            { name: "Ice Slick", color: [0.8, 0.9, 1.0], offset: { x: -5.0, y: 3, z: 0 }, radius: 0.48, friction: 0.005, restitution: 0.8, density: 0.9, roughness: 0.1 },
+            // 6. Super Bouncy Marble - Maximum bounce
+            { name: "Super Bouncy", color: [1.0, 0.0, 0.8], offset: { x: 5.0, y: 3, z: 0 }, radius: 0.52, friction: 0.5, restitution: 1.8, density: 0.5, roughness: 0.3 },
+            // 7. Mud Marble - Sticky, heavy, no bounce
+            { name: "Mud Sticky", color: [0.35, 0.25, 0.2], offset: { x: 0.0, y: 3, z: 4 }, radius: 0.5, friction: 2.0, restitution: 0.0, density: 3.0, roughness: 0.9 },
+            // 8. Tiny Dense Marble - Small, heavy, and fast
+            { name: "Tiny Dense", color: [1.0, 1.0, 1.0], offset: { x: 3.5, y: 3, z: 4 }, radius: 0.3, density: 10.0, friction: 0.1, restitution: 0.5 },
+            // 9. Nano Marble - Tiny and dense
+            { name: "Nano", color: [1.0, 0.4, 0.7], offset: { x: 1.5, y: 4, z: 4 }, radius: 0.25, density: 2.0, roughness: 0.2 },
+            // 10. Giant Marble - Huge, hollow-ish, slow rolling
+            { name: "Giant", color: [0.2, 0.8, 0.2], offset: { x: -3.0, y: 4, z: 4 }, radius: 1.2, density: 0.5, friction: 0.5, roughness: 0.8 },
+            // 11. Mercury Marble - Heavy liquid metal, low friction
+            { name: "Mercury", color: [0.7, 0.7, 0.7], offset: { x: -5.0, y: 3, z: 4 }, radius: 0.55, density: 5.0, friction: 0.05, restitution: 0.2, roughness: 0.1 }
         ];
 
-        // ... rest of createMarbles ...
-    }
+        for (const info of marblesInfo) {
+            const radius = info.radius || 0.5;
+            const scale = radius / 0.5;
+            const pos = {
+                x: baseSpawn.x + info.offset.x,
+                y: baseSpawn.y + info.offset.y,
+                z: baseSpawn.z + info.offset.z
+            };
 
+            const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+                .setTranslation(pos.x, pos.y, pos.z)
+                .setCanSleep(false);
+            const rigidBody = this.world.createRigidBody(bodyDesc);
+
+            const colliderDesc = RAPIER.ColliderDesc.ball(radius)
+                .setRestitution(info.restitution !== undefined ? info.restitution : 0.5);
+
+            if (info.density) colliderDesc.setDensity(info.density);
+            if (info.friction !== undefined) colliderDesc.setFriction(info.friction);
+
+            this.world.createCollider(colliderDesc, rigidBody);
+
+            const entity = this.Filament.EntityManager.get().create();
+            const matInstance = this.material.createInstance();
+            matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, info.color);
+            matInstance.setFloatParameter('roughness', info.roughness !== undefined ? info.roughness : 0.4);
+
+            this.Filament.RenderableManager.Builder(1)
+                .boundingBox({ center: [0, 0, 0], halfExtent: [radius, radius, radius] })
+                .material(0, matInstance)
+                .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.sphereVb, this.sphereIb)
+                .build(this.engine, entity);
+
+            this.scene.addEntity(entity);
+
+            this.marbles.push({
+                rigidBody,
+                entity,
+                scale,
+                initialPos: pos,
+                scoredGoals: new Set()
+            });
+        }
+
+        this.currentMarbleIndex = 0;
+        this.playerMarble = this.marbles[0];
+        this.selectedEl.textContent = 'Selected: 1';
+    }
     loop() {
         // Debug: Log first few frames
         if (!this.frameCount) this.frameCount = 0;
