@@ -1,3 +1,28 @@
+        // Step Physics with event handling
+        this.world.step();
+
+        // Process collision events for audio
+        this.processCollisionEvents();
+
+        this.checkGameLogic();
+
+        // Sync Visuals
+        const tcm = this.engine.getTransformManager();
+        for (const m of this.marbles) {
+            const t = m.rigidBody.translation();
+            const r = m.rigidBody.rotation();
+            const mat = quaternionToMat4(t, r);
+
+            if (m.scale && m.scale !== 1.0) {
+                mat[0] *= m.scale; mat[1] *= m.scale; mat[2] *= m.scale;
+                mat[4] *= m.scale; mat[5] *= m.scale; mat[6] *= m.scale;
+                mat[8] *= m.scale; mat[9] *= m.scale; mat[10] *= m.scale;
+            }
+
+            const inst = tcm.getInstance(m.entity);
+            tcm.setTransform(inst, mat);
+        }
+
         const now = Date.now();
 
         // Update PowerUps
@@ -12,7 +37,6 @@
             mat[4] *= s; mat[5] *= s; mat[6] *= s;
             mat[8] *= s; mat[9] *= s; mat[10] *= s;
 
-            const tcm = this.engine.getTransformManager();
             const inst = tcm.getInstance(p.entity);
             tcm.setTransform(inst, mat);
         }
