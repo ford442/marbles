@@ -117,6 +117,7 @@
             pointer-events: none;
             user-select: none;
             display: none;
+            z-index: 10;
         }
 
         #level-name {
@@ -130,6 +131,14 @@
         #score {
             font-size: 32px;
             font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        #timer {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0ff;
             margin-bottom: 10px;
             text-shadow: 2px 2px 0px #000;
         }
@@ -197,7 +206,25 @@
         #boostbar {
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, #800080 0%, #ff00ff 100%);
+            background: linear-gradient(90deg, #f0f 0%, #0ff 100%);
+            transition: width 0.05s, background-color 0.2s;
+        }
+
+        #magnetbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #magnetbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #00ffff 0%, #ff00ff 100%);
             transition: width 0.1s;
         }
 
@@ -299,6 +326,7 @@
     <div id="ui">
         <div id="level-name">Level</div>
         <div id="score">Score: 0</div>
+        <div id="timer">Time: 0.00s</div>
         <div id="selected">Selected: 1</div>
         <div id="aim">Aim: 0°</div>
         <div id="powerbar-container">
@@ -310,11 +338,15 @@
         <div id="boostbar-container">
             <div id="boostbar"></div>
         </div>
-        <div id="active-effects" style="margin-bottom: 15px; font-weight: bold; color: #0ff; text-shadow: 1px 1px 0 #000;"></div>
+        <div id="magnetbar-container">
+            <div id="magnetbar"></div>
+        </div>
         <div id="instructions">
             <kbd>WASD</kbd> / <kbd>Arrows</kbd> Move &nbsp;|&nbsp;
             <kbd>Shift</kbd> Boost &nbsp;|&nbsp;
             <kbd>Space</kbd> Jump (Hold) &nbsp;|&nbsp;
+            <kbd>E</kbd> / <kbd>Q</kbd> Magnet &nbsp;|&nbsp;
+            <kbd>Shift</kbd> Boost &nbsp;|&nbsp;
             <kbd>R</kbd> Reset &nbsp;|&nbsp;
             <kbd>Tab</kbd> Switch Marble &nbsp;|&nbsp;
             <kbd>C</kbd> Camera &nbsp;|&nbsp;
@@ -324,7 +356,7 @@
         </div>
         <button id="mute-btn" title="Toggle Sound">🔊</button>
     </div>
-
+        <div id="active-effects" style="margin-bottom: 15px; font-weight: bold; color: #0ff; text-shadow: 1px 1px 0 #000;"></div>
     <canvas id="canvas"></canvas>
     <script type="module" src="/src/main.js"></script>
 </body>
