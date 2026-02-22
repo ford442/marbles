@@ -300,6 +300,96 @@ export class MarbleAudio {
     }
 
     /**
+     * Play a jump sound
+     */
+    playJump() {
+        if (!this.enabled || !this.ctx) return;
+
+        const t = this.ctx.currentTime;
+        const gain = this.ctx.createGain();
+        gain.connect(this.masterGain);
+
+        // "Boing" effect using filtered saw wave
+        const osc = this.ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, t);
+        osc.frequency.exponentialRampToValueAtTime(600, t + 0.15);
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(200, t);
+        filter.frequency.exponentialRampToValueAtTime(1500, t + 0.1);
+        filter.Q.value = 5;
+
+        osc.connect(filter);
+        filter.connect(gain);
+
+        // Envelope
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.3, t + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+
+        osc.start(t);
+        osc.stop(t + 0.35);
+    }
+
+    /**
+     * Play a boost/dash sound
+     */
+    playBoost() {
+        if (!this.enabled || !this.ctx) return;
+
+        const t = this.ctx.currentTime;
+        const gain = this.ctx.createGain();
+        gain.connect(this.masterGain);
+
+        // White noise for whoosh
+        const bufferSize = this.ctx.sampleRate * 0.5;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(200, t);
+        filter.frequency.exponentialRampToValueAtTime(3000, t + 0.2);
+        filter.Q.value = 1;
+
+        noise.connect(filter);
+        filter.connect(gain);
+
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.3, t + 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+
+        noise.start(t);
+        noise.stop(t + 0.5);
+
+        // Add a rising sine wave for "energy" feel
+        const osc = this.ctx.createOscillator();
+        const oscGain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(200, t);
+        osc.frequency.exponentialRampToValueAtTime(800, t + 0.3);
+
+        osc.connect(oscGain);
+        oscGain.connect(this.masterGain);
+
+        oscGain.gain.setValueAtTime(0, t);
+        oscGain.gain.linearRampToValueAtTime(0.2, t + 0.1);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+
+        osc.start(t);
+        osc.stop(t + 0.4);
+    }
+
+    /**
      * Set master volume
      * @param {number} vol - 0.0 to 1.0
      */
