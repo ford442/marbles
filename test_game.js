@@ -79,7 +79,9 @@ test('Level definitions are valid', () => {
         'loop_challenge',
         'block_challenge',
         'bowling_alley',
-        'castle_siege'
+        'castle_siege',
+        'domino_effect',
+        'pyramid_climb'
     ];
     
     for (const level of expectedLevels) {
@@ -194,6 +196,10 @@ test('All zone types are implemented', () => {
         'createBowlingZone',
         'createCheckpointZone'
         'createCastleZone'
+        'createCastleZone',
+        'createCheckpointZone',
+        'createDominoZone',
+        'createPyramidZone'
     ];
     
     for (const zone of zoneTypes) {
@@ -229,6 +235,30 @@ test('Camera modes are implemented', () => {
     assert(mainJs.includes("'orbit'"), 'Orbit camera should exist');
     assert(mainJs.includes("'follow'"), 'Follow camera should exist');
     assert(mainJs.includes('lookAt('), 'Camera lookAt should be used');
+});
+
+// Test 13: Check boost mechanic
+test('Boost mechanic is implemented', () => {
+    const mainJs = fs.readFileSync(join(__dirname, 'src/main.js'), 'utf-8');
+    const audioJs = fs.readFileSync(join(__dirname, 'src/audio.js'), 'utf-8');
+    const html = fs.readFileSync(join(__dirname, 'index.html'), 'utf-8');
+
+    assert(mainJs.includes('boostCooldownDuration'), 'Boost cooldown should be defined');
+    assert(mainJs.includes('audio.playBoost()'), 'Boost audio should be triggered');
+    assert(mainJs.includes('ShiftLeft'), 'Shift key should be handled');
+
+    assert(audioJs.includes('playBoost()'), 'playBoost method should exist in audio.js');
+
+    assert(html.includes('id="boostbar"'), 'Boost bar element should exist in HTML');
+// Test 13: Check Power-up system
+test('Power-up system is implemented', () => {
+    const mainJs = fs.readFileSync(join(__dirname, 'src/main.js'), 'utf-8');
+
+    assert(mainJs.includes('createPowerUp('), 'createPowerUp method should exist');
+    assert(mainJs.includes('createPowerUpZone('), 'createPowerUpZone method should exist');
+    assert(mainJs.includes('this.powerUps = []'), 'powerUps array should be initialized');
+    assert(mainJs.includes('this.activeEffects = {}'), 'activeEffects object should be initialized');
+    assert(mainJs.includes('powerup_park:'), 'powerup_park level should be defined');
 });
 
 // Summary
