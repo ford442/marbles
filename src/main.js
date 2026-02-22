@@ -73,6 +73,7 @@ const LEVELS = {
             { type: 'track', pos: { x: 0, y: 3, z: 0 } },
             { type: 'landing', pos: { x: 0, y: 0, z: 25 } },
             { type: 'slalom', pos: { x: 0, y: -2, z: 85 } },
+            { type: 'checkpoint', pos: { x: 0, y: -1.5, z: 110 }, size: { x: 10, y: 4, z: 2 } },
             { type: 'staircase', pos: { x: 0, y: -2, z: 110 } },
             { type: 'goal', pos: { x: 0, y: 9, z: 154 } }
         ],
@@ -150,13 +151,9 @@ const LEVELS = {
             { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
             { type: 'track', pos: { x: 0, y: 3, z: 0 } },
             { type: 'zigzag', pos: { x: 0, y: 0, z: 25 } },
-            { type: 'checkpoint', pos: { x: 0, y: 0, z: 38 } },
             { type: 'goal', pos: { x: 0, y: -2, z: 80 } }
         ],
         spawn: { x: 0, y: 8, z: -12 },
-        checkpoints: [
-            { id: 1, range: { x: [-5, 5], z: [36, 40], y: [-2, 2] }, respawn: { x: 0, y: 5, z: 38 } }
-        ],
         goals: [
             { id: 1, range: { x: [-5, 5], z: [78, 82], y: [-5, 5] } }
         ],
@@ -236,36 +233,6 @@ const LEVELS = {
         spawn: { x: 0, y: 8, z: -12 },
         goals: [
             { id: 1, range: { x: [-2, 2], z: [63, 67], y: [0, 5] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 }
-    },
-    domino_effect: {
-        name: 'Domino Effect',
-        description: 'Set off the chain reaction!',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'domino', pos: { x: 0, y: 0, z: 25 } },
-            { type: 'goal', pos: { x: 0, y: 0.25, z: 60 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-2, 2], z: [58, 62], y: [0, 2] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 }
-    },
-    pyramid_climb: {
-        name: 'Pyramid Climb',
-        description: 'Ascend the ancient structure',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 60, y: 0.5, z: 60 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'pyramid', pos: { x: 0, y: 0, z: 35 } },
-            { type: 'goal', pos: { x: 0, y: 6.5, z: 35 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-2, 2], z: [33, 37], y: [6, 10] } }
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     }
@@ -376,6 +343,12 @@ class MarblesGame {
         this.staticBodies = []; // Track for cleanup
         this.staticEntities = []; // Track for cleanup
         this.dynamicObjects = []; // Track for cleanup (pins, dominos, etc)
+        this.checkpoints = []; // Track active checkpoints
+        this.collectibles = [];
+        this.collectibleRotation = 0;
+        this.powerUps = [];
+        this.activeEffects = { speed: 0, jump: 0 };
+        this.movingPlatforms = [];
         this.Filament = null;
         this.material = null;
         this.cubeMesh = null;
@@ -401,6 +374,7 @@ class MarblesGame {
         this.jumpBarEl = document.getElementById('jumpbar');
         this.boostBarEl = document.getElementById('boostbar');
         this.magnetBarEl = document.getElementById('magnetbar');
+        this.effectEl = document.getElementById('effects');
         this.currentMarbleIndex = 0;
         this.aimYaw = 0;
         this.jumpCharge = 0;
@@ -413,8 +387,6 @@ class MarblesGame {
         this.isAiming = false;
         this.playerMarble = null;
         this.cueInst = null;
-        this.jumpCount = 0;
-        this.maxJumps = 2;
 
         // Magnet State
         this.magnetPower = 1.0;
@@ -426,47 +398,6 @@ class MarblesGame {
         this.levelStartTime = 0;
         this.levelComplete = false;
         this.goalDefinitions = [];
-        this.checkpointDefinitions = [];
-    }
-
-    initMouseControls() {
-        // Request pointer lock on click
-        this.canvas.addEventListener('click', () => {
-            if (document.pointerLockElement !== this.canvas) {
-                this.canvas.requestPointerLock();
-            }
-        });
-
-        // Handle mouse movement for aiming
-        document.addEventListener('mousemove', (e) => {
-            if (document.pointerLockElement === this.canvas) {
-                const sensitivity = 0.002;
-                this.aimYaw -= e.movementX * sensitivity;
-                this.pitchAngle -= e.movementY * sensitivity;
-
-                // Clamp pitch to avoid flipping (-80 to +80 degrees)
-                const maxPitch = 1.4;
-                this.pitchAngle = Math.max(-maxPitch, Math.min(maxPitch, this.pitchAngle));
-            }
-        });
-
-        // Handle charging (Left Click)
-        document.addEventListener('mousedown', (e) => {
-            if (document.pointerLockElement === this.canvas && e.button === 0) {
-                this.charging = true;
-                this.chargePower = 0;
-            }
-        });
-
-        // Handle shooting (Release Left Click)
-        document.addEventListener('mouseup', (e) => {
-            if (document.pointerLockElement === this.canvas && e.button === 0) {
-                if (this.charging) {
-                    this.charging = false;
-                    this.shootMarble();
-                }
-            }
-        });
     }
 
     isGrounded(marble) {
@@ -751,6 +682,35 @@ class MarblesGame {
         }
         this.dynamicObjects = [];
 
+        // Remove all checkpoints
+        for (const cp of this.checkpoints) {
+            this.scene.remove(cp.entity);
+            this.engine.destroyEntity(cp.entity);
+        }
+        this.checkpoints = [];
+
+        // Remove all collectibles (from feature)
+        for (const c of this.collectibles) {
+            this.scene.remove(c.entity);
+            this.engine.destroyEntity(c.entity);
+        }
+        this.collectibles = [];
+
+        // Remove all powerups (from main)
+        for (const p of this.powerUps) {
+            this.scene.remove(p.entity);
+            this.engine.destroyEntity(p.entity);
+        }
+        this.powerUps = [];
+
+        // Remove all moving platforms (from main)
+        for (const platform of this.movingPlatforms) {
+            this.world.removeRigidBody(platform.rigidBody);
+            this.scene.remove(platform.entity);
+            this.engine.destroyEntity(platform.entity);
+        }
+        this.movingPlatforms = [];
+
         // Reset lighting to day mode
         this.setNightMode(false);
     }
@@ -808,72 +768,52 @@ class MarblesGame {
             case 'bowling':
                 this.createBowlingZone(offset);
                 break;
+            case 'checkpoint':
+                this.createCheckpointZone(offset, zone.size);
+                break;
             case 'castle':
                 this.createCastleZone(offset);
                 break;
-            case 'checkpoint':
-                this.createCheckpointZone(offset);
-                break;
-            case 'domino':
-                this.createDominoZone(offset);
-                break;
-            case 'pyramid':
-                this.createPyramidZone(offset);
-                break;
         }
     }
 
-    createPyramidZone(offset) {
-        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
-
-        // Base
-        this.createStaticBox(
-            { x: offset.x, y: offset.y, z: offset.z },
-            floorQ,
-            { x: 15, y: 0.5, z: 15 },
-            [0.6, 0.5, 0.3], // Sand color
-            'concrete'
-        );
-
-        // Steps
-        const steps = 6;
-        const stepHeight = 0.8;
-        const sizeStep = 2.0;
-
-        for (let i = 0; i < steps; i++) {
-            const currentSize = 12 - i * sizeStep;
-            const y = offset.y + 0.5 + i * stepHeight + stepHeight/2;
-
-            this.createStaticBox(
-                { x: offset.x, y: y, z: offset.z },
-                floorQ,
-                { x: currentSize/2, y: stepHeight/2, z: currentSize/2 },
-                [0.7 - i*0.05, 0.6 - i*0.05, 0.4 - i*0.05],
-                'concrete'
-            );
-        }
-
-        // Top Platform
-        const topY = offset.y + 0.5 + steps * stepHeight;
-        this.createStaticBox(
-            { x: offset.x, y: topY, z: offset.z },
-            floorQ,
-            { x: 2, y: 0.2, z: 2 },
-            [1.0, 0.8, 0.0], // Gold
-            'metal'
-        );
-    }
-
-    createCheckpointZone(offset) {
+    createCheckpointZone(offset, size) {
+        const sz = size || { x: 10, y: 5, z: 2 };
+        const center = { x: offset.x, y: offset.y + sz.y / 2, z: offset.z };
         const q = { x: 0, y: 0, z: 0, w: 1 };
-        // Create a semi-transparent cyan box to visualize the checkpoint
-        this.createStaticBox(
-            { x: offset.x, y: offset.y, z: offset.z },
-            q,
-            { x: 2, y: 0.25, z: 2 },
-            [0.0, 1.0, 1.0], // Cyan
-            'glass'
-        );
+
+        const entity = this.Filament.EntityManager.get().create();
+        const matInstance = this.material.createInstance();
+
+        // Checkpoint inactive: Cyan [0, 1, 1]
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.0, 1.0, 1.0]);
+        matInstance.setFloatParameter('roughness', 0.1);
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [sz.x / 2, sz.y / 2, sz.z / 2] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .build(this.engine, entity);
+
+        const tcm = this.engine.getTransformManager();
+        const inst = tcm.getInstance(entity);
+
+        const mat = quaternionToMat4(center, q);
+        mat[0] *= sz.x; mat[1] *= sz.x; mat[2] *= sz.x;
+        mat[4] *= sz.y; mat[5] *= sz.y; mat[6] *= sz.y;
+        mat[8] *= sz.z; mat[9] *= sz.z; mat[10] *= sz.z;
+
+        tcm.setTransform(inst, mat);
+        this.scene.addEntity(entity);
+
+        // Track as checkpoint (no physics body, just visual + logic)
+        this.checkpoints.push({
+            pos: center,
+            halfExtents: { x: sz.x / 2, y: sz.y / 2, z: sz.z / 2 },
+            entity: entity,
+            matInstance: matInstance,
+            activated: false
+        });
     }
 
     createFloorZone(offset, size) {
@@ -1000,65 +940,6 @@ class MarblesGame {
                 'concrete'
             );
         }
-    }
-
-    createDominoZone(offset) {
-        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
-
-        // Floor
-        this.createStaticBox(
-            { x: offset.x, y: offset.y, z: offset.z },
-            floorQ,
-            { x: 10, y: 0.5, z: 40 },
-            [0.5, 0.5, 0.5],
-            'concrete'
-        );
-
-        // Ramp to build speed
-        const rampAngle = -0.3;
-        const sinA = Math.sin(rampAngle / 2);
-        const cosA = Math.cos(rampAngle / 2);
-        const rampQ = { x: sinA, y: 0, z: 0, w: cosA };
-
-        this.createStaticBox(
-            { x: offset.x, y: offset.y + 2, z: offset.z - 15 },
-            rampQ,
-            { x: 2, y: 0.2, z: 8 },
-            [0.6, 0.6, 0.8],
-            'wood'
-        );
-
-        // Dominoes
-        const startZ = offset.z - 5;
-        const numDominos = 20;
-        const spacing = 1.5;
-
-        for (let i = 0; i < numDominos; i++) {
-            const angle = i * 0.1;
-            const z = startZ + i * spacing * Math.cos(angle * 0.5);
-            const x = offset.x + Math.sin(angle) * 3;
-
-            const q = quatFromEuler(angle * 0.5, 0, 0);
-
-            this.createDynamicBox(
-                { x: x, y: offset.y + 1.0, z: z },
-                q,
-                { x: 0.8, y: 1.0, z: 0.1 },
-                [1.0, 1.0 - (i/numDominos), i/numDominos],
-                0.5,
-                'wood'
-            );
-        }
-
-        // A big block at the end to knock over
-        this.createDynamicBox(
-            { x: offset.x + Math.sin(numDominos * 0.1) * 3, y: offset.y + 2, z: startZ + numDominos * spacing * Math.cos(numDominos * 0.05) + 2 },
-            floorQ,
-            { x: 1, y: 2, z: 1 },
-            [0.2, 0.8, 0.2],
-            0.2,
-            'wood'
-        );
     }
 
     createLoopZone(offset) {
@@ -1194,81 +1075,6 @@ class MarblesGame {
         );
     }
 
-    createLoopZone(offset) {
-        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
-
-        // Approach ramp
-        this.createStaticBox(
-            { x: offset.x, y: offset.y, z: offset.z },
-            floorQ,
-            { x: 4, y: 0.5, z: 5 },
-            [0.4, 0.4, 0.4],
-            'concrete'
-        );
-
-        const radius = 12;
-        const segments = 32;
-        const loopCenterZ = offset.z + 15;
-        const loopCenterY = offset.y + radius;
-
-        // Create the loop
-        for (let i = 0; i < segments; i++) {
-            // Angle from -PI/2 (bottom) to 3PI/2 (bottom again)
-            // But we want to start from flat and go up
-            // Let's go from -PI/2 to 3PI/2
-            const t = i / segments;
-            const angle = -Math.PI / 2 + t * 2 * Math.PI;
-
-            const y = loopCenterY + Math.sin(angle) * radius;
-            const z = loopCenterZ + Math.cos(angle) * radius;
-
-            // Rotation: Tangent to the circle
-            // At bottom (-PI/2), tangent is horizontal (0 pitch)
-            // At back (0), tangent is vertical (-PI/2 pitch)
-            // Slope = cos(angle) / -sin(angle)
-            // Or just rotate the box by 'angle' around X axis?
-            // If angle is -PI/2 (bottom), we want 0 rotation.
-            // If angle is 0 (back), we want -PI/2 rotation.
-            // So rotation = -(angle + PI/2) ?
-            const rotX = -(angle + Math.PI / 2);
-
-            const q = quatFromEuler(0, rotX, 0);
-
-            this.createStaticBox(
-                { x: offset.x, y: y, z: z },
-                q,
-                { x: 3, y: 0.2, z: (2 * Math.PI * radius / segments) / 2 + 0.2 },
-                [0.2 + t * 0.8, 0.5, 0.8 - t * 0.8], // Gradient color
-                'metal'
-            );
-
-            // Side guards for the loop
-             this.createStaticBox(
-                { x: offset.x - 3, y: y, z: z },
-                q,
-                { x: 0.2, y: 1.0, z: (2 * Math.PI * radius / segments) / 2 + 0.2 },
-                [0.8, 0.2, 0.2],
-                'metal'
-            );
-             this.createStaticBox(
-                { x: offset.x + 3, y: y, z: z },
-                q,
-                { x: 0.2, y: 1.0, z: (2 * Math.PI * radius / segments) / 2 + 0.2 },
-                [0.8, 0.2, 0.2],
-                'metal'
-            );
-        }
-
-        // Exit ramp
-        this.createStaticBox(
-            { x: offset.x, y: offset.y, z: offset.z + 30 },
-            floorQ,
-            { x: 4, y: 0.5, z: 5 },
-            [0.4, 0.4, 0.4],
-            'concrete'
-        );
-    }
-
     createNeonCityZone(offset) {
         const floorQ = { x: 0, y: 0, z: 0, w: 1 };
         const buildingColors = [
@@ -1376,40 +1182,6 @@ class MarblesGame {
             [0.2, 0.8, 0.2],
             'metal'
         );
-    }
-
-    createBlockZone(offset) {
-        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
-
-        // Floor
-        this.createStaticBox(
-            { x: offset.x, y: offset.y, z: offset.z },
-            floorQ,
-            { x: 10, y: 0.5, z: 25 },
-            [0.5, 0.5, 0.5],
-            'concrete'
-        );
-
-        // Blocks
-        for (let i = 0; i < 30; i++) {
-            // Deterministic positions
-            const x = offset.x + (Math.sin(i * 123.45) * 8);
-            const z = offset.z - 20 + (i * 1.5); // Spread along Z
-            const h = 1.0 + Math.abs(Math.cos(i * 67.89)) * 2.0;
-
-            // Deterministic color
-            const r = 0.5 + Math.sin(i) * 0.5;
-            const g = 0.5 + Math.cos(i) * 0.5;
-            const b = 0.5 + Math.sin(i * 0.5) * 0.5;
-
-            this.createStaticBox(
-                { x: x, y: offset.y + h / 2, z: z },
-                floorQ,
-                { x: 0.8, y: h / 2, z: 0.8 },
-                [r, g, b],
-                'metal'
-            );
-        }
     }
 
     createBowlingZone(offset) {
@@ -1686,457 +1458,28 @@ class MarblesGame {
         }
     }
 
-    createStaircaseZone(offset) {
-        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
-
-        // Initial platform (stone/concrete)
-        this.createStaticBox(
-            { x: offset.x, y: offset.y, z: offset.z },
-            floorQ,
-            { x: 4, y: 0.5, z: 4 },
-            [0.4, 0.4, 0.6],
-            'concrete'
-        );
-
-        // Steps (stone/concrete)
-        let currentY = offset.y;
-        let currentZ = offset.z;
-        for (let i = 0; i < 10; i++) {
-            currentY += 1.0;
-            currentZ += 4.0;
-            this.createStaticBox(
-                { x: offset.x, y: currentY, z: currentZ },
-                floorQ,
-                { x: 2, y: 0.5, z: 1.5 },
-                [0.2 + (i * 0.05), 0.5, 0.8 - (i * 0.05)],
-                'concrete'
-            );
-        }
-    }
-
-    createSplitZone(offset) {
-        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
-
-        // Start Platform
-        this.createStaticBox(
-            { x: offset.x, y: offset.y, z: offset.z },
-            floorQ,
-            { x: 4, y: 0.5, z: 4 },
-            [0.4, 0.4, 0.4]
-        );
-
-        // Left Path (Narrow)
-        this.createStaticBox(
-            { x: offset.x - 2, y: offset.y, z: offset.z + 14 },
-            floorQ,
-            { x: 1, y: 0.5, z: 10 },
-            [0.6, 0.3, 0.3]
-        );
-
-        // Right Path (Jump)
-        // Ramp up
-        const angle = -0.3;
-        const sinA = Math.sin(angle / 2);
-        const cosA = Math.cos(angle / 2);
-        const rampQ = { x: sinA, y: 0, z: 0, w: cosA };
-
-        this.createStaticBox(
-            { x: offset.x + 2, y: offset.y + 1, z: offset.z + 8 },
-            rampQ,
-            { x: 1, y: 0.5, z: 4 },
-            [0.3, 0.3, 0.6]
-        );
-
-        // Landing pad further away
-        this.createStaticBox(
-            { x: offset.x + 2, y: offset.y, z: offset.z + 20 },
-            floorQ,
-            { x: 1.5, y: 0.5, z: 4 },
-            [0.3, 0.3, 0.6]
-        );
-
-        // Merge Platform
-        this.createStaticBox(
-            { x: offset.x, y: offset.y - 1, z: offset.z + 30 },
-            floorQ,
-            { x: 4, y: 0.5, z: 4 },
-            [0.4, 0.4, 0.4]
-        );
-    }
-
-    createForestZone(offset) {
-        const floorQ = { x: 0, y: 0, z: 0, w: 1 };
-
-        // Floor
-        this.createStaticBox(
-            { x: offset.x, y: offset.y, z: offset.z },
-            floorQ,
-            { x: 10, y: 0.5, z: 20 },
-            [0.2, 0.5, 0.2]
-        );
-
-        // Random Pillars
-        for (let i = 0; i < 20; i++) {
-            const rx = (Math.sin(i * 12.9898) * 9);
-            const rz = (Math.cos(i * 78.233) * 19);
-
-            this.createStaticBox(
-                { x: offset.x + rx, y: offset.y + 2, z: offset.z + rz },
-                floorQ,
-                { x: 0.5 + Math.sin(i) * 0.2, y: 2 + Math.cos(i), z: 0.5 + Math.sin(i) * 0.2 },
-                [0.55, 0.27, 0.07]
-            );
-        }
-    }
-
-    createGoalZone(offset, color) {
-        const q = { x: 0, y: 0, z: 0, w: 1 };
-        this.createStaticBox(
-            { x: offset.x, y: offset.y, z: offset.z },
-            q,
-            { x: 2, y: 0.25, z: 2 },
-            color || [1.0, 0.84, 0.0],
-            'glass'
-        );
-    }
-
-    setNightMode(enabled, bgColor) {
-        if (enabled) {
-            this.currentClearColor = bgColor || [0.02, 0.02, 0.08, 1.0];
-            this.renderer.setClearOptions({ clearColor: this.currentClearColor, clear: true });
-
-            this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
-                .color([0.4, 0.5, 0.7])
-                .intensity(20000.0)
-                .direction([0.3, -1.0, -0.5])
-                .castShadows(true)
-                .build(this.engine, this.light);
-
-            this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
-                .color([0.3, 0.2, 0.5])
-                .intensity(5000.0)
-                .direction([-0.3, -0.3, 0.8])
-                .castShadows(false)
-                .build(this.engine, this.fillLight);
-
-            this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
-                .color([0.2, 0.2, 0.3])
-                .intensity(3000.0)
-                .direction([0.0, 1.0, 0.0])
-                .castShadows(false)
-                .build(this.engine, this.backLight);
-        } else {
-            this.currentClearColor = [0.1, 0.1, 0.1, 1.0];
-            this.renderer.setClearOptions({ clearColor: this.currentClearColor, clear: true });
-            this.createLight();
-        }
-    }
-
-    createOrchardZone(center, radius) {
-        const cx = center.x, cy = center.y, cz = center.z, r = radius || 60;
-        const ringRadius = r * 0.4, ringWidth = 8, segments = 24;
-
-        for (let i = 0; i < segments; i++) {
-            const angle = (i / segments) * Math.PI * 2;
-            const x = cx + Math.cos(angle) * ringRadius;
-            const z = cz + Math.sin(angle) * ringRadius;
-            this.createStaticBox(
-                { x, y: cy, z },
-                { x: 0, y: 0, z: 0, w: 1 },
-                { x: ringWidth / 2, y: 0.3, z: (2 * Math.PI * ringRadius / segments) / 2 + 1 },
-                [0.4, 0.25, 0.15]
-            );
-        }
-
-        this.createStaticBox({ x: cx, y: cy - 0.2, z: cz }, { x: 0, y: 0, z: 0, w: 1 }, { x: ringRadius - 2, y: 0.5, z: ringRadius - 2 }, [0.1, 0.25, 0.1]);
-
-        [[cx + r, cz, r * 0.4, r], [cx - r, cz, r * 0.4, r], [cx, cz + r, r, r * 0.4], [cx, cz - r, r, r * 0.4]].forEach(([x, z, sx, sz]) => {
-            this.createStaticBox({ x, y: cy - 0.2, z }, { x: 0, y: 0, z: 0, w: 1 }, { x: sx, y: 0.5, z: sz }, [0.08, 0.2, 0.08]);
-        });
-
-        const fruitColors = [[1.0, 0.2, 0.5], [0.2, 0.8, 1.0], [0.8, 0.3, 1.0], [1.0, 0.8, 0.2], [0.2, 1.0, 0.5]];
-        const treeSpacing = 15, rowCount = 3, treeDistance = 25;
-
-        for (let row = -rowCount; row <= rowCount; row++) {
-            for (let col = -2; col <= 2; col++) {
-                const tx = cx + col * treeSpacing, tz = cz + row * treeDistance + (col % 2) * 7;
-                const dist = Math.sqrt(tx * tx + tz * tz);
-                if (dist < ringRadius + 5 || dist > r - 5) continue;
-                this.createTree(tx, cy, tz, fruitColors[Math.abs((row + rowCount) * 3 + col) % fruitColors.length]);
-            }
-        }
-
-        this.createStaticBox({ x: cx, y: cy + 0.5, z: cz + ringRadius }, { x: 0, y: 0, z: 0, w: 1 }, { x: 4, y: 0.5, z: 4 }, [0.9, 0.9, 1.0]);
-
-        for (let i = 0; i < 4; i++) {
-            const angle = (i / 4) * Math.PI * 2;
-            this.createStaticBox({ x: cx + Math.cos(angle) * 3, y: cy + 2, z: cz + ringRadius + Math.sin(angle) * 3 }, { x: 0, y: 0, z: 0, w: 1 }, { x: 0.3, y: 0.3, z: 0.3 }, [1.0, 0.9, 0.5]);
-        }
-    }
-
-    createTree(x, y, z, fruitColor) {
-        for (let i = 0; i < 4; i++) {
-            const w = 0.8 - i * 0.1;
-            this.createStaticBox({ x, y: y + 1 + i * 1.5, z }, { x: 0, y: 0, z: 0, w: 1 }, { x: w, y: 0.8, z: w }, [0.25, 0.15, 0.08]);
-        }
-
-        const canopyY = y + 6;
-        [[0, 0, 0, 2], [1.5, 0.5, 0, 1.2], [-1.5, 0.5, 0, 1.2], [0, 0.5, 1.5, 1.2], [0, 0.5, -1.5, 1.2], [0, 1.5, 0, 1.5]].forEach(([px, py, pz, s]) => {
-            this.createStaticBox({ x: x + px, y: canopyY + py, z: z + pz }, { x: 0, y: 0, z: 0, w: 1 }, { x: s, y: s * 0.8, z: s }, [0.15, 0.35, 0.15]);
-        });
-
-        [[1.2, 0.5, 1.2], [-1.2, 0.5, -1.2], [1.2, -0.5, -1.2], [-1.2, -0.5, 1.2], [0, 2, 0], [0.8, 1, 0], [-0.8, 1, 0], [0, 1, 0.8]].forEach(([px, py, pz]) => {
-            this.createStaticBox({ x: x + px, y: canopyY + py, z: z + pz }, { x: 0, y: 0, z: 0, w: 1 }, { x: 0.25, y: 0.35, z: 0.25 }, fruitColor);
-        });
-    }
-
-    async setupAssets() {
-        console.log('[ASSETS] Loading baked_color.filmat...');
-        let response;
-        try {
-            response = await fetch('./baked_color.filmat');
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-        } catch (e) {
-            console.error('[ASSETS] Failed to fetch material:', e);
-            throw e;
-        }
-        const buffer = await response.arrayBuffer();
-        console.log(`[ASSETS] Loaded ${buffer.byteLength} bytes`);
-        this.material = this.engine.createMaterial(new Uint8Array(buffer));
-        console.log('[ASSETS] Material created successfully');
-
-        const VertexAttribute = this.Filament['VertexAttribute'];
-        const AttributeType = this.Filament['VertexBuffer$AttributeType'];
-
-        this.vb = this.Filament.VertexBuffer.Builder()
-            .vertexCount(24)
-            .bufferCount(1)
-            .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, 28)
-            .attribute(VertexAttribute.TANGENTS, 0, AttributeType.FLOAT4, 12, 28)
-            .build(this.engine);
-        this.vb.setBufferAt(this.engine, 0, CUBE_VERTICES);
-
-        this.ib = this.Filament.IndexBuffer.Builder()
-            .indexCount(36)
-            .bufferType(this.Filament['IndexBuffer$IndexType'].USHORT)
-            .build(this.engine);
-        this.ib.setBuffer(this.engine, CUBE_INDICES);
-
-        const sphereData = createSphere(0.5, 32, 16);
-        this.sphereVb = this.Filament.VertexBuffer.Builder()
-            .vertexCount(sphereData.vertices.length / 7)
-            .bufferCount(1)
-            .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, 28)
-            .attribute(VertexAttribute.TANGENTS, 0, AttributeType.FLOAT4, 12, 28)
-            .build(this.engine);
-        this.sphereVb.setBufferAt(this.engine, 0, sphereData.vertices);
-
-        this.sphereIb = this.Filament.IndexBuffer.Builder()
-            .indexCount(sphereData.indices.length)
-            .bufferType(this.Filament['IndexBuffer$IndexType'].USHORT)
-            .build(this.engine);
-        this.sphereIb.setBuffer(this.engine, sphereData.indices);
-
-        this.createCueStick();
-    }
-
-    createCueStick() {
-        this.cueEntity = this.Filament.EntityManager.get().create();
-        const cueColor = [1.0, 1.0, 0.0];
-        const matInstance = this.material.createInstance();
-        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, cueColor);
-        matInstance.setFloatParameter('roughness', 0.2);
-
-        this.Filament.RenderableManager.Builder(1)
-            .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
-            .material(0, matInstance)
-            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
-            .build(this.engine, this.cueEntity);
-
-        this.scene.addEntity(this.cueEntity);
-
-        const tcm = this.engine.getTransformManager();
-        this.cueInst = tcm.getInstance(this.cueEntity);
-
-        const zeroMat = new Float32Array(16);
-        zeroMat[15] = 1;
-        tcm.setTransform(this.cueInst, zeroMat);
-    }
-
-    shootMarble() {
-        if (!this.playerMarble) return;
-
-        const force = 50.0 + this.chargePower * 150.0;
-        const cosP = Math.cos(this.pitchAngle);
-        const sinP = Math.sin(this.pitchAngle);
-
-        const dirX = Math.sin(this.aimYaw) * cosP;
-        const dirY = sinP;
-        const dirZ = Math.cos(this.aimYaw) * cosP;
-
-        this.playerMarble.rigidBody.applyImpulse({
-            x: dirX * force,
-            y: dirY * force,
-            z: dirZ * force
-        }, true);
-
-        this.chargePower = 0;
-        this.powerbarEl.style.width = '0%';
-    }
-
-    createLight() {
-        this.light = this.Filament.EntityManager.get().create();
-        this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
-            .color([0.98, 0.92, 0.89])
-            .intensity(110000.0)
-            .direction([0.6, -1.0, -0.8])
-            .castShadows(true)
-            .sunAngularRadius(1.9)
-            .sunHaloSize(10.0)
-            .sunHaloFalloff(80.0)
-            .build(this.engine, this.light);
-        this.scene.addEntity(this.light);
-
-        this.fillLight = this.Filament.EntityManager.get().create();
-        this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
-            .color([0.8, 0.8, 1.0])
-            .intensity(30000.0)
-            .direction([-0.6, -0.5, 0.8])
-            .castShadows(false)
-            .build(this.engine, this.fillLight);
-        this.scene.addEntity(this.fillLight);
-
-        this.backLight = this.Filament.EntityManager.get().create();
-        this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
-            .color([0.5, 0.5, 0.5])
-            .intensity(20000.0)
-            .direction([0.0, -1.0, 1.0])
-            .castShadows(false)
-            .build(this.engine, this.backLight);
-        this.scene.addEntity(this.backLight);
-    }
-
-    createStaticBox(pos, rotation, halfExtents, color, material = 'wood') {
-        const bodyDesc = RAPIER.RigidBodyDesc.fixed()
-            .setTranslation(pos.x, pos.y, pos.z)
-            .setRotation(rotation);
-        const body = this.world.createRigidBody(bodyDesc);
-        const colliderDesc = RAPIER.ColliderDesc.cuboid(halfExtents.x, halfExtents.y, halfExtents.z);
-        this.world.createCollider(colliderDesc, body);
-        this.staticBodies.push(body);
-
-        // Register material for collision sounds
-        audio.registerBodyMaterial(body, material);
-
-        const entity = this.Filament.EntityManager.get().create();
-        const matInstance = this.material.createInstance();
-        matInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, color);
-        matInstance.setFloatParameter('roughness', 0.4);
-
-        this.Filament.RenderableManager.Builder(1)
-            .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
-            .material(0, matInstance)
-            .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.vb, this.ib)
-            .build(this.engine, entity);
-
-        const tcm = this.engine.getTransformManager();
-        const inst = tcm.getInstance(entity);
-
-        const mat = quaternionToMat4(pos, rotation);
-        const sx = halfExtents.x * 2;
-        const sy = halfExtents.y * 2;
-        const sz = halfExtents.z * 2;
-
-        mat[0] *= sx; mat[1] *= sx; mat[2] *= sx;
-        mat[4] *= sy; mat[5] *= sy; mat[6] *= sy;
-        mat[8] *= sz; mat[9] *= sz; mat[10] *= sz;
-
-        tcm.setTransform(inst, mat);
-        this.scene.addEntity(entity);
-        this.staticEntities.push(entity);
-    }
-
-    createDynamicBox(pos, rotation, halfExtents, color, density = 1.0, material = 'wood') {
-        const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
-            .setTranslation(pos.x, pos.y, pos.z)
-            .setRotation(rotation);
-        const body = this.world.createRigidBody(bodyDesc);
-
-        const colliderDesc = RAPIER.ColliderDesc.cuboid(halfExtents.x, halfExtents.y, halfExtents.z)
-            .setDensity(density);
-        this.world.createCollider(colliderDesc, body);
-
-        // Register material for collision sounds
-        audio.registerBodyMaterial(body, material);
-
-        const entity = this.Filament.EntityManager.get().create();
-        const matInstance = this.material.createInstance();
-        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color);
-        matInstance.setFloatParameter('roughness', 0.4);
-
-        // Bounding box for culling - can be approximate
-        this.Filament.RenderableManager.Builder(1)
-            .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
-            .material(0, matInstance)
-            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
-            .build(this.engine, entity);
-
-        this.scene.addEntity(entity);
-
-        this.dynamicObjects.push({
-            rigidBody: body,
-            entity: entity,
-            halfExtents: halfExtents
-        });
-    }
-
     createMarbles(spawnPos) {
         const baseSpawn = spawnPos || { x: 0, y: 8, z: -12 };
 
         const marblesInfo = [
-            { name: "Red Standard", color: [1.0, 0.0, 0.0], offset: { x: -1.0, y: 0, z: 0 } },
-            { name: "Blue Standard", color: [0.0, 0.0, 1.0], offset: { x: 1.0, y: 0, z: 0 } },
-            { name: "Green Bouncy", color: [0.2, 1.0, 0.2], offset: { x: -2.5, y: 4, z: 0 }, radius: 0.4, friction: 0.1, restitution: 0.8, roughness: 0.2 },
-            { name: "Purple Heavy", color: [0.6, 0.1, 0.8], offset: { x: 0.0, y: 2, z: 2 }, radius: 0.75, restitution: 1.2 },
-            { name: "Gold Heavy", color: [1.0, 0.84, 0.0], offset: { x: 2.5, y: 2, z: 2 }, radius: 0.6, restitution: 0.2, density: 3.0, roughness: 0.3 },
-            { name: "Cyan Slick", color: [0.0, 0.8, 1.0], offset: { x: -2.0, y: 2, z: 2 }, radius: 0.5, friction: 0.05, restitution: 0.5, roughness: 0.1 },
+            { name: "Red Classic", color: [1.0, 0.0, 0.0], offset: { x: -1.0, y: 0, z: 0 } },
+            { name: "Blue Classic", color: [0.0, 0.0, 1.0], offset: { x: 1.0, y: 0, z: 0 } },
+            { name: "Green Flash", color: [0.2, 1.0, 0.2], offset: { x: -2.5, y: 4, z: 0 }, radius: 0.4, friction: 0.1, restitution: 0.8, roughness: 0.2 },
+            { name: "Purple Haze", color: [0.6, 0.1, 0.8], offset: { x: 0.0, y: 2, z: 2 }, radius: 0.75, restitution: 1.2 },
+            { name: "Golden Orb", color: [1.0, 0.84, 0.0], offset: { x: 2.5, y: 2, z: 2 }, radius: 0.6, restitution: 0.2, density: 3.0, roughness: 0.3 },
+            { name: "Cyan Surfer", color: [0.0, 0.8, 1.0], offset: { x: -2.0, y: 2, z: 2 }, radius: 0.5, friction: 0.05, restitution: 0.5, roughness: 0.1 },
             // --- NEW MARBLES ---
-            // 1. Volcanic Magma Marble - Glowing hot red-orange with extreme bounce
             { name: "Volcanic Magma", color: [1.0, 0.25, 0.0], offset: { x: 3.5, y: 3, z: 0 }, radius: 0.55, friction: 0.15, restitution: 1.5, density: 0.8, roughness: 0.6 },
-            // 2. Shadow Ninja Marble - Dark purple, ultra-smooth, sneaky low friction
             { name: "Shadow Ninja", color: [0.15, 0.05, 0.25], offset: { x: -3.5, y: 3, z: 0 }, radius: 0.45, friction: 0.02, restitution: 0.3, density: 1.2, roughness: 0.05 },
-            // 3. Cosmic Nebula Marble - Deep space teal with silver shimmer, balanced all-rounder
             { name: "Cosmic Nebula", color: [0.3, 0.9, 0.7], offset: { x: 0.0, y: 5, z: -2 }, radius: 0.65, friction: 0.08, restitution: 0.7, density: 1.5, roughness: 0.15 },
-            // 4. Void Marble - Very dense and heavy, doesn't bounce much
             { name: "Void Heavy", color: [0.1, 0.05, 0.2], offset: { x: 2.0, y: 5, z: -2 }, radius: 0.7, friction: 1.0, restitution: 0.1, density: 4.0, roughness: 0.9 },
-            // 5. Ice Marble - Slippery and smooth
             { name: "Ice Slick", color: [0.8, 0.9, 1.0], offset: { x: -5.0, y: 3, z: 0 }, radius: 0.48, friction: 0.005, restitution: 0.8, density: 0.9, roughness: 0.1 },
-            // 6. Super Bouncy Marble - Maximum bounce
             { name: "Super Bouncy", color: [1.0, 0.0, 0.8], offset: { x: 5.0, y: 3, z: 0 }, radius: 0.52, friction: 0.5, restitution: 1.8, density: 0.5, roughness: 0.3 },
-            // 7. Mud Marble - Sticky, heavy, no bounce
             { name: "Mud Sticky", color: [0.35, 0.25, 0.2], offset: { x: 0.0, y: 3, z: 4 }, radius: 0.5, friction: 2.0, restitution: 0.0, density: 3.0, roughness: 0.9 },
-            // 8. Tiny Dense Marble - Small, heavy, and fast
             { name: "Tiny Dense", color: [1.0, 1.0, 1.0], offset: { x: 3.5, y: 3, z: 4 }, radius: 0.3, density: 10.0, friction: 0.1, restitution: 0.5 },
-            // 9. Nano Marble - Tiny and dense
             { name: "Nano", color: [1.0, 0.4, 0.7], offset: { x: 1.5, y: 4, z: 4 }, radius: 0.25, density: 2.0, roughness: 0.2 },
-            // 10. Giant Marble - Huge, hollow-ish, slow rolling
             { name: "Giant", color: [0.2, 0.8, 0.2], offset: { x: -3.0, y: 4, z: 4 }, radius: 1.2, density: 0.5, friction: 0.5, roughness: 0.8 },
-            // 11. Mercury Marble - Heavy liquid metal, low friction
-            { name: "Mercury", color: [0.7, 0.7, 0.7], offset: { x: -5.0, y: 3, z: 4 }, radius: 0.55, density: 5.0, friction: 0.05, restitution: 0.2, roughness: 0.1 },
-            // 12. Neutron Star - Extremely dense, small, hard to move
-            { name: "Neutron Star", color: [0.9, 0.9, 1.0], offset: { x: 0.0, y: 3, z: 6 }, radius: 0.3, density: 50.0, friction: 0.5, restitution: 0.1, roughness: 0.2 },
-            // 13. Balloon - Very light, easily pushed
-            { name: "Balloon", color: [1.0, 0.4, 0.7], offset: { x: 2.0, y: 3, z: 6 }, radius: 0.5, density: 0.05, friction: 0.3, restitution: 0.9, roughness: 0.8 },
-            // 14. Plasma - Energy ball, frictionless, high bounce
-            { name: "Plasma", color: [0.9, 0.2, 0.9], offset: { x: -2.0, y: 3, z: 6 }, radius: 0.6, density: 0.2, friction: 0.0, restitution: 1.1, roughness: 0.0 },
-            // 15. Zero G - Almost weightless, floats
-            { name: "Zero G", color: [0.8, 1.0, 1.0], offset: { x: 5.0, y: 5, z: 2 }, radius: 0.5, gravityScale: 0.1, friction: 0.1, restitution: 0.9, density: 0.1, roughness: 0.1 },
-            // 16. Meteor - Heavy, fast falling
-            { name: "Meteor", color: [0.4, 0.1, 0.0], offset: { x: -5.0, y: 5, z: 2 }, radius: 0.6, gravityScale: 3.0, density: 5.0, friction: 0.5, restitution: 0.2, roughness: 0.8 },
-            // 17. Pinball - Steel ball, heavy, smooth, bouncy
-            { name: "Pinball", color: [0.75, 0.75, 0.8], offset: { x: 0.0, y: 5, z: -4 }, radius: 0.4, density: 8.0, friction: 0.1, restitution: 0.7, roughness: 0.0 }
+            { name: "Mercury", color: [0.7, 0.7, 0.7], offset: { x: -5.0, y: 3, z: 4 }, radius: 0.55, density: 5.0, friction: 0.05, restitution: 0.2, roughness: 0.1 }
         ];
 
         for (const info of marblesInfo) {
@@ -2151,11 +1494,6 @@ class MarblesGame {
             const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
                 .setTranslation(pos.x, pos.y, pos.z)
                 .setCanSleep(false);
-
-            if (info.gravityScale !== undefined) bodyDesc.setGravityScale(info.gravityScale);
-            if (info.linearDamping !== undefined) bodyDesc.setLinearDamping(info.linearDamping);
-            if (info.angularDamping !== undefined) bodyDesc.setAngularDamping(info.angularDamping);
-
             const rigidBody = this.world.createRigidBody(bodyDesc);
 
             const colliderDesc = RAPIER.ColliderDesc.ball(radius)
@@ -2185,7 +1523,7 @@ class MarblesGame {
                 entity,
                 scale,
                 initialPos: pos,
-                currentRespawnPos: { ...pos },
+                respawnPos: { ...pos },
                 scoredGoals: new Set()
             });
         }
@@ -2213,12 +1551,21 @@ class MarblesGame {
         audio.stopAllRolling();
 
         for (const m of this.marbles) {
-            m.currentRespawnPos = { ...m.initialPos };
             m.rigidBody.setTranslation(m.initialPos, true);
             m.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
             m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
             m.scoredGoals.clear();
+            m.respawnPos = { ...m.initialPos };
         }
+
+        // Reset checkpoints
+        for (const cp of this.checkpoints) {
+            cp.activated = false;
+            if (cp.matInstance) {
+                cp.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.0, 1.0, 1.0]);
+            }
+        }
+
         this.score = 0;
         this.scoreEl.textContent = 'Score: 0';
         this.currentMarbleIndex = 0;
@@ -2326,35 +1673,47 @@ class MarblesGame {
 
             // Respawn logic
             if (t.y < -20) {
-                const respawnPos = m.currentRespawnPos || m.initialPos;
-                m.rigidBody.setTranslation(respawnPos, true);
+                const respawn = m.respawnPos || m.initialPos;
+                m.rigidBody.setTranslation(respawn, true);
                 m.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
                 m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
-
-                // Only clear progress if we are respawning at the very start
-                const isStart = Math.abs(respawnPos.x - m.initialPos.x) < 0.001 &&
-                                Math.abs(respawnPos.y - m.initialPos.y) < 0.001 &&
-                                Math.abs(respawnPos.z - m.initialPos.z) < 0.001;
-
-                if (isStart) {
-                    m.scoredGoals.clear();
-                }
+                m.scoredGoals.clear();
                 continue;
             }
 
             // Check checkpoints
-            for (const checkpoint of this.checkpointDefinitions) {
-                if (t.x > checkpoint.range.x[0] && t.x < checkpoint.range.x[1] &&
-                    t.z > checkpoint.range.z[0] && t.z < checkpoint.range.z[1] &&
-                    t.y > checkpoint.range.y[0] && t.y < checkpoint.range.y[1]) {
+            for (const cp of this.checkpoints) {
+                if (cp.activated) continue;
 
-                    // Update respawn position if different
-                    if (m.currentRespawnPos.x !== checkpoint.respawn.x ||
-                        m.currentRespawnPos.z !== checkpoint.respawn.z) {
-                         m.currentRespawnPos = { ...checkpoint.respawn };
-                         console.log(`[GAME] Marble ${m.name} reached checkpoint ${checkpoint.id}`);
-                         audio.playGoal(); // Reuse goal sound for feedback
+                // Simple AABB overlap check
+                // Checkpoint is centered at cp.pos with halfExtents cp.halfExtents
+                // Marble is at t with radius m.scale * 0.5
+                const radius = m.scale * 0.5 || 0.5;
+
+                const minX = cp.pos.x - cp.halfExtents.x;
+                const maxX = cp.pos.x + cp.halfExtents.x;
+                const minZ = cp.pos.z - cp.halfExtents.z;
+                const maxZ = cp.pos.z + cp.halfExtents.z;
+                const minY = cp.pos.y - cp.halfExtents.y;
+                const maxY = cp.pos.y + cp.halfExtents.y;
+
+                if (t.x + radius > minX && t.x - radius < maxX &&
+                    t.z + radius > minZ && t.z - radius < maxZ &&
+                    t.y + radius > minY && t.y - radius < maxY) {
+
+                    cp.activated = true;
+                    // Visual feedback: Green
+                    if (cp.matInstance) {
+                        cp.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.0, 1.0, 0.0]);
                     }
+                    // Audio feedback
+                    audio.playGoal();
+
+                    // Update respawn for THIS marble
+                    // Spawn slightly above the checkpoint center to avoid clipping
+                    m.respawnPos = { x: cp.pos.x, y: cp.pos.y + 1.0, z: cp.pos.z };
+
+                    console.log(`[GAME] Checkpoint activated by ${m.name}! New respawn set.`);
                 }
             }
 
@@ -2488,17 +1847,17 @@ class MarblesGame {
         }
 
         // Audio controls
-        if (this.keys['BracketLeft']) { // [ key - decrease volume
+        if (this.keys['BracketLeft']) {
             const currentVol = audio.masterGain ? audio.masterGain.gain.value : 0.4;
             audio.setVolume(currentVol - 0.1);
-            this.keys['BracketLeft'] = false; // Prevent holding
+            this.keys['BracketLeft'] = false;
         }
-        if (this.keys['BracketRight']) { // ] key - increase volume
+        if (this.keys['BracketRight']) {
             const currentVol = audio.masterGain ? audio.masterGain.gain.value : 0.4;
             audio.setVolume(currentVol + 0.1);
             this.keys['BracketRight'] = false;
         }
-        if (this.keys['KeyN']) { // N key - toggle mute
+        if (this.keys['KeyN']) {
             audio.init();
             const muted = audio.toggleMute();
             if (this.muteBtn) {
@@ -2508,6 +1867,7 @@ class MarblesGame {
             this.keys['KeyN'] = false;
         }
 
+        // Camera and movement controls
         if (this.cameraMode === 'orbit') {
             if (this.keys['ArrowLeft'] || this.keys['KeyA']) this.camAngle -= rotSpeed;
             if (this.keys['ArrowRight'] || this.keys['KeyD']) this.camAngle += rotSpeed;
@@ -2515,7 +1875,6 @@ class MarblesGame {
             if (this.keys['ArrowDown'] || this.keys['KeyS']) this.camRadius = Math.min(100, this.camRadius + zoomSpeed);
         } else {
             const impulseStrength = 0.5;
-
             if (this.playerMarble) {
                 const rigidBody = this.playerMarble.rigidBody;
                 if (this.keys['ArrowUp'] || this.keys['KeyW']) rigidBody.applyImpulse({ x: 0, y: 0, z: impulseStrength }, true);
@@ -2526,43 +1885,30 @@ class MarblesGame {
         }
 
         // Handle Boost
-        if (this.keys['ShiftLeft'] || this.keys['ShiftRight']) {
-            const now = Date.now();
-            if (this.playerMarble && now - this.lastBoostTime > this.boostCooldown) {
-                // Boost magnitude
-                const force = 60.0;
-
-                // Determine boost direction (horizontal)
-                // Default: camera aim direction
-                let boostYaw = this.aimYaw;
-
-                // Calculate vector
-                const dirX = Math.sin(boostYaw);
-                const dirZ = Math.cos(boostYaw);
-
-                this.playerMarble.rigidBody.applyImpulse({
-                    x: dirX * force,
-                    y: 0,
-                    z: dirZ * force
-                }, true);
-
+        const now = Date.now();
+        if ((this.keys['ShiftLeft'] || this.keys['ShiftRight']) && now - this.lastBoostTime > this.boostCooldown) {
+            if (this.playerMarble) {
                 this.lastBoostTime = now;
                 audio.playBoost();
-            }
-        }
 
-        // Update Boost UI
-        if (this.boostBarEl) {
-            const now = Date.now();
-            const timeSince = now - this.lastBoostTime;
-            const progress = Math.min(1.0, timeSince / this.boostCooldown);
-            this.boostBarEl.style.width = `${progress * 100}%`;
+                let dirX = 0, dirZ = 0;
+                if (this.cameraMode === 'follow') {
+                    dirX = Math.sin(this.aimYaw);
+                    dirZ = Math.cos(this.aimYaw);
+                } else {
+                    const vel = this.playerMarble.rigidBody.linvel();
+                    const speed = Math.hypot(vel.x, vel.z);
+                    if (speed > 0.1) {
+                        dirX = vel.x / speed;
+                        dirZ = vel.z / speed;
+                    } else {
+                        dirX = 0;
+                        dirZ = 1;
+                    }
+                }
 
-            // Visual feedback when ready
-            if (progress >= 1.0) {
-               this.boostBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #f0f)';
-            } else {
-               this.boostBarEl.style.filter = 'brightness(0.7)';
+                const boostForce = 80.0;
+                this.playerMarble.rigidBody.applyImpulse({ x: dirX * boostForce, y: 0, z: dirZ * boostForce }, true);
             }
         }
 
@@ -2575,6 +1921,14 @@ class MarblesGame {
         // Update Shot Charge
         if (this.charging) {
             this.chargePower = Math.min(1.0, this.chargePower + 0.015);
+        }
+
+        // Update Boost Bar
+        const boostProgress = Math.min(1.0, (now - this.lastBoostTime) / this.boostCooldown);
+        if (this.boostBarEl) {
+            this.boostBarEl.style.width = `${boostProgress * 100}%`;
+            this.boostBarEl.style.backgroundColor = boostProgress >= 1.0 ? '#0ff' : '#555';
+            this.boostBarEl.style.filter = boostProgress >= 1.0 ? 'brightness(1.2) drop-shadow(0 0 5px #f0f)' : 'brightness(0.7)';
         }
 
         // Magnet Logic
@@ -2660,16 +2014,59 @@ class MarblesGame {
                 const t = target.rigidBody.translation();
                 const height = level?.camera?.height || 10;
                 const dist = 20;
-
                 const eyeX = t.x - Math.sin(this.aimYaw) * dist;
                 const eyeZ = t.z - Math.cos(this.aimYaw) * dist;
-
                 this.camera.lookAt([eyeX, t.y + height, eyeZ], [t.x, t.y, t.z], [0, 1, 0]);
             }
         } else {
             const eyeX = this.camRadius * Math.sin(this.camAngle);
             const eyeZ = this.camRadius * Math.cos(this.camAngle);
             this.camera.lookAt([eyeX, this.camHeight, eyeZ], [0, 0, 0], [0, 1, 0]);
+        }
+
+        // Update Collectibles (from feature branch)
+        this.collectibleRotation += 0.05;
+        if (this.collectibles && this.collectibles.length > 0) {
+            const tcm = this.engine.getTransformManager();
+            for (let i = this.collectibles.length - 1; i >= 0; i--) {
+                const c = this.collectibles[i];
+
+                // Animate: Rotate + Bob up and down
+                const bobOffset = Math.sin(this.collectibleRotation * 2) * 0.2;
+                const newY = c.baseY + bobOffset;
+                const q = quatFromEuler(this.collectibleRotation, 0, Math.PI / 4);
+
+                // Construct matrix manually to include scale
+                const mat = quaternionToMat4({ x: c.pos.x, y: newY, z: c.pos.z }, q);
+                const scale = 0.5;
+                mat[0] *= scale; mat[1] *= scale; mat[2] *= scale;
+                mat[4] *= scale; mat[5] *= scale; mat[6] *= scale;
+                mat[8] *= scale; mat[9] *= scale; mat[10] *= scale;
+
+                const inst = tcm.getInstance(c.entity);
+                tcm.setTransform(inst, mat);
+
+                // Check collision with player
+                if (this.playerMarble) {
+                    const pt = this.playerMarble.rigidBody.translation();
+                    const dx = pt.x - c.pos.x;
+                    const dy = pt.y - newY;
+                    const dz = pt.z - c.pos.z;
+                    const distSq = dx*dx + dy*dy + dz*dz;
+
+                    if (distSq < 2.25) { // 1.5 distance squared
+                        // Collected!
+                        audio.playCollect();
+                        this.score += 10;
+                        this.scoreEl.textContent = 'Score: ' + this.score;
+
+                        // Remove
+                        this.scene.remove(c.entity);
+                        this.engine.destroyEntity(c.entity);
+                        this.collectibles.splice(i, 1);
+                    }
+                }
+            }
         }
 
         // Step Physics with event handling
@@ -2697,64 +2094,38 @@ class MarblesGame {
             tcm.setTransform(inst, mat);
         }
 
-        // Sync Dynamic Objects (Pins, Dominos, etc)
-        for (const obj of this.dynamicObjects) {
-            const t = obj.rigidBody.translation();
-            const r = obj.rigidBody.rotation();
-            const mat = quaternionToMat4(t, r);
+        // Update PowerUps (from main)
+        for (const p of this.powerUps) {
+            p.rotation += 0.05;
+            const q = quatFromEuler(p.rotation, 0, 0);
+            const mat = quaternionToMat4(p.pos, q);
+            const s = 0.6;
+            mat[0] *= s; mat[1] *= s; mat[2] *= s;
+            mat[4] *= s; mat[5] *= s; mat[6] *= s;
+            mat[8] *= s; mat[9] *= s; mat[10] *= s;
 
-            if (obj.halfExtents) {
-                const sx = obj.halfExtents.x * 2;
-                const sy = obj.halfExtents.y * 2;
-                const sz = obj.halfExtents.z * 2;
-                mat[0] *= sx; mat[1] *= sx; mat[2] *= sx;
-                mat[4] *= sy; mat[5] *= sy; mat[6] *= sy;
-                mat[8] *= sz; mat[9] *= sz; mat[10] *= sz;
-            }
-
-            const inst = tcm.getInstance(obj.entity);
+            const inst = tcm.getInstance(p.entity);
             tcm.setTransform(inst, mat);
         }
 
-        // Update Cue Stick (if charging)
-        if (this.cameraMode === 'follow' && this.playerMarble && this.charging && this.cueInst) {
-            const cosP = Math.cos(this.pitchAngle);
-            const sinP = Math.sin(this.pitchAngle);
-            const dirX = Math.sin(this.aimYaw) * cosP;
-            const dirY = sinP;
-            const dirZ = Math.cos(this.aimYaw) * cosP;
-            const length = 0.5 + this.chargePower * 2.5;
-            const r = this.playerMarble.scale * 0.5 || 0.5;
-            const marbleT = this.playerMarble.rigidBody.translation();
-            const cuePos = {
-                x: marbleT.x - dirX * (r + 0.2),
-                y: marbleT.y - dirY * (r + 0.2),
-                z: marbleT.z - dirZ * (r + 0.2)
-            };
-            const quat = quatFromEuler(this.aimYaw, this.pitchAngle, 0);
-            let mat = quaternionToMat4(cuePos, quat);
-            const thin = 0.04;
-            mat[0] *= thin; mat[1] *= thin; mat[2] *= thin;
-            mat[4] *= thin; mat[5] *= thin; mat[6] *= thin;
-            mat[8] *= length; mat[9] *= length; mat[10] *= length;
-            this.engine.getTransformManager().setTransform(this.cueInst, mat);
-        } else if (this.cueInst) {
-            const zeroMat = new Float32Array(16);
-            zeroMat[15] = 1;
-            this.engine.getTransformManager().setTransform(this.cueInst, zeroMat);
+        // Update active effects UI (from main)
+        let effectsText = '';
+        if (this.activeEffects.speed && this.activeEffects.speed > now) {
+            effectsText += '<div style="color: #ffcc00">SPEED BOOST!</div>';
         }
+        if (this.activeEffects.jump && this.activeEffects.jump > now) {
+            effectsText += '<div style="color: #00ff00">JUMP BOOST!</div>';
+        }
+        if (this.effectEl) this.effectEl.innerHTML = effectsText;
 
-        // Render
-        if (this.renderer && this.swapChain && this.view) {
-            if (this.renderer.beginFrame(this.swapChain)) {
-                this.renderer.renderView(this.view);
-                this.renderer.endFrame();
-            }
-            this.engine.execute();
+        // Update Moving Platforms (Physics) (from main)
+        for (const platform of this.movingPlatforms) {
+            platform.time += 0.016;
+            const t = (Math.sin(platform.time * platform.speed) + 1) / 2;
+            const x = platform.start.x + (platform.end.x - platform.start.x) * t;
+            const y = platform.start.y + (platform.end.y - platform.start.y) * t;
+            const z = platform.start.z + (platform.end.z - platform.start.z) * t;
+            platform.rigidBody.setNextKinematicTranslation({ x, y, z });
         }
-        requestAnimationFrame(() => this.loop());
     }
 }
-
-window.game = new MarblesGame();
-window.game.init();
