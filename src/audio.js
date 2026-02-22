@@ -169,6 +169,57 @@ export class MarbleAudio {
     }
 
     /**
+     * Play a boost sound (synth sweep)
+     */
+    playBoost() {
+        if (!this.enabled || !this.ctx) return;
+
+        const t = this.ctx.currentTime;
+
+        // 1. Oscillator for the "whoosh/zoom" sound
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(100, t);
+        osc.frequency.exponentialRampToValueAtTime(800, t + 0.3);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(200, t);
+        filter.frequency.exponentialRampToValueAtTime(3000, t + 0.2);
+        filter.Q.value = 5;
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.3, t + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+
+        osc.start(t);
+        osc.stop(t + 0.4);
+
+        // 2. Sub-bass kick for impact
+        const kickOsc = this.ctx.createOscillator();
+        const kickGain = this.ctx.createGain();
+
+        kickOsc.type = 'sine';
+        kickOsc.frequency.setValueAtTime(150, t);
+        kickOsc.frequency.exponentialRampToValueAtTime(50, t + 0.1);
+
+        kickOsc.connect(kickGain);
+        kickGain.connect(this.masterGain);
+
+        kickGain.gain.setValueAtTime(0.5, t);
+        kickGain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+
+        kickOsc.start(t);
+        kickOsc.stop(t + 0.2);
+    }
+
+    /**
      * Play a wall/floor hit sound (deeper, thuddier)
      * @param {number} velocity - Impact velocity
      * @param {string} material - 'wood', 'metal', 'concrete'
@@ -246,6 +297,40 @@ export class MarbleAudio {
             osc.start(startTime);
             osc.stop(startTime + 0.6);
         });
+    }
+
+    /**
+     * Play a jump sound
+     */
+    playJump() {
+        if (!this.enabled || !this.ctx) return;
+
+        const t = this.ctx.currentTime;
+        const gain = this.ctx.createGain();
+        gain.connect(this.masterGain);
+
+        // "Boing" effect using filtered saw wave
+        const osc = this.ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, t);
+        osc.frequency.exponentialRampToValueAtTime(600, t + 0.15);
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(200, t);
+        filter.frequency.exponentialRampToValueAtTime(1500, t + 0.1);
+        filter.Q.value = 5;
+
+        osc.connect(filter);
+        filter.connect(gain);
+
+        // Envelope
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.3, t + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+
+        osc.start(t);
+        osc.stop(t + 0.35);
     }
 
     /**
