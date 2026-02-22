@@ -373,6 +373,7 @@ class MarblesGame {
         this.powerbarEl = document.getElementById('powerbar');
         this.jumpBarEl = document.getElementById('jumpbar');
         this.boostBarEl = document.getElementById('boostbar');
+        this.magnetBarEl = document.getElementById('magnetbar');
         this.effectEl = document.getElementById('effects');
         this.currentMarbleIndex = 0;
         this.aimYaw = 0;
@@ -387,6 +388,11 @@ class MarblesGame {
         this.playerMarble = null;
         this.cueInst = null;
 
+        // Magnet State
+        this.magnetPower = 1.0;
+        this.magnetActive = false;
+        this.magnetMode = null; // 'attract' or 'repel'
+
         // Level State
         this.currentLevel = null;
         this.levelStartTime = 0;
@@ -394,7 +400,256 @@ class MarblesGame {
         this.goalDefinitions = [];
     }
 
-    // ... keep initMouseControls, isGrounded, init, showLevelSelection, loadLevel from feature branch ...
+    isGrounded(marble) {
+        if (!marble || !marble.rigidBody) return false;
+        const rb = marble.rigidBody;
+        const radius = marble.scale * 0.5 || 0.5;
+        const pos = rb.translation();
+
+        // Cast a small downward ray to detect ground/surface contact
+        const rayOrigin = { x: pos.x, y: pos.y, z: pos.z };
+        const rayDir = { x: 0, y: -1, z: 0 };
+        const ray = new RAPIER.Ray(rayOrigin, rayDir);
+        const maxToi = radius + 0.1; // Slightly beyond marble radius
+
+        const hit = this.world.castRay(ray, maxToi, true);
+        return !!hit;
+    }
+
+    async init() {
+        console.log('[INIT] Starting game initialization...');
+
+        // Input Listeners
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !this.keys['Space']) {
+                if (this.playerMarble) {
+                    if (this.isGrounded(this.playerMarble)) {
+                        this.isChargingJump = true;
+                        this.jumpCharge = 0;
+                    } else if (this.jumpCount < this.maxJumps) {
+                        // Double Jump
+                        const linvel = this.playerMarble.rigidBody.linvel();
+                        this.playerMarble.rigidBody.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true);
+                        this.playerMarble.rigidBody.applyImpulse({ x: 0, y: 10.0, z: 0 }, true);
+                        this.jumpCount++;
+                        audio.playJump();
+                    }
+                }
+            }
+            // Switch Marble
+            if (e.code === 'Tab') {
+                e.preventDefault();
+                if (this.marbles.length > 0) {
+                    this.currentMarbleIndex = (this.currentMarbleIndex + 1) % this.marbles.length;
+                    this.playerMarble = this.marbles[this.currentMarbleIndex];
+                    this.selectedEl.textContent = `Selected: ${this.playerMarble.name}`;
+                    console.log(`[GAME] Switched to marble ${this.currentMarbleIndex}: ${this.playerMarble.name}`);
+                }
+            }
+            this.keys[e.code] = true;
+            if (e.code === 'KeyC') {
+                this.cameraMode = this.cameraMode === 'orbit' ? 'follow' : 'orbit';
+                console.log('Camera Mode:', this.cameraMode);
+            }
+            // Magnet Input
+            if (e.code === 'KeyE') {
+                this.magnetMode = 'attract';
+                this.magnetActive = true;
+            }
+            if (e.code === 'KeyQ') {
+                this.magnetMode = 'repel';
+                this.magnetActive = true;
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'KeyE' || e.code === 'KeyQ') {
+                this.magnetActive = false;
+                this.magnetMode = null;
+            }
+            if (e.code === 'Space') {
+                if (this.isChargingJump && this.playerMarble) {
+                    const force = 5.0 + this.jumpCharge * 10.0;
+                    this.playerMarble.rigidBody.applyImpulse({ x: 0, y: force, z: 0 }, true);
+                    audio.playJump();
+                    this.jumpCount = 1; // Used ground jump
+                }
+                this.isChargingJump = false;
+                this.jumpCharge = 0;
+                if (this.jumpBarEl) this.jumpBarEl.style.width = '0%';
+            }
+            this.keys[e.code] = false;
+        });
+
+        // Initialize audio on first user interaction (required by browsers)
+        const initAudio = () => {
+            audio.init();
+            audio.resume();
+        };
+        window.addEventListener('click', initAudio, { once: true });
+        window.addEventListener('keydown', initAudio, { once: true });
+
+        // Mute button
+        this.muteBtn = document.getElementById('mute-btn');
+        if (this.muteBtn) {
+            this.muteBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent triggering audio init again
+                audio.init(); // Ensure audio is initialized
+                const muted = audio.toggleMute();
+                this.muteBtn.textContent = muted ? '🔇' : '🔊';
+                this.muteBtn.classList.toggle('muted', muted);
+            });
+        }
+
+        // Initialize mouse controls
+        this.initMouseControls();
+
+        // 1. Initialize Physics
+        console.log('[INIT] Initializing Rapier physics...');
+        await RAPIER.init();
+        const gravity = { x: 0.0, y: -9.81, z: 0.0 };
+        this.world = new RAPIER.World(gravity);
+        console.log('[INIT] Physics initialized');
+
+        // 2. Initialize Filament
+        console.log('[INIT] Initializing Filament rendering...');
+        this.Filament = await loadFilament();
+        console.log('[INIT] Filament loaded');
+
+        // Set initial canvas size before creating swap chain
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        this.canvas.width = width;
+        this.canvas.height = height;
+        console.log(`[INIT] Canvas sized to ${width}x${height}`);
+
+        // Create engine, scene, swap chain, renderer, view, camera
+        this.engine = this.Filament.Engine.create(this.canvas);
+        this.scene = this.engine.createScene();
+        this.swapChain = this.engine.createSwapChain();
+        this.renderer = this.engine.createRenderer();
+        console.log('[INIT] Filament engine created');
+
+        // Camera setup
+        const cameraEntity = this.Filament.EntityManager.get().create();
+        this.camera = this.engine.createCamera(cameraEntity);
+        this.view = this.engine.createView();
+        this.view.setCamera(this.camera);
+        this.view.setScene(this.scene);
+        this.view.setViewport([0, 0, width, height]);
+
+        // Camera projection - use VERTICAL FOV enum
+        const Fov = this.Filament.Camera$Fov;
+        const aspect = width / height;
+        this.camera.setProjectionFov(45, aspect, 0.1, 1000.0, Fov.VERTICAL);
+        this.camera.lookAt([0, 10, 20], [0, 0, 0], [0, 1, 0]);
+
+        this.renderer.setClearOptions({ clearColor: [0.1, 0.1, 0.1, 1.0], clear: true });
+        console.log('[INIT] Camera and view configured');
+
+        // 3. LOAD ASSETS
+        console.log('[INIT] Loading assets...');
+        await this.setupAssets();
+        console.log('[INIT] Assets loaded');
+
+        // 4. Create Light
+        this.createLight();
+        console.log('[INIT] Lights created');
+
+        // 5. Show Level Selection
+        this.showLevelSelection();
+        console.log('[INIT] Level menu displayed');
+
+        // Hide loading screen
+        const loading = document.getElementById('loading');
+        if (loading) loading.style.display = 'none';
+        console.log('[INIT] Loading screen hidden');
+
+        // 6. Resize & Start
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        console.log('[INIT] Starting game loop');
+
+        // Start render loop
+        this.loop();
+        console.log('[INIT] Initialization complete!');
+    }
+
+    showLevelSelection() {
+        const menu = document.getElementById('level-menu');
+        const levelGrid = document.getElementById('level-grid');
+        const gameUI = document.getElementById('ui');
+
+        menu.style.display = 'flex';
+        gameUI.style.display = 'none';
+        levelGrid.innerHTML = '';
+
+        Object.entries(LEVELS).forEach(([id, level]) => {
+            const card = document.createElement('div');
+            card.className = 'level-card';
+            card.innerHTML = `
+                <h3>${level.name}</h3>
+                <p>${level.description}</p>
+                <span class="goals">${level.goals.length} Goal${level.goals.length !== 1 ? 's' : ''}</span>
+            `;
+            card.addEventListener('click', () => this.loadLevel(id));
+            levelGrid.appendChild(card);
+        });
+    }
+
+    async loadLevel(levelId) {
+        console.log(`[LEVEL] Loading level: ${levelId}`);
+        const level = LEVELS[levelId];
+        if (!level) {
+            console.error(`[LEVEL] Level ${levelId} not found!`);
+            return;
+        }
+
+        // Hide menu, show game UI
+        document.getElementById('level-menu').style.display = 'none';
+        document.getElementById('ui').style.display = 'block';
+
+        // Clear existing level
+        this.clearLevel();
+        console.log('[LEVEL] Cleared previous level');
+
+        // Set level state
+        this.currentLevel = levelId;
+        this.levelNameEl.textContent = level.name;
+        this.goalDefinitions = level.goals;
+        this.checkpointDefinitions = level.checkpoints || [];
+        this.score = 0;
+        this.scoreEl.textContent = 'Score: 0';
+        this.levelStartTime = Date.now();
+        this.levelComplete = false;
+
+        // Set night mode if enabled
+        if (level.nightMode) {
+            this.setNightMode(true, level.backgroundColor);
+        } else {
+            this.setNightMode(false);
+        }
+
+        // Set camera defaults from level
+        if (level.camera) {
+            this.cameraMode = level.camera.mode || 'orbit';
+            this.camAngle = level.camera.angle || 0;
+            this.camHeight = level.camera.height || 10;
+            this.camRadius = level.camera.radius || 25;
+        }
+
+        // Build zones
+        console.log(`[LEVEL] Creating ${level.zones.length} zones...`);
+        for (const zone of level.zones) {
+            await this.createZone(zone);
+        }
+        console.log(`[LEVEL] Created ${this.staticEntities.length} static entities`);
+
+        // Spawn marbles at level spawn point
+        console.log(`[LEVEL] Spawning marbles at ${JSON.stringify(level.spawn)}...`);
+        this.createMarbles(level.spawn);
+        console.log(`[LEVEL] Created ${this.marbles.length} marbles`);
+        console.log('[LEVEL] Level loading complete!');
+    }
 
     clearLevel() {
         // Remove all marbles
@@ -1674,6 +1929,75 @@ class MarblesGame {
             this.boostBarEl.style.width = `${boostProgress * 100}%`;
             this.boostBarEl.style.backgroundColor = boostProgress >= 1.0 ? '#0ff' : '#555';
             this.boostBarEl.style.filter = boostProgress >= 1.0 ? 'brightness(1.2) drop-shadow(0 0 5px #f0f)' : 'brightness(0.7)';
+        }
+
+        // Magnet Logic
+        if (this.magnetActive && this.magnetPower > 0 && this.playerMarble) {
+            // Drain power
+            this.magnetPower = Math.max(0, this.magnetPower - 0.005);
+
+            const pt = this.playerMarble.rigidBody.translation();
+            const range = 20.0;
+            const forceStrength = 150.0; // Adjustable strength
+
+            // Helper to apply force
+            const applyMagnetForce = (body) => {
+                const bt = body.translation();
+                const dx = pt.x - bt.x;
+                const dy = pt.y - bt.y;
+                const dz = pt.z - bt.z;
+                const dist = Math.hypot(dx, dy, dz);
+
+                if (dist > 0.5 && dist < range) {
+                    // Force inversely proportional to distance squared (like gravity/magnetism)
+                    // but clamped to avoid infinite forces
+                    const factor = forceStrength / (dist * dist + 1.0);
+
+                    const dirX = dx / dist;
+                    const dirY = dy / dist;
+                    const dirZ = dz / dist;
+
+                    let fx = dirX * factor;
+                    let fy = dirY * factor;
+                    let fz = dirZ * factor;
+
+                    if (this.magnetMode === 'repel') {
+                        fx = -fx;
+                        fy = -fy;
+                        fz = -fz;
+                    }
+
+                    body.applyImpulse({ x: fx, y: fy, z: fz }, true);
+                }
+            };
+
+            // Apply to other marbles
+            for (const m of this.marbles) {
+                if (m !== this.playerMarble) {
+                    applyMagnetForce(m.rigidBody);
+                }
+            }
+            // Apply to dynamic objects
+            for (const obj of this.dynamicObjects) {
+                applyMagnetForce(obj.rigidBody);
+            }
+
+        } else if (!this.magnetActive && this.magnetPower < 1.0) {
+            // Regenerate power
+            this.magnetPower = Math.min(1.0, this.magnetPower + 0.002);
+        }
+
+        // Update Magnet UI
+        if (this.magnetBarEl) {
+            this.magnetBarEl.style.width = `${this.magnetPower * 100}%`;
+            if (this.magnetActive) {
+                const color = this.magnetMode === 'attract' ? '#00ffff' : '#ff00ff';
+                this.magnetBarEl.style.background = color;
+                this.magnetBarEl.style.boxShadow = `0 0 10px ${color}`;
+            } else {
+                this.magnetBarEl.style.background = 'linear-gradient(90deg, #00ffff 0%, #ff00ff 100%)';
+                this.magnetBarEl.style.boxShadow = 'none';
+            }
         }
 
         // Update UI
