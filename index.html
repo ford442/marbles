@@ -228,6 +228,24 @@
             transition: width 0.1s;
         }
 
+        #focusbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #focusbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #7b00ff 0%, #0000ff 100%);
+            transition: width 0.1s;
+        }
+
         #instructions {
             font-size: 14px;
             opacity: 0.9;
@@ -341,10 +359,14 @@
         <div id="magnetbar-container">
             <div id="magnetbar"></div>
         </div>
+        <div id="focusbar-container">
+            <div id="focusbar"></div>
+        </div>
         <div id="instructions">
             <kbd>WASD</kbd> / <kbd>Arrows</kbd> Move &nbsp;|&nbsp;
             <kbd>Shift</kbd> Boost &nbsp;|&nbsp;
             <kbd>Space</kbd> Jump (Hold) &nbsp;|&nbsp;
+            <kbd>F</kbd> Focus &nbsp;|&nbsp;
             <kbd>E</kbd> / <kbd>Q</kbd> Magnet &nbsp;|&nbsp;
             <kbd>Shift</kbd> Boost &nbsp;|&nbsp;
             <kbd>R</kbd> Reset &nbsp;|&nbsp;

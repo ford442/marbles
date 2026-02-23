@@ -63,6 +63,7 @@ class MarblesGame {
         this.jumpBarEl = document.getElementById('jumpbar')
         this.boostBarEl = document.getElementById('boostbar')
         this.magnetBarEl = document.getElementById('magnetbar')
+        this.focusBarEl = document.getElementById('focusbar')
         this.effectEl = document.getElementById('effects')
         this.currentMarbleIndex = 0
         this.aimYaw = 0
@@ -83,6 +84,12 @@ class MarblesGame {
         this.magnetPower = 1.0
         this.magnetActive = false
         this.magnetMode = null
+
+        // Focus / Time Slow Mechanic
+        this.timeScale = 1.0
+        this.focusEnergy = 100
+        this.maxFocusEnergy = 100
+        this.focusActive = false
 
         this.currentLevel = null
         this.levelStartTime = 0
@@ -1062,6 +1069,42 @@ class MarblesGame {
 
         const rotSpeed = 0.02
         const zoomSpeed = 0.5
+
+        // Focus Mechanic Logic
+        if (this.keys['KeyF'] && this.focusEnergy > 0) {
+            this.focusActive = true
+            const targetScale = 0.2
+            this.timeScale = this.timeScale * 0.9 + targetScale * 0.1
+            this.focusEnergy = Math.max(0, this.focusEnergy - 0.5)
+        } else {
+            this.focusActive = false
+            const targetScale = 1.0
+            this.timeScale = this.timeScale * 0.9 + targetScale * 0.1
+            this.focusEnergy = Math.min(this.maxFocusEnergy, this.focusEnergy + 0.2)
+        }
+
+        // Apply Time Scale to Physics
+        if (this.world) {
+            this.world.timestep = (1/60) * this.timeScale
+        }
+
+        // Update Focus UI and Effects
+        if (this.focusBarEl) {
+            const pct = (this.focusEnergy / this.maxFocusEnergy) * 100
+            this.focusBarEl.style.width = `${pct}%`
+
+            if (this.focusActive) {
+                this.focusBarEl.style.boxShadow = '0 0 10px #7b00ff'
+                document.body.style.filter = 'contrast(1.2) saturate(0.5) brightness(1.1)'
+            } else {
+                this.focusBarEl.style.boxShadow = 'none'
+                document.body.style.filter = 'none'
+            }
+        }
+
+        if (audio && audio.setFocus) {
+            audio.setFocus(this.focusActive)
+        }
 
         if (this.keys['KeyR']) {
             this.resetMarbles()

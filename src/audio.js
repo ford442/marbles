@@ -51,10 +51,38 @@ export class MarbleAudio {
         this.ctx = new AudioContext();
         this.masterGain = this.ctx.createGain();
         this.masterGain.gain.value = this._volume; // Master volume
-        this.masterGain.connect(this.ctx.destination);
+
+        // Master filter for focus effect
+        this.masterFilter = this.ctx.createBiquadFilter();
+        this.masterFilter.type = 'lowpass';
+        this.masterFilter.frequency.value = 20000; // Default open
+        this.masterFilter.Q.value = 1;
+
+        this.masterGain.connect(this.masterFilter);
+        this.masterFilter.connect(this.ctx.destination);
         this.enabled = true;
 
         console.log('[Audio] Audio context initialized');
+    }
+
+    /**
+     * Set focus mode audio effect (muffled sound)
+     * @param {boolean} active
+     */
+    setFocus(active) {
+        if (!this.masterFilter || !this.ctx) return;
+
+        const t = this.ctx.currentTime;
+        // Clamp targetFreq to valid range (positive)
+        const targetFreq = active ? 400 : 20000;
+
+        // Use exponential ramp for smooth frequency transition
+        try {
+             this.masterFilter.frequency.setTargetAtTime(targetFreq, t, 0.1);
+        } catch(e) {
+             // Fallback if needed
+             this.masterFilter.frequency.value = targetFreq;
+        }
     }
 
     /**
