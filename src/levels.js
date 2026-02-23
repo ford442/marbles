@@ -297,5 +297,20 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
+    helix_havoc: {
+        name: 'Helix Havoc',
+        description: 'Spiral down the double helix!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 80, y: 0.5, z: 80 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'helix', pos: { x: 0, y: 0, z: 30 } },
+            { type: 'goal', pos: { x: 0, y: 44, z: 30 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [25, 35], y: [42, 46] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
+    },
     space_station: spaceStationLevel
 };
