@@ -713,7 +713,8 @@ class MarblesGame {
             { name: "Zero G", color: [0.8, 1.0, 1.0], offset: { x: 5.0, y: 5, z: 2 }, radius: 0.5, gravityScale: 0.1, friction: 0.1, restitution: 0.9, density: 0.1, roughness: 0.1 },
             { name: "Meteor", color: [0.4, 0.1, 0.0], offset: { x: -5.0, y: 5, z: 2 }, radius: 0.6, gravityScale: 3.0, density: 5.0, friction: 0.5, restitution: 0.2, roughness: 0.8 },
             { name: "Pinball", color: [0.75, 0.75, 0.8], offset: { x: 0.0, y: 5, z: -4 }, radius: 0.4, density: 8.0, friction: 0.1, restitution: 0.7, roughness: 0.0 },
-            { name: "Obsidian", color: [0.05, 0.05, 0.05], offset: { x: 2.0, y: 5, z: -4 }, radius: 0.5, density: 4.0, friction: 0.1, restitution: 0.1, roughness: 0.0 }
+            { name: "Obsidian", color: [0.05, 0.05, 0.05], offset: { x: 2.0, y: 5, z: -4 }, radius: 0.5, density: 4.0, friction: 0.1, restitution: 0.1, roughness: 0.0 },
+            { name: "Digital Cube", color: [0.0, 1.0, 0.5], offset: { x: -2.0, y: 5, z: -4 }, radius: 0.5, geometry: 'cube', density: 2.0, friction: 0.5, restitution: 0.3, roughness: 0.4 }
         ]
 
         for (const info of marblesInfo) {
@@ -748,10 +749,13 @@ class MarblesGame {
             matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, info.color)
             matInstance.setFloatParameter('roughness', info.roughness !== undefined ? info.roughness : 0.4)
 
+            const vb = info.geometry === 'cube' ? this.vb : this.sphereVb
+            const ib = info.geometry === 'cube' ? this.ib : this.sphereIb
+
             this.Filament.RenderableManager.Builder(1)
                 .boundingBox({ center: [0, 0, 0], halfExtent: [radius, radius, radius] })
                 .material(0, matInstance)
-                .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.sphereVb, this.sphereIb)
+                .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, vb, ib)
                 .build(this.engine, entity)
 
             this.scene.addEntity(entity)

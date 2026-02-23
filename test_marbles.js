@@ -11,34 +11,47 @@ try {
     const content = fs.readFileSync(mainJsPath, 'utf8');
     const lines = content.split('\n');
 
-    let obsidianLine = null;
-    for (const line of lines) {
-        if (line.includes('name: "Obsidian"')) {
-            obsidianLine = line;
-            break;
-        }
-    }
+    let success = true;
 
-    if (obsidianLine) {
-        console.log("SUCCESS: Obsidian marble found in marblesInfo.");
-        console.log("Line:", obsidianLine.trim());
-
-        const requiredProps = ['color', 'radius', 'density', 'friction', 'restitution'];
-        const missing = [];
-        for (const p of requiredProps) {
-            if (!obsidianLine.includes(p)) {
-                missing.push(p);
+    function checkMarble(name, requiredProps) {
+        let marbleLine = null;
+        for (const line of lines) {
+            if (line.includes(`name: "${name}"`)) {
+                marbleLine = line;
+                break;
             }
         }
 
-        if (missing.length > 0) {
-            console.error(`FAILURE: Obsidian marble missing properties: ${missing.join(', ')}`);
-            process.exit(1);
+        if (marbleLine) {
+            console.log(`SUCCESS: ${name} marble found in marblesInfo.`);
+
+            const missing = [];
+            for (const p of requiredProps) {
+                if (!marbleLine.includes(p)) {
+                    missing.push(p);
+                }
+            }
+
+            if (missing.length > 0) {
+                console.error(`FAILURE: ${name} marble missing properties: ${missing.join(', ')}`);
+                success = false;
+            } else {
+                console.log(`SUCCESS: ${name} marble has all required properties.`);
+            }
+        } else {
+            console.error(`FAILURE: ${name} marble NOT found in marblesInfo.`);
+            success = false;
         }
-        console.log("SUCCESS: Obsidian marble has all required properties.");
-    } else {
-        console.error("FAILURE: Obsidian marble NOT found in marblesInfo.");
+    }
+
+    checkMarble("Obsidian", ['color', 'radius', 'density', 'friction', 'restitution']);
+    checkMarble("Digital Cube", ['geometry: \'cube\'', 'color', 'radius', 'density']);
+
+    if (!success) {
+        console.error("Some marble checks failed.");
         process.exit(1);
+    } else {
+        console.log("All marble checks passed!");
     }
 
 } catch (err) {
