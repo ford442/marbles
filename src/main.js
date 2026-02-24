@@ -82,6 +82,7 @@ class MarblesGame {
         this.jumpCount = 0
         this.maxJumps = 2
         this.powerUpRotation = 0
+        this.isStomping = false
 
         this.magnetPower = 1.0
         this.magnetActive = false
@@ -186,6 +187,16 @@ class MarblesGame {
             if (e.code === 'KeyQ') {
                 this.magnetMode = 'repel'
                 this.magnetActive = true
+            }
+            if (e.code === 'KeyZ' && this.playerMarble && !this.isGrounded(this.playerMarble)) {
+                this.isStomping = true
+                this.playerMarble.rigidBody.setLinvel({ x: 0, y: -60.0, z: 0 }, true)
+
+                const rcm = this.engine.getRenderableManager()
+                const inst = rcm.getInstance(this.playerMarble.entity)
+                rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 0.0, 0.0])
+
+                audio.playBoost()
             }
         })
 
@@ -749,6 +760,7 @@ class MarblesGame {
                 rigidBody,
                 entity,
                 scale,
+                color: info.color,
                 initialPos: pos,
                 respawnPos: { ...pos },
                 scoredGoals: new Set()
@@ -868,6 +880,52 @@ class MarblesGame {
         }
     }
 
+    performStompImpact() {
+        if (!this.playerMarble) return
+
+        if (audio.playStomp) audio.playStomp()
+
+        const center = this.playerMarble.rigidBody.translation()
+        const radius = 15.0
+        const force = 100.0
+
+        const applyForce = (body) => {
+            const t = body.translation()
+            const dx = t.x - center.x
+            const dy = t.y - center.y
+            const dz = t.z - center.z
+            const dist = Math.hypot(dx, dy, dz)
+
+            if (dist < radius && dist > 0.1) {
+                const factor = 1.0 - (dist / radius)
+                const nx = dx / dist
+                const ny = dy / dist
+                const nz = dz / dist
+
+                body.applyImpulse({
+                    x: nx * force * factor,
+                    y: (ny * 0.5 + 0.5) * force * factor,
+                    z: nz * force * factor
+                }, true)
+            }
+        }
+
+        for (const m of this.marbles) {
+            if (m !== this.playerMarble) {
+                applyForce(m.rigidBody)
+            }
+        }
+        for (const obj of this.dynamicObjects) {
+            applyForce(obj.rigidBody)
+        }
+
+        if (this.playerMarble.color) {
+            const rcm = this.engine.getRenderableManager()
+            const inst = rcm.getInstance(this.playerMarble.entity)
+            rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, this.playerMarble.color)
+        }
+    }
+
     checkGameLogic() {
         if (!this.currentLevel || this.levelComplete) return
 
@@ -875,6 +933,10 @@ class MarblesGame {
             const linvel = this.playerMarble.rigidBody.linvel()
             if (linvel.y <= 0.1) {
                 this.jumpCount = 0
+            }
+            if (this.isStomping) {
+                this.performStompImpact()
+                this.isStomping = false
             }
         }
 

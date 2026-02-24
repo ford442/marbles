@@ -715,6 +715,57 @@ export class MarbleAudio {
             this.stopRolling(id);
         }
     }
+
+    /**
+     * Play a heavy stomp impact sound
+     */
+    playStomp() {
+        if (!this.enabled || !this.ctx) return;
+
+        const t = this.ctx.currentTime;
+        const gain = this.ctx.createGain();
+        gain.connect(this.masterGain);
+
+        // 1. Heavy thud (low freq noise)
+        const bufferSize = this.ctx.sampleRate * 0.2;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.05));
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const noiseFilter = this.ctx.createBiquadFilter();
+        noiseFilter.type = 'lowpass';
+        noiseFilter.frequency.setValueAtTime(150, t);
+        noiseFilter.Q.value = 1;
+
+        noise.connect(noiseFilter);
+        noiseFilter.connect(gain);
+        noise.start(t);
+
+        // 2. Shockwave sweep (sine drop)
+        const osc = this.ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(200, t);
+        osc.frequency.exponentialRampToValueAtTime(40, t + 0.3);
+
+        const oscGain = this.ctx.createGain();
+        osc.connect(oscGain);
+        oscGain.connect(gain);
+
+        oscGain.gain.setValueAtTime(0, t);
+        oscGain.gain.linearRampToValueAtTime(1.0, t + 0.02);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+
+        osc.start(t);
+        osc.stop(t + 0.5);
+
+        // Master envelope
+        gain.gain.setValueAtTime(0.8, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    }
 }
 
 // Singleton instance for easy importing
