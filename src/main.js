@@ -7,6 +7,7 @@ import { LEVELS } from './levels.js';
 import { quatFromEuler, quaternionToMat4 } from './math.js';
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import { applyZoneMethods } from './zone-methods.js';
+import { marblesInfo } from './marbles_data.js';
 
 async function loadFilament() {
     let attempts = 0
@@ -699,34 +700,6 @@ class MarblesGame {
 
     createMarbles(spawnPos) {
         const baseSpawn = spawnPos || { x: 0, y: 8, z: -12 }
-
-        const marblesInfo = [
-            { name: "Red Standard", color: [1.0, 0.0, 0.0], offset: { x: -1.0, y: 0, z: 0 } },
-            { name: "Blue Standard", color: [0.0, 0.0, 1.0], offset: { x: 1.0, y: 0, z: 0 } },
-            { name: "Green Bouncy", color: [0.2, 1.0, 0.2], offset: { x: -2.5, y: 4, z: 0 }, radius: 0.4, friction: 0.1, restitution: 0.8, roughness: 0.2 },
-            { name: "Purple Heavy", color: [0.6, 0.1, 0.8], offset: { x: 0.0, y: 2, z: 2 }, radius: 0.75, restitution: 1.2 },
-            { name: "Gold Heavy", color: [1.0, 0.84, 0.0], offset: { x: 2.5, y: 2, z: 2 }, radius: 0.6, restitution: 0.2, density: 3.0, roughness: 0.3 },
-            { name: "Cyan Slick", color: [0.0, 0.8, 1.0], offset: { x: -2.0, y: 2, z: 2 }, radius: 0.5, friction: 0.05, restitution: 0.5, roughness: 0.1 },
-            { name: "Volcanic Magma", color: [1.0, 0.25, 0.0], offset: { x: 3.5, y: 3, z: 0 }, radius: 0.55, friction: 0.15, restitution: 1.5, density: 0.8, roughness: 0.6 },
-            { name: "Shadow Ninja", color: [0.15, 0.05, 0.25], offset: { x: -3.5, y: 3, z: 0 }, radius: 0.45, friction: 0.02, restitution: 0.3, density: 1.2, roughness: 0.05 },
-            { name: "Cosmic Nebula", color: [0.3, 0.9, 0.7], offset: { x: 0.0, y: 5, z: -2 }, radius: 0.65, friction: 0.08, restitution: 0.7, density: 1.5, roughness: 0.15 },
-            { name: "Void Heavy", color: [0.1, 0.05, 0.2], offset: { x: 2.0, y: 5, z: -2 }, radius: 0.7, friction: 1.0, restitution: 0.1, density: 4.0, roughness: 0.9 },
-            { name: "Ice Slick", color: [0.8, 0.9, 1.0], offset: { x: -5.0, y: 3, z: 0 }, radius: 0.48, friction: 0.005, restitution: 0.8, density: 0.9, roughness: 0.1 },
-            { name: "Super Bouncy", color: [1.0, 0.0, 0.8], offset: { x: 5.0, y: 3, z: 0 }, radius: 0.52, friction: 0.5, restitution: 1.8, density: 0.5, roughness: 0.3 },
-            { name: "Mud Sticky", color: [0.35, 0.25, 0.2], offset: { x: 0.0, y: 3, z: 4 }, radius: 0.5, friction: 2.0, restitution: 0.0, density: 3.0, roughness: 0.9 },
-            { name: "Tiny Dense", color: [1.0, 1.0, 1.0], offset: { x: 3.5, y: 3, z: 4 }, radius: 0.3, density: 10.0, friction: 0.1, restitution: 0.5 },
-            { name: "Nano", color: [1.0, 0.4, 0.7], offset: { x: 1.5, y: 4, z: 4 }, radius: 0.25, density: 2.0, roughness: 0.2 },
-            { name: "Giant", color: [0.2, 0.8, 0.2], offset: { x: -3.0, y: 4, z: 4 }, radius: 1.2, density: 0.5, friction: 0.5, roughness: 0.8 },
-            { name: "Mercury", color: [0.7, 0.7, 0.7], offset: { x: -5.0, y: 3, z: 4 }, radius: 0.55, density: 5.0, friction: 0.05, restitution: 0.2, roughness: 0.1 },
-            { name: "Neutron Star", color: [0.9, 0.9, 1.0], offset: { x: 0.0, y: 3, z: 6 }, radius: 0.3, density: 50.0, friction: 0.5, restitution: 0.1, roughness: 0.2 },
-            { name: "Balloon", color: [1.0, 0.4, 0.7], offset: { x: 2.0, y: 3, z: 6 }, radius: 0.5, density: 0.05, friction: 0.3, restitution: 0.9, roughness: 0.8 },
-            { name: "Plasma", color: [0.9, 0.2, 0.9], offset: { x: -2.0, y: 3, z: 6 }, radius: 0.6, density: 0.2, friction: 0.0, restitution: 1.1, roughness: 0.0 },
-            { name: "Zero G", color: [0.8, 1.0, 1.0], offset: { x: 5.0, y: 5, z: 2 }, radius: 0.5, gravityScale: 0.1, friction: 0.1, restitution: 0.9, density: 0.1, roughness: 0.1 },
-            { name: "Meteor", color: [0.4, 0.1, 0.0], offset: { x: -5.0, y: 5, z: 2 }, radius: 0.6, gravityScale: 3.0, density: 5.0, friction: 0.5, restitution: 0.2, roughness: 0.8 },
-            { name: "Pinball", color: [0.75, 0.75, 0.8], offset: { x: 0.0, y: 5, z: -4 }, radius: 0.4, density: 8.0, friction: 0.1, restitution: 0.7, roughness: 0.0 },
-            { name: "Obsidian", color: [0.05, 0.05, 0.05], offset: { x: 2.0, y: 5, z: -4 }, radius: 0.5, density: 4.0, friction: 0.1, restitution: 0.1, roughness: 0.0 },
-            { name: "Digital Cube", color: [0.0, 1.0, 0.5], offset: { x: -2.0, y: 5, z: -4 }, radius: 0.5, geometry: 'cube', density: 2.0, friction: 0.5, restitution: 0.3, roughness: 0.4 }
-        ]
 
         for (const info of marblesInfo) {
             const radius = info.radius || 0.5
