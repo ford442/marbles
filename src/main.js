@@ -1,6 +1,7 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { createSphere } from './sphere.js';
 import { createSpaceStationZone } from './space_station.js';
+import { createSkateParkZone } from './skate_park.js';
 import { createHelixZone } from './helix_zone.js';
 import { audio } from './audio.js';
 import { LEVELS } from './levels.js';
@@ -499,6 +500,9 @@ class MarblesGame {
                 break
             case 'space_station':
                 createSpaceStationZone(this, offset)
+                break
+            case 'skate_park':
+                createSkateParkZone(this, offset)
                 break
             case 'helix':
                 createHelixZone(this, offset)
