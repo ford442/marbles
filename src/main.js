@@ -377,6 +377,10 @@ class MarblesGame {
             this.world.removeRigidBody(m.rigidBody)
             this.scene.remove(m.entity)
             this.engine.destroyEntity(m.entity)
+            if (m.lightEntity) {
+                this.scene.remove(m.lightEntity)
+                this.engine.destroyEntity(m.lightEntity)
+            }
         }
         this.marbles = []
         this.playerMarble = null
@@ -755,7 +759,7 @@ class MarblesGame {
 
             this.scene.addEntity(entity)
 
-            this.marbles.push({
+            const marbleObj = {
                 name: info.name || `Marble ${this.marbles.length + 1}`,
                 rigidBody,
                 entity,
@@ -764,7 +768,20 @@ class MarblesGame {
                 initialPos: pos,
                 respawnPos: { ...pos },
                 scoredGoals: new Set()
-            })
+            }
+
+            if (info.emissive) {
+                const lightEntity = this.Filament.EntityManager.get().create()
+                this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].POINT)
+                    .color(info.lightColor || info.color)
+                    .intensity(info.lightIntensity || 10000.0)
+                    .falloff(20.0)
+                    .build(this.engine, lightEntity)
+                this.scene.addEntity(lightEntity)
+                marbleObj.lightEntity = lightEntity
+            }
+
+            this.marbles.push(marbleObj)
         }
 
         this.currentMarbleIndex = 0
@@ -1445,6 +1462,12 @@ class MarblesGame {
 
             const inst = tcm.getInstance(m.entity)
             tcm.setTransform(inst, mat)
+
+            if (m.lightEntity) {
+                const lightInst = tcm.getInstance(m.lightEntity)
+                const lightMat = quaternionToMat4(t, { x: 0, y: 0, z: 0, w: 1 })
+                tcm.setTransform(lightInst, lightMat)
+            }
         }
 
         for (const obj of this.dynamicObjects) {
