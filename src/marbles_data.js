@@ -25,5 +25,6 @@ export const marblesInfo = [
     { name: "Obsidian", color: [0.05, 0.05, 0.05], offset: { x: 2.0, y: 5, z: -4 }, radius: 0.5, density: 4.0, friction: 0.1, restitution: 0.1, roughness: 0.0 },
     { name: "Digital Cube", color: [0.0, 1.0, 0.5], offset: { x: -2.0, y: 5, z: -4 }, radius: 0.5, geometry: 'cube', density: 2.0, friction: 0.5, restitution: 0.3, roughness: 0.4 },
     { name: "Slime", color: [0.4, 0.8, 0.0], offset: { x: -2.0, y: 3, z: 8 }, radius: 0.5, density: 1.5, friction: 2.0, restitution: 0.0, roughness: 0.8, linearDamping: 0.5, angularDamping: 0.5 },
-    { name: "Feather", color: [1.0, 1.0, 0.9], offset: { x: 2.0, y: 3, z: 8 }, radius: 0.4, density: 0.1, gravityScale: 0.2, linearDamping: 3.0, angularDamping: 3.0, friction: 0.5, restitution: 0.2 }
+    { name: "Feather", color: [1.0, 1.0, 0.9], offset: { x: 2.0, y: 3, z: 8 }, radius: 0.4, density: 0.1, gravityScale: 0.2, linearDamping: 3.0, angularDamping: 3.0, friction: 0.5, restitution: 0.2 },
+    { name: "Sun", color: [1.0, 0.9, 0.5], offset: { x: 0.0, y: 8, z: 0 }, radius: 0.8, density: 5.0, friction: 0.5, restitution: 0.5, emissive: true, lightIntensity: 50000.0, lightColor: [1.0, 0.8, 0.4] }
 ];

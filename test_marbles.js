@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const mainJsPath = path.join(__dirname, 'src', 'main.js');
+const mainJsPath = path.join(__dirname, 'src', 'marbles_data.js');
 
 try {
     const content = fs.readFileSync(mainJsPath, 'utf8');
@@ -46,6 +46,7 @@ try {
 
     checkMarble("Obsidian", ['color', 'radius', 'density', 'friction', 'restitution']);
     checkMarble("Digital Cube", ['geometry: \'cube\'', 'color', 'radius', 'density']);
+    checkMarble("Sun", ['color', 'radius', 'density', 'emissive: true', 'lightIntensity']);
 
     if (!success) {
         console.error("Some marble checks failed.");
