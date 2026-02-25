@@ -146,7 +146,58 @@ class MarblesGame {
         const ray = new RAPIER.Ray(rayOrigin, rayDir)
         const maxToi = radius + 0.1
         const hit = this.world.castRay(ray, maxToi, true)
-        return !!hit
+
+        if (hit) {
+            const otherBody = hit.collider.parent()
+            if (otherBody && otherBody.handle === rb.handle) {
+                return false // Hit self, ignore
+            }
+            return true
+        }
+        return false
+    }
+
+    getWallContact(marble) {
+        if (!marble || !marble.rigidBody) return null
+        const rb = marble.rigidBody
+        const radius = marble.scale * 0.5 || 0.5
+        const pos = rb.translation()
+
+        // 8 directions
+        const directions = [
+            { x: 1, z: 0 }, { x: -1, z: 0 },
+            { x: 0, z: 1 }, { x: 0, z: -1 },
+            { x: 0.707, z: 0.707 }, { x: -0.707, z: 0.707 },
+            { x: 0.707, z: -0.707 }, { x: -0.707, z: -0.707 }
+        ]
+
+        // We need to check collisions that are NOT the marble itself.
+
+        for (const dir of directions) {
+             const len = Math.sqrt(dir.x*dir.x + dir.z*dir.z)
+             const ndir = { x: dir.x/len, y: 0, z: dir.z/len }
+
+             const startDist = radius + 0.05
+             const rayOrigin = {
+                 x: pos.x + ndir.x * startDist,
+                 y: pos.y,
+                 z: pos.z + ndir.z * startDist
+             }
+
+             const ray = new RAPIER.Ray(rayOrigin, ndir)
+             const checkDist = 0.5
+
+             const hit = this.world.castRay(ray, checkDist, true)
+
+             if (hit) {
+                 const otherBody = hit.collider.parent()
+                 if (otherBody && otherBody.handle !== rb.handle) {
+                     // Found a wall!
+                     return { normal: { x: -ndir.x, y: 0, z: -ndir.z } }
+                 }
+             }
+        }
+        return null
     }
 
     async init() {
@@ -158,12 +209,31 @@ class MarblesGame {
                     if (this.isGrounded(this.playerMarble)) {
                         this.isChargingJump = true
                         this.jumpCharge = 0
-                    } else if (this.jumpCount < this.maxJumps) {
-                        const linvel = this.playerMarble.rigidBody.linvel()
-                        this.playerMarble.rigidBody.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true)
-                        this.playerMarble.rigidBody.applyImpulse({ x: 0, y: 10.0, z: 0 }, true)
-                        this.jumpCount++
-                        audio.playJump()
+                    } else {
+                        const wallContact = this.getWallContact(this.playerMarble)
+                        if (wallContact) {
+                            const rb = this.playerMarble.rigidBody
+                            const linvel = rb.linvel()
+                            rb.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true)
+
+                            const upForce = 15.0
+                            const pushForce = 10.0
+                            rb.applyImpulse({
+                                x: wallContact.normal.x * pushForce,
+                                y: upForce,
+                                z: wallContact.normal.z * pushForce
+                            }, true)
+
+                            this.jumpCount = 1
+                            audio.playJump()
+                            console.log('[GAME] Wall Jump!')
+                        } else if (this.jumpCount < this.maxJumps) {
+                            const linvel = this.playerMarble.rigidBody.linvel()
+                            this.playerMarble.rigidBody.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true)
+                            this.playerMarble.rigidBody.applyImpulse({ x: 0, y: 10.0, z: 0 }, true)
+                            this.jumpCount++
+                            audio.playJump()
+                        }
                     }
                 }
             }
