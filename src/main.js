@@ -357,6 +357,9 @@ class MarblesGame {
         this.createLight()
         console.log('[INIT] Lights created')
 
+        this.setupPostProcessing()
+        console.log('[INIT] Post-processing enabled')
+
         this.showLevelSelection()
         console.log('[INIT] Level menu displayed')
 
@@ -621,7 +624,7 @@ class MarblesGame {
             .build(this.engine)
         this.ib.setBuffer(this.engine, CUBE_INDICES)
 
-        const sphereData = createSphere(0.5, 32, 16)
+        const sphereData = createSphere(0.5, 64, 32)
         this.sphereVb = this.Filament.VertexBuffer.Builder()
             .vertexCount(sphereData.vertices.length / 7)
             .bufferCount(1)
@@ -686,9 +689,9 @@ class MarblesGame {
     createLight() {
         this.light = this.Filament.EntityManager.get().create()
         this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
-            .color([0.98, 0.92, 0.89])
-            .intensity(110000.0)
-            .direction([0.6, -1.0, -0.8])
+            .color([1.0, 0.95, 0.85])
+            .intensity(120000.0)
+            .direction([0.5, -1.0, -0.7])
             .castShadows(true)
             .sunAngularRadius(1.9)
             .sunHaloSize(10.0)
@@ -698,21 +701,82 @@ class MarblesGame {
 
         this.fillLight = this.Filament.EntityManager.get().create()
         this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
-            .color([0.8, 0.8, 1.0])
-            .intensity(30000.0)
-            .direction([-0.6, -0.5, 0.8])
+            .color([0.7, 0.8, 1.0])
+            .intensity(35000.0)
+            .direction([-0.5, -0.3, 0.6])
             .castShadows(false)
             .build(this.engine, this.fillLight)
         this.scene.addEntity(this.fillLight)
 
         this.backLight = this.Filament.EntityManager.get().create()
         this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
-            .color([0.5, 0.5, 0.5])
-            .intensity(20000.0)
-            .direction([0.0, -1.0, 1.0])
+            .color([0.6, 0.6, 0.75])
+            .intensity(25000.0)
+            .direction([0.0, -0.5, 1.0])
             .castShadows(false)
             .build(this.engine, this.backLight)
         this.scene.addEntity(this.backLight)
+    }
+
+    setupPostProcessing() {
+        // Bloom - makes bright marbles and lights glow
+        this.view.setBloomOptions({
+            enabled: true,
+            strength: 0.3,
+            resolution: 256,
+            levels: 6,
+            threshold: true,
+            highlight: 10.0,
+            blendMode: this.Filament['View$BloomOptions$BlendMode'].ADD,
+            quality: this.Filament['View$QualityLevel'].MEDIUM,
+        })
+
+        // SSAO - ambient occlusion for contact shadows under marbles
+        this.view.setAmbientOcclusion(this.Filament['View$AmbientOcclusion'].SSAO)
+        this.view.setAmbientOcclusionOptions({
+            radius: 0.5,
+            power: 1.8,
+            bias: 0.005,
+            resolution: 0.5,
+            intensity: 1.5,
+            quality: this.Filament['View$QualityLevel'].MEDIUM,
+            enabled: true,
+        })
+
+        // MSAA 4x - smooth sphere edges
+        this.view.setMultiSampleAntiAliasingOptions({ enabled: true, sampleCount: 4 })
+
+        // ACES tone mapping for cinematic, physically-correct look
+        const colorGrading = this.Filament.ColorGrading.Builder()
+            .toneMapping(this.Filament['ColorGrading$ToneMapping'].ACES)
+            .contrast(1.05)
+            .saturation(1.1)
+            .build(this.engine)
+        this.view.setColorGrading(colorGrading)
+
+        // Indirect Light (IBL) via 2-band Spherical Harmonics
+        // Simulates a cool blue sky above with warm ground bounce below
+        const iblSh = new Float32Array([
+            // L00 - overall ambient (neutral blue-white)
+            0.9, 0.92, 1.05,
+            // L1-1 - warm floor bounce (Y negative)
+            0.12, 0.10, 0.06,
+            // L10 - sky direction (Y positive)
+            -0.18, -0.18, -0.28,
+            // L11 - X side contribution
+            0.04, 0.04, 0.05,
+        ])
+        this.ibl = this.Filament.IndirectLight.Builder()
+            .irradianceSh(2, iblSh)
+            .intensity(30000.0)
+            .build(this.engine)
+        this.scene.setIndirectLight(this.ibl)
+
+        // Skybox - replace flat gray background with a deep space blue
+        this.skyboxEntity = this.Filament.Skybox.Builder()
+            .color([0.08, 0.10, 0.18, 1.0])
+            .build(this.engine)
+        this.scene.setSkybox(this.skyboxEntity)
     }
 
     createStaticBox(pos, rotation, halfExtents, color, material = 'wood') {
