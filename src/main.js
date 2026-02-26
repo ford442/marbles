@@ -3,6 +3,7 @@ import { createSphere } from './sphere.js';
 import { createSpaceStationZone } from './space_station.js';
 import { createSkateParkZone } from './skate_park.js';
 import { createHelixZone } from './helix_zone.js';
+import { createPinballZone } from './pinball_zone.js';
 import { audio } from './audio.js';
 import { LEVELS } from './levels.js';
 import { quatFromEuler, quaternionToMat4 } from './math.js';
@@ -583,6 +584,9 @@ class MarblesGame {
                 break
             case 'helix':
                 createHelixZone(this, offset)
+                break
+            case 'pinball':
+                createPinballZone(this, offset)
                 break
             case 'moving':
                 this.createMovingZone(offset)

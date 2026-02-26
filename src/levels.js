@@ -1,5 +1,6 @@
 import { spaceStationLevel } from './space_station.js';
 import { skateParkLevel } from './skate_park.js';
+import { pinballLevel } from './pinball_zone.js';
 
 export const LEVELS = {
     tutorial: {
@@ -314,5 +315,6 @@ export const LEVELS = {
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
     space_station: spaceStationLevel,
-    skate_park: skateParkLevel
+    skate_park: skateParkLevel,
+    pinball_wizard: pinballLevel
 };
