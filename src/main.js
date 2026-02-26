@@ -89,6 +89,13 @@ class MarblesGame {
         this.magnetActive = false
         this.magnetMode = null
 
+        this.isGrappling = false
+        this.grappleTarget = null
+        this.grappleEntity = null
+        this.grappleInst = null
+        this.grappleMaxDist = 50.0
+        this.grappleForce = 40.0
+
         // Focus / Time Slow Mechanic
         this.timeScale = 1.0
         this.focusEnergy = 100
@@ -103,6 +110,8 @@ class MarblesGame {
     }
 
     initMouseControls() {
+        this.canvas.addEventListener('contextmenu', e => e.preventDefault())
+
         this.canvas.addEventListener('click', () => {
             if (document.pointerLockElement !== this.canvas) {
                 this.canvas.requestPointerLock()
@@ -120,17 +129,25 @@ class MarblesGame {
         })
 
         document.addEventListener('mousedown', (e) => {
-            if (document.pointerLockElement === this.canvas && e.button === 0) {
-                this.charging = true
-                this.chargePower = 0
+            if (document.pointerLockElement === this.canvas) {
+                if (e.button === 0) {
+                    this.charging = true
+                    this.chargePower = 0
+                } else if (e.button === 2) {
+                    this.startGrapple()
+                }
             }
         })
 
         document.addEventListener('mouseup', (e) => {
-            if (document.pointerLockElement === this.canvas && e.button === 0) {
-                if (this.charging) {
-                    this.charging = false
-                    this.shootMarble()
+            if (document.pointerLockElement === this.canvas) {
+                if (e.button === 0) {
+                    if (this.charging) {
+                        this.charging = false
+                        this.shootMarble()
+                    }
+                } else if (e.button === 2) {
+                    this.stopGrapple()
                 }
             }
         })
@@ -640,6 +657,32 @@ class MarblesGame {
         this.sphereIb.setBuffer(this.engine, sphereData.indices)
 
         this.createCueStick()
+        this.createGrappleLine()
+    }
+
+    createGrappleLine() {
+        this.grappleEntity = this.Filament.EntityManager.get().create()
+        // Bright cyan/blue color for the grapple line
+        const grappleColor = [0.0, 1.0, 1.0]
+        const matInstance = this.material.createInstance()
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, grappleColor)
+        matInstance.setFloatParameter('roughness', 0.2)
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .build(this.engine, this.grappleEntity)
+
+        this.scene.addEntity(this.grappleEntity)
+
+        const tcm = this.engine.getTransformManager()
+        this.grappleInst = tcm.getInstance(this.grappleEntity)
+
+        // Hide initially
+        const zeroMat = new Float32Array(16)
+        zeroMat[15] = 1
+        tcm.setTransform(this.grappleInst, zeroMat)
     }
 
     createCueStick() {
@@ -663,6 +706,113 @@ class MarblesGame {
         const zeroMat = new Float32Array(16)
         zeroMat[15] = 1
         tcm.setTransform(this.cueInst, zeroMat)
+    }
+
+    startGrapple() {
+        if (!this.playerMarble || !this.world) return
+
+        const rb = this.playerMarble.rigidBody
+        const pos = rb.translation()
+
+        const cosP = Math.cos(this.pitchAngle)
+        const sinP = Math.sin(this.pitchAngle)
+        const dirX = Math.sin(this.aimYaw) * cosP
+        const dirY = sinP
+        const dirZ = Math.cos(this.aimYaw) * cosP
+
+        const rayOrigin = { x: pos.x, y: pos.y, z: pos.z }
+        const rayDir = { x: dirX, y: dirY, z: dirZ }
+        const ray = new RAPIER.Ray(rayOrigin, rayDir)
+
+        const hit = this.world.castRay(ray, this.grappleMaxDist, true)
+        if (hit) {
+            this.grappleTarget = {
+                x: rayOrigin.x + rayDir.x * hit.toi,
+                y: rayOrigin.y + rayDir.y * hit.toi,
+                z: rayOrigin.z + rayDir.z * hit.toi
+            }
+            this.isGrappling = true
+            console.log("[GAME] Grapple attached at", this.grappleTarget)
+            if (audio && audio.playCollect) audio.playCollect()
+        }
+    }
+
+    stopGrapple() {
+        this.isGrappling = false
+        this.grappleTarget = null
+
+        if (this.grappleInst) {
+            const tcm = this.engine.getTransformManager()
+            const zeroMat = new Float32Array(16)
+            zeroMat[15] = 1
+            tcm.setTransform(this.grappleInst, zeroMat)
+        }
+    }
+
+    updateGrapple() {
+        if (!this.isGrappling || !this.playerMarble || !this.grappleTarget) {
+            if (this.isGrappling) this.stopGrapple()
+            return
+        }
+
+        const rb = this.playerMarble.rigidBody
+        const pos = rb.translation()
+        const target = this.grappleTarget
+
+        const dx = target.x - pos.x
+        const dy = target.y - pos.y
+        const dz = target.z - pos.z
+        const dist = Math.hypot(dx, dy, dz)
+
+        const dirX = dx / dist
+        const dirY = dy / dist
+        const dirZ = dz / dist
+
+        // Apply pulling force
+        rb.applyImpulse({
+            x: dirX * this.grappleForce,
+            y: dirY * this.grappleForce,
+            z: dirZ * this.grappleForce
+        }, true)
+
+        // Counter-gravity
+        if (dirY > 0) {
+            rb.applyImpulse({ x: 0, y: 1.0, z: 0 }, true)
+        }
+
+        // Visuals
+        if (this.grappleInst) {
+            let ux = 0, uy = 1, uz = 0
+            if (Math.abs(dirY) > 0.99) {
+                ux = 1; uy = 0; uz = 0
+            }
+
+            let rx = uy * dirZ - uz * dirY
+            let ry = uz * dirX - ux * dirZ
+            let rz = ux * dirY - uy * dirX
+            const rLen = Math.hypot(rx, ry, rz)
+            rx /= rLen; ry /= rLen; rz /= rLen
+
+            let newUx = dirY * rz - dirZ * ry
+            let newUy = dirZ * rx - dirX * rz
+            let newUz = dirX * ry - dirY * rx
+
+            const thick = 0.05
+
+            const midX = (pos.x + target.x) / 2
+            const midY = (pos.y + target.y) / 2
+            const midZ = (pos.z + target.z) / 2
+
+            const mat = new Float32Array([
+                rx * thick, ry * thick, rz * thick, 0,
+                newUx * thick, newUy * thick, newUz * thick, 0,
+                dx, dy, dz, 0,
+                midX, midY, midZ, 1
+            ])
+
+            const tcm = this.engine.getTransformManager()
+            tcm.setTransform(this.grappleInst, mat)
+        }
     }
 
     shootMarble() {
@@ -1510,6 +1660,8 @@ class MarblesGame {
             const inst = tcm.getInstance(p.entity)
             tcm.setTransform(inst, mat)
         }
+
+        this.updateGrapple()
 
         // Update PowerUps
         for (const p of this.powerUps) {
