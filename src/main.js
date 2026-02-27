@@ -68,6 +68,7 @@ class MarblesGame {
         this.boostBarEl = document.getElementById('boostbar')
         this.magnetBarEl = document.getElementById('magnetbar')
         this.focusBarEl = document.getElementById('focusbar')
+        this.rewindBarEl = document.getElementById('rewindbar')
         this.effectEl = document.getElementById('effects')
         this.currentMarbleIndex = 0
         this.aimYaw = 0
@@ -102,6 +103,11 @@ class MarblesGame {
         this.focusEnergy = 100
         this.maxFocusEnergy = 100
         this.focusActive = false
+
+        // Rewind Mechanic
+        this.rewindHistory = []
+        this.isRewinding = false
+        this.maxRewindFrames = 300 // 5 seconds at 60fps
 
         this.currentLevel = null
         this.levelStartTime = 0
@@ -287,9 +293,23 @@ class MarblesGame {
 
                 audio.playBoost()
             }
+            if (e.code === 'KeyT') {
+                this.isRewinding = true
+            }
         })
 
         window.addEventListener('keyup', (e) => {
+            if (e.code === 'KeyT') {
+                this.isRewinding = false
+                if (this.playerMarble) {
+                    this.playerMarble.rigidBody.wakeUp()
+                    if (this.playerMarble.color) {
+                         const rcm = this.engine.getRenderableManager()
+                         const inst = rcm.getInstance(this.playerMarble.entity)
+                         rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, this.playerMarble.color)
+                    }
+                }
+            }
             if (e.code === 'KeyE' || e.code === 'KeyQ') {
                 this.magnetActive = false
                 this.magnetMode = null
@@ -1122,6 +1142,7 @@ class MarblesGame {
         this.charging = false
         this.powerbarEl.style.width = '0%'
         this.levelComplete = false
+        this.rewindHistory = []
     }
 
     returnToMenu() {
@@ -1261,6 +1282,9 @@ class MarblesGame {
                 m.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true)
                 m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true)
                 m.scoredGoals.clear()
+                if (m === this.playerMarble) {
+                    this.rewindHistory = []
+                }
                 continue
             }
 
@@ -1452,6 +1476,44 @@ class MarblesGame {
                 this.focusBarEl.style.boxShadow = 'none'
                 document.body.style.filter = 'none'
             }
+        }
+
+        if (this.isRewinding && this.playerMarble) {
+            if (this.rewindHistory.length > 0) {
+                const state = this.rewindHistory.pop()
+                this.playerMarble.rigidBody.setTranslation(state.pos, true)
+                this.playerMarble.rigidBody.setRotation(state.rot, true)
+                this.playerMarble.rigidBody.setLinvel(state.linvel, true)
+                this.playerMarble.rigidBody.setAngvel(state.angvel, true)
+
+                // Visual effect for rewind
+                const rcm = this.engine.getRenderableManager()
+                const inst = rcm.getInstance(this.playerMarble.entity)
+                // Tint red/orange
+                rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 0.2, 0.0])
+            }
+        } else if (this.playerMarble) {
+             const rb = this.playerMarble.rigidBody
+             const pos = rb.translation()
+             const rot = rb.rotation()
+             const linvel = rb.linvel()
+             const angvel = rb.angvel()
+
+             this.rewindHistory.push({
+                 pos: { x: pos.x, y: pos.y, z: pos.z },
+                 rot: { x: rot.x, y: rot.y, z: rot.z, w: rot.w },
+                 linvel: { x: linvel.x, y: linvel.y, z: linvel.z },
+                 angvel: { x: angvel.x, y: angvel.y, z: angvel.z }
+             })
+
+             if (this.rewindHistory.length > this.maxRewindFrames) {
+                 this.rewindHistory.shift()
+             }
+        }
+
+        if (this.rewindBarEl) {
+            const pct = (this.rewindHistory.length / this.maxRewindFrames) * 100
+            this.rewindBarEl.style.width = `${pct}%`
         }
 
         if (audio && audio.setFocus) {
