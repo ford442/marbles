@@ -28,5 +28,6 @@ export const marblesInfo = [
     { name: "Feather", color: [1.0, 1.0, 0.9], offset: { x: 2.0, y: 3, z: 8 }, radius: 0.4, density: 0.1, gravityScale: 0.2, linearDamping: 3.0, angularDamping: 3.0, friction: 0.5, restitution: 0.2, roughness: 0.7 },
     { name: "Sun", color: [1.0, 0.9, 0.5], offset: { x: 0.0, y: 8, z: 0 }, radius: 0.8, density: 5.0, friction: 0.5, restitution: 0.5, roughness: 0.0, emissive: true, lightIntensity: 60000.0, lightColor: [1.0, 0.8, 0.4] },
     { name: "Neon Core", color: [0.1, 0.1, 0.1], offset: { x: 4.0, y: 3, z: 6 }, radius: 0.5, density: 8.0, friction: 0.3, restitution: 0.4, roughness: 0.1, emissive: true, lightIntensity: 30000.0, lightColor: [0.0, 1.0, 1.0] },
-    { name: "Glacier", color: [0.8, 0.9, 1.0], offset: { x: -4.0, y: 3, z: 6 }, radius: 0.5, density: 1.0, friction: 0.0, restitution: 0.5, roughness: 0.05, emissive: true, lightIntensity: 5000.0, lightColor: [0.8, 0.9, 1.0] }
+    { name: "Glacier", color: [0.8, 0.9, 1.0], offset: { x: -4.0, y: 3, z: 6 }, radius: 0.5, density: 1.0, friction: 0.0, restitution: 0.5, roughness: 0.05, emissive: true, lightIntensity: 5000.0, lightColor: [0.8, 0.9, 1.0] },
+    { name: "Chameleon", color: [1.0, 1.0, 1.0], offset: { x: 4.0, y: 3, z: 8 }, radius: 0.5, rainbow: true, friction: 0.5, restitution: 0.5, roughness: 0.2 }
 ];
