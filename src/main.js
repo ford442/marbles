@@ -1059,7 +1059,8 @@ class MarblesGame {
                 color: info.color,
                 initialPos: pos,
                 respawnPos: { ...pos },
-                scoredGoals: new Set()
+                scoredGoals: new Set(),
+                rainbow: info.rainbow
             }
 
             if (info.emissive) {
@@ -1756,6 +1757,16 @@ class MarblesGame {
 
             const inst = tcm.getInstance(m.entity)
             tcm.setTransform(inst, mat)
+
+            if (m.rainbow) {
+                const time = Date.now() * 0.002
+                const r = Math.sin(time) * 0.5 + 0.5
+                const g = Math.sin(time + 2.094) * 0.5 + 0.5
+                const b = Math.sin(time + 4.188) * 0.5 + 0.5
+                const rcm = this.engine.getRenderableManager()
+                const renderInst = rcm.getInstance(m.entity)
+                rcm.getMaterialInstanceAt(renderInst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [r, g, b])
+            }
 
             if (m.lightEntity) {
                 const lightInst = tcm.getInstance(m.lightEntity)
