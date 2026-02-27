@@ -4,6 +4,7 @@ import { createSpaceStationZone } from './space_station.js';
 import { createSkateParkZone } from './skate_park.js';
 import { createHelixZone } from './helix_zone.js';
 import { createPinballZone } from './pinball_zone.js';
+import { createClockworkZone } from './clockwork_zone.js';
 import { audio } from './audio.js';
 import { LEVELS } from './levels.js';
 import { quatFromEuler, quaternionToMat4 } from './math.js';
@@ -47,6 +48,7 @@ class MarblesGame {
         this.powerUps = []
         this.activeEffects = { speed: 0, jump: 0 }
         this.movingPlatforms = []
+        this.rotatingPlatforms = []
         this.Filament = null
         this.material = null
         this.cubeMesh = null
@@ -522,6 +524,13 @@ class MarblesGame {
         }
         this.movingPlatforms = []
 
+        for (const platform of this.rotatingPlatforms) {
+            this.world.removeRigidBody(platform.rigidBody)
+            this.scene.remove(platform.entity)
+            this.engine.destroyEntity(platform.entity)
+        }
+        this.rotatingPlatforms = []
+
         this.setNightMode(false)
     }
 
@@ -607,6 +616,9 @@ class MarblesGame {
                 break
             case 'moving':
                 this.createMovingZone(offset)
+                break
+            case 'clockwork':
+                createClockworkZone(this, offset)
                 break
         }
     }
@@ -1002,6 +1014,45 @@ class MarblesGame {
             rigidBody: body,
             entity: entity,
             halfExtents: halfExtents
+        })
+    }
+
+    createRotatingBox(pos, halfExtents, color, axis = 'y', speed = 0.01, initialAngle = 0, material = 'metal') {
+        const rotation = quatFromEuler(0, initialAngle, 0) // Assume Y axis for now
+
+        const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
+            .setTranslation(pos.x, pos.y, pos.z)
+            .setRotation(rotation)
+        const body = this.world.createRigidBody(bodyDesc)
+
+        const colliderDesc = RAPIER.ColliderDesc.cuboid(halfExtents.x, halfExtents.y, halfExtents.z)
+        this.world.createCollider(colliderDesc, body)
+
+        if (audio && audio.registerBodyMaterial) {
+             audio.registerBodyMaterial(body, material)
+        }
+
+        const entity = this.Filament.EntityManager.get().create()
+        const matInstance = this.material.createInstance()
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color)
+        matInstance.setFloatParameter('roughness', 0.2)
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .build(this.engine, entity)
+
+        this.scene.addEntity(entity)
+
+        this.rotatingPlatforms.push({
+            rigidBody: body,
+            entity: entity,
+            halfExtents: halfExtents,
+            axis: axis,
+            speed: speed,
+            angle: initialAngle,
+            pos: pos
         })
     }
 
@@ -1653,6 +1704,27 @@ class MarblesGame {
             p.rigidBody.setNextKinematicTranslation({ x, y, z })
 
             const mat = quaternionToMat4({ x, y, z }, p.rigidBody.rotation())
+            const sx = p.halfExtents.x * 2
+            const sy = p.halfExtents.y * 2
+            const sz = p.halfExtents.z * 2
+            mat[0] *= sx; mat[1] *= sx; mat[2] *= sx
+            mat[4] *= sy; mat[5] *= sy; mat[6] *= sy
+            mat[8] *= sz; mat[9] *= sz; mat[10] *= sz
+
+            const tcm = this.engine.getTransformManager()
+            const inst = tcm.getInstance(p.entity)
+            tcm.setTransform(inst, mat)
+        }
+
+        for (const p of this.rotatingPlatforms) {
+            p.angle += p.speed
+            // Assuming Y axis rotation for now as per createRotatingBox
+            const q = quatFromEuler(0, p.angle, 0)
+
+            p.rigidBody.setNextKinematicRotation(q)
+
+            const t = p.rigidBody.translation()
+            const mat = quaternionToMat4(t, q)
             const sx = p.halfExtents.x * 2
             const sy = p.halfExtents.y * 2
             const sz = p.halfExtents.z * 2

@@ -314,6 +314,21 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
+    clockwork_chaos: {
+        name: 'Clockwork Chaos',
+        description: 'Jump across the rotating gears!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'clockwork', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 0, y: 4, z: 100 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-2, 2], z: [98, 102], y: [3, 7] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel
