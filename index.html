@@ -246,6 +246,24 @@
             transition: width 0.1s;
         }
 
+        #rewindbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #rewindbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000 0%, #ff4500 100%);
+            transition: width 0.1s;
+        }
+
         #instructions {
             font-size: 14px;
             opacity: 0.9;
@@ -362,6 +380,9 @@
         <div id="focusbar-container">
             <div id="focusbar"></div>
         </div>
+        <div id="rewindbar-container">
+            <div id="rewindbar"></div>
+        </div>
         <div id="instructions">
             <kbd>WASD</kbd> / <kbd>Arrows</kbd> Move &nbsp;|&nbsp;
             <kbd>Shift</kbd> Boost &nbsp;|&nbsp;
@@ -375,7 +396,8 @@
             <kbd>M</kbd> Menu &nbsp;|&nbsp;
             <kbd>N</kbd> Mute &nbsp;|&nbsp;
             <kbd>[</kbd> <kbd>]</kbd> Vol &nbsp;|&nbsp;
-            <kbd>Z</kbd> Stomp
+            <kbd>Z</kbd> Stomp &nbsp;|&nbsp;
+            <kbd>T</kbd> Rewind
         </div>
         <button id="mute-btn" title="Toggle Sound">🔊</button>
     </div>
