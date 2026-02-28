@@ -329,6 +329,21 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
+    bumper_arena: {
+        name: 'Bumper Arena',
+        description: 'Navigate through the bouncy obstacles!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'bumper_arena', pos: { x: 0, y: 0, z: 30 } },
+            { type: 'goal', pos: { x: 0, y: 0.25, z: 60 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [58, 62], y: [0, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel
