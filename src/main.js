@@ -5,6 +5,7 @@ import { createSkateParkZone } from './skate_park.js';
 import { createHelixZone } from './helix_zone.js';
 import { createPinballZone } from './pinball_zone.js';
 import { createClockworkZone } from './clockwork_zone.js';
+import { createBumperArenaZone } from './bumper_arena.js';
 import { audio } from './audio.js';
 import { LEVELS } from './levels.js';
 import { quatFromEuler, quaternionToMat4 } from './math.js';
@@ -639,6 +640,9 @@ class MarblesGame {
                 break
             case 'clockwork':
                 createClockworkZone(this, offset)
+                break
+            case 'bumper_arena':
+                createBumperArenaZone(this, offset)
                 break
         }
     }
