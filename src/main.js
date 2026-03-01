@@ -69,6 +69,7 @@ class MarblesGame {
         this.powerbarEl = document.getElementById('powerbar')
         this.jumpBarEl = document.getElementById('jumpbar')
         this.boostBarEl = document.getElementById('boostbar')
+        this.dashBarEl = document.getElementById('dashbar')
         this.magnetBarEl = document.getElementById('magnetbar')
         this.focusBarEl = document.getElementById('focusbar')
         this.rewindBarEl = document.getElementById('rewindbar')
@@ -84,6 +85,8 @@ class MarblesGame {
         this.charging = false
         this.isAiming = false
         this.playerMarble = null
+        this.lastDashTime = 0
+        this.dashCooldown = 2000
         this.cueInst = null
         this.jumpCount = 0
         this.maxJumps = 2
@@ -285,6 +288,51 @@ class MarblesGame {
             if (e.code === 'KeyQ') {
                 this.magnetMode = 'repel'
                 this.magnetActive = true
+            }
+            if (e.code === 'KeyV' && this.playerMarble) {
+                const now = Date.now()
+                if (now - this.lastDashTime > this.dashCooldown) {
+                    const rb = this.playerMarble.rigidBody
+                    const pos = rb.translation()
+                    const cosP = Math.cos(this.pitchAngle)
+                    const sinP = Math.sin(this.pitchAngle)
+                    const dirX = Math.sin(this.aimYaw) * cosP
+                    const dirY = sinP
+                    const dirZ = Math.cos(this.aimYaw) * cosP
+
+                    const rayOrigin = { x: pos.x, y: pos.y, z: pos.z }
+                    const rayDir = { x: dirX, y: dirY, z: dirZ }
+                    const ray = new RAPIER.Ray(rayOrigin, rayDir)
+
+                    // ignore marble itself during raycast
+                    // In RAPIER js compat we can use filterExcludeRigidBody parameter
+                    const hit = this.world.castRay(ray, 15.0, true, 0xffffffff, undefined, undefined, rb)
+
+                    let newPos
+                    if (hit) {
+                        // hit something else, stop short
+                        const dist = Math.max(0, hit.toi - 0.5)
+                        newPos = {
+                            x: rayOrigin.x + rayDir.x * dist,
+                            y: rayOrigin.y + rayDir.y * dist,
+                            z: rayOrigin.z + rayDir.z * dist
+                        }
+                    } else {
+                        // Max distance
+                        newPos = {
+                            x: rayOrigin.x + rayDir.x * 15.0,
+                            y: rayOrigin.y + rayDir.y * 15.0,
+                            z: rayOrigin.z + rayDir.z * 15.0
+                        }
+                    }
+
+                    rb.setTranslation(newPos, true)
+                    rb.setLinvel({ x: 0, y: 0, z: 0 }, true)
+                    rb.setAngvel({ x: 0, y: 0, z: 0 }, true)
+
+                    this.lastDashTime = now
+                    if (audio && audio.playBoost) audio.playBoost()
+                }
             }
             if (e.code === 'KeyZ' && this.playerMarble && !this.isGrounded(this.playerMarble)) {
                 this.isStomping = true
@@ -1658,6 +1706,19 @@ class MarblesGame {
                this.boostBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #f0f)'
             } else {
                this.boostBarEl.style.filter = 'brightness(0.7)'
+            }
+        }
+
+        if (this.dashBarEl) {
+            const now = Date.now()
+            const timeSince = now - this.lastDashTime
+            const progress = Math.min(1.0, timeSince / this.dashCooldown)
+            this.dashBarEl.style.width = `${progress * 100}%`
+
+            if (progress >= 1.0) {
+               this.dashBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ff8c00)'
+            } else {
+               this.dashBarEl.style.filter = 'brightness(0.7)'
             }
         }
 
