@@ -31,5 +31,6 @@ export const marblesInfo = [
     { name: "Glacier", color: [0.8, 0.9, 1.0], offset: { x: -4.0, y: 3, z: 6 }, radius: 0.5, density: 1.0, friction: 0.0, restitution: 0.5, roughness: 0.05, emissive: true, lightIntensity: 5000.0, lightColor: [0.8, 0.9, 1.0] },
     { name: "Chameleon", color: [1.0, 1.0, 1.0], offset: { x: 4.0, y: 3, z: 8 }, radius: 0.5, rainbow: true, friction: 0.5, restitution: 0.5, roughness: 0.2 },
     { name: "Quantum Anomaly", color: [0.5, 0.0, 1.0], offset: { x: -6.0, y: 5, z: 8 }, radius: 0.45, density: 0.8, gravityScale: 0.3, friction: 0.1, restitution: 1.5, roughness: 0.1, emissive: true, lightIntensity: 40000.0, lightColor: [0.8, 0.2, 1.0] },
-    { name: "Anti-Matter", color: [1.0, 0.0, 1.0], offset: { x: -8.0, y: 5, z: 8 }, radius: 0.5, density: 1.0, gravityScale: -0.5, friction: 0.2, restitution: 0.8, roughness: 0.2, emissive: true, lightIntensity: 20000.0, lightColor: [1.0, 0.2, 0.8] }
+    { name: "Anti-Matter", color: [1.0, 0.0, 1.0], offset: { x: -8.0, y: 5, z: 8 }, radius: 0.5, density: 1.0, gravityScale: -0.5, friction: 0.2, restitution: 0.8, roughness: 0.2, emissive: true, lightIntensity: 20000.0, lightColor: [1.0, 0.2, 0.8] },
+    { name: "Black Hole", color: [0.0, 0.0, 0.0], offset: { x: 6.0, y: 3, z: -2 }, radius: 0.6, density: 20.0, friction: 0.05, restitution: 0.0, roughness: 0.0, emissive: true, lightIntensity: 50000.0, lightColor: [0.1, 0.0, 0.2] }
 ];
