@@ -1,48 +1,24 @@
 {
   "id": "slalom",
-  "name": "Slalom Challenge",
-  "description": "Weave through the pillars",
+  "name": "Slalom Challenge: Hazard Run",
+  "description": "Master the double slalom, survive the moving hazards, and stick the landing",
   "version": "1.0.0",
   "author": "Marble Game Team",
-  "difficulty": "medium",
+  "difficulty": "hard",
   "zones": [
-    {
-      "type": "floor",
-      "pos": { "x": 0, "y": -2, "z": 0 },
-      "size": { "x": 60, "y": 0.5, "z": 120 }
-    },
-    {
-      "type": "track",
-      "pos": { "x": 0, "y": 3, "z": 0 }
-    },
-    {
-      "type": "landing",
-      "pos": { "x": 0, "y": 0, "z": 25 }
-    },
-    {
-      "type": "slalom",
-      "pos": { "x": 0, "y": -2, "z": 85 }
-    },
-    {
-      "type": "goal",
-      "pos": { "x": 0, "y": -1.4, "z": 100 },
-      "color": [1.0, 0.84, 0.0]
-    }
+    {"type": "floor", "pos": {"x": 0, "y": -2, "z": 0}, "size": {"x": 60, "y": 0.5, "z": 120}},
+    {"type": "track", "pos": {"x": 0, "y": 3, "z": 0}},
+    {"type": "landing", "pos": {"x": 0, "y": 0, "z": 25}},
+    {"type": "slalom", "pos": {"x": 0, "y": -2, "z": 55}, "gateWidth": 4.0, "label": "slalom_1"},
+    {"type": "jump", "pos": {"x": 0, "y": -1, "z": 72}, "length": 8, "height": 2},
+    {"type": "staircase", "pos": {"x": 0, "y": 0, "z": 85}, "steps": 5, "rise": 0.8, "run": 3},
+    {"type": "hazard", "pos": {"x": 0, "y": 3, "z": 95}, "type": "moving_pendulum", "range": 6, "speed": 1.5},
+    {"type": "slalom", "pos": {"x": 0, "y": 4, "z": 105}, "gateWidth": 2.5, "label": "slalom_2_narrow"},
+    {"type": "hazard", "pos": {"x": -4, "y": 4, "z": 110}, "type": "rotating_barrier", "radius": 3, "speed": 2.0},
+    {"type": "hazard", "pos": {"x": 4, "y": 4, "z": 115}, "type": "rotating_barrier", "radius": 3, "speed": -2.0},
+    {"type": "goal", "pos": {"x": 0, "y": -1.4, "z": 100}, "color": [1.0, 0.84, 0.0]}
   ],
-  "spawn": { "x": 0, "y": 8, "z": -12 },
-  "goals": [
-    {
-      "id": 1,
-      "range": {
-        "x": [-2, 2],
-        "y": [-2, 0],
-        "z": [98, 102]
-      }
-    }
-  ],
-  "camera": {
-    "mode": "follow",
-    "height": 15,
-    "offset": -25
-  }
+  "spawn": {"x": 0, "y": 8, "z": -12},
+  "goals": [{"id": 1, "range": {"x": [-2, 2], "y": [-2, 0], "z": [98, 102]}}],
+  "camera": {"mode": "follow", "height": 18, "offset": -30}
 }
