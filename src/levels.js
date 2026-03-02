@@ -329,6 +329,21 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
+    plinko_challenge: {
+        name: 'Plinko Challenge',
+        description: 'Drop the marble and hope for the best!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'plinko', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 0, y: -4, z: 50 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [48, 52], y: [-5, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
+    },
     bumper_arena: {
         name: 'Bumper Arena',
         description: 'Navigate through the bouncy obstacles!',
