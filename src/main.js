@@ -7,6 +7,7 @@ import { createPinballZone } from './pinball_zone.js';
 import { createClockworkZone } from './clockwork_zone.js';
 import { createBumperArenaZone } from './bumper_arena.js';
 import { createPinwheelAlleyZone } from './pinwheel_alley.js';
+import { createPlinkoZone } from './plinko_zone.js';
 import { audio } from './audio.js';
 import { LEVELS } from './levels.js';
 import { quatFromEuler, quaternionToMat4 } from './math.js';
@@ -648,6 +649,9 @@ class MarblesGame {
             case 'pinwheel_alley':
                 createPinwheelAlleyZone(this, offset)
                 break
+            case 'plinko':
+                createPlinkoZone(this, offset)
+                break;
             case 'neon_city':
                 this.createNeonCityZone(offset)
                 break
