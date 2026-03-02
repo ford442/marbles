@@ -1,25 +1,68 @@
 {
   "id": "shadow_ninja",
-  "name": "Shadow Ninja",
-  "description": "A stealthy marble that slides effortlessly across any surface. Nearly frictionless!",
-  "version": "1.0.0",
-  "author": "Marble Game Team",
-  "rarity": "epic",
+  "name": "Void Walker",
+  "description": "A stealthy marble of pure void that absorbs light. Shadow tendrils writhe across its surface as smoke wisps trail behind.",
+  "version": "5.0.0",
+  "author": "Marble Game Team - Visual Overhaul",
+  "rarity": "legendary",
   "appearance": {
-    "color": { "r": 0.15, "g": 0.05, "b": 0.25 },
-    "roughness": 0.05,
-    "metallic": 0.1
+    "color": {"r": 0.02, "g": 0.02, "b": 0.03},
+    "roughness": 0.6,
+    "metallic": 0.2,
+    "emissive": {"r": 0.1, "g": 0.0, "b": 0.15, "intensity": 0.8},
+    "clearCoat": 0.1,
+    "clearCoatRoughness": 0.4,
+    "rimLightColor": {"r": 0.6, "g": 0.2, "b": 0.9},
+    "rimLightIntensity": 3.0,
+    "subsurfaceScattering": 0.1,
+    "reflectance": 0.1,
+    "ambientOcclusion": 0.9,
+    "texture": "procedural_void_tendrils",
+    "particleEffect": "shadow_trail"
   },
   "physics": {
     "radius": 0.45,
-    "density": 1.2,
+    "density": 1.1,
     "friction": 0.02,
     "restitution": 0.3,
-    "linearDamping": 0.05,
-    "angularDamping": 0.05
+    "linearDamping": 0.04,
+    "angularDamping": 0.06
   },
   "audio": {
-    "rollSound": "ninja_roll",
+    "rollSound": "shadow_whisper",
+    "collisionSound": "void_impact",
     "pitchVariation": 0.1
+  },
+  "abilities": {
+    "ghostMode": true,
+    "speedBoost": 1.1
+  },
+  "visual_overhaul": {
+    "agent_features": [
+      "Agent 1: Deep void black, intense purple rim light (3.0), smoke emissive layers",
+      "Agent 2: 6-octave void noise, shadow tendril textures, smoke wisp overlays",
+      "Agent 3: Void absorption shader (light-draining), vertex distortion, animated smoke",
+      "Agent 4: 4 particle systems, void vignette, spatial audio integration"
+    ],
+    "effects": ["void_absorption", "shadow_tendrils", "smoke_wisps", "ethereal_distortion", "void_sparkle"],
+    "shader_uniforms": {
+      "uVoidDepth": 0.9,
+      "uTendrilDensity": 0.7,
+      "uSmokeScrollSpeed": 0.3,
+      "uAbsorptionRadius": 2.0
+    },
+    "particle_systems": ["ShadowTrail", "VoidSparkle", "ShadowBurst", "NinjaDash"],
+    "post_process": {
+      "bloom": {"intensity": 0.6, "threshold": 0.7},
+      "vignette": {"intensity": 0.25, "color": [0.0, 0.0, 0.05]},
+      "motionBlur": 0.4,
+      "colorGrading": {"contrast": 1.15, "shadowLift": [0.02, 0.0, 0.03]}
+    },
+    "special_properties": {
+      "light_absorption": true,
+      "ethereal_quality": true,
+      "void_presence": "nearby_marbles_dim"
+    },
+    "lod_variants": ["high_void", "medium_void", "low_void", "impostor"]
   }
 }

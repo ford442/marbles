@@ -1,31 +1,75 @@
 {
   "id": "volcanic_magma",
-  "name": "Volcanic Magma",
-  "description": "An unstable fire marble that bounces like crazy with its extreme elasticity. Handle with care!",
-  "version": "1.0.0",
-  "author": "Marble Game Team",
-  "rarity": "rare",
+  "name": "Magma Core",
+  "description": "An unstable fire marble with cracked crust revealing flowing lava beneath. Erupts with intense heat and volcanic fury.",
+  "version": "5.0.0",
+  "author": "Marble Game Team - Visual Overhaul",
+  "rarity": "legendary",
   "appearance": {
-    "color": { "r": 1.0, "g": 0.25, "b": 0.0 },
-    "roughness": 0.6,
-    "metallic": 0.2,
-    "emissive": {
-      "r": 0.5,
-      "g": 0.1,
-      "b": 0.0,
-      "intensity": 0.3
-    }
+    "color": {"r": 0.4, "g": 0.05, "b": 0.02},
+    "roughness": 0.7,
+    "metallic": 0.1,
+    "emissive": {"r": 1.0, "g": 0.25, "b": 0.05, "intensity": 4.0},
+    "clearCoat": 0.0,
+    "clearCoatRoughness": 1.0,
+    "rimLightColor": {"r": 1.0, "g": 0.4, "b": 0.1},
+    "rimLightIntensity": 2.5,
+    "subsurfaceScattering": 0.4,
+    "reflectance": 0.3,
+    "ambientOcclusion": 0.5,
+    "texture": "procedural_cracked_crust",
+    "particleEffect": "lava_eruption"
   },
   "physics": {
     "radius": 0.55,
-    "density": 0.8,
-    "friction": 0.15,
-    "restitution": 1.5,
+    "density": 1.8,
+    "friction": 0.12,
+    "restitution": 1.2,
     "linearDamping": 0.1,
     "angularDamping": 0.1
   },
   "audio": {
-    "collisionSound": "magma_hit",
+    "rollSound": "lava_roll",
+    "collisionSound": "volcanic_impact",
     "pitchVariation": 0.2
+  },
+  "abilities": {
+    "speedBoost": 1.2
+  },
+  "visual_overhaul": {
+    "agent_features": [
+      "Agent 1: Intense orange-red glow (intensity 4.0), heat shimmer, dual-layer emissive",
+      "Agent 2: Procedural cracked crust, animated lava flow, cooling zones, surface bubbles",
+      "Agent 3: Heat distortion shader, lava flow animation, eruption glow, bubble simulation",
+      "Agent 4: 6 particle systems including volcanic boost, collision deformation, scorch effect"
+    ],
+    "effects": ["heat_distortion", "lava_flow", "cracked_crust", "eruption_glow", "surface_bubbles", "volcanic_boost"],
+    "shader_uniforms": {
+      "uHeatIntensity": 4.0,
+      "uCrackScale": [1.0, 3.0, 8.0],
+      "uLavaFlowSpeed": 0.5,
+      "uBubbleCount": 8,
+      "uEruptionFrequency": 0.02
+    },
+    "particle_systems": ["HeatShimmer", "LavaSparks", "EruptionBurst", "MagmaTrail", "VolcanicBoost", "SmokePlume"],
+    "post_process": {
+      "bloom": {"intensity": 2.5, "threshold": 0.3, "tint": [0.5, 0.15, 0.05]},
+      "heatDistortion": {"intensity": 0.4, "waveSpeed": 3.0},
+      "chromaticAberration": 0.025,
+      "motionBlur": 0.5,
+      "colorGrading": {"contrast": 1.25, "saturation": 1.3, "temperature": 1.2}
+    },
+    "dynamic_properties": {
+      "crust_cooling": true,
+      "lava_viscosity": 0.7,
+      "eruption_events": {"enabled": true, "random": true, "intensity_range": [0.5, 1.0]},
+      "surface_scorch": true
+    },
+    "gameplay_modifiers": {
+      "heat_damage_radius": 2.0,
+      "lava_tracks_bonus": 0.15,
+      "unstable_bounce": true
+    },
+    "lod_variants": ["high_magma", "medium_magma", "low_magma", "impostor"]
   }
 }

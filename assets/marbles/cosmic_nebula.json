@@ -1,33 +1,80 @@
 {
   "id": "cosmic_nebula",
-  "name": "Cosmic Nebula",
-  "description": "A beautiful all-rounder with nebula-like coloring. Balanced stats make it perfect for any challenge.",
-  "version": "1.0.0",
-  "author": "Marble Game Team",
-  "rarity": "legendary",
+  "name": "Stellar Nursery",
+  "description": "A sphere containing the birth of stars. Gas clouds swirl in cosmic dance while newborn suns ignite within holographic depths.",
+  "version": "5.0.0",
+  "author": "Marble Game Team - Visual Overhaul",
+  "rarity": "mythic",
   "appearance": {
-    "color": { "r": 0.3, "g": 0.9, "b": 0.7 },
+    "color": {"r": 0.3, "g": 0.1, "b": 0.5},
     "roughness": 0.15,
-    "metallic": 0.4,
-    "emissive": {
-      "r": 0.1,
-      "g": 0.3,
-      "b": 0.25,
-      "intensity": 0.2
-    },
-    "particleEffect": "nebula_trail"
+    "metallic": 0.0,
+    "emissive": {"r": 0.7, "g": 0.2, "b": 1.0, "intensity": 2.5},
+    "clearCoat": 0.5,
+    "clearCoatRoughness": 0.1,
+    "rimLightColor": {"r": 0.8, "g": 0.3, "b": 1.0},
+    "rimLightIntensity": 2.0,
+    "subsurfaceScattering": 0.5,
+    "reflectance": 0.4,
+    "ambientOcclusion": 0.3,
+    "texture": "procedural_starfield",
+    "particleEffect": "stellar_wind"
   },
   "physics": {
     "radius": 0.65,
-    "density": 1.5,
-    "friction": 0.08,
-    "restitution": 0.7,
-    "linearDamping": 0.1,
-    "angularDamping": 0.1
+    "density": 0.9,
+    "friction": 0.05,
+    "restitution": 0.85,
+    "linearDamping": 0.06,
+    "angularDamping": 0.08
   },
   "audio": {
     "rollSound": "cosmic_hum",
-    "collisionSound": "nebula_impact",
-    "pitchVariation": 0.15
+    "collisionSound": "stellar_collision",
+    "pitchVariation": 0.25
+  },
+  "abilities": {
+    "speedBoost": 1.15
+  },
+  "visual_overhaul": {
+    "agent_features": [
+      "Agent 1: Intensified purple/cyan binary glow, 5-layer chromatic depth",
+      "Agent 2: 2000-star field with constellations, 4-layer gas cloud wisps, protostars",
+      "Agent 3: Holographic iridescence, 5000 volumetric stars, gravitational lensing, supernovas",
+      "Agent 4: 4 particle systems, lens flare, volumetric fog, Supernova Burst ability"
+    ],
+    "effects": ["holographic_shimmer", "gravitational_lensing", "plasma_dynamics", "supernova_events", "dimensional_refraction"],
+    "shader_uniforms": {
+      "uIridescenceScale": 1.2,
+      "uVolumeDensity": 0.4,
+      "uLensStrength": 0.3,
+      "uChromaticSeparation": 0.03
+    },
+    "particle_systems": ["StellarWind", "SupernovaBoost", "NebulaImpact", "GravitationalWake"],
+    "post_process": {
+      "bloom": {"intensity": 3.0, "threshold": 0.25, "starburst": true},
+      "lensFlare": {"intensity": 0.6, "ghostCount": 6},
+      "volumetricFog": {"density": 0.15, "color": [0.2, 0.1, 0.4]},
+      "chromaticAberration": 0.04,
+      "motionBlur": 0.5
+    },
+    "dynamic_constellations": {
+      "enabled": true,
+      "patternCount": 12,
+      "rotationSpeed": 0.1,
+      "connectLines": true
+    },
+    "gameplay_modifiers": {
+      "space_tracks_speed_boost": 0.15,
+      "zero_g_bonus": 0.2,
+      "gravity_well": {"attraction": 0.05, "range": 5.0}
+    },
+    "special_ability": {
+      "name": "Supernova Burst",
+      "cooldown": 30,
+      "effect": "temporary_speed_boost_and_particle_shield",
+      "duration": 5
+    },
+    "lod_variants": ["high_stellar", "medium_stellar", "low_stellar", "impostor"]
   }
 }

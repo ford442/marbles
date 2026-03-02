@@ -1,0 +1,45 @@
+{
+  "id": "stone_vein",
+  "name": "Stone Vein",
+  "description": "Earthy marble with natural mineral veins, gold and silver deposits, and warm subsurface scattering. Ancient and solid.",
+  "version": "5.0.0",
+  "author": "Marble Game Team - Visual Overhaul",
+  "rarity": "uncommon",
+  "appearance": {
+    "color": {"r": 0.5, "g": 0.42, "b": 0.35},
+    "roughness": 0.85,
+    "metallic": 0.0,
+    "emissive": {"r": 0.0, "g": 0.0, "b": 0.0, "intensity": 0.0},
+    "clearCoat": 0.0,
+    "clearCoatRoughness": 1.0,
+    "rimLightColor": {"r": 0.7, "g": 0.6, "b": 0.5},
+    "rimLightIntensity": 0.3,
+    "subsurfaceScattering": 0.6,
+    "reflectance": 0.1,
+    "ambientOcclusion": 0.8,
+    "texture": "procedural_veins",
+    "particleEffect": "dust_puff"
+  },
+  "physics": {
+    "radius": 0.5,
+    "density": 2.8,
+    "friction": 0.6,
+    "restitution": 0.2,
+    "linearDamping": 0.15,
+    "angularDamping": 0.12
+  },
+  "audio": {
+    "rollSound": "stone_grind",
+    "collisionSound": "stone_thud",
+    "pitchVariation": 0.1
+  },
+  "visual_overhaul": {
+    "agent_features": [
+      "Agent 1: Matte finish, warm subsurface scattering, earth tones",
+      "Agent 2: Turbulent vein patterns, mineral deposits, crack networks",
+      "Agent 3: Subsurface scattering, view-dependent sparkles, ambient occlusion"
+    ],
+    "effects": ["subsurface_scatter", "vein_shimmer", "mineral_glint", "dust_trail"],
+    "lod_variants": ["high_stone", "medium_stone", "low_stone", "impostor"]
+  }
+}

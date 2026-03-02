@@ -1,0 +1,45 @@
+{
+  "id": "obsidian_metal",
+  "name": "Obsidian Metal",
+  "description": "Dark volcanic metal with hammered texture, silver flakes, and anisotropic reflections. Heavy and imposing.",
+  "version": "5.0.0",
+  "author": "Marble Game Team - Visual Overhaul",
+  "rarity": "epic",
+  "appearance": {
+    "color": {"r": 0.08, "g": 0.08, "b": 0.1},
+    "roughness": 0.25,
+    "metallic": 0.95,
+    "emissive": {"r": 0.05, "g": 0.05, "b": 0.08, "intensity": 0.05},
+    "clearCoat": 0.3,
+    "clearCoatRoughness": 0.2,
+    "rimLightColor": {"r": 0.9, "g": 0.95, "b": 1.0},
+    "rimLightIntensity": 0.6,
+    "subsurfaceScattering": 0.1,
+    "reflectance": 1.0,
+    "ambientOcclusion": 0.4,
+    "texture": "procedural_hammered",
+    "particleEffect": "metal_sparks"
+  },
+  "physics": {
+    "radius": 0.5,
+    "density": 2.5,
+    "friction": 0.4,
+    "restitution": 0.4,
+    "linearDamping": 0.1,
+    "angularDamping": 0.08
+  },
+  "audio": {
+    "rollSound": "metal_scrape",
+    "collisionSound": "metal_clang",
+    "pitchVariation": 0.15
+  },
+  "visual_overhaul": {
+    "agent_features": [
+      "Agent 1: High metallic 0.95, silver rim light, metal flakes",
+      "Agent 2: Hammered texture, scratch marks, anisotropic direction",
+      "Agent 3: Anisotropic BRDF, heat shimmer, directional reflections"
+    ],
+    "effects": ["anisotropic_reflection", "heat_shimmer", "metal_flakes", "scratches"],
+    "lod_variants": ["high_metal", "medium_metal", "low_metal", "impostor"]
+  }
+}

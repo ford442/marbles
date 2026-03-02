@@ -1,19 +1,65 @@
 {
   "id": "classic_green",
-  "name": "Classic Green",
-  "description": "The classic green marble. Balanced and smooth.",
-  "version": "1.0.0",
-  "author": "Marble Game Team",
-  "rarity": "common",
+  "name": "Verdant Heart",
+  "description": "Living jade sphere pulsing with chlorophyll energy. Moss grows across its surface with bioluminescent spore trails.",
+  "version": "5.0.0",
+  "author": "Marble Game Team - Visual Overhaul",
+  "rarity": "legendary",
   "appearance": {
-    "color": { "r": 0.2, "g": 1.0, "b": 0.2 },
-    "roughness": 0.2,
-    "metallic": 0.0
+    "color": {"r": 0.1, "g": 0.45, "b": 0.15},
+    "roughness": 0.4,
+    "metallic": 0.0,
+    "emissive": {"r": 0.2, "g": 0.8, "b": 0.25, "intensity": 1.2},
+    "clearCoat": 0.2,
+    "clearCoatRoughness": 0.3,
+    "rimLightColor": {"r": 0.5, "g": 0.95, "b": 0.4},
+    "rimLightIntensity": 1.0,
+    "subsurfaceScattering": 0.8,
+    "reflectance": 0.2,
+    "ambientOcclusion": 0.6,
+    "texture": "procedural_moss_veins",
+    "particleEffect": "spore_trail"
   },
   "physics": {
-    "radius": 0.4,
-    "density": 1.0,
-    "friction": 0.1,
-    "restitution": 0.8
+    "radius": 0.5,
+    "density": 1.3,
+    "friction": 0.08,
+    "restitution": 0.6,
+    "linearDamping": 0.12,
+    "angularDamping": 0.1
+  },
+  "audio": {
+    "rollSound": "leaves_rustle",
+    "collisionSound": "wood_thud",
+    "pitchVariation": 0.15
+  },
+  "abilities": {
+    "speedBoost": 1.1
+  },
+  "visual_overhaul": {
+    "agent_features": [
+      "Agent 1: Earthy bioluminescent glow, mossy rim light, wet clear coat",
+      "Agent 2: L-system moss patterns, Fibonacci organic swirls, lichen patches",
+      "Agent 3: Plant-like subsurface scattering, vascular vein system, translucency",
+      "Agent 4: 3 particle systems, green vignette, nature audio signature"
+    ],
+    "effects": ["subsurface_scatter", "moss_growth", "spore_trail", "photosynthesis_burst", "root_impact"],
+    "shader_uniforms": {
+      "uMossCoverage": 0.4,
+      "uGrowthSpeed": 0.05,
+      "uChlorophyllAbsorption": 0.9,
+      "uTranslucency": 0.6
+    },
+    "particle_systems": ["SporeTrail", "PhotosynthesisBurst", "RootImpact"],
+    "post_process": {
+      "bloom": {"intensity": 0.8, "threshold": 0.6},
+      "vignette": {"intensity": 0.15, "color": [0.05, 0.2, 0.05]},
+      "motionBlur": 0.25
+    },
+    "gameplay_modifiers": {
+      "forest_tracks_speed_boost": 0.1,
+      "nature_affinity": true
+    },
+    "lod_variants": ["high_verdant", "medium_verdant", "low_verdant", "impostor"]
   }
 }

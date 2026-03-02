@@ -1,0 +1,47 @@
+{
+  "id": "classic_glass",
+  "name": "Classic Glass",
+  "description": "Crystal clear glass marble with internal refraction and subtle blue tint. Features caustics, bubbles, and rim lighting.",
+  "version": "5.0.0",
+  "author": "Marble Game Team - Visual Overhaul",
+  "rarity": "rare",
+  "appearance": {
+    "color": {"r": 0.85, "g": 0.9, "b": 1.0},
+    "roughness": 0.05,
+    "metallic": 0.0,
+    "emissive": {"r": 0.1, "g": 0.15, "b": 0.25, "intensity": 0.15},
+    "clearCoat": 1.0,
+    "clearCoatRoughness": 0.05,
+    "transmission": 0.7,
+    "ior": 1.52,
+    "rimLightColor": {"r": 0.6, "g": 0.8, "b": 1.0},
+    "rimLightIntensity": 0.8,
+    "subsurfaceScattering": 0.4,
+    "reflectance": 0.5,
+    "ambientOcclusion": 0.2,
+    "texture": "procedural_bubbles",
+    "particleEffect": "glass_sparkle"
+  },
+  "physics": {
+    "radius": 0.5,
+    "density": 1.0,
+    "friction": 0.1,
+    "restitution": 0.3,
+    "linearDamping": 0.05,
+    "angularDamping": 0.05
+  },
+  "audio": {
+    "rollSound": "glass_roll",
+    "collisionSound": "glass_clink",
+    "pitchVariation": 0.2
+  },
+  "visual_overhaul": {
+    "agent_features": [
+      "Agent 1: Clear coat 1.0, rim light, subsurface scattering",
+      "Agent 2: Internal bubbles, caustics, frosted edges",
+      "Agent 3: Refraction shader, transmission, environment mapping"
+    ],
+    "effects": ["refraction", "caustics", "bubbles", "rim_glow"],
+    "lod_variants": ["high_glass", "medium_glass", "low_glass", "impostor"]
+  }
+}

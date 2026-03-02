@@ -1,19 +1,60 @@
 {
   "id": "classic_blue",
-  "name": "Classic Blue",
-  "description": "The classic blue marble. Steady and reliable.",
-  "version": "1.0.0",
-  "author": "Marble Game Team",
-  "rarity": "common",
+  "name": "Sapphire Surge",
+  "description": "Crystal clear ocean sapphire with electric cyan energy. Features internal refraction, caustics, and water-like sparkles.",
+  "version": "5.0.0",
+  "author": "Marble Game Team - Visual Overhaul",
+  "rarity": "epic",
   "appearance": {
-    "color": { "r": 0.0, "g": 0.0, "b": 1.0 },
-    "roughness": 0.4,
-    "metallic": 0.0
+    "color": {"r": 0.05, "g": 0.15, "b": 0.6},
+    "roughness": 0.05,
+    "metallic": 0.1,
+    "emissive": {"r": 0.0, "g": 0.8, "b": 1.0, "intensity": 1.2},
+    "clearCoat": 1.0,
+    "clearCoatRoughness": 0.02,
+    "transmission": 0.7,
+    "ior": 1.77,
+    "rimLightColor": {"r": 0.4, "g": 0.9, "b": 1.0},
+    "rimLightIntensity": 1.5,
+    "subsurfaceScattering": 0.6,
+    "reflectance": 0.9,
+    "ambientOcclusion": 0.2,
+    "texture": "procedural_swirls",
+    "particleEffect": "aqua_trail"
   },
   "physics": {
     "radius": 0.5,
     "density": 1.0,
-    "friction": 0.3,
-    "restitution": 0.5
+    "friction": 0.02,
+    "restitution": 0.75,
+    "linearDamping": 0.05,
+    "angularDamping": 0.05
+  },
+  "audio": {
+    "rollSound": "crystal_roll",
+    "collisionSound": "water_splash",
+    "pitchVariation": 0.2
+  },
+  "visual_overhaul": {
+    "agent_features": [
+      "Agent 1: Cyan emissive core, clear coat 1.0, blue rim lighting",
+      "Agent 2: Volumetric swirl patterns, micro-scratch normals, iridescence",
+      "Agent 3: Refraction shader (IOR 1.77), water caustics, speed sparkles",
+      "Agent 4: 3 LOD levels, impostor, 3 particle systems, performance budget"
+    ],
+    "effects": ["refraction", "caustics", "iridescence", "speed_sparkles", "rim_glow"],
+    "shader_uniforms": {
+      "uRefractionIndex": 1.77,
+      "uCausticIntensity": 0.55,
+      "uSwirlSpeed": 0.3,
+      "uIridescenceScale": 0.4
+    },
+    "particle_systems": ["AquaTrail", "SpeedSparkles", "ImpactSplash"],
+    "post_process": {
+      "bloom": {"intensity": 0.8, "threshold": 0.6},
+      "chromaticAberration": 0.015,
+      "motionBlur": 0.35
+    },
+    "lod_variants": ["high_sapphire", "medium_sapphire", "low_sapphire", "impostor"]
   }
 }
