@@ -82,6 +82,7 @@ class MarblesGame {
         this.magnetBarEl = document.getElementById('magnetbar')
         this.focusBarEl = document.getElementById('focusbar')
         this.rewindBarEl = document.getElementById('rewindbar')
+        this.gravityBarEl = document.getElementById('gravitybar')
         this.effectEl = document.getElementById('effects')
         this.currentMarbleIndex = 0
         this.aimYaw = 0
@@ -1690,6 +1691,26 @@ class MarblesGame {
         if (this.rewindBarEl) {
             const pct = (this.rewindHistory.length / this.maxRewindFrames) * 100
             this.rewindBarEl.style.width = `${pct}%`
+        }
+
+        if (this.gravityBarEl) {
+            if (this.activeEffects.gravity && Date.now() < this.activeEffects.gravity) {
+                const timeLeft = this.activeEffects.gravity - Date.now()
+                const pct = (timeLeft / 5000) * 100
+                this.gravityBarEl.style.width = `${pct}%`
+                this.gravityBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ffcc00)'
+
+                if (this.playerMarble) {
+                    // Apply counter-gravity impulse
+                    const mass = this.playerMarble.rigidBody.mass()
+                    // Counteract mostly gravity (-9.81 * mass * timestep)
+                    // Apply a steady upward force so it feels floaty
+                    this.playerMarble.rigidBody.applyImpulse({ x: 0, y: 0.16 * mass, z: 0 }, true)
+                }
+            } else {
+                this.gravityBarEl.style.width = `0%`
+                this.gravityBarEl.style.filter = 'none'
+            }
         }
 
         if (audio && audio.setFocus) {
