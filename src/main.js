@@ -8,6 +8,7 @@ import { createClockworkZone } from './clockwork_zone.js';
 import { createBumperArenaZone } from './bumper_arena.js';
 import { createPinwheelAlleyZone } from './pinwheel_alley.js';
 import { createPlinkoZone } from './plinko_zone.js';
+import { createCanyonRunZone } from './canyon_run.js';
 import { audio } from './audio.js';
 import { LEVELS } from './levels.js';
 import { quatFromEuler, quaternionToMat4 } from './math.js';
@@ -714,6 +715,9 @@ class MarblesGame {
                 break
             case 'bumper_arena':
                 createBumperArenaZone(this, offset)
+                break
+            case 'canyon_run':
+                createCanyonRunZone(this, offset)
                 break
         }
     }
