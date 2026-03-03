@@ -1,6 +1,7 @@
 import { spaceStationLevel } from './space_station.js';
 import { skateParkLevel } from './skate_park.js';
 import { pinballLevel } from './pinball_zone.js';
+import { canyonRunLevel } from './canyon_run.js';
 
 export const LEVELS = {
     tutorial: {
@@ -376,5 +377,6 @@ export const LEVELS = {
     },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
-    pinball_wizard: pinballLevel
+    pinball_wizard: pinballLevel,
+    canyon_run: canyonRunLevel
 };
