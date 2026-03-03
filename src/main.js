@@ -64,6 +64,12 @@ class MarblesGame {
         this.cameraMode = 'orbit'
         this.score = 0
         this.scoreEl = document.getElementById('score')
+        this.comboEl = document.getElementById('combo')
+        this.combobarContainerEl = document.getElementById('combobar-container')
+        this.combobarEl = document.getElementById('combobar')
+        this.combo = 1
+        this.comboTimer = 0
+        this.maxComboTime = 3000
         this.timerEl = document.getElementById('timer')
         this.levelNameEl = document.getElementById('level-name')
         this.selectedEl = document.getElementById('selected')
@@ -508,6 +514,15 @@ class MarblesGame {
         this.checkpointDefinitions = level.checkpoints || []
         this.score = 0
         this.scoreEl.textContent = 'Score: 0'
+        this.combo = 1
+        this.comboTimer = 0
+        if (this.comboEl) {
+            this.comboEl.style.display = 'none'
+            this.comboEl.textContent = 'Combo: x1'
+        }
+        if (this.combobarContainerEl) this.combobarContainerEl.style.display = 'none'
+        if (this.combobarEl) this.combobarEl.style.width = '0%'
+
         if (this.timerEl) this.timerEl.textContent = 'Time: 0.00s'
         this.levelStartTime = Date.now()
         this.levelComplete = false
@@ -1246,6 +1261,15 @@ class MarblesGame {
 
         this.score = 0
         this.scoreEl.textContent = 'Score: 0'
+        this.combo = 1
+        this.comboTimer = 0
+        if (this.comboEl) {
+            this.comboEl.style.display = 'none'
+            this.comboEl.textContent = 'Combo: x1'
+        }
+        if (this.combobarContainerEl) this.combobarContainerEl.style.display = 'none'
+        if (this.combobarEl) this.combobarEl.style.width = '0%'
+
         this.currentMarbleIndex = 0
         this.playerMarble = this.marbles[0]
         this.selectedEl.textContent = `Selected: ${this.playerMarble ? this.playerMarble.name : 'None'}`
@@ -1431,7 +1455,21 @@ class MarblesGame {
                     t.y > goal.range.y[0] && t.y < goal.range.y[1]) {
 
                     m.scoredGoals.add(goal.id)
-                    this.score++
+
+                    // Combo Logic
+                    if (m === this.playerMarble) {
+                        this.combo = Math.min(10, this.combo + 1)
+                        this.comboTimer = Date.now()
+                        if (this.comboEl) {
+                            this.comboEl.style.display = 'block'
+                            this.comboEl.textContent = `Combo: x${this.combo}`
+                            this.comboEl.style.transform = 'scale(1.2)'
+                            setTimeout(() => { if (this.comboEl) this.comboEl.style.transform = 'scale(1)' }, 100)
+                        }
+                        if (this.combobarContainerEl) this.combobarContainerEl.style.display = 'block'
+                    }
+
+                    this.score += 1 * this.combo
                     this.scoreEl.textContent = 'Score: ' + this.score
 
                     if (this.score <= 5) {
@@ -1470,6 +1508,17 @@ class MarblesGame {
                     if (audio.playCollect) audio.playCollect()
                     console.log(`[GAME] Collected ${p.type} powerup!`)
 
+                    // Combo Logic
+                    this.combo = Math.min(10, this.combo + 1)
+                    this.comboTimer = Date.now()
+                    if (this.comboEl) {
+                        this.comboEl.style.display = 'block'
+                        this.comboEl.textContent = `Combo: x${this.combo}`
+                        this.comboEl.style.transform = 'scale(1.2)'
+                        setTimeout(() => { if (this.comboEl) this.comboEl.style.transform = 'scale(1)' }, 100)
+                    }
+                    if (this.combobarContainerEl) this.combobarContainerEl.style.display = 'block'
+
                     this.world.removeRigidBody(p.rigidBody)
                     this.scene.remove(p.entity)
                     this.engine.destroyEntity(p.entity)
@@ -1492,7 +1541,18 @@ class MarblesGame {
                 if (dist < 1.0) {
                     const relSpeed = Math.hypot(pv.x - ov.x, pv.y - ov.y, pv.z - ov.z)
                     if (relSpeed > 4) {
-                        this.score += Math.floor(relSpeed / 3)
+                        // Combo Logic
+                        this.combo = Math.min(10, this.combo + 1)
+                        this.comboTimer = Date.now()
+                        if (this.comboEl) {
+                            this.comboEl.style.display = 'block'
+                            this.comboEl.textContent = `Combo: x${this.combo}`
+                            this.comboEl.style.transform = 'scale(1.2)'
+                            setTimeout(() => { if (this.comboEl) this.comboEl.style.transform = 'scale(1)' }, 100)
+                        }
+                        if (this.combobarContainerEl) this.combobarContainerEl.style.display = 'block'
+
+                        this.score += Math.floor(relSpeed / 3) * this.combo
                         this.scoreEl.innerText = `Score: ${this.score}`
 
                         const playerRadius = this.playerMarble.scale * 0.5 || 0.5
@@ -1925,7 +1985,19 @@ class MarblesGame {
                     const distSq = dx*dx + dy*dy + dz*dz
                     if (distSq < 2.25) {
                         if (audio.playCollect) audio.playCollect()
-                        this.score += 10
+
+                        // Combo Logic
+                        this.combo = Math.min(10, this.combo + 1)
+                        this.comboTimer = Date.now()
+                        if (this.comboEl) {
+                            this.comboEl.style.display = 'block'
+                            this.comboEl.textContent = `Combo: x${this.combo}`
+                            this.comboEl.style.transform = 'scale(1.2)'
+                            setTimeout(() => { if (this.comboEl) this.comboEl.style.transform = 'scale(1)' }, 100)
+                        }
+                        if (this.combobarContainerEl) this.combobarContainerEl.style.display = 'block'
+
+                        this.score += 10 * this.combo
                         this.scoreEl.textContent = 'Score: ' + this.score
                         this.scene.remove(c.entity)
                         this.engine.destroyEntity(c.entity)
@@ -1933,6 +2005,22 @@ class MarblesGame {
                     }
                 }
             }
+        }
+
+        // Combo Timer Logic
+        const comboTimeElapsed = Date.now() - this.comboTimer
+        if (comboTimeElapsed > this.maxComboTime && this.combo > 1) {
+            this.combo = 1
+            if (this.comboEl) {
+                this.comboEl.style.display = 'none'
+                this.comboEl.textContent = `Combo: x${this.combo}`
+            }
+            if (this.combobarContainerEl) this.combobarContainerEl.style.display = 'none'
+            if (this.combobarEl) this.combobarEl.style.width = '0%'
+        } else if (this.combo > 1 && this.combobarEl) {
+            const timeRemaining = Math.max(0, this.maxComboTime - comboTimeElapsed)
+            const pct = (timeRemaining / this.maxComboTime) * 100
+            this.combobarEl.style.width = `${pct}%`
         }
 
         // Update Active Effects UI

@@ -131,8 +131,35 @@
         #score {
             font-size: 32px;
             font-weight: bold;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        #combo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff00ff;
             margin-bottom: 10px;
             text-shadow: 2px 2px 0px #000;
+            transition: transform 0.1s;
+        }
+
+        #combobar-container {
+            width: 200px;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+            margin-top: -5px;
+        }
+
+        #combobar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff00ff 0%, #00ffff 100%);
+            transition: width 0.1s linear;
         }
 
         #timer {
@@ -380,6 +407,10 @@
     <div id="ui">
         <div id="level-name">Level</div>
         <div id="score">Score: 0</div>
+        <div id="combo" style="display: none;">Combo: x1</div>
+        <div id="combobar-container" style="display: none;">
+            <div id="combobar"></div>
+        </div>
         <div id="timer">Time: 0.00s</div>
         <div id="selected">Selected: 1</div>
         <div id="aim">Aim: 0°</div>
