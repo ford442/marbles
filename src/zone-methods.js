@@ -130,6 +130,7 @@ export class ZoneMethods {
         this.createPowerUp({ x: offset.x - 3, y: offset.y + 1, z: offset.z }, 'speed');
         this.createPowerUp({ x: offset.x + 3, y: offset.y + 1, z: offset.z }, 'speed');
         this.createPowerUp({ x: offset.x, y: offset.y + 1, z: offset.z + 10 }, 'jump');
+        this.createPowerUp({ x: offset.x, y: offset.y + 1, z: offset.z + 15 }, 'gravity');
 
         this.createStaticBox(
             { x: offset.x, y: offset.y + 1, z: offset.z + 20 },
@@ -155,6 +156,7 @@ export class ZoneMethods {
         let color = [1, 1, 1];
         if (type === 'speed') color = [0, 1, 1];
         if (type === 'jump') color = [0, 1, 0];
+        if (type === 'gravity') color = [1, 1, 0];
 
         matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color);
         matInstance.setFloatParameter('roughness', 0.2);
