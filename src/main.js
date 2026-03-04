@@ -102,6 +102,8 @@ class MarblesGame {
         this.maxJumps = 2
         this.powerUpRotation = 0
         this.isStomping = false
+        this.stompStartTime = 0
+        this.trickState = { airTime: 0, spin: 0, wallRides: 0, highSpeed: 0 }
 
         this.magnetPower = 1.0
         this.magnetActive = false
@@ -346,6 +348,7 @@ class MarblesGame {
             }
             if (e.code === 'KeyZ' && this.playerMarble && !this.isGrounded(this.playerMarble)) {
                 this.isStomping = true
+                this.stompStartTime = Date.now()
                 this.playerMarble.rigidBody.setLinvel({ x: 0, y: -60.0, z: 0 }, true)
 
                 const rcm = this.engine.getRenderableManager()
@@ -1351,14 +1354,14 @@ class MarblesGame {
         }
     }
 
-    performStompImpact() {
+    performStompImpact(multiplier = 1.0) {
         if (!this.playerMarble) return
 
         if (audio.playStomp) audio.playStomp()
 
         const center = this.playerMarble.rigidBody.translation()
-        const radius = 15.0
-        const force = 100.0
+        const radius = 15.0 * multiplier
+        const force = 100.0 * multiplier
 
         const applyForce = (body) => {
             const t = body.translation()
@@ -1397,6 +1400,59 @@ class MarblesGame {
         }
     }
 
+    awardTrickPoints(message, points, color) {
+        if (audio && audio.playCollect) audio.playCollect()
+
+        this.combo = Math.min(10, this.combo + 1)
+        this.comboTimer = Date.now()
+        if (this.comboEl) {
+            this.comboEl.style.display = 'block'
+            this.comboEl.textContent = `Combo: x${this.combo}`
+            this.comboEl.style.transform = 'scale(1.2)'
+            setTimeout(() => { if (this.comboEl) this.comboEl.style.transform = 'scale(1)' }, 100)
+        }
+        if (this.combobarContainerEl) this.combobarContainerEl.style.display = 'block'
+
+        this.score += points * this.combo
+        if (this.scoreEl) this.scoreEl.textContent = 'Score: ' + this.score
+
+        this.showTrickMessage(message + ` +${points * this.combo}`, color)
+    }
+
+    showTrickMessage(text, color) {
+        const uiContainer = document.getElementById('ui')
+        if (!uiContainer) return
+
+        const msgEl = document.createElement('div')
+        msgEl.textContent = text
+        msgEl.style.position = 'absolute'
+        // random position around the center-ish of the UI
+        msgEl.style.left = '200px'
+        msgEl.style.top = (150 + Math.random() * 50) + 'px'
+        msgEl.style.color = color || '#ffffff'
+        msgEl.style.fontWeight = 'bold'
+        msgEl.style.fontSize = '24px'
+        msgEl.style.textShadow = '2px 2px 0 #000'
+        msgEl.style.transition = 'all 1.5s ease-out'
+        msgEl.style.pointerEvents = 'none'
+        msgEl.style.zIndex = '100'
+
+        uiContainer.appendChild(msgEl)
+
+        // Force reflow
+        msgEl.getBoundingClientRect()
+
+        msgEl.style.top = (parseInt(msgEl.style.top) - 50) + 'px'
+        msgEl.style.opacity = '0'
+        msgEl.style.transform = 'scale(1.5)'
+
+        setTimeout(() => {
+            if (msgEl.parentNode) {
+                msgEl.parentNode.removeChild(msgEl)
+            }
+        }, 1500)
+    }
+
     checkGameLogic() {
         if (!this.currentLevel || this.levelComplete) return
 
@@ -1405,10 +1461,28 @@ class MarblesGame {
             if (linvel.y <= 0.1) {
                 this.jumpCount = 0
             }
+
+            if (this.trickState.airTime > 30) {
+                const points = Math.floor(this.trickState.airTime * 2 + this.trickState.spin * 10)
+                this.awardTrickPoints('Air Time + Spin', points, '#00ffcc')
+            }
+            this.trickState.airTime = 0
+            this.trickState.spin = 0
+
             if (this.isStomping) {
-                this.performStompImpact()
+                let multiplier = 1.0
+                const stompDuration = Date.now() - this.stompStartTime
+                if (stompDuration < 300) {
+                    multiplier = 2.0
+                    this.awardTrickPoints('Perfect Stomp!', 50, '#ff0000')
+                }
+                this.performStompImpact(multiplier)
                 this.isStomping = false
             }
+        } else if (this.playerMarble) {
+            this.trickState.airTime += 1
+            const angvel = this.playerMarble.rigidBody.angvel()
+            this.trickState.spin += Math.hypot(angvel.x, angvel.y, angvel.z)
         }
 
         const level = LEVELS[this.currentLevel]
