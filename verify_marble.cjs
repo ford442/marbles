@@ -39,18 +39,18 @@ const { chromium } = require('playwright');
           const selectedText = await page.textContent('#selected');
           // console.log(`Current: ${selectedText}`);
 
-          if (selectedText && selectedText.includes('Chameleon')) {
+          if (selectedText && selectedText.includes('Crystal')) {
               console.log(`FOUND: ${selectedText}`);
               found = true;
               await page.waitForTimeout(2000);
-              await page.screenshot({ path: 'verification_chameleon.png' });
+              await page.screenshot({ path: 'verification_crystal.png' });
               console.log('Screenshot saved.');
               break;
           }
       }
 
       if (!found) {
-          console.error('FAILED: "Chameleon" marble not found.');
+          console.error('FAILED: "Crystal" marble not found.');
           // Take a debug screenshot to see where we are
           await page.screenshot({ path: 'debug_failed.png' });
           console.log('Saved debug_failed.png');

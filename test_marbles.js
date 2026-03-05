@@ -48,6 +48,7 @@ try {
     checkMarble("Digital Cube", ['geometry: \'cube\'', 'color', 'radius', 'density']);
     checkMarble("Sun", ['color', 'radius', 'density', 'emissive: true', 'lightIntensity']);
     checkMarble("Chameleon", ['rainbow: true']);
+    checkMarble("Crystal", ['color', 'radius', 'density', 'friction', 'restitution', 'roughness', 'emissive: true', 'lightIntensity', 'lightColor']);
 
     if (!success) {
         console.error("Some marble checks failed.");
