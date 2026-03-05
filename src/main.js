@@ -288,7 +288,9 @@ class MarblesGame {
             }
             this.keys[e.code] = true
             if (e.code === 'KeyC') {
-                this.cameraMode = this.cameraMode === 'orbit' ? 'follow' : 'orbit'
+                const modes = ['orbit', 'follow', 'fpv', 'topdown']
+                const idx = modes.indexOf(this.cameraMode)
+                this.cameraMode = modes[(idx + 1) % modes.length]
                 console.log('Camera Mode:', this.cameraMode)
             }
             if (e.code === 'KeyE') {
@@ -1749,7 +1751,7 @@ class MarblesGame {
             if (this.keys['ArrowRight'] || this.keys['KeyD']) this.camAngle += rotSpeed
             if (this.keys['ArrowUp'] || this.keys['KeyW']) this.camRadius = Math.max(5, this.camRadius - zoomSpeed)
             if (this.keys['ArrowDown'] || this.keys['KeyS']) this.camRadius = Math.min(100, this.camRadius + zoomSpeed)
-        } else {
+        } else if (this.cameraMode === 'follow' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown') {
             let impulseStrength = 0.5
             if (this.activeEffects.speed && Date.now() < this.activeEffects.speed) {
                 impulseStrength *= 2.0
@@ -1894,18 +1896,35 @@ class MarblesGame {
         this.aimEl.textContent = `Yaw: ${yawDeg}° Pitch: ${pitchDeg}°`
         this.powerbarEl.style.width = `${this.chargePower * 100}%`
 
-        if (this.cameraMode === 'follow' && this.currentLevel) {
+        if ((this.cameraMode === 'follow' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown') && this.currentLevel) {
             const level = LEVELS[this.currentLevel]
             const target = this.playerMarble || this.getLeader()
             if (target) {
                 const t = target.rigidBody.translation()
-                const height = level?.camera?.height || 10
-                const dist = 20
+                if (this.cameraMode === 'follow') {
+                    const height = level?.camera?.height || 10
+                    const dist = 20
 
-                const eyeX = t.x - Math.sin(this.aimYaw) * dist
-                const eyeZ = t.z - Math.cos(this.aimYaw) * dist
+                    const eyeX = t.x - Math.sin(this.aimYaw) * dist
+                    const eyeZ = t.z - Math.cos(this.aimYaw) * dist
 
-                this.camera.lookAt([eyeX, t.y + height, eyeZ], [t.x, t.y, t.z], [0, 1, 0])
+                    this.camera.lookAt([eyeX, t.y + height, eyeZ], [t.x, t.y, t.z], [0, 1, 0])
+                } else if (this.cameraMode === 'fpv') {
+                    const r = target.scale * 0.5 || 0.5
+                    const eyeX = t.x
+                    const eyeY = t.y + r + 0.1
+                    const eyeZ = t.z
+
+                    const cosP = Math.cos(this.pitchAngle)
+                    const sinP = Math.sin(this.pitchAngle)
+                    const dirX = Math.sin(this.aimYaw) * cosP
+                    const dirY = sinP
+                    const dirZ = Math.cos(this.aimYaw) * cosP
+
+                    this.camera.lookAt([eyeX, eyeY, eyeZ], [eyeX + dirX, eyeY + dirY, eyeZ + dirZ], [0, 1, 0])
+                } else if (this.cameraMode === 'topdown') {
+                    this.camera.lookAt([t.x, t.y + 40, t.z], [t.x, t.y, t.z], [0, 0, -1])
+                }
             }
         } else {
             const eyeX = this.camRadius * Math.sin(this.camAngle)
