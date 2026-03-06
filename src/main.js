@@ -54,6 +54,11 @@ class MarblesGame {
         this.activeEffects = { speed: 0, jump: 0 }
         this.movingPlatforms = []
         this.rotatingPlatforms = []
+        this.temporaryPlatforms = []
+        this.holoDuration = 3000
+        this.holoCooldown = 5000
+        this.lastHoloTime = 0
+
         this.Filament = null
         this.material = null
         this.cubeMesh = null
@@ -84,6 +89,8 @@ class MarblesGame {
         this.focusBarEl = document.getElementById('focusbar')
         this.rewindBarEl = document.getElementById('rewindbar')
         this.gravityBarEl = document.getElementById('gravitybar')
+        this.holobarEl = document.getElementById('holobar')
+        this.holobarContainerEl = document.getElementById('holobar-container')
         this.effectEl = document.getElementById('effects')
         this.currentMarbleIndex = 0
         this.aimYaw = 0
@@ -303,6 +310,9 @@ class MarblesGame {
             if (e.code === 'KeyQ') {
                 this.magnetMode = 'repel'
                 this.magnetActive = true
+            }
+            if (e.code === 'KeyB' && this.playerMarble) {
+                this.spawnHoloPlatform()
             }
             if (e.code === 'KeyV' && this.playerMarble) {
                 const now = Date.now()
@@ -624,6 +634,17 @@ class MarblesGame {
             this.engine.destroyEntity(platform.entity)
         }
         this.rotatingPlatforms = []
+
+        if (this.temporaryPlatforms) {
+            for (const p of this.temporaryPlatforms) {
+                this.world.removeRigidBody(p.rigidBody)
+                this.scene.remove(p.entity)
+                if (p.matInstance) this.engine.destroyMaterialInstance(p.matInstance)
+                this.engine.destroyEntity(p.entity)
+                this.Filament.EntityManager.get().destroy(p.entity)
+            }
+            this.temporaryPlatforms = []
+        }
 
         this.setNightMode(false)
     }
@@ -1683,6 +1704,58 @@ class MarblesGame {
         }
     }
 
+    spawnHoloPlatform() {
+        const now = Date.now()
+        if (now - this.lastHoloTime < this.holoCooldown) return
+
+        this.lastHoloTime = now
+        const pos = this.playerMarble.rigidBody.translation()
+
+        // Spawn platform slightly below the marble
+        const spawnPos = { x: pos.x, y: pos.y - 1.2, z: pos.z }
+        const halfExtents = { x: 3, y: 0.2, z: 3 }
+
+        const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(spawnPos.x, spawnPos.y, spawnPos.z)
+        const body = this.world.createRigidBody(bodyDesc)
+        const colliderDesc = RAPIER.ColliderDesc.cuboid(halfExtents.x, halfExtents.y, halfExtents.z)
+            .setFriction(0.5)
+            .setRestitution(0.3)
+        this.world.createCollider(colliderDesc, body)
+
+        const entity = this.Filament.EntityManager.get().create()
+        const matInstance = this.material.createInstance()
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.0, 1.0, 1.0])
+        matInstance.setFloatParameter('roughness', 0.1)
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .build(this.engine, entity)
+
+        const tcm = this.engine.getTransformManager()
+        const inst = tcm.getInstance(entity)
+        const mat = quaternionToMat4(spawnPos, { x: 0, y: 0, z: 0, w: 1 })
+
+        const scaleMat = new Float32Array(16)
+        scaleMat[0] = halfExtents.x * 2; scaleMat[5] = halfExtents.y * 2; scaleMat[10] = halfExtents.z * 2; scaleMat[15] = 1
+
+        for (let i = 0; i < 12; i += 4) {
+            const x = mat[i], y = mat[i + 1], z = mat[i + 2], w = mat[i + 3]
+            mat[i] = x * scaleMat[0]; mat[i + 1] = y * scaleMat[5]; mat[i + 2] = z * scaleMat[10]; mat[i + 3] = w * scaleMat[15]
+        }
+
+        tcm.setTransform(inst, mat)
+        this.scene.addEntity(entity)
+
+        this.temporaryPlatforms.push({
+            entity: entity,
+            rigidBody: body,
+            matInstance: matInstance,
+            spawnTime: now
+        })
+    }
+
     loop() {
         if (!this.frameCount) this.frameCount = 0
         this.frameCount++
@@ -2159,6 +2232,42 @@ class MarblesGame {
                 }
             }
             effectsContainer.textContent = active.join(' | ')
+        }
+
+        if (this.holobarContainerEl && this.holobarEl) {
+            const timeSinceHolo = now - this.lastHoloTime
+            if (timeSinceHolo < this.holoCooldown) {
+                this.holobarContainerEl.style.display = 'block'
+                const pct = (timeSinceHolo / this.holoCooldown) * 100
+                this.holobarEl.style.width = pct + '%'
+            } else {
+                this.holobarEl.style.width = '100%'
+                this.holobarContainerEl.style.display = 'none'
+            }
+        }
+
+        // Handle Holo-Platform lifecycle
+        for (let i = this.temporaryPlatforms.length - 1; i >= 0; i--) {
+            const p = this.temporaryPlatforms[i]
+            const timeAlive = now - p.spawnTime
+
+            if (timeAlive > this.holoDuration) {
+                this.world.removeRigidBody(p.rigidBody)
+                this.scene.remove(p.entity)
+                if (p.matInstance) this.engine.destroyMaterialInstance(p.matInstance)
+                this.engine.destroyEntity(p.entity)
+                this.Filament.EntityManager.get().destroy(p.entity)
+                this.temporaryPlatforms.splice(i, 1)
+            } else {
+                const timeLeft = this.holoDuration - timeAlive
+                if (timeLeft < 1000) {
+                    const blink = Math.floor(now / 100) % 2 === 0
+                    if (p.matInstance) {
+                        const color = blink ? [1.0, 0.0, 0.0] : [0.0, 1.0, 1.0]
+                        p.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color)
+                    }
+                }
+            }
         }
 
         this.world.step()
