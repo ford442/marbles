@@ -23,6 +23,13 @@ __pycache__/
 *.o
 *.a
 
+# WASM Renderer build outputs
+/wasm_renderer/build/
+/wasm_renderer/dist/
+/wasm_renderer/public/
+/public/wasm/
+/cmake-build-*/
+
 # IDE
 .vscode/settings.json
 .vscode/launch.json
