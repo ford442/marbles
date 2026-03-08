@@ -407,6 +407,23 @@ export const LEVELS = {
         nightMode: true,
         backgroundColor: [0.05, 0.0, 0.0, 1.0]
     },
+    cyber_run: {
+        name: 'Cyber Run',
+        description: 'Race across the neon tracks and dodge the lasers!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'cyber_track', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 0, y: -0.75, z: 85 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [80, 90], y: [-2, 2] } }
+        ],
+        camera: { mode: 'follow', height: 12, offset: -20 },
+        nightMode: true,
+        backgroundColor: [0.05, 0.05, 0.1, 1.0]
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
