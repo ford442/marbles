@@ -6,7 +6,7 @@ const { chromium } = require('playwright');
 
   page.on('console', msg => console.log('PAGE LOG:', msg.text()));
 
-  await page.goto('http://localhost:3000');
+  await page.goto('http://localhost:5173');
   await page.waitForTimeout(1000);
 
   console.log("Starting Sandbox level...");
