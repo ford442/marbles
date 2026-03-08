@@ -115,6 +115,9 @@ class MarblesGame {
         this.stompStartTime = 0
         this.trickState = { airTime: 0, spin: 0, wallRides: 0, highSpeed: 0 }
 
+        this.isWallRiding = false
+        this.wallRideTime = 0
+
         this.magnetPower = 1.0
         this.magnetActive = false
         this.magnetMode = null
@@ -1497,12 +1500,26 @@ class MarblesGame {
                 this.jumpCount = 0
             }
 
-            if (this.trickState.airTime > 30) {
-                const points = Math.floor(this.trickState.airTime * 2 + this.trickState.spin * 10)
-                this.awardTrickPoints('Air Time + Spin', points, '#00ffcc')
+            if (this.trickState.airTime > 30 || this.trickState.wallRides > 0) {
+                let points = Math.floor(this.trickState.airTime * 2 + this.trickState.spin * 10)
+                let msg = 'Air Time + Spin'
+
+                if (this.trickState.wallRides > 0) {
+                    points += this.trickState.wallRides * 50
+                    msg += ' + Wall Ride'
+                }
+
+                if (points > 0) {
+                    this.awardTrickPoints(msg, points, '#00ffcc')
+                }
             }
             this.trickState.airTime = 0
             this.trickState.spin = 0
+            this.trickState.wallRides = 0
+
+            this.isWallRiding = false
+            this.wallRideTime = 0
+            if (audio.stopRolling) audio.stopRolling('wallride')
 
             if (this.isStomping) {
                 let multiplier = 1.0
@@ -1518,6 +1535,35 @@ class MarblesGame {
             this.trickState.airTime += 1
             const angvel = this.playerMarble.rigidBody.angvel()
             this.trickState.spin += Math.hypot(angvel.x, angvel.y, angvel.z)
+
+            const wallContact = this.getWallContact(this.playerMarble)
+            const rb = this.playerMarble.rigidBody
+            const linvel = rb.linvel()
+            const horizSpeed = Math.hypot(linvel.x, linvel.z)
+
+            if (wallContact && horizSpeed > 5.0 && this.wallRideTime < 90) {
+                if (!this.isWallRiding) {
+                    this.isWallRiding = true
+                    this.trickState.wallRides += 1
+                }
+
+                const mass = rb.mass()
+                rb.applyImpulse({ x: 0, y: 0.16 * mass, z: 0 }, true)
+                rb.applyImpulse({ x: -wallContact.normal.x * 2.0, y: 0, z: -wallContact.normal.z * 2.0 }, true)
+
+                this.wallRideTime += 1
+
+                const radius = this.playerMarble.scale * 0.5 || 0.5
+                if (audio.startRolling && audio.updateRolling) {
+                    audio.startRolling('wallride', radius, 'concrete')
+                    audio.updateRolling('wallride', horizSpeed, 0)
+                }
+            } else {
+                if (this.isWallRiding) {
+                    this.isWallRiding = false
+                    if (audio.stopRolling) audio.stopRolling('wallride')
+                }
+            }
         }
 
         const level = LEVELS[this.currentLevel]
