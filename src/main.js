@@ -101,6 +101,8 @@ class MarblesGame {
         this.holobarContainerEl = document.getElementById('holobar-container')
         this.bombBarEl = document.getElementById('bombbar')
         this.bombBarContainerEl = document.getElementById('bombbar-container')
+        this.hoverBarEl = document.getElementById('hoverbar')
+        this.hoverBarContainerEl = document.getElementById('hoverbar-container')
         this.effectEl = document.getElementById('effects')
         this.currentMarbleIndex = 0
         this.aimYaw = 0
@@ -142,6 +144,11 @@ class MarblesGame {
         this.focusEnergy = 100
         this.maxFocusEnergy = 100
         this.focusActive = false
+
+        // Hover Mechanic
+        this.hoverEnergy = 100
+        this.maxHoverEnergy = 100
+        this.hoverActive = false
 
         // Rewind Mechanic
         this.rewindHistory = []
@@ -327,6 +334,9 @@ class MarblesGame {
             if (e.code === 'KeyB' && this.playerMarble) {
                 this.spawnHoloPlatform()
             }
+            if (e.code === 'KeyH' && this.playerMarble) {
+                this.hoverActive = true
+            }
             if (e.code === 'KeyV' && this.playerMarble) {
                 const now = Date.now()
                 if (now - this.lastDashTime > this.dashCooldown) {
@@ -392,6 +402,9 @@ class MarblesGame {
         })
 
         window.addEventListener('keyup', (e) => {
+            if (e.code === 'KeyH') {
+                this.hoverActive = false
+            }
             if (e.code === 'KeyT') {
                 this.isRewinding = false
                 if (this.playerMarble) {
@@ -2060,6 +2073,32 @@ class MarblesGame {
             } else {
                 this.gravityBarEl.style.width = `0%`
                 this.gravityBarEl.style.filter = 'none'
+            }
+        }
+
+        if (this.hoverActive && this.hoverEnergy > 0) {
+            if (this.playerMarble) {
+                const mass = this.playerMarble.rigidBody.mass()
+                const linvel = this.playerMarble.rigidBody.linvel()
+                if (linvel.y < 0) {
+                    this.playerMarble.rigidBody.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true)
+                }
+                this.playerMarble.rigidBody.applyImpulse({ x: 0, y: 0.1635 * mass, z: 0 }, true)
+            }
+            this.hoverEnergy = Math.max(0, this.hoverEnergy - 0.5)
+        } else {
+            if (this.playerMarble && this.isGrounded(this.playerMarble)) {
+                this.hoverEnergy = Math.min(this.maxHoverEnergy, this.hoverEnergy + 0.2)
+            }
+        }
+
+        if (this.hoverBarEl) {
+            const pct = (this.hoverEnergy / this.maxHoverEnergy) * 100
+            this.hoverBarEl.style.width = `${pct}%`
+            if (this.hoverActive && this.hoverEnergy > 0) {
+                this.hoverBarEl.style.boxShadow = '0 0 10px #00ffcc'
+            } else {
+                this.hoverBarEl.style.boxShadow = 'none'
             }
         }
 
