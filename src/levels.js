@@ -439,6 +439,23 @@ export const LEVELS = {
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: false
     },
+    grapple_course_run: {
+        name: 'Grapple Course Run',
+        description: 'Use the grapple hook (Right Click) and wall-ride to cross the void!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'grapple_course', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 0, y: 0.25, z: 150 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [145, 155], y: [-2, 2] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.02, 0.05, 0.1, 1.0]
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
