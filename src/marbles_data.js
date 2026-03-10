@@ -1,4 +1,7 @@
+import { marbleDraft } from './marble_draft.js';
+
 export const marblesInfo = [
+    marbleDraft,
     { name: "Red Standard", color: [1.0, 0.0, 0.0], offset: { x: -1.0, y: 0, z: 0 }, roughness: 0.4 },
     { name: "Blue Standard", color: [0.0, 0.0, 1.0], offset: { x: 1.0, y: 0, z: 0 }, roughness: 0.4 },
     { name: "Green Bouncy", color: [0.2, 1.0, 0.2], offset: { x: -2.5, y: 4, z: 0 }, radius: 0.4, friction: 0.1, restitution: 0.8, roughness: 0.2 },
