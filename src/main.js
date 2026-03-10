@@ -12,6 +12,7 @@ import { createCanyonRunZone } from './canyon_run.js';
 import { createVolcanoZone } from './volcano_zone.js';
 import { createWindTunnelZone } from './wind_tunnel_zone.js';
 import { createCyberTrackZone } from './cyber_track_zone.js';
+import { createWaterSlideZone } from './water_slide_zone.js';
 import { audio } from './audio.js';
 import { LEVELS } from './levels.js';
 import { quatFromEuler, quaternionToMat4 } from './math.js';
@@ -760,6 +761,9 @@ class MarblesGame {
                 break
             case 'cyber_track':
                 createCyberTrackZone(this, offset)
+                break
+            case 'water_slide':
+                createWaterSlideZone(this, offset)
                 break
         }
     }

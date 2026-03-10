@@ -424,6 +424,21 @@ export const LEVELS = {
         nightMode: true,
         backgroundColor: [0.05, 0.05, 0.1, 1.0]
     },
+    water_slide: {
+        name: 'Water Slide',
+        description: 'Slide down the curvy water slide!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'water_slide', pos: { x: 0, y: 0, z: 25 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-50, 50], z: [80, 150], y: [-30, 10] } } // This will be adjusted after seeing the level
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: false
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
