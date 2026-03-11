@@ -14,6 +14,7 @@ import { createWindTunnelZone } from './wind_tunnel_zone.js';
 import { createCyberTrackZone } from './cyber_track_zone.js';
 import { createWaterSlideZone } from './water_slide_zone.js';
 import { createGrappleCourseZone } from './grapple_course_zone.js';
+import { createIceCaveZone } from './ice_cave_zone.js';
 import { audio } from './audio.js';
 import { LEVELS } from './levels.js';
 import { quatFromEuler, quaternionToMat4 } from './math.js';
@@ -807,6 +808,9 @@ class MarblesGame {
                 break
             case 'grapple_course':
                 createGrappleCourseZone(this, offset)
+                break
+            case 'ice_cave':
+                createIceCaveZone(this, offset)
                 break
         }
     }
