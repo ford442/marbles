@@ -151,6 +151,15 @@ class MarblesGame {
         this.maxHoverEnergy = 100
         this.hoverActive = false
 
+        // Frost Bridge Mechanic
+        this.iceEnergy = 100
+        this.maxIceEnergy = 100
+        this.lastIceTime = 0
+        this.iceCooldown = 150
+        this.iceActive = false
+        this.icebarEl = document.getElementById('icebar')
+        this.icebarContainerEl = document.getElementById('icebar-container')
+
         // Rewind Mechanic
         this.rewindHistory = []
         this.isRewinding = false
@@ -338,6 +347,9 @@ class MarblesGame {
             if (e.code === 'KeyH' && this.playerMarble) {
                 this.hoverActive = true
             }
+            if (e.code === 'KeyG' && this.playerMarble) {
+                this.iceActive = true
+            }
             if (e.code === 'KeyV' && this.playerMarble) {
                 const now = Date.now()
                 if (now - this.lastDashTime > this.dashCooldown) {
@@ -405,6 +417,9 @@ class MarblesGame {
         window.addEventListener('keyup', (e) => {
             if (e.code === 'KeyH') {
                 this.hoverActive = false
+            }
+            if (e.code === 'KeyG') {
+                this.iceActive = false
             }
             if (e.code === 'KeyT') {
                 this.isRewinding = false
@@ -1918,6 +1933,53 @@ class MarblesGame {
         }
     }
 
+    spawnIceBlock(pos) {
+        const now = Date.now()
+        const spawnPos = { x: pos.x, y: pos.y - 0.6, z: pos.z }
+        const halfExtents = { x: 0.6, y: 0.1, z: 0.6 }
+
+        const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(spawnPos.x, spawnPos.y, spawnPos.z)
+        const body = this.world.createRigidBody(bodyDesc)
+        const colliderDesc = RAPIER.ColliderDesc.cuboid(halfExtents.x, halfExtents.y, halfExtents.z)
+            .setFriction(0.0)
+            .setRestitution(0.1)
+        this.world.createCollider(colliderDesc, body)
+
+        const entity = this.Filament.EntityManager.get().create()
+        const matInstance = this.material.createInstance()
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.5, 0.9, 1.0])
+        matInstance.setFloatParameter('roughness', 0.1)
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .build(this.engine, entity)
+
+        const tcm = this.engine.getTransformManager()
+        const inst = tcm.getInstance(entity)
+        const mat = quaternionToMat4(spawnPos, { x: 0, y: 0, z: 0, w: 1 })
+
+        const scaleMat = new Float32Array(16)
+        scaleMat[0] = halfExtents.x * 2; scaleMat[5] = halfExtents.y * 2; scaleMat[10] = halfExtents.z * 2; scaleMat[15] = 1
+
+        for (let i = 0; i < 12; i += 4) {
+            const x = mat[i], y = mat[i + 1], z = mat[i + 2], w = mat[i + 3]
+            mat[i] = x * scaleMat[0]; mat[i + 1] = y * scaleMat[5]; mat[i + 2] = z * scaleMat[10]; mat[i + 3] = w * scaleMat[15]
+        }
+
+        tcm.setTransform(inst, mat)
+        this.scene.addEntity(entity)
+
+        this.temporaryPlatforms.push({
+            entity: entity,
+            rigidBody: body,
+            matInstance: matInstance,
+            spawnTime: now,
+            duration: 2000
+        })
+    }
+
     spawnHoloPlatform() {
         const now = Date.now()
         if (now - this.lastHoloTime < this.holoCooldown) return
@@ -2103,6 +2165,37 @@ class MarblesGame {
                 this.hoverBarEl.style.boxShadow = '0 0 10px #00ffcc'
             } else {
                 this.hoverBarEl.style.boxShadow = 'none'
+            }
+        }
+
+        // Frost Bridge Logic
+        if (this.iceActive && this.iceEnergy > 0 && this.playerMarble) {
+            this.iceEnergy = Math.max(0, this.iceEnergy - 0.5)
+
+            const now = Date.now()
+            if (now - this.lastIceTime > this.iceCooldown) {
+                this.lastIceTime = now
+                const pos = this.playerMarble.rigidBody.translation()
+                this.spawnIceBlock(pos)
+            }
+        } else {
+            this.iceEnergy = Math.min(this.maxIceEnergy, this.iceEnergy + 0.2)
+        }
+
+        if (this.icebarContainerEl && this.icebarEl) {
+            const pct = (this.iceEnergy / this.maxIceEnergy) * 100
+            this.icebarEl.style.width = `${pct}%`
+
+            if (this.iceEnergy < this.maxIceEnergy || this.iceActive) {
+                this.icebarContainerEl.style.display = 'block'
+            } else {
+                this.icebarContainerEl.style.display = 'none'
+            }
+
+            if (this.iceActive && this.iceEnergy > 0) {
+                this.icebarEl.style.boxShadow = '0 0 10px #00ffff'
+            } else {
+                this.icebarEl.style.boxShadow = 'none'
             }
         }
 
@@ -2551,12 +2644,13 @@ class MarblesGame {
             }
         }
 
-        // Handle Holo-Platform lifecycle
+        // Handle temporary platforms lifecycle
         for (let i = this.temporaryPlatforms.length - 1; i >= 0; i--) {
             const p = this.temporaryPlatforms[i]
             const timeAlive = now - p.spawnTime
+            const maxDuration = p.duration || this.holoDuration
 
-            if (timeAlive > this.holoDuration) {
+            if (timeAlive > maxDuration) {
                 this.world.removeRigidBody(p.rigidBody)
                 this.scene.remove(p.entity)
                 if (p.matInstance) this.engine.destroyMaterialInstance(p.matInstance)
@@ -2564,11 +2658,22 @@ class MarblesGame {
                 this.Filament.EntityManager.get().destroy(p.entity)
                 this.temporaryPlatforms.splice(i, 1)
             } else {
-                const timeLeft = this.holoDuration - timeAlive
+                const timeLeft = maxDuration - timeAlive
                 if (timeLeft < 1000) {
                     const blink = Math.floor(now / 100) % 2 === 0
-                    if (p.matInstance) {
+                    if (p.matInstance && !p.duration) { // Only blink Holo-platforms, not ice blocks
                         const color = blink ? [1.0, 0.0, 0.0] : [0.0, 1.0, 1.0]
+                        p.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color)
+                    } else if (p.matInstance && p.duration) {
+                        // Fade/blink out ice blocks subtly
+                        const scale = blink ? 0.9 : 1.0
+                        const tcm = this.engine.getTransformManager()
+                        const inst = tcm.getInstance(p.entity)
+                        const mat = tcm.getTransform(inst)
+
+                        // We shouldn't modify the main transform's scaling easily without recreating it.
+                        // So let's just change color to whiteish.
+                        const color = blink ? [1.0, 1.0, 1.0] : [0.5, 0.9, 1.0]
                         p.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color)
                     }
                 }
