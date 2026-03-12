@@ -2,6 +2,7 @@ import { spaceStationLevel } from './space_station.js';
 import { skateParkLevel } from './skate_park.js';
 import { pinballLevel } from './pinball_zone.js';
 import { canyonRunLevel } from './canyon_run.js';
+import { antigravityLevel } from './antigravity_zone.js';
 
 export const LEVELS = {
     wind_tunnel: {
@@ -475,5 +476,6 @@ export const LEVELS = {
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
-    canyon_run: canyonRunLevel
+    canyon_run: canyonRunLevel,
+    antigravity_chamber: antigravityLevel
 };
