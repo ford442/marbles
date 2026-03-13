@@ -8,6 +8,7 @@ import { createClockworkZone } from './clockwork_zone.js';
 import { createBumperArenaZone } from './bumper_arena.js';
 import { createPinwheelAlleyZone } from './pinwheel_alley.js';
 import { createPlinkoZone } from './plinko_zone.js';
+import { createPlinkoObstacleZone } from './plinko_obstacle_zone.js';
 import { createCanyonRunZone } from './canyon_run.js';
 import { createVolcanoZone } from './volcano_zone.js';
 import { createWindTunnelZone } from './wind_tunnel_zone.js';
@@ -757,6 +758,9 @@ class MarblesGame {
                 break
             case 'plinko':
                 createPlinkoZone(this, offset)
+                break;
+            case 'plinko_obstacle':
+                createPlinkoObstacleZone(this, offset)
                 break;
             case 'neon_city':
                 this.createNeonCityZone(offset)

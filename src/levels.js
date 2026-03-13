@@ -19,6 +19,21 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
+    plinko_obstacle: {
+        name: 'Plinko Obstacle Course',
+        description: 'Navigate the slanted board full of pegs!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'plinko_obstacle', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 0, y: -5, z: 56 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [54, 58], y: [-7, -3] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
+    },
     tutorial: {
         name: 'Tutorial Ramp',
         description: 'Learn the basics on a simple ramp',
