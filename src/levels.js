@@ -2,6 +2,7 @@ import { spaceStationLevel } from './space_station.js';
 import { skateParkLevel } from './skate_park.js';
 import { pinballLevel } from './pinball_zone.js';
 import { canyonRunLevel } from './canyon_run.js';
+import { antigravityLevel } from './antigravity_zone.js';
 
 export const LEVELS = {
     wind_tunnel: {
@@ -16,6 +17,21 @@ export const LEVELS = {
         spawn: { x: 0, y: 8, z: -12 },
         goals: [
             { id: 1, range: { x: [-5, 5], z: [65, 75], y: [-1, 3] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
+    },
+    plinko_obstacle: {
+        name: 'Plinko Obstacle Course',
+        description: 'Navigate the slanted board full of pegs!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'plinko_obstacle', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 0, y: -5, z: 56 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [54, 58], y: [-7, -3] } }
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
@@ -475,5 +491,6 @@ export const LEVELS = {
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
-    canyon_run: canyonRunLevel
+    canyon_run: canyonRunLevel,
+    antigravity_chamber: antigravityLevel
 };

@@ -8,6 +8,7 @@ import { createClockworkZone } from './clockwork_zone.js';
 import { createBumperArenaZone } from './bumper_arena.js';
 import { createPinwheelAlleyZone } from './pinwheel_alley.js';
 import { createPlinkoZone } from './plinko_zone.js';
+import { createPlinkoObstacleZone } from './plinko_obstacle_zone.js';
 import { createCanyonRunZone } from './canyon_run.js';
 import { createVolcanoZone } from './volcano_zone.js';
 import { createWindTunnelZone } from './wind_tunnel_zone.js';
@@ -15,6 +16,7 @@ import { createCyberTrackZone } from './cyber_track_zone.js';
 import { createWaterSlideZone } from './water_slide_zone.js';
 import { createGrappleCourseZone } from './grapple_course_zone.js';
 import { createIceCaveZone } from './ice_cave_zone.js';
+import { createAntigravityZone } from './antigravity_zone.js';
 import { audio } from './audio.js';
 import { LEVELS } from './levels.js';
 import { quatFromEuler, quaternionToMat4 } from './math.js';
@@ -229,7 +231,8 @@ class MarblesGame {
         const radius = marble.scale * 0.5 || 0.5
         const pos = rb.translation()
         const rayOrigin = { x: pos.x, y: pos.y, z: pos.z }
-        const rayDir = { x: 0, y: this.flipActive ? 1 : -1, z: 0 }
+        const gravityDir = rb.gravityScale() < 0 ? 1 : -1
+        const rayDir = { x: 0, y: gravityDir, z: 0 }
         const ray = new RAPIER.Ray(rayOrigin, rayDir)
         const maxToi = radius + 0.1
         const hit = this.world.castRay(ray, maxToi, true)
@@ -303,7 +306,8 @@ class MarblesGame {
                             const linvel = rb.linvel()
                             rb.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true)
 
-                            const upForce = 15.0
+                            const gravityDir = rb.gravityScale() < 0 ? -1 : 1
+                            const upForce = 15.0 * gravityDir
                             const pushForce = 10.0
                             rb.applyImpulse({
                                 x: wallContact.normal.x * pushForce,
@@ -315,9 +319,11 @@ class MarblesGame {
                             audio.playJump()
                             console.log('[GAME] Wall Jump!')
                         } else if (this.jumpCount < this.maxJumps) {
-                            const linvel = this.playerMarble.rigidBody.linvel()
-                            this.playerMarble.rigidBody.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true)
-                            this.playerMarble.rigidBody.applyImpulse({ x: 0, y: 10.0, z: 0 }, true)
+                            const rb = this.playerMarble.rigidBody
+                            const linvel = rb.linvel()
+                            const gravityDir = rb.gravityScale() < 0 ? -1 : 1
+                            rb.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true)
+                            rb.applyImpulse({ x: 0, y: 10.0 * gravityDir, z: 0 }, true)
                             this.jumpCount++
                             audio.playJump()
                         }
@@ -327,6 +333,10 @@ class MarblesGame {
             if (e.code === 'Tab') {
                 e.preventDefault()
                 if (this.marbles.length > 0) {
+                    if (this.playerMarble && this.flipActive) {
+                        this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
+                        this.flipActive = false
+                    }
                     this.currentMarbleIndex = (this.currentMarbleIndex + 1) % this.marbles.length
                     this.playerMarble = this.marbles[this.currentMarbleIndex]
                     this.selectedEl.textContent = `Selected: ${this.playerMarble.name}`
@@ -359,6 +369,11 @@ class MarblesGame {
             }
             if (e.code === 'KeyU' && this.playerMarble) {
                 this.flipActive = !this.flipActive
+                if (this.flipActive) {
+                    this.playerMarble.rigidBody.setGravityScale(-this.playerMarble.baseGravityScale, true)
+                } else {
+                    this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
+                }
             }
             if (e.code === 'KeyV' && this.playerMarble) {
                 const now = Date.now()
@@ -408,7 +423,8 @@ class MarblesGame {
             if (e.code === 'KeyZ' && this.playerMarble && !this.isGrounded(this.playerMarble)) {
                 this.isStomping = true
                 this.stompStartTime = Date.now()
-                this.playerMarble.rigidBody.setLinvel({ x: 0, y: -60.0, z: 0 }, true)
+                const gravityDir = this.playerMarble.rigidBody.gravityScale() < 0 ? 1 : -1
+                this.playerMarble.rigidBody.setLinvel({ x: 0, y: 60.0 * gravityDir, z: 0 }, true)
 
                 const rcm = this.engine.getRenderableManager()
                 const inst = rcm.getInstance(this.playerMarble.entity)
@@ -452,7 +468,8 @@ class MarblesGame {
                     if (this.activeEffects.jump && Date.now() < this.activeEffects.jump) {
                         force *= 2.0
                     }
-                    this.playerMarble.rigidBody.applyImpulse({ x: 0, y: force, z: 0 }, true)
+                    const gravityDir = this.playerMarble.rigidBody.gravityScale() < 0 ? -1 : 1
+                    this.playerMarble.rigidBody.applyImpulse({ x: 0, y: force * gravityDir, z: 0 }, true)
                     audio.playJump()
                     this.jumpCount = 1
                 }
@@ -768,6 +785,9 @@ class MarblesGame {
             case 'plinko':
                 createPlinkoZone(this, offset)
                 break;
+            case 'plinko_obstacle':
+                createPlinkoObstacleZone(this, offset)
+                break;
             case 'neon_city':
                 this.createNeonCityZone(offset)
                 break
@@ -836,6 +856,9 @@ class MarblesGame {
                 break
             case 'ice_cave':
                 createIceCaveZone(this, offset)
+                break
+            case 'antigravity':
+                createAntigravityZone(this, offset)
                 break
         }
     }
@@ -1396,6 +1419,7 @@ class MarblesGame {
         this.currentMarbleIndex = 0
         this.playerMarble = this.marbles[0]
         this.selectedEl.textContent = `Selected: ${this.playerMarble ? this.playerMarble.name : 'None'}`
+        this.flipActive = false
         this.aimYaw = 0
         this.chargePower = 0
         this.charging = false
@@ -1590,7 +1614,8 @@ class MarblesGame {
 
         if (this.playerMarble && this.isGrounded(this.playerMarble)) {
             const linvel = this.playerMarble.rigidBody.linvel()
-            if (linvel.y <= 0.1) {
+            const gravityDir = this.playerMarble.rigidBody.gravityScale() < 0 ? -1 : 1
+            if ((gravityDir > 0 && linvel.y <= 0.1) || (gravityDir < 0 && linvel.y >= -0.1)) {
                 this.jumpCount = 0
             }
 
@@ -1642,7 +1667,8 @@ class MarblesGame {
                 }
 
                 const mass = rb.mass()
-                rb.applyImpulse({ x: 0, y: 0.16 * mass, z: 0 }, true)
+                const gravityDir = rb.gravityScale() < 0 ? -1 : 1
+                rb.applyImpulse({ x: 0, y: 0.16 * mass * gravityDir, z: 0 }, true)
                 rb.applyImpulse({ x: -wallContact.normal.x * 2.0, y: 0, z: -wallContact.normal.z * 2.0 }, true)
 
                 this.wallRideTime += 1
@@ -2157,10 +2183,11 @@ class MarblesGame {
             if (this.playerMarble) {
                 const mass = this.playerMarble.rigidBody.mass()
                 const linvel = this.playerMarble.rigidBody.linvel()
-                if (linvel.y < 0) {
+                const gravityDir = this.playerMarble.rigidBody.gravityScale() < 0 ? -1 : 1
+                if ((gravityDir > 0 && linvel.y < 0) || (gravityDir < 0 && linvel.y > 0)) {
                     this.playerMarble.rigidBody.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true)
                 }
-                this.playerMarble.rigidBody.applyImpulse({ x: 0, y: 0.1635 * mass, z: 0 }, true)
+                this.playerMarble.rigidBody.applyImpulse({ x: 0, y: 0.1635 * mass * gravityDir, z: 0 }, true)
             }
             this.hoverEnergy = Math.max(0, this.hoverEnergy - 0.5)
         } else {
@@ -2189,6 +2216,13 @@ class MarblesGame {
             if (this.playerMarble) {
                 this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
             }
+        } else if (this.flipActive && this.flipEnergy <= 0) {
+            this.flipActive = false
+            if (this.playerMarble) {
+                this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
+            }
+        } else if (!this.flipActive) {
+            this.flipEnergy = Math.min(this.maxFlipEnergy, this.flipEnergy + 0.2)
         }
 
         if (this.flipbarContainerEl && this.flipbarEl) {

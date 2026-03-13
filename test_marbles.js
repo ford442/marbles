@@ -50,6 +50,7 @@ try {
     checkMarble("Chameleon", ['rainbow: true']);
     checkMarble("Crystal", ['color', 'radius', 'density', 'friction', 'restitution', 'roughness', 'emissive: true', 'lightIntensity', 'lightColor']);
     checkMarble("Ghost", ['color', 'radius', 'density', 'gravityScale', 'friction', 'emissive: true', 'lightIntensity', 'lightColor']);
+    checkMarble("Quasar", ['color', 'radius', 'density', 'restitution', 'friction', 'emissive: true', 'lightIntensity', 'lightColor']);
 
     if (!success) {
         console.error("Some marble checks failed.");
