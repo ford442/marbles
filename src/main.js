@@ -160,6 +160,13 @@ class MarblesGame {
         this.icebarEl = document.getElementById('icebar')
         this.icebarContainerEl = document.getElementById('icebar-container')
 
+        // Gravity Flip Mechanic
+        this.flipEnergy = 100
+        this.maxFlipEnergy = 100
+        this.flipActive = false
+        this.flipbarEl = document.getElementById('flipbar')
+        this.flipbarContainerEl = document.getElementById('flipbar-container')
+
         // Rewind Mechanic
         this.rewindHistory = []
         this.isRewinding = false
@@ -222,7 +229,7 @@ class MarblesGame {
         const radius = marble.scale * 0.5 || 0.5
         const pos = rb.translation()
         const rayOrigin = { x: pos.x, y: pos.y, z: pos.z }
-        const rayDir = { x: 0, y: -1, z: 0 }
+        const rayDir = { x: 0, y: this.flipActive ? 1 : -1, z: 0 }
         const ray = new RAPIER.Ray(rayOrigin, rayDir)
         const maxToi = radius + 0.1
         const hit = this.world.castRay(ray, maxToi, true)
@@ -349,6 +356,9 @@ class MarblesGame {
             }
             if (e.code === 'KeyG' && this.playerMarble) {
                 this.iceActive = true
+            }
+            if (e.code === 'KeyU' && this.playerMarble) {
+                this.flipActive = !this.flipActive
             }
             if (e.code === 'KeyV' && this.playerMarble) {
                 const now = Date.now()
@@ -1318,7 +1328,8 @@ class MarblesGame {
                 initialPos: pos,
                 respawnPos: { ...pos },
                 scoredGoals: new Set(),
-                rainbow: info.rainbow
+                rainbow: info.rainbow,
+                baseGravityScale: info.gravityScale !== undefined ? info.gravityScale : 1.0
             }
 
             if (info.emissive) {
@@ -1434,7 +1445,7 @@ class MarblesGame {
             const pos = rb.translation()
 
             const rayOrigin = { x: pos.x, y: pos.y, z: pos.z }
-            const rayDir = { x: 0, y: -1, z: 0 }
+            const rayDir = { x: 0, y: this.flipActive ? 1 : -1, z: 0 }
             const ray = new RAPIER.Ray(rayOrigin, rayDir)
             const maxToi = radius + 0.1
 
@@ -2165,6 +2176,35 @@ class MarblesGame {
                 this.hoverBarEl.style.boxShadow = '0 0 10px #00ffcc'
             } else {
                 this.hoverBarEl.style.boxShadow = 'none'
+            }
+        }
+
+        // Gravity Flip Logic
+        if (this.flipActive && this.flipEnergy > 0 && this.playerMarble) {
+            this.flipEnergy = Math.max(0, this.flipEnergy - 0.5)
+            this.playerMarble.rigidBody.setGravityScale(-this.playerMarble.baseGravityScale, true)
+        } else {
+            this.flipActive = false
+            this.flipEnergy = Math.min(this.maxFlipEnergy, this.flipEnergy + 0.2)
+            if (this.playerMarble) {
+                this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
+            }
+        }
+
+        if (this.flipbarContainerEl && this.flipbarEl) {
+            const pct = (this.flipEnergy / this.maxFlipEnergy) * 100
+            this.flipbarEl.style.width = `${pct}%`
+
+            if (this.flipEnergy < this.maxFlipEnergy || this.flipActive) {
+                this.flipbarContainerEl.style.display = 'block'
+            } else {
+                this.flipbarContainerEl.style.display = 'none'
+            }
+
+            if (this.flipActive && this.flipEnergy > 0) {
+                this.flipbarEl.style.boxShadow = '0 0 10px #ff00ff'
+            } else {
+                this.flipbarEl.style.boxShadow = 'none'
             }
         }
 
