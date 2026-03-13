@@ -1469,7 +1469,7 @@ class MarblesGame {
             const pos = rb.translation()
 
             const rayOrigin = { x: pos.x, y: pos.y, z: pos.z }
-            const rayDir = { x: 0, y: -1, z: 0 }
+            const rayDir = { x: 0, y: this.flipActive ? 1 : -1, z: 0 }
             const ray = new RAPIER.Ray(rayOrigin, rayDir)
             const maxToi = radius + 0.1
 
@@ -2209,6 +2209,13 @@ class MarblesGame {
         // Gravity Flip Logic
         if (this.flipActive && this.flipEnergy > 0 && this.playerMarble) {
             this.flipEnergy = Math.max(0, this.flipEnergy - 0.5)
+            this.playerMarble.rigidBody.setGravityScale(-this.playerMarble.baseGravityScale, true)
+        } else {
+            this.flipActive = false
+            this.flipEnergy = Math.min(this.maxFlipEnergy, this.flipEnergy + 0.2)
+            if (this.playerMarble) {
+                this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
+            }
         } else if (this.flipActive && this.flipEnergy <= 0) {
             this.flipActive = false
             if (this.playerMarble) {
