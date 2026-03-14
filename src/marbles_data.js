@@ -39,6 +39,7 @@ export const marblesInfo = [
     { name: "Crystal", color: [0.9, 0.9, 1.0], offset: { x: 0.0, y: 5, z: 0 }, radius: 0.5, density: 2.5, friction: 0.1, restitution: 0.6, roughness: 0.05, emissive: true, lightIntensity: 20000.0, lightColor: [0.8, 0.9, 1.0] },
     { name: "Alien Tech", color: [0.2, 1.0, 0.5], offset: { x: 8.0, y: 5, z: 0 }, radius: 0.55, density: 1.2, gravityScale: 0.5, friction: 0.05, restitution: 1.5, roughness: 0.2, emissive: true, lightIntensity: 25000.0, lightColor: [0.2, 1.0, 0.5] },
     { name: "Nova", color: [1.0, 0.5, 0.0], offset: { x: 0.0, y: 5, z: 10 }, radius: 0.6, density: 10.0, friction: 0.05, restitution: 1.2, roughness: 0.1, emissive: true, lightIntensity: 45000.0, lightColor: [1.0, 0.6, 0.1] },
-    { name: "Quasar", color: [1.0, 1.0, 0.8], offset: { x: -8.0, y: 5.0, z: -2.0 }, radius: 0.6, density: 5.0, restitution: 1.5, friction: 0.1, emissive: true, lightIntensity: 40000.0, lightColor: [1.0, 1.0, 0.8] }
-    { name: "Prismatic Shard", color: [1.0, 1.0, 1.0], offset: { x: 2.0, y: 5, z: 10 }, radius: 0.5, geometry: 'cube', density: 1.5, restitution: 0.8, gravityScale: 0.5, emissive: true, lightIntensity: 35000.0, lightColor: [1.0, 1.0, 1.0], rainbow: true }
+    { name: "Quasar", color: [1.0, 1.0, 0.8], offset: { x: -8.0, y: 5.0, z: -2.0 }, radius: 0.6, density: 5.0, restitution: 1.5, friction: 0.1, emissive: true, lightIntensity: 40000.0, lightColor: [1.0, 1.0, 0.8] },
+    { name: "Prismatic Shard", color: [1.0, 1.0, 1.0], offset: { x: 2.0, y: 5, z: 10 }, radius: 0.5, geometry: 'cube', density: 1.5, restitution: 0.8, gravityScale: 0.5, emissive: true, lightIntensity: 35000.0, lightColor: [1.0, 1.0, 1.0], rainbow: true },
+    { name: "Plasma Core", color: [0.9, 0.2, 0.9], offset: { x: 4.0, y: 5, z: -2 }, radius: 0.6, density: 0.2, friction: 0.0, restitution: 1.1, roughness: 0.0, emissive: true, lightIntensity: 35000.0, lightColor: [0.9, 0.2, 0.9] }
 ];

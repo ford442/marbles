@@ -7,10 +7,10 @@ const { chromium } = require('playwright');
   page.on('console', msg => console.log('PAGE LOG:', msg.text()));
 
   await page.goto('http://localhost:5173');
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(10000); // Give Filament more time to initialize
 
   console.log("Starting Sandbox level...");
-  await page.click('text=Sandbox');
+  await page.click('.level-card');
 
   await page.waitForTimeout(2000);
 
