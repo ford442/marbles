@@ -2210,12 +2210,6 @@ class MarblesGame {
         if (this.flipActive && this.flipEnergy > 0 && this.playerMarble) {
             this.flipEnergy = Math.max(0, this.flipEnergy - 0.5)
             this.playerMarble.rigidBody.setGravityScale(-this.playerMarble.baseGravityScale, true)
-        } else {
-            this.flipActive = false
-            this.flipEnergy = Math.min(this.maxFlipEnergy, this.flipEnergy + 0.2)
-            if (this.playerMarble) {
-                this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
-            }
         } else if (this.flipActive && this.flipEnergy <= 0) {
             this.flipActive = false
             if (this.playerMarble) {
@@ -2223,6 +2217,9 @@ class MarblesGame {
             }
         } else if (!this.flipActive) {
             this.flipEnergy = Math.min(this.maxFlipEnergy, this.flipEnergy + 0.2)
+            if (this.playerMarble) {
+                this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
+            }
         }
 
         if (this.flipbarContainerEl && this.flipbarEl) {
