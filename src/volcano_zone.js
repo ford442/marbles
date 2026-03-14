@@ -3,121 +3,107 @@ import { quatFromEuler } from './math.js';
 export function createVolcanoZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
-    const lavaRadius = 18;
-    const lavaCenterZ = offset.z + 20;
-
-    // Entrance Platform
+    // --- Entrance Platform ---
     game.createStaticBox(
         { x: offset.x, y: offset.y, z: offset.z },
         floorQ,
-        { x: 4, y: 0.5, z: 4 },
-        [0.15, 0.15, 0.15],
+        { x: 10, y: 0.5, z: 10 },
+        [0.2, 0.2, 0.25],
         'concrete'
     );
 
-    // Lava Floor
+    // --- Lava Floor (Hazard/Reset) ---
+    // Make it wide and glowing (red/orange)
     game.createStaticBox(
-        { x: offset.x, y: offset.y - 1.5, z: lavaCenterZ },
+        { x: offset.x, y: offset.y - 5, z: offset.z + 40 },
         floorQ,
-        { x: lavaRadius, y: 0.5, z: lavaRadius },
-        [1.0, 0.3, 0.0], // Glowing orange
+        { x: 40, y: 0.5, z: 40 },
+        [1.0, 0.2, 0.0],
         'concrete'
     );
 
-    // Octagonal Caldera Walls
-    const wallThickness = 1.5;
-    const wallHeight = 5;
-    const numSides = 8;
-    const sideLength = 2 * lavaRadius * Math.tan(Math.PI / numSides) + 1.5;
-
-    for (let i = 0; i < numSides; i++) {
-        const angle = (i / numSides) * Math.PI * 2;
-
-        // Midpoint of the wall
-        const x = offset.x + Math.sin(angle) * lavaRadius;
-        const z = lavaCenterZ + Math.cos(angle) * lavaRadius;
-
-        const rotY = angle;
-        const q = quatFromEuler(rotY, 0, 0);
-
-        // Leave gaps for Entrance (angle ~PI) and Exit (angle ~0)
-        // Since angle=0 is z=+radius, this is exit.
-        // angle=PI is z=-radius, this is entrance.
-        if (i === 0 || i === 4) {
-            const gapHalfWidth = 4.5; // Total gap width 9
-            const smallWallHalfExtent = (sideLength / 2 - gapHalfWidth) / 2;
-
-            if (smallWallHalfExtent > 0) {
-                const smallWallCenterOffset = gapHalfWidth + smallWallHalfExtent;
-
-                // For walls not aligned with the global axes, we would need to shift
-                // along the local X axis. Since i=0 and i=4 are aligned with X, we can just use global X.
-                game.createStaticBox(
-                    { x: x + smallWallCenterOffset, y: offset.y + 1, z: z },
-                    q,
-                    { x: smallWallHalfExtent, y: wallHeight, z: wallThickness },
-                    [0.1, 0.1, 0.12],
-                    'concrete'
-                );
-                game.createStaticBox(
-                    { x: x - smallWallCenterOffset, y: offset.y + 1, z: z },
-                    q,
-                    { x: smallWallHalfExtent, y: wallHeight, z: wallThickness },
-                    [0.1, 0.1, 0.12],
-                    'concrete'
-                );
-            }
-            continue;
-        }
+    // --- Caldera Walls ---
+    // Create an octagonal rim
+    const calderaRadius = 35;
+    const wallHeight = 15;
+    const numWalls = 8;
+    for (let i = 0; i < numWalls; i++) {
+        const angle = (i / numWalls) * Math.PI * 2;
+        const x = offset.x + Math.sin(angle) * calderaRadius;
+        const z = offset.z + 40 + Math.cos(angle) * calderaRadius;
+        const q = quatFromEuler(angle, 0, 0);
 
         game.createStaticBox(
-            { x: x, y: offset.y + 1, z: z },
+            { x: x, y: offset.y + wallHeight/2 - 5, z: z },
             q,
-            { x: sideLength / 2, y: wallHeight, z: wallThickness },
-            [0.1, 0.1, 0.12],
+            { x: 15, y: wallHeight/2, z: 2 },
+            [0.15, 0.1, 0.1],
             'concrete'
         );
     }
 
-    // Platforms over Lava
+    // --- Floating Rock Platforms (Kinematic) ---
+    const platformRadius = 25;
+    const numPlatforms = 12;
+    for (let i = 0; i < numPlatforms; i++) {
+        const angle = (i / numPlatforms) * Math.PI * 2;
+        const dist = 10 + Math.random() * platformRadius;
+        const x = offset.x + Math.sin(angle) * dist;
+        const z = offset.z + 40 + Math.cos(angle) * dist;
+        const baseY = offset.y + (i * 1.5); // Ascending spiraling platforms
 
-    // Rotating Platform 1 (Left side)
-    game.createRotatingBox(
-        { x: offset.x - 6, y: offset.y, z: lavaCenterZ - 6 },
-        { x: 3, y: 0.5, z: 0.5 },
-        [0.3, 0.2, 0.2],
-        'y',
-        0.02,
-        0,
-        'metal'
-    );
+        // Vary the type of movement
+        const moveType = i % 3 === 0 ? 'vertical' : (i % 3 === 1 ? 'horizontal' : 'depth');
+        const amplitude = 1.0 + Math.random() * 2.0;
 
-    // Rotating Platform 2 (Right side)
-    game.createRotatingBox(
-        { x: offset.x + 6, y: offset.y, z: lavaCenterZ + 6 },
-        { x: 3, y: 0.5, z: 0.5 },
-        [0.3, 0.2, 0.2],
-        'y',
-        -0.03,
-        Math.PI / 4,
-        'metal'
-    );
+        game.createKinematicBox(
+            { x: x, y: baseY, z: z },
+            { x: 2.5, y: 0.5, z: 2.5 },
+            [0.3, 0.25, 0.2], // Dark rock color
+            moveType,
+            moveType === 'vertical' ? baseY : (moveType === 'horizontal' ? x : z),
+            amplitude
+        );
 
-    // Center Stepping Stone
+        // Add occasional power-ups on platforms
+        if (i % 4 === 0) {
+             game.createPowerUp({ x: x, y: baseY + 1.0, z: z }, 'jump');
+        }
+    }
+
+    // --- Central Spire ---
     game.createStaticBox(
-        { x: offset.x, y: offset.y, z: lavaCenterZ },
+        { x: offset.x, y: offset.y + 10, z: offset.z + 40 },
         floorQ,
-        { x: 1.5, y: 0.5, z: 1.5 },
-        [0.15, 0.15, 0.15],
+        { x: 3, y: 15, z: 3 },
+        [0.1, 0.05, 0.05],
         'concrete'
     );
 
-    // Exit Platform
+    // --- Goal at the Top ---
+    const topY = offset.y + 25.5;
     game.createStaticBox(
-        { x: offset.x, y: offset.y, z: lavaCenterZ + lavaRadius + 2 },
+        { x: offset.x, y: topY, z: offset.z + 40 },
         floorQ,
-        { x: 4, y: 0.5, z: 4 },
-        [0.15, 0.15, 0.15],
-        'concrete'
+        { x: 5, y: 0.5, z: 5 },
+        [0.8, 0.8, 0.9],
+        'metal'
     );
+
+    // --- Erupting Debris (Dynamic Objects) ---
+    for (let j = 0; j < 10; j++) {
+        // Randomly spawn these high up, they will fall and bounce
+        const dx = offset.x + (Math.random() * 20 - 10);
+        const dz = offset.z + 40 + (Math.random() * 20 - 10);
+        const dy = topY + 10 + (Math.random() * 30);
+
+        game.createDynamicBox(
+            { x: dx, y: dy, z: dz },
+            floorQ,
+            { x: 0.8, y: 0.8, z: 0.8 }, // Size of debris
+            [0.9, 0.3, 0.1], // Glowing orange/red color
+            3.0, // High density
+            'concrete' // Material
+        );
+    }
 }
