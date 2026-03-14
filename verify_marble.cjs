@@ -13,13 +13,15 @@ const { chromium } = require('playwright');
 
       await page.waitForSelector('#canvas', { timeout: 10000 });
       console.log('Canvas loaded. Waiting for game init...');
-      await page.waitForTimeout(5000);
+      await page.waitForTimeout(10000);
 
       // Start the game by clicking on the level card if needed,
       // OR if we are already in the game, try to cycle.
       // The game starts at the level menu. We need to select a level first!
       // This is likely why we couldn't find the marble - we were still in the menu.
 
+      // Explicitly wait for level cards to appear
+      await page.waitForSelector('.level-card', { state: 'visible', timeout: 15000 });
       const levelCard = await page.$('.level-card');
       if (levelCard) {
           console.log('Found level menu. Clicking first level...');
@@ -34,7 +36,7 @@ const { chromium } = require('playwright');
 
       const targetMarble = process.argv[2] || 'Nova';
 
-      for (let i = 0; i < 40; i++) {
+      for (let i = 0; i < 50; i++) {
           await page.keyboard.press('Tab');
           await page.waitForTimeout(300);
 
