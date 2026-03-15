@@ -417,6 +417,24 @@
             transition: width 0.1s;
         }
 
+        #chameleonbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #chameleonbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ffffff 0%, #ffffff 100%);
+            transition: width 0.1s, background 0.3s;
+        }
+
         #instructions {
             font-size: 14px;
             opacity: 0.9;
@@ -552,6 +570,9 @@
         <div id="bombbar-container">
             <div id="bombbar"></div>
         </div>
+        <div id="chameleonbar-container" style="display: none;">
+            <div id="chameleonbar"></div>
+        </div>
         <div id="hoverbar-container">
             <div id="hoverbar"></div>
         </div>
@@ -580,7 +601,8 @@
             <kbd>X</kbd> Bomb &nbsp;|&nbsp;
             <kbd>H</kbd> Hover &nbsp;|&nbsp;
             <kbd>G</kbd> Frost Bridge &nbsp;|&nbsp;
-            <kbd>U</kbd> Gravity Flip
+            <kbd>U</kbd> Gravity Flip &nbsp;|&nbsp;
+            <kbd>K</kbd> Chameleon
         </div>
         <button id="mute-btn" title="Toggle Sound">🔊</button>
     </div>

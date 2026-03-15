@@ -104,6 +104,8 @@ class MarblesGame {
         this.holobarContainerEl = document.getElementById('holobar-container')
         this.bombBarEl = document.getElementById('bombbar')
         this.bombBarContainerEl = document.getElementById('bombbar-container')
+        this.chameleonBarEl = document.getElementById('chameleonbar')
+        this.chameleonBarContainerEl = document.getElementById('chameleonbar-container')
         this.hoverBarEl = document.getElementById('hoverbar')
         this.hoverBarContainerEl = document.getElementById('hoverbar-container')
         this.effectEl = document.getElementById('effects')
@@ -168,6 +170,17 @@ class MarblesGame {
         this.flipActive = false
         this.flipbarEl = document.getElementById('flipbar')
         this.flipbarContainerEl = document.getElementById('flipbar-container')
+
+        // Chameleon Mechanic
+        this.chameleonState = 0
+        this.lastChameleonTime = 0
+        this.chameleonCooldown = 1000
+        this.chameleonProfiles = [
+            { name: 'Normal', color: [1, 1, 1], gravityScale: 1.0 },
+            { name: 'Heavy', color: [0.2, 0.2, 0.2], gravityScale: 2.5 },
+            { name: 'Bouncy', color: [1, 0.2, 0.8], gravityScale: 0.5 },
+            { name: 'Floaty', color: [0.2, 0.8, 1.0], gravityScale: 0.1 }
+        ]
 
         // Rewind Mechanic
         this.rewindHistory = []
@@ -437,6 +450,29 @@ class MarblesGame {
             }
             if (e.code === 'KeyT') {
                 this.isRewinding = true
+            }
+            if (e.code === 'KeyK' && this.playerMarble) {
+                const now = Date.now()
+                if (now - this.lastChameleonTime > this.chameleonCooldown) {
+                    this.chameleonState = (this.chameleonState + 1) % this.chameleonProfiles.length
+                    const profile = this.chameleonProfiles[this.chameleonState]
+
+                    this.playerMarble.baseGravityScale = profile.gravityScale
+                    if (!this.flipActive) {
+                        this.playerMarble.rigidBody.setGravityScale(profile.gravityScale, true)
+                    } else {
+                        this.playerMarble.rigidBody.setGravityScale(-profile.gravityScale, true)
+                    }
+
+                    this.playerMarble.color = profile.color
+                    const rcm = this.engine.getRenderableManager()
+                    const inst = rcm.getInstance(this.playerMarble.entity)
+                    rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, profile.color)
+
+                    this.lastChameleonTime = now
+                    this.showTrickMessage(`Chameleon: ${profile.name}`, `rgb(${profile.color[0]*255}, ${profile.color[1]*255}, ${profile.color[2]*255})`)
+                    if (audio && audio.playCollect) audio.playCollect()
+                }
             }
         })
 
@@ -1347,12 +1383,14 @@ class MarblesGame {
                 rigidBody,
                 entity,
                 scale,
-                color: info.color,
+                color: [...info.color],
+                originalColor: [...info.color],
                 initialPos: pos,
                 respawnPos: { ...pos },
                 scoredGoals: new Set(),
                 rainbow: info.rainbow,
-                baseGravityScale: info.gravityScale !== undefined ? info.gravityScale : 1.0
+                baseGravityScale: info.gravityScale !== undefined ? info.gravityScale : 1.0,
+                originalGravityScale: info.gravityScale !== undefined ? info.gravityScale : 1.0
             }
 
             if (info.emissive) {
@@ -1419,6 +1457,21 @@ class MarblesGame {
         this.currentMarbleIndex = 0
         this.playerMarble = this.marbles[0]
         this.selectedEl.textContent = `Selected: ${this.playerMarble ? this.playerMarble.name : 'None'}`
+
+        // Reset Chameleon State
+        this.chameleonState = 0
+        if (this.playerMarble) {
+            // Restore actual marble's base state from marblesInfo or initial creation
+            this.playerMarble.baseGravityScale = this.playerMarble.originalGravityScale || this.playerMarble.baseGravityScale || 1.0;
+            this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
+            const rcm = this.engine.getRenderableManager()
+            const inst = rcm.getInstance(this.playerMarble.entity)
+            if (this.playerMarble.originalColor) {
+                this.playerMarble.color = [...this.playerMarble.originalColor]
+                rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, this.playerMarble.originalColor)
+            }
+        }
+
         this.flipActive = false
         this.aimYaw = 0
         this.chargePower = 0
@@ -2650,6 +2703,21 @@ class MarblesGame {
             } else {
                 this.holobarEl.style.width = '100%'
                 this.holobarContainerEl.style.display = 'none'
+            }
+        }
+
+        if (this.chameleonBarContainerEl && this.chameleonBarEl) {
+            const timeSinceChameleon = now - this.lastChameleonTime
+            const profile = this.chameleonProfiles[this.chameleonState]
+            if (timeSinceChameleon < this.chameleonCooldown) {
+                this.chameleonBarContainerEl.style.display = 'block'
+                const pct = (timeSinceChameleon / this.chameleonCooldown) * 100
+                this.chameleonBarEl.style.width = pct + '%'
+                this.chameleonBarEl.style.background = `rgb(${profile.color[0]*255}, ${profile.color[1]*255}, ${profile.color[2]*255})`
+            } else {
+                this.chameleonBarEl.style.width = '100%'
+                this.chameleonBarEl.style.background = `rgb(${profile.color[0]*255}, ${profile.color[1]*255}, ${profile.color[2]*255})`
+                this.chameleonBarContainerEl.style.display = 'none'
             }
         }
 
