@@ -417,7 +417,7 @@
             transition: width 0.1s;
         }
 
-        #chameleonbar-container {
+        #buildbar-container {
             width: 200px;
             height: 10px;
             background: rgba(0, 0, 0, 0.5);
@@ -428,11 +428,11 @@
             margin-top: -5px;
         }
 
-        #chameleonbar {
+        #buildbar {
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, #ffffff 0%, #ffffff 100%);
-            transition: width 0.1s, background 0.3s;
+            background: linear-gradient(90deg, #32cd32 0%, #00ff00 100%);
+            transition: width 0.1s;
         }
 
         #instructions {
@@ -582,7 +582,11 @@
         <div id="flipbar-container" style="display: none;">
             <div id="flipbar"></div>
         </div>
+        <div id="buildbar-container">
+            <div id="buildbar"></div>
+        </div>
         <div id="instructions">
+            <kbd>1</kbd> Ramp | <kbd>2</kbd> Floor | <kbd>3</kbd> Bouncer &nbsp;|&nbsp;
             <kbd>WASD</kbd> / <kbd>Arrows</kbd> Move &nbsp;|&nbsp;
             <kbd>Shift</kbd> Boost &nbsp;|&nbsp;
             <kbd>Space</kbd> Jump (Hold) &nbsp;|&nbsp;

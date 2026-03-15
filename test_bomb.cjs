@@ -9,7 +9,7 @@ const assert = require('assert');
     page.on('console', msg => console.log('BROWSER LOG:', msg.text()));
 
     await page.goto('http://localhost:5173');
-    await page.waitForTimeout(2000); // Wait for initialization
+    await page.waitForTimeout(5000); // Wait for initialization
 
     // Select a level to start the game
     const levelCards = await page.$$('.level-card');

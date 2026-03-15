@@ -144,6 +144,12 @@ class MarblesGame {
         this.grappleMaxDist = 50.0
         this.grappleForce = 40.0
 
+        // Sandbox Builder Mechanic
+        this.buildEnergy = 100
+        this.maxBuildEnergy = 100
+        this.buildbarEl = document.getElementById('buildbar')
+        this.buildbarContainerEl = document.getElementById('buildbar-container')
+
         // Focus / Time Slow Mechanic
         this.timeScale = 1.0
         this.focusEnergy = 100
@@ -444,6 +450,15 @@ class MarblesGame {
                 rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 0.0, 0.0])
 
                 audio.playBoost()
+            }
+            if (e.code === 'Digit1') {
+                this.spawnBuildPiece('ramp')
+            }
+            if (e.code === 'Digit2') {
+                this.spawnBuildPiece('floor')
+            }
+            if (e.code === 'Digit3') {
+                this.spawnBuildPiece('bouncer')
             }
             if (e.code === 'KeyX' && this.playerMarble) {
                 this.spawnBomb()
@@ -2050,13 +2065,13 @@ class MarblesGame {
         const inst = tcm.getInstance(entity)
         const mat = quaternionToMat4(spawnPos, { x: 0, y: 0, z: 0, w: 1 })
 
-        const scaleMat = new Float32Array(16)
-        scaleMat[0] = halfExtents.x * 2; scaleMat[5] = halfExtents.y * 2; scaleMat[10] = halfExtents.z * 2; scaleMat[15] = 1
+        const sx = halfExtents.x * 2;
+        const sy = halfExtents.y * 2;
+        const sz = halfExtents.z * 2;
 
-        for (let i = 0; i < 12; i += 4) {
-            const x = mat[i], y = mat[i + 1], z = mat[i + 2], w = mat[i + 3]
-            mat[i] = x * scaleMat[0]; mat[i + 1] = y * scaleMat[5]; mat[i + 2] = z * scaleMat[10]; mat[i + 3] = w * scaleMat[15]
-        }
+        mat[0] *= sx; mat[1] *= sx; mat[2] *= sx;
+        mat[4] *= sy; mat[5] *= sy; mat[6] *= sy;
+        mat[8] *= sz; mat[9] *= sz; mat[10] *= sz;
 
         tcm.setTransform(inst, mat)
         this.scene.addEntity(entity)
@@ -2068,6 +2083,81 @@ class MarblesGame {
             spawnTime: now,
             duration: 2000
         })
+    }
+
+    spawnBuildPiece(type) {
+        if (!this.playerMarble || this.buildEnergy < 25) return
+
+        this.buildEnergy -= 25
+
+        const pos = this.playerMarble.rigidBody.translation()
+        const dirX = Math.sin(this.aimYaw)
+        const dirZ = Math.cos(this.aimYaw)
+
+        // Spawn 3 units in front
+        const spawnPos = { x: pos.x + dirX * 3, y: pos.y, z: pos.z + dirZ * 3 }
+
+        let halfExtents, rot, color, restitution
+
+        if (type === 'ramp') {
+            halfExtents = { x: 2, y: 0.1, z: 3 }
+            rot = quatFromEuler(this.aimYaw, 0.5, 0)
+            color = [0.0, 1.0, 0.0]
+            restitution = 0.3
+        } else if (type === 'floor') {
+            halfExtents = { x: 2, y: 0.1, z: 2 }
+            rot = quatFromEuler(this.aimYaw, 0, 0)
+            color = [0.0, 0.5, 1.0]
+            restitution = 0.3
+        } else if (type === 'bouncer') {
+            halfExtents = { x: 2, y: 0.5, z: 2 }
+            rot = quatFromEuler(this.aimYaw, 0, 0)
+            color = [0.8, 0.0, 1.0]
+            restitution = 2.0
+        }
+
+        const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(spawnPos.x, spawnPos.y, spawnPos.z).setRotation(rot)
+        const body = this.world.createRigidBody(bodyDesc)
+        const colliderDesc = RAPIER.ColliderDesc.cuboid(halfExtents.x, halfExtents.y, halfExtents.z)
+            .setFriction(0.5)
+            .setRestitution(restitution)
+        this.world.createCollider(colliderDesc, body)
+
+        const entity = this.Filament.EntityManager.get().create()
+        const matInstance = this.material.createInstance()
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color)
+        matInstance.setFloatParameter('roughness', 0.1)
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .build(this.engine, entity)
+
+        const tcm = this.engine.getTransformManager()
+        const inst = tcm.getInstance(entity)
+        const mat = quaternionToMat4(spawnPos, rot)
+
+        const sx = halfExtents.x * 2;
+        const sy = halfExtents.y * 2;
+        const sz = halfExtents.z * 2;
+
+        mat[0] *= sx; mat[1] *= sx; mat[2] *= sx;
+        mat[4] *= sy; mat[5] *= sy; mat[6] *= sy;
+        mat[8] *= sz; mat[9] *= sz; mat[10] *= sz;
+
+        tcm.setTransform(inst, mat)
+        this.scene.addEntity(entity)
+
+        this.temporaryPlatforms.push({
+            entity: entity,
+            rigidBody: body,
+            matInstance: matInstance,
+            spawnTime: Date.now(),
+            duration: 15000 // Lasts 15 seconds
+        })
+
+        if (audio && audio.playJump) audio.playJump()
     }
 
     spawnHoloPlatform() {
@@ -2103,13 +2193,13 @@ class MarblesGame {
         const inst = tcm.getInstance(entity)
         const mat = quaternionToMat4(spawnPos, { x: 0, y: 0, z: 0, w: 1 })
 
-        const scaleMat = new Float32Array(16)
-        scaleMat[0] = halfExtents.x * 2; scaleMat[5] = halfExtents.y * 2; scaleMat[10] = halfExtents.z * 2; scaleMat[15] = 1
+        const sx = halfExtents.x * 2;
+        const sy = halfExtents.y * 2;
+        const sz = halfExtents.z * 2;
 
-        for (let i = 0; i < 12; i += 4) {
-            const x = mat[i], y = mat[i + 1], z = mat[i + 2], w = mat[i + 3]
-            mat[i] = x * scaleMat[0]; mat[i + 1] = y * scaleMat[5]; mat[i + 2] = z * scaleMat[10]; mat[i + 3] = w * scaleMat[15]
-        }
+        mat[0] *= sx; mat[1] *= sx; mat[2] *= sx;
+        mat[4] *= sy; mat[5] *= sy; mat[6] *= sy;
+        mat[8] *= sz; mat[9] *= sz; mat[10] *= sz;
 
         tcm.setTransform(inst, mat)
         this.scene.addEntity(entity)
@@ -2141,6 +2231,19 @@ class MarblesGame {
 
         const rotSpeed = 0.02
         const zoomSpeed = 0.5
+
+        // Sandbox Builder Logic
+        this.buildEnergy = Math.min(this.maxBuildEnergy, this.buildEnergy + 0.1)
+        if (this.buildbarEl) {
+            const pct = (this.buildEnergy / this.maxBuildEnergy) * 100
+            this.buildbarEl.style.width = `${pct}%`
+
+            if (this.buildEnergy >= 25) {
+                this.buildbarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #00ff00)'
+            } else {
+                this.buildbarEl.style.filter = 'brightness(0.7)'
+            }
+        }
 
         // Focus Mechanic Logic
         if (this.keys['KeyF'] && this.focusEnergy > 0) {
@@ -2263,12 +2366,6 @@ class MarblesGame {
         if (this.flipActive && this.flipEnergy > 0 && this.playerMarble) {
             this.flipEnergy = Math.max(0, this.flipEnergy - 0.5)
             this.playerMarble.rigidBody.setGravityScale(-this.playerMarble.baseGravityScale, true)
-        } else {
-            this.flipActive = false
-            this.flipEnergy = Math.min(this.maxFlipEnergy, this.flipEnergy + 0.2)
-            if (this.playerMarble) {
-                this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
-            }
         } else if (this.flipActive && this.flipEnergy <= 0) {
             this.flipActive = false
             if (this.playerMarble) {
@@ -2276,6 +2373,9 @@ class MarblesGame {
             }
         } else if (!this.flipActive) {
             this.flipEnergy = Math.min(this.maxFlipEnergy, this.flipEnergy + 0.2)
+            if (this.playerMarble) {
+                this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
+            }
         }
 
         if (this.flipbarContainerEl && this.flipbarEl) {
