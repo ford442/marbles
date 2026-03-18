@@ -43,5 +43,6 @@ export const marblesInfo = [
     { name: "Prismatic Shard", color: [1.0, 1.0, 1.0], offset: { x: 2.0, y: 5, z: 10 }, radius: 0.5, geometry: 'cube', density: 1.5, restitution: 0.8, gravityScale: 0.5, emissive: true, lightIntensity: 35000.0, lightColor: [1.0, 1.0, 1.0], rainbow: true },
     { name: "Plasma Core", color: [0.9, 0.2, 0.9], offset: { x: 4.0, y: 5, z: -2 }, radius: 0.6, density: 0.2, friction: 0.0, restitution: 1.1, roughness: 0.0, emissive: true, lightIntensity: 35000.0, lightColor: [0.9, 0.2, 0.9] },
     { name: "Aether", color: [0.5, 0.0, 1.0], offset: { x: 6.0, y: 5, z: 10 }, radius: 0.5, density: 0.1, gravityScale: 0.1, friction: 0.0, restitution: 1.5, emissive: true, lightIntensity: 60000.0, lightColor: [0.5, 0.0, 1.0] },
-    { name: "Hyperion", color: [1.0, 0.5, 0.0], offset: { x: -6.0, y: 5, z: 10 }, radius: 0.6, density: 2.0, friction: 0.1, restitution: 0.9, roughness: 0.1, emissive: true, lightIntensity: 50000.0, lightColor: [1.0, 0.8, 0.2] }
+    { name: "Hyperion", color: [1.0, 0.5, 0.0], offset: { x: -6.0, y: 5, z: 10 }, radius: 0.6, density: 2.0, friction: 0.1, restitution: 0.9, roughness: 0.1, emissive: true, lightIntensity: 50000.0, lightColor: [1.0, 0.8, 0.2] },
+    { name: "Radiant Spark", color: [1.0, 0.2, 0.5], offset: { x: -2.0, y: 5, z: 12 }, radius: 0.4, density: 0.3, friction: 0.05, restitution: 1.3, roughness: 0.1, emissive: true, lightIntensity: 55000.0, lightColor: [1.0, 0.2, 0.5] }
 ];
