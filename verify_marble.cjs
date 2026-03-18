@@ -36,7 +36,7 @@ const { chromium } = require('playwright');
 
       const targetMarble = process.argv[2] || 'Nova';
 
-      for (let i = 0; i < 60; i++) {
+      for (let i = 0; i < 70; i++) {
           await page.keyboard.press('Tab');
           await page.waitForTimeout(300);
 
