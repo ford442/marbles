@@ -453,6 +453,24 @@
             transition: width 0.1s;
         }
 
+        #missilebar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #missilebar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff8800 0%, #ffff00 100%);
+            transition: width 0.1s;
+        }
+
         #instructions {
             font-size: 14px;
             opacity: 0.9;
@@ -606,6 +624,9 @@
         <div id="buildbar-container">
             <div id="buildbar"></div>
         </div>
+        <div id="missilebar-container">
+            <div id="missilebar"></div>
+        </div>
         <div id="instructions">
             <kbd>1</kbd> Ramp | <kbd>2</kbd> Floor | <kbd>3</kbd> Bouncer &nbsp;|&nbsp;
             <kbd>WASD</kbd> / <kbd>Arrows</kbd> Move &nbsp;|&nbsp;
@@ -628,7 +649,8 @@
             <kbd>H</kbd> Hover &nbsp;|&nbsp;
             <kbd>G</kbd> Frost Bridge &nbsp;|&nbsp;
             <kbd>U</kbd> Gravity Flip &nbsp;|&nbsp;
-            <kbd>K</kbd> Chameleon
+            <kbd>K</kbd> Chameleon &nbsp;|&nbsp;
+            <kbd>L</kbd> Missile
         </div>
         <button id="mute-btn" title="Toggle Sound">🔊</button>
     </div>

@@ -72,7 +72,9 @@ class MarblesGame {
 
         this.activeMissiles = []
         this.lastMissileTime = 0
-        this.missileCooldown = 3000
+        this.missileCooldown = 1500
+        this.missileBarEl = document.getElementById('missilebar')
+        this.missileBarContainerEl = document.getElementById('missilebar-container')
 
         this.Filament = null
         this.material = null
@@ -417,7 +419,7 @@ class MarblesGame {
 
                     // ignore marble itself during raycast
                     // In RAPIER js compat we can use filterExcludeRigidBody parameter
-                    const hit = this.world.castRay(ray, 15.0, true, 0xffffffff, undefined, undefined, rb)
+                    const hit = this.world.castRay(ray, 15.0, true, 0xffffffff, undefined, undefined, undefined, rb)
 
                     let newPos
                     if (hit) {
@@ -470,7 +472,7 @@ class MarblesGame {
                 this.spawnBomb()
             }
             if (e.code === 'KeyL' && this.playerMarble) {
-                this.shootMissile()
+                this.spawnMissile()
             }
             if (e.code === 'KeyT') {
                 this.isRewinding = true
@@ -776,6 +778,23 @@ class MarblesGame {
                 this.Filament.EntityManager.get().destroy(p.entity)
             }
             this.temporaryPlatforms = []
+        }
+
+        if (this.activeMissiles) {
+            for (const m of this.activeMissiles) {
+                this.world.removeRigidBody(m.rigidBody)
+                this.scene.remove(m.entity)
+                if (m.matInstance) this.engine.destroyMaterialInstance(m.matInstance)
+                this.engine.destroyEntity(m.entity)
+                this.Filament.EntityManager.get().destroy(m.entity)
+
+                if (m.lightEntity) {
+                    this.scene.remove(m.lightEntity)
+                    this.engine.destroyEntity(m.lightEntity)
+                    this.Filament.EntityManager.get().destroy(m.lightEntity)
+                }
+            }
+            this.activeMissiles = []
         }
 
         if (this.activeBombs) {
@@ -1521,6 +1540,23 @@ class MarblesGame {
         this.levelComplete = false
         this.rewindHistory = []
 
+        if (this.activeMissiles) {
+            for (const m of this.activeMissiles) {
+                this.world.removeRigidBody(m.rigidBody)
+                this.scene.remove(m.entity)
+                if (m.matInstance) this.engine.destroyMaterialInstance(m.matInstance)
+                this.engine.destroyEntity(m.entity)
+                this.Filament.EntityManager.get().destroy(m.entity)
+
+                if (m.lightEntity) {
+                    this.scene.remove(m.lightEntity)
+                    this.engine.destroyEntity(m.lightEntity)
+                    this.Filament.EntityManager.get().destroy(m.lightEntity)
+                }
+            }
+            this.activeMissiles = []
+        }
+
         if (this.activeBombs) {
             for (const b of this.activeBombs) {
                 this.world.removeRigidBody(b.rigidBody)
@@ -2138,6 +2174,109 @@ class MarblesGame {
             spawnTime: now,
             duration: 2500 // 2.5 seconds until boom
         })
+    }
+
+    spawnMissile() {
+        const now = Date.now()
+        if (now - this.lastMissileTime < this.missileCooldown) return
+        this.lastMissileTime = now
+
+        const pos = this.playerMarble.rigidBody.translation()
+
+        const cosP = Math.cos(this.pitchAngle)
+        const sinP = Math.sin(this.pitchAngle)
+        const dirX = Math.sin(this.aimYaw) * cosP
+        const dirY = sinP
+        const dirZ = Math.cos(this.aimYaw) * cosP
+
+        const spawnPos = {
+            x: pos.x + dirX * 1.5,
+            y: pos.y + dirY * 1.5,
+            z: pos.z + dirZ * 1.5
+        }
+
+        const missileSpeed = 40.0
+
+        const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+            .setTranslation(spawnPos.x, spawnPos.y, spawnPos.z)
+            .setLinvel(dirX * missileSpeed, dirY * missileSpeed, dirZ * missileSpeed)
+            .setGravityScale(0)
+
+        const body = this.world.createRigidBody(bodyDesc)
+        const colliderDesc = RAPIER.ColliderDesc.ball(0.2)
+            .setRestitution(0.5)
+            .setFriction(0.5)
+            .setDensity(0.5)
+        this.world.createCollider(colliderDesc, body)
+
+        const entity = this.Filament.EntityManager.get().create()
+        const matInstance = this.material.createInstance()
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 0.5, 0.0])
+        matInstance.setFloatParameter('roughness', 0.2)
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [0.2, 0.2, 0.2] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
+            .build(this.engine, entity)
+
+        this.scene.addEntity(entity)
+
+        const lightEntity = this.Filament.EntityManager.get().create()
+        this.Filament.LightManager.Builder(this.Filament.LightManager$Type.POINT)
+            .color([1.0, 0.5, 0.0])
+            .intensity(20000.0)
+            .falloff(5.0)
+            .build(this.engine, lightEntity)
+        this.scene.addEntity(lightEntity)
+
+        this.activeMissiles.push({
+            entity: entity,
+            rigidBody: body,
+            matInstance: matInstance,
+            lightEntity: lightEntity,
+            spawnTime: now,
+            duration: 3000
+        })
+
+        if (audio && audio.playBoost) audio.playBoost()
+    }
+
+    explodeMissile(missilePos) {
+        if (audio.playStomp) audio.playStomp()
+
+        const pos = missilePos
+        const radius = 10.0
+        const force = 80.0
+
+        const applyExplosionForce = (body) => {
+            const t = body.translation()
+            const dx = t.x - pos.x
+            const dy = t.y - pos.y
+            const dz = t.z - pos.z
+            const dist = Math.hypot(dx, dy, dz)
+
+            if (dist < radius && dist > 0.1) {
+                const factor = 1.0 - (dist / radius)
+                const nx = dx / dist
+                const ny = dy / dist
+                const nz = dz / dist
+
+                body.applyImpulse({
+                    x: nx * force * factor,
+                    y: (ny * 0.5 + 0.5) * force * factor, // Always bias upward
+                    z: nz * force * factor
+                }, true)
+            }
+        }
+
+        for (const m of this.marbles) {
+            applyExplosionForce(m.rigidBody)
+        }
+
+        for (const obj of this.dynamicObjects) {
+            applyExplosionForce(obj.rigidBody)
+        }
     }
 
     explodeBomb(bomb) {
@@ -2984,39 +3123,57 @@ class MarblesGame {
             }
         }
 
-        // Handle Active Missiles lifecycle and CCD
+        if (this.missileBarEl) {
+            const timeSinceMissile = now - this.lastMissileTime
+            const progress = Math.min(1.0, timeSinceMissile / this.missileCooldown)
+            this.missileBarEl.style.width = `${progress * 100}%`
+
+            if (progress >= 1.0) {
+               this.missileBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ff8800)'
+            } else {
+               this.missileBarEl.style.filter = 'brightness(0.7)'
+            }
+        }
+
+        // Handle Active Missiles lifecycle
         for (let i = this.activeMissiles.length - 1; i >= 0; i--) {
             const m = this.activeMissiles[i]
             const timeAlive = now - m.spawnTime
-            const currentPos = m.rigidBody.translation()
 
-            const dx = currentPos.x - m.lastPos.x
-            const dy = currentPos.y - m.lastPos.y
-            const dz = currentPos.z - m.lastPos.z
-            const dist = Math.hypot(dx, dy, dz)
-            let hitSomething = false
+            const pos = m.rigidBody.translation()
+            const vel = m.rigidBody.linvel()
+            const speed = Math.hypot(vel.x, vel.y, vel.z)
 
-            if (dist > 0.01) {
-                const rayDir = { x: dx/dist, y: dy/dist, z: dz/dist }
-                const ray = new RAPIER.Ray(m.lastPos, rayDir)
-                // Cast ray to check if we bypassed anything between last frame and this frame
-                // exclude the missile's own body
-                const hit = this.world.castRay(ray, dist, true, 0xffffffff, undefined, undefined, m.rigidBody)
+            // CCD via raycast
+            let hitTarget = false
+            let hitPos = pos
+            if (speed > 0.1) {
+                const dir = { x: vel.x / speed, y: vel.y / speed, z: vel.z / speed }
+                // Raycast ahead for the distance it will travel next frame (approx 1/60th of speed)
+                // Plus a little extra for radius
+                const rayDist = (speed * (1/60)) + 0.2
+                const ray = new RAPIER.Ray(pos, dir)
+                // Filter out the missile's rigidBody. castRay args: ray, maxToi, solid, collisionGroups, filterIntersection, filterHit, filterExcludeCollider, filterExcludeRigidBody
+                const hit = this.world.castRay(ray, rayDist, true, 0xffffffff, undefined, undefined, undefined, m.rigidBody)
 
-                // Exclude hitting player who shot it just in case
-                if (hit && this.playerMarble && hit.collider.parent() !== this.playerMarble.rigidBody) {
-                    hitSomething = true
-                    // Move to hit pos for explosion
-                    m.rigidBody.setTranslation({
-                        x: m.lastPos.x + rayDir.x * hit.toi,
-                        y: m.lastPos.y + rayDir.y * hit.toi,
-                        z: m.lastPos.z + rayDir.z * hit.toi
-                    }, true)
+                if (hit) {
+                    // Check if it hit the player who fired it
+                    const otherBody = hit.collider.parent()
+                    if (!(otherBody && this.playerMarble && otherBody.handle === this.playerMarble.rigidBody.handle)) {
+                         hitTarget = true
+                         hitPos = {
+                             x: pos.x + dir.x * hit.toi,
+                             y: pos.y + dir.y * hit.toi,
+                             z: pos.z + dir.z * hit.toi
+                         }
+                    }
                 }
             }
 
-            if (timeAlive > m.duration || hitSomething) {
-                this.explodeMissile(m)
+            if (hitTarget || timeAlive > m.duration) {
+                if (hitTarget) {
+                    this.explodeMissile(hitPos)
+                }
                 this.world.removeRigidBody(m.rigidBody)
                 this.scene.remove(m.entity)
                 if (m.matInstance) this.engine.destroyMaterialInstance(m.matInstance)
@@ -3028,16 +3185,16 @@ class MarblesGame {
                     this.engine.destroyEntity(m.lightEntity)
                     this.Filament.EntityManager.get().destroy(m.lightEntity)
                 }
+
                 this.activeMissiles.splice(i, 1)
             } else {
-                m.lastPos = { x: currentPos.x, y: currentPos.y, z: currentPos.z }
-
+                // Sync Filament transform
                 const tcm = this.engine.getTransformManager()
                 const inst = tcm.getInstance(m.entity)
-                const mat = quaternionToMat4(currentPos, m.rigidBody.rotation())
+                const r = m.rigidBody.rotation()
+                const mat = quaternionToMat4(pos, r)
 
-                // Scale 0.4
-                const s = 0.8 // halfExtents was 0.2 -> scale = 0.4
+                const s = 0.4
                 mat[0] *= s; mat[1] *= s; mat[2] *= s
                 mat[4] *= s; mat[5] *= s; mat[6] *= s
                 mat[8] *= s; mat[9] *= s; mat[10] *= s
@@ -3046,7 +3203,7 @@ class MarblesGame {
 
                 if (m.lightEntity) {
                     const lightInst = tcm.getInstance(m.lightEntity)
-                    const lightMat = quaternionToMat4(currentPos, { x: 0, y: 0, z: 0, w: 1 })
+                    const lightMat = quaternionToMat4(pos, { x: 0, y: 0, z: 0, w: 1 })
                     tcm.setTransform(lightInst, lightMat)
                 }
             }
