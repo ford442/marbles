@@ -110,6 +110,8 @@ class MarblesGame {
         this.holobarContainerEl = document.getElementById('holobar-container')
         this.bombBarEl = document.getElementById('bombbar')
         this.bombBarContainerEl = document.getElementById('bombbar-container')
+        this.missileBarEl = document.getElementById('missilebar')
+        this.missileBarContainerEl = document.getElementById('missilebar-container')
         this.chameleonBarEl = document.getElementById('chameleonbar')
         this.chameleonBarContainerEl = document.getElementById('chameleonbar-container')
         this.hoverBarEl = document.getElementById('hoverbar')
@@ -810,6 +812,23 @@ class MarblesGame {
                 }
             }
             this.activeBombs = []
+        }
+
+        if (this.activeMissiles) {
+            for (const m of this.activeMissiles) {
+                this.world.removeRigidBody(m.rigidBody)
+                this.scene.remove(m.entity)
+                if (m.matInstance) this.engine.destroyMaterialInstance(m.matInstance)
+                this.engine.destroyEntity(m.entity)
+                this.Filament.EntityManager.get().destroy(m.entity)
+
+                if (m.lightEntity) {
+                    this.scene.remove(m.lightEntity)
+                    this.engine.destroyEntity(m.lightEntity)
+                    this.Filament.EntityManager.get().destroy(m.lightEntity)
+                }
+            }
+            this.activeMissiles = []
         }
 
         this.setNightMode(false)
@@ -1554,6 +1573,23 @@ class MarblesGame {
             }
             this.activeBombs = []
         }
+
+        if (this.activeMissiles) {
+            for (const m of this.activeMissiles) {
+                this.world.removeRigidBody(m.rigidBody)
+                this.scene.remove(m.entity)
+                if (m.matInstance) this.engine.destroyMaterialInstance(m.matInstance)
+                this.engine.destroyEntity(m.entity)
+                this.Filament.EntityManager.get().destroy(m.entity)
+
+                if (m.lightEntity) {
+                    this.scene.remove(m.lightEntity)
+                    this.engine.destroyEntity(m.lightEntity)
+                    this.Filament.EntityManager.get().destroy(m.lightEntity)
+                }
+            }
+            this.activeMissiles = []
+        }
     }
 
     returnToMenu() {
@@ -1986,6 +2022,102 @@ class MarblesGame {
             const Fov = this.Filament.Camera$Fov
             this.camera.setProjectionFov(45, aspect, 0.1, 1000.0, Fov.VERTICAL)
             this.camera.lookAt([0, 10, 20], [0, 0, 0], [0, 1, 0])
+        }
+    }
+
+    shootMissile() {
+        const now = Date.now()
+        if (now - this.lastMissileTime < this.missileCooldown) return
+        this.lastMissileTime = now
+
+        const pos = this.playerMarble.rigidBody.translation()
+        const cosP = Math.cos(this.pitchAngle)
+        const sinP = Math.sin(this.pitchAngle)
+
+        const dirX = Math.sin(this.aimYaw) * cosP
+        const dirY = sinP
+        const dirZ = Math.cos(this.aimYaw) * cosP
+
+        const spawnPos = { x: pos.x + dirX * 1.5, y: pos.y + dirY * 1.5, z: pos.z + dirZ * 1.5 }
+        const speed = 150.0
+
+        const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+            .setTranslation(spawnPos.x, spawnPos.y, spawnPos.z)
+            .setLinvel(dirX * speed, dirY * speed, dirZ * speed)
+            .setCanSleep(false)
+
+        const body = this.world.createRigidBody(bodyDesc)
+        const colliderDesc = RAPIER.ColliderDesc.ball(0.2).setDensity(2.0)
+        this.world.createCollider(colliderDesc, body)
+
+        const entity = this.Filament.EntityManager.get().create()
+        const matInstance = this.material.createInstance()
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 0.5, 0.0])
+        matInstance.setFloatParameter('roughness', 0.1)
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [0.2, 0.2, 0.2] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
+            .build(this.engine, entity)
+
+        this.scene.addEntity(entity)
+
+        const lightEntity = this.Filament.EntityManager.get().create()
+        this.Filament.LightManager.Builder(this.Filament.LightManager$Type.POINT)
+            .color([1.0, 0.5, 0.0])
+            .intensity(50000.0)
+            .falloff(15.0)
+            .build(this.engine, lightEntity)
+        this.scene.addEntity(lightEntity)
+
+        if (audio.playBoost) audio.playBoost()
+
+        this.activeMissiles.push({
+            entity: entity,
+            rigidBody: body,
+            matInstance: matInstance,
+            lightEntity: lightEntity,
+            spawnTime: now,
+            duration: 3000,
+            lastPos: { x: spawnPos.x, y: spawnPos.y, z: spawnPos.z }
+        })
+    }
+
+    explodeMissile(missile) {
+        if (audio.playStomp) audio.playStomp()
+
+        const pos = missile.rigidBody.translation()
+        const radius = 15.0
+        const force = 100.0
+
+        const applyExplosionForce = (body) => {
+            const t = body.translation()
+            const dx = t.x - pos.x
+            const dy = t.y - pos.y
+            const dz = t.z - pos.z
+            const dist = Math.hypot(dx, dy, dz)
+
+            if (dist < radius && dist > 0.1) {
+                const factor = 1.0 - (dist / radius)
+                const nx = dx / dist
+                const ny = dy / dist
+                const nz = dz / dist
+
+                body.applyImpulse({
+                    x: nx * force * factor,
+                    y: (ny * 0.5 + 0.5) * force * factor,
+                    z: nz * force * factor
+                }, true)
+            }
+        }
+
+        for (const m of this.marbles) {
+            applyExplosionForce(m.rigidBody)
+        }
+
+        for (const obj of this.dynamicObjects) {
+            applyExplosionForce(obj.rigidBody)
         }
     }
 
@@ -2964,6 +3096,18 @@ class MarblesGame {
                 this.chameleonBarEl.style.width = '100%'
                 this.chameleonBarEl.style.background = `rgb(${profile.color[0]*255}, ${profile.color[1]*255}, ${profile.color[2]*255})`
                 this.chameleonBarContainerEl.style.display = 'none'
+            }
+        }
+
+        if (this.missileBarEl) {
+            const timeSinceMissile = now - this.lastMissileTime
+            const progress = Math.min(1.0, timeSinceMissile / this.missileCooldown)
+            this.missileBarEl.style.width = `${progress * 100}%`
+
+            if (progress >= 1.0) {
+               this.missileBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ff8c00)'
+            } else {
+               this.missileBarEl.style.filter = 'brightness(0.7)'
             }
         }
 
