@@ -263,3 +263,61 @@ export function createMagnetFacilityZone(game, offset) {
         [0.0, 1.0, 0.0]
     );
 }
+
+export function createLaserGridZone(game, offset) {
+    const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+    // --- Entrance Platform ---
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: offset.z },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.2, 0.2, 0.25],
+        'metal'
+    );
+
+    // --- Main Floor (Long Grid) ---
+    const gridZ = offset.z + 30;
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: gridZ },
+        floorQ,
+        { x: 5, y: 0.5, z: 25 }, // Total length is 50, so width is 10
+        [0.1, 0.1, 0.15],
+        'metal'
+    );
+
+    // --- Kinematic Lasers ---
+    const numLasers = 6;
+    for (let i = 0; i < numLasers; i++) {
+        // Space them out along the z-axis
+        const lz = offset.z + 10 + i * 8;
+        const startX = offset.x; // Moving across the width
+        const baseY = offset.y + 0.5 + 1.0; // Slightly above ground
+
+        // Horizontal laser beams
+        game.createKinematicBox(
+            { x: startX, y: baseY, z: lz },
+            { x: 5, y: 0.2, z: 0.2 }, // Spanning the entire width (10 units across)
+            [1.0, 0.0, 0.0], // Red color
+            'horizontal', // Moves along x-axis
+            startX,
+            4.0 // Amplitude of movement
+        );
+    }
+
+    // --- Goal Platform ---
+    const goalZ = offset.z + 60;
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: goalZ },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.8, 0.8, 0.9],
+        'metal'
+    );
+
+    // Goal zone
+    game.createGoalZone(
+        { x: offset.x, y: offset.y + 1, z: goalZ },
+        [0.0, 1.0, 0.0]
+    );
+}
