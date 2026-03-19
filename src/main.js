@@ -112,6 +112,14 @@ class MarblesGame {
         this.bombBarContainerEl = document.getElementById('bombbar-container')
         this.missileBarEl = document.getElementById('missilebar')
         this.missileBarContainerEl = document.getElementById('missilebar-container')
+
+        // Teleport Mechanic
+        this.lastTeleportTime = 0
+        this.teleportCooldown = 5000
+        this.teleportDistance = 15.0
+        this.teleportBarEl = document.getElementById('teleportbar')
+        this.teleportBarContainerEl = document.getElementById('teleportbar-container')
+
         this.chameleonBarEl = document.getElementById('chameleonbar')
         this.chameleonBarContainerEl = document.getElementById('chameleonbar-container')
         this.hoverBarEl = document.getElementById('hoverbar')
@@ -476,6 +484,12 @@ class MarblesGame {
             }
             if (e.code === 'KeyT') {
                 this.isRewinding = true
+            }
+            if (e.code === 'KeyP' && this.playerMarble) {
+                const now = Date.now()
+                if (now - this.lastTeleportTime > this.teleportCooldown) {
+                    this.triggerTeleport()
+                }
             }
             if (e.code === 'KeyK' && this.playerMarble) {
                 const now = Date.now()
@@ -2025,6 +2039,32 @@ class MarblesGame {
         }
     }
 
+    triggerTeleport() {
+        if (!this.playerMarble) return
+        this.lastTeleportTime = Date.now()
+
+        const pos = this.playerMarble.rigidBody.translation()
+        const cosP = Math.cos(this.pitchAngle)
+        const sinP = Math.sin(this.pitchAngle)
+        const dirX = Math.sin(this.aimYaw) * cosP
+        const dirY = sinP
+        const dirZ = Math.cos(this.aimYaw) * cosP
+
+        const newPos = {
+            x: pos.x + dirX * this.teleportDistance,
+            y: pos.y + dirY * this.teleportDistance,
+            z: pos.z + dirZ * this.teleportDistance
+        }
+
+        this.playerMarble.rigidBody.setTranslation(newPos, true)
+
+        if (audio && audio.playTrick) {
+            audio.playTrick()
+        }
+
+        console.log(`[GAME] Teleported to ${newPos.x.toFixed(2)}, ${newPos.y.toFixed(2)}, ${newPos.z.toFixed(2)}`)
+    }
+
     shootMissile() {
         const now = Date.now()
         if (now - this.lastMissileTime < this.missileCooldown) return
@@ -3096,6 +3136,18 @@ class MarblesGame {
                 this.chameleonBarEl.style.width = '100%'
                 this.chameleonBarEl.style.background = `rgb(${profile.color[0]*255}, ${profile.color[1]*255}, ${profile.color[2]*255})`
                 this.chameleonBarContainerEl.style.display = 'none'
+            }
+        }
+
+        if (this.teleportBarEl) {
+            const timeSinceTeleport = now - this.lastTeleportTime
+            const progress = Math.min(1.0, timeSinceTeleport / this.teleportCooldown)
+            this.teleportBarEl.style.width = `${progress * 100}%`
+
+            if (progress >= 1.0) {
+               this.teleportBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #cc00ff)'
+            } else {
+               this.teleportBarEl.style.filter = 'brightness(0.7)'
             }
         }
 
