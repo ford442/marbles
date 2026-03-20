@@ -53,6 +53,7 @@ try {
     checkMarble("Quasar", ['color', 'radius', 'density', 'restitution', 'friction', 'emissive: true', 'lightIntensity', 'lightColor']);
     checkMarble("Aether", ['color', 'radius', 'density', 'gravityScale', 'friction', 'restitution', 'emissive: true', 'lightIntensity', 'lightColor']);
     checkMarble("Radiant Spark", ['color', 'radius', 'density', 'restitution', 'emissive: true', 'lightIntensity', 'lightColor']);
+    checkMarble("Supernova", ['color', 'radius', 'density', 'friction', 'restitution', 'emissive: true', 'lightIntensity', 'lightColor']);
 
     if (!success) {
         console.error("Some marble checks failed.");
