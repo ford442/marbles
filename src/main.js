@@ -113,6 +113,13 @@ class MarblesGame {
         this.missileBarEl = document.getElementById('missilebar')
         this.missileBarContainerEl = document.getElementById('missilebar-container')
 
+        // Shield Mechanic
+        this.shieldEnergy = 100
+        this.maxShieldEnergy = 100
+        this.shieldActive = false
+        this.shieldbarEl = document.getElementById('shieldbar')
+        this.shieldbarContainerEl = document.getElementById('shieldbar-container')
+
         // Teleport Mechanic
         this.lastTeleportTime = 0
         this.teleportCooldown = 5000
@@ -479,6 +486,9 @@ class MarblesGame {
             if (e.code === 'KeyX' && this.playerMarble) {
                 this.spawnBomb()
             }
+            if (e.code === 'KeyO' && this.playerMarble) {
+                this.shieldActive = true
+            }
             if (e.code === 'KeyL' && this.playerMarble) {
                 this.spawnMissile()
             }
@@ -517,6 +527,9 @@ class MarblesGame {
         })
 
         window.addEventListener('keyup', (e) => {
+            if (e.code === 'KeyO') {
+                this.shieldActive = false
+            }
             if (e.code === 'KeyH') {
                 this.hoverActive = false
             }
@@ -2218,7 +2231,7 @@ class MarblesGame {
 
     spawnMissile() {
         const now = Date.now()
-        if (now - this.lastMissileTime < this.missileCooldown) return
+        if (this.lastMissileTime !== 0 && now - this.lastMissileTime < this.missileCooldown) return
         this.lastMissileTime = now
 
         const pos = this.playerMarble.rigidBody.translation()
@@ -2650,6 +2663,69 @@ class MarblesGame {
             } else {
                 this.gravityBarEl.style.width = `0%`
                 this.gravityBarEl.style.filter = 'none'
+            }
+        }
+
+        if (this.shieldActive && this.shieldEnergy > 0) {
+            this.shieldEnergy -= 1.0
+            if (this.shieldEnergy < 0) this.shieldEnergy = 0
+
+            if (this.playerMarble) {
+                const playerPos = this.playerMarble.rigidBody.translation()
+                const radius = 5.0
+                const force = 3.0
+
+                // Repel other dynamic bodies
+                this.world.bodies.forEach(body => {
+                    if (body === this.playerMarble.rigidBody) return
+                    if (!body.isDynamic()) return
+
+                    const bodyPos = body.translation()
+                    const dx = bodyPos.x - playerPos.x
+                    const dy = bodyPos.y - playerPos.y
+                    const dz = bodyPos.z - playerPos.z
+                    const distSq = dx * dx + dy * dy + dz * dz
+
+                    if (distSq < radius * radius && distSq > 0.001) {
+                        const dist = Math.sqrt(distSq)
+                        const fx = (dx / dist) * force * body.mass()
+                        const fy = (dy / dist) * force * body.mass() + 1.0 // slight upward pop
+                        const fz = (dz / dist) * force * body.mass()
+
+                        body.applyImpulse({ x: fx, y: fy, z: fz }, true)
+                    }
+                })
+
+                // Visual feedback - tint cyan
+                const rcm = this.engine.getRenderableManager()
+                const inst = rcm.getInstance(this.playerMarble.entity)
+                if (inst) {
+                    const matInst = rcm.getMaterialInstanceAt(inst, 0)
+                    matInst.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.0, 1.0, 1.0])
+                }
+            }
+        } else {
+            this.shieldEnergy += 0.2
+            if (this.shieldEnergy > this.maxShieldEnergy) this.shieldEnergy = this.maxShieldEnergy
+
+            // Restore original color when not shielding or out of energy
+            if (this.playerMarble && this.playerMarble.originalColor) {
+                const rcm = this.engine.getRenderableManager()
+                const inst = rcm.getInstance(this.playerMarble.entity)
+                if (inst) {
+                    const matInst = rcm.getMaterialInstanceAt(inst, 0)
+                    matInst.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, this.playerMarble.originalColor)
+                }
+            }
+        }
+
+        if (this.shieldbarEl) {
+            const pct = (this.shieldEnergy / this.maxShieldEnergy) * 100
+            this.shieldbarEl.style.width = `${pct}%`
+            if (this.shieldActive && this.shieldEnergy > 0) {
+                this.shieldbarEl.style.boxShadow = '0 0 10px #00ffff'
+            } else {
+                this.shieldbarEl.style.boxShadow = 'none'
             }
         }
 
