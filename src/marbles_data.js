@@ -45,5 +45,6 @@ export const marblesInfo = [
     { name: "Aether", color: [0.5, 0.0, 1.0], offset: { x: 6.0, y: 5, z: 10 }, radius: 0.5, density: 0.1, gravityScale: 0.1, friction: 0.0, restitution: 1.5, emissive: true, lightIntensity: 60000.0, lightColor: [0.5, 0.0, 1.0] },
     { name: "Hyperion", color: [1.0, 0.5, 0.0], offset: { x: -6.0, y: 5, z: 10 }, radius: 0.6, density: 2.0, friction: 0.1, restitution: 0.9, roughness: 0.1, emissive: true, lightIntensity: 50000.0, lightColor: [1.0, 0.8, 0.2] },
     { name: "Radiant Spark", color: [1.0, 0.2, 0.4], offset: { x: 8.0, y: 5, z: -10 }, radius: 0.5, density: 0.3, friction: 0.5, restitution: 1.3, roughness: 0.1, emissive: true, lightIntensity: 35000.0, lightColor: [1.0, 0.2, 0.4] },
-    { name: "Supernova", color: [1.0, 0.8, 0.2], offset: { x: -8.0, y: 5, z: -10 }, radius: 0.7, density: 8.0, friction: 0.0, restitution: 1.4, roughness: 0.05, emissive: true, lightIntensity: 60000.0, lightColor: [1.0, 0.7, 0.1] }
+    { name: "Supernova", color: [1.0, 0.8, 0.2], offset: { x: -8.0, y: 5, z: -10 }, radius: 0.7, density: 8.0, friction: 0.0, restitution: 1.4, roughness: 0.05, emissive: true, lightIntensity: 60000.0, lightColor: [1.0, 0.7, 0.1] },
+    { name: "Galactic Core", color: [0.2, 0.4, 1.0], offset: { x: 0.0, y: 5, z: 12 }, radius: 0.6, density: 4.0, friction: 0.1, restitution: 1.2, roughness: 0.1, emissive: true, lightIntensity: 55000.0, lightColor: [0.2, 0.5, 1.0] }
 ];
