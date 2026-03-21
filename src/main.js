@@ -184,6 +184,14 @@ class MarblesGame {
         this.maxHoverEnergy = 100
         this.hoverActive = false
 
+        // Jetpack Mechanic
+        this.jetpackEnergy = 100
+        this.maxJetpackEnergy = 100
+        this.jetpackActive = false
+        this.jetpackbarEl = document.getElementById('jetpackbar')
+        this.jetpackbarContainerEl = document.getElementById('jetpackbar-container')
+        this.visualParticles = []
+
         // Frost Bridge Mechanic
         this.iceEnergy = 100
         this.maxIceEnergy = 100
@@ -501,6 +509,9 @@ class MarblesGame {
                     this.triggerTeleport()
                 }
             }
+            if (e.code === 'KeyJ' && this.playerMarble) {
+                this.jetpackActive = true
+            }
             if (e.code === 'KeyK' && this.playerMarble) {
                 const now = Date.now()
                 if (now - this.lastChameleonTime > this.chameleonCooldown) {
@@ -535,6 +546,9 @@ class MarblesGame {
             }
             if (e.code === 'KeyG') {
                 this.iceActive = false
+            }
+            if (e.code === 'KeyJ') {
+                this.jetpackActive = false
             }
             if (e.code === 'KeyT') {
                 this.isRewinding = false
@@ -805,6 +819,16 @@ class MarblesGame {
                 this.Filament.EntityManager.get().destroy(p.entity)
             }
             this.temporaryPlatforms = []
+        }
+
+        if (this.visualParticles) {
+            for (const p of this.visualParticles) {
+                this.scene.remove(p.entity)
+                if (p.matInstance) this.engine.destroyMaterialInstance(p.matInstance)
+                this.engine.destroyEntity(p.entity)
+                this.Filament.EntityManager.get().destroy(p.entity)
+            }
+            this.visualParticles = []
         }
 
         if (this.activeMissiles) {
@@ -1560,6 +1584,7 @@ class MarblesGame {
         }
 
         this.flipActive = false
+        this.jetpackActive = false
         this.aimYaw = 0
         this.chargePower = 0
         this.charging = false
@@ -2491,6 +2516,47 @@ class MarblesGame {
         if (audio && audio.playJump) audio.playJump()
     }
 
+    spawnJetpackExhaust(pos, linvel) {
+        const entity = this.Filament.EntityManager.get().create()
+        const matInstance = this.material.createInstance()
+        // Bright orange/yellow core
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 0.6, 0.0])
+        matInstance.setFloatParameter('roughness', 0.8)
+
+        const halfExtents = { x: 0.1, y: 0.1, z: 0.1 }
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .build(this.engine, entity)
+
+        const tcm = this.engine.getTransformManager()
+        const inst = tcm.getInstance(entity)
+        const mat = quaternionToMat4(pos, { x: 0, y: 0, z: 0, w: 1 })
+
+        const sx = halfExtents.x * 2;
+        const sy = halfExtents.y * 2;
+        const sz = halfExtents.z * 2;
+
+        mat[0] *= sx; mat[1] *= sx; mat[2] *= sx;
+        mat[4] *= sy; mat[5] *= sy; mat[6] *= sy;
+        mat[8] *= sz; mat[9] *= sz; mat[10] *= sz;
+
+        tcm.setTransform(inst, mat)
+        this.scene.addEntity(entity)
+
+        this.visualParticles.push({
+            entity: entity,
+            matInstance: matInstance,
+            spawnTime: Date.now(),
+            pos: { x: pos.x, y: pos.y, z: pos.z },
+            vel: { x: -linvel.x * 0.1 + (Math.random() - 0.5) * 2, y: -linvel.y * 0.1 - 2.0, z: -linvel.z * 0.1 + (Math.random() - 0.5) * 2 },
+            duration: 500, // ms
+            scale: 1.0
+        })
+    }
+
     spawnHoloPlatform() {
         const now = Date.now()
         if (now - this.lastHoloTime < this.holoCooldown) return
@@ -2743,6 +2809,64 @@ class MarblesGame {
         } else {
             if (this.playerMarble && this.isGrounded(this.playerMarble)) {
                 this.hoverEnergy = Math.min(this.maxHoverEnergy, this.hoverEnergy + 0.2)
+            }
+        }
+
+        // Jetpack Logic
+        if (this.jetpackActive && this.jetpackEnergy > 0) {
+            if (this.playerMarble) {
+                const rb = this.playerMarble.rigidBody
+                const mass = rb.mass()
+                const cosP = Math.cos(this.pitchAngle)
+                const sinP = Math.sin(this.pitchAngle)
+
+                // Thrust vector aligned with camera aim, but mainly upwards
+                const dirX = Math.sin(this.aimYaw) * cosP
+                const dirY = 1.0 // Always push up
+                const dirZ = Math.cos(this.aimYaw) * cosP
+
+                // Apply continuous force while active
+                // Stronger than hover to actually ascend
+                rb.applyImpulse({
+                    x: dirX * mass * 0.1,
+                    y: dirY * mass * 0.25,
+                    z: dirZ * mass * 0.1
+                }, true)
+
+                const pos = rb.translation()
+                const linvel = rb.linvel()
+                // Spawn exhaust particles
+                if (this.frameCount % 2 === 0) {
+                    this.spawnJetpackExhaust(pos, linvel)
+                }
+
+                // Play continuous thrust sound
+                if (this.frameCount % 5 === 0 && audio && audio.playBoost) {
+                    // We could add a specialized loop sound, but boosting repeatedly gives a sputtering jet effect
+                    audio.playBoost()
+                }
+            }
+            this.jetpackEnergy = Math.max(0, this.jetpackEnergy - 1.0) // Drains faster than hover
+        } else {
+            if (this.playerMarble && this.isGrounded(this.playerMarble)) {
+                this.jetpackEnergy = Math.min(this.maxJetpackEnergy, this.jetpackEnergy + 0.5)
+            }
+        }
+
+        if (this.jetpackbarEl && this.jetpackbarContainerEl) {
+            const pct = (this.jetpackEnergy / this.maxJetpackEnergy) * 100
+            this.jetpackbarEl.style.width = `${pct}%`
+
+            if (this.jetpackEnergy < this.maxJetpackEnergy || this.jetpackActive) {
+                this.jetpackbarContainerEl.style.display = 'block'
+            } else {
+                this.jetpackbarContainerEl.style.display = 'none'
+            }
+
+            if (this.jetpackActive && this.jetpackEnergy > 0) {
+                this.jetpackbarEl.style.boxShadow = '0 0 10px #ffaa00'
+            } else {
+                this.jetpackbarEl.style.boxShadow = 'none'
             }
         }
 
@@ -3387,6 +3511,48 @@ class MarblesGame {
                     const lightMat = quaternionToMat4(t, { x: 0, y: 0, z: 0, w: 1 })
                     tcm.setTransform(lightInst, lightMat)
                 }
+            }
+        }
+
+        // Handle visual particles lifecycle
+        for (let i = this.visualParticles.length - 1; i >= 0; i--) {
+            const p = this.visualParticles[i]
+            const timeAlive = now - p.spawnTime
+
+            if (timeAlive > p.duration) {
+                this.scene.remove(p.entity)
+                if (p.matInstance) this.engine.destroyMaterialInstance(p.matInstance)
+                this.engine.destroyEntity(p.entity)
+                this.Filament.EntityManager.get().destroy(p.entity)
+                this.visualParticles.splice(i, 1)
+            } else {
+                // Animate position
+                p.pos.x += p.vel.x * 0.016
+                p.pos.y += p.vel.y * 0.016
+                p.pos.z += p.vel.z * 0.016
+
+                // Shrink
+                p.scale = Math.max(0, 1.0 - (timeAlive / p.duration))
+
+                // Fade to dark red/smoke
+                if (p.matInstance) {
+                    const progress = timeAlive / p.duration
+                    const r = 1.0 - progress * 0.8
+                    const g = 0.6 - progress * 0.6
+                    const b = 0.0
+                    p.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [r, g, b])
+                }
+
+                const tcm = this.engine.getTransformManager()
+                const inst = tcm.getInstance(p.entity)
+                const mat = quaternionToMat4(p.pos, { x: 0, y: 0, z: 0, w: 1 })
+
+                const s = 0.2 * p.scale // Base size * animation scale
+                mat[0] *= s; mat[1] *= s; mat[2] *= s
+                mat[4] *= s; mat[5] *= s; mat[6] *= s
+                mat[8] *= s; mat[9] *= s; mat[10] *= s
+
+                tcm.setTransform(inst, mat)
             }
         }
 
