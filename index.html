@@ -363,6 +363,24 @@
             transition: width 0.1s;
         }
 
+        #jetpackbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #jetpackbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ffaa00 0%, #ffff00 100%);
+            transition: width 0.1s;
+        }
+
         #icebar-container {
             width: 200px;
             height: 10px;
@@ -634,6 +652,9 @@
         <div id="hoverbar-container">
             <div id="hoverbar"></div>
         </div>
+        <div id="jetpackbar-container" style="display: none;">
+            <div id="jetpackbar"></div>
+        </div>
         <div id="icebar-container" style="display: none;">
             <div id="icebar"></div>
         </div>
@@ -669,6 +690,7 @@
             <kbd>X</kbd> Bomb &nbsp;|&nbsp;
             <kbd>L</kbd> Missile &nbsp;|&nbsp;
             <kbd>H</kbd> Hover &nbsp;|&nbsp;
+            <kbd>J</kbd> Jetpack &nbsp;|&nbsp;
             <kbd>G</kbd> Frost Bridge &nbsp;|&nbsp;
             <kbd>U</kbd> Gravity Flip &nbsp;|&nbsp;
             <kbd>K</kbd> Chameleon &nbsp;|&nbsp;
