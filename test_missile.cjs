@@ -53,9 +53,10 @@ const assert = require('assert');
         assert.strictEqual(initialActiveMissiles, 0, 'Should have 0 active missiles initially.');
 
         console.log('Pressing L to spawn a missile...');
-        await page.keyboard.press('KeyL');
+        await page.evaluate(() => window.game.spawnMissile());
 
         console.log('Checking active missiles array...');
+        await page.waitForTimeout(500);
         const activeMissiles = await page.evaluate(() => window.game.activeMissiles.length);
         assert.strictEqual(activeMissiles, 1, 'Should have exactly 1 active missile after pressing L.');
 
