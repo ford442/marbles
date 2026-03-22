@@ -1,0 +1,64 @@
+{
+  "registry": {
+    "candy_world": {
+      "description": "Fantasy first-person 3D game with music-reactive world",
+      "type": "game",
+      "stack": ["typescript", "webgpu"],
+      "default_branch": "main",
+      "ports": [3000, 8080],
+      "build_cmd": "npm install && npm run build",
+      "serve_cmd": "npm run dev"
+    },
+    "image_video_effects": {
+      "description": "Image and video effects using WebGPU",
+      "type": "graphics",
+      "stack": ["wgsl", "webgpu", "typescript"],
+      "default_branch": "main",
+      "ports": [3000],
+      "build_cmd": "npm install",
+      "serve_cmd": "npm run dev"
+    },
+    "mod-player": {
+      "description": "WebGPU pattern/note display for MOD/S3M/IT/XM via libopenmpt.js",
+      "type": "audio",
+      "stack": ["wgsl", "wasm", "javascript"],
+      "default_branch": "main",
+      "ports": [8080],
+      "build_cmd": "npm install",
+      "serve_cmd": "npx serve ."
+    },
+    "pachinball": {
+      "description": "3D game blending Japanese Pachinko and American Pinball",
+      "type": "game",
+      "stack": ["typescript", "webgpu"],
+      "default_branch": "main",
+      "ports": [3000],
+      "build_cmd": "npm install",
+      "serve_cmd": "npm run dev"
+    },
+    "Tetris_WebGPU": {
+      "description": "Classic Tetris implemented with WebGPU",
+      "type": "game",
+      "stack": ["typescript", "webgpu"],
+      "default_branch": "main",
+      "ports": [3000],
+      "build_cmd": "npm install",
+      "serve_cmd": "npm run dev"
+    },
+    "web_sequencer": {
+      "description": "Web-based music sequencer with synth, drums, sampler & TTS",
+      "type": "audio",
+      "stack": ["cpp", "wasm", "emscripten"],
+      "default_branch": "main",
+      "ports": [8080],
+      "build_cmd": "make || emcc src/*.cpp -o build/sequencer.js",
+      "serve_cmd": "python3 -m http.server 8080"
+    }
+  },
+  "meta": {
+    "owner": "ford442",
+    "base_url": "https://github.com/ford442",
+    "projects_dir": "${HOME}/projects",
+    "shared_dir": "${WORKSPACE_ROOT}/shared"
+  }
+}

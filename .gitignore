@@ -1,6 +1,61 @@
+# Projects directory (user-created content)
+projects/**/*
+!projects/.gitkeep
+openclaw
+# Node modules
 node_modules/
-dist/
-*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+emsdk
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+
+# Build outputs
+/dist/
+/build/
+*.wasm
+*.o
+*.a
+
+# WASM Renderer build outputs
+/wasm_renderer/build/
+/wasm_renderer/dist/
+/wasm_renderer/public/
+/public/wasm/
+/cmake-build-*/
+
+# IDE
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
 .DS_Store
-package-lock.json
-server.pid
+Thumbs.db
+
+# Emscripten cache
+.emscripten_cache/
+
+# Temporary files
+/tmp/
+*.tmp
+*.log
+
+# Environment variables (API keys)
+.env
+.env.local
+.env.remote
+.env.backup.*
+
+*.bundle
+the_jokesters-pre-cleanup-*.bundle

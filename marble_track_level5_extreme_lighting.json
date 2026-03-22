@@ -1,0 +1,106 @@
+{
+    "trackId": "marble_track_level5_extreme",
+    "qualityProfile": "cinematic",
+    "iblIntensity": 1.1,
+    "iblRotation": 0.0,
+    "directionalLight": {
+        "enabled": true,
+        "direction": [
+            0.85,
+            1.0,
+            -0.4
+        ],
+        "color": [
+            1.0,
+            0.94,
+            0.88
+        ],
+        "intensity": 1.25,
+        "castShadows": true
+    },
+    "shadow": {
+        "enabled": true,
+        "mapResolution": 4096,
+        "cascadeCount": 4,
+        "cascadeSplits": [
+            0.08,
+            0.25,
+            0.55,
+            1.0
+        ],
+        "bias": 0.0007,
+        "normalBias": 0.12,
+        "softness": 0.85,
+        "maxDistance": 120.0
+    },
+    "reflectionProbes": [
+        {
+            "id": "start_grid",
+            "resolution": 256,
+            "updateMode": "scheduled",
+            "updateInterval": 0.2,
+            "position": [
+                0,
+                50,
+                8
+            ],
+            "near": 0.1,
+            "far": 60.0,
+            "cullingMask": [
+                "marbles",
+                "track"
+            ],
+            "intensity": 1.15,
+            "priority": 2
+        },
+        {
+            "id": "endgame_path",
+            "resolution": 384,
+            "updateMode": "scheduled",
+            "updateInterval": 0.12,
+            "position": [
+                26,
+                -80,
+                -32
+            ],
+            "near": 0.1,
+            "far": 80.0,
+            "cullingMask": [
+                "marbles",
+                "track"
+            ],
+            "intensity": 1.3,
+            "priority": 3
+        },
+        {
+            "id": "goal_platform",
+            "resolution": 512,
+            "updateMode": "realtime",
+            "updateInterval": 0.0,
+            "position": [
+                18,
+                -86,
+                -2
+            ],
+            "near": 0.1,
+            "far": 90.0,
+            "cullingMask": [
+                "marbles",
+                "track",
+                "fx"
+            ],
+            "intensity": 1.45,
+            "priority": 4
+        }
+    ],
+    "skybox": {
+        "enabled": true,
+        "texture": "env_sky_cloudy.hdr",
+        "color": [
+            0.45,
+            0.5,
+            0.6
+        ],
+        "exposure": 1.0
+    }
+}

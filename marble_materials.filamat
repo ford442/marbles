@@ -1,0 +1,462 @@
+/**
+ * Filament Material Definitions (.mat format)
+ * These are compiled to .filamat binaries using matc (Filament material compiler)
+ * 
+ * Compilation: matc -o marble_glass.filamat marble_glass.mat
+ */
+
+// ============================================================================
+// MATERIAL: Classic Glass Marble
+// ============================================================================
+/*
+material {
+    name : ClassicGlass,
+    requires : [
+        position,
+        normal,
+        tangent,
+        uv0
+    ],
+    shadingModel : unlit,  // Custom lighting in shader
+    blending : transparent,
+    depthWrite : false,
+    culling : back,
+    
+    parameters : [
+        { type : float,  name : uTime },
+        { type : float,  name : uRefractionIndex },
+        { type : float,  name : uFresnelPower },
+        { type : float,  name : uCausticIntensity },
+        { type : float,  name : uDistortionStrength },
+        { type : sampler2d, name : noiseTexture },
+        { type : samplerCubemap, name : envMap },
+        { type : float4, name : materialBaseColor }
+    ],
+    
+    variables : [
+        { name : worldPosition, precision : high },
+        { name : normal, precision : high },
+        { name : viewDirection, precision : high },
+        { name : uv, precision : medium }
+    ]
+}
+
+fragment {
+    #include "common_types.glsl"
+    
+    void material(inout MaterialInputs material) {
+        vec3 normal = normalize(getWorldGeometricNormalVector());
+        vec3 viewDir = normalize(getWorldViewVector());
+        
+        // Fresnel effect
+        float fresnel = pow(1.0 - abs(dot(viewDir, normal)), materialParams.uFresnelPower);
+        
+        // Caustic simulation
+        vec3 internalPos = getWorldPosition() * 0.5 + vec3(0.0, materialParams.uTime * 0.1, 0.0);
+        float caustic = 0.0;
+        caustic += sin(internalPos.x * 3.0 + materialParams.uTime) * cos(internalPos.y * 3.0 + materialParams.uTime * 0.7);
+        caustic = pow(caustic * 0.5 + 0.5, 3.0) * materialParams.uCausticIntensity;
+        
+        // Environment sampling (simplified - actual would use proper reflection/refraction)
+        vec3 reflectDir = reflect(-viewDir, normal);
+        vec4 reflectionColor = sampleMaterial(envMap, reflectDir);
+        
+        // Glass base with caustics
+        vec3 glassColor = reflectionColor.rgb;
+        glassColor += vec3(1.0, 0.95, 0.8) * caustic * (1.0 - fresnel);
+        
+        // Mix with base material color
+        glassColor = mix(glassColor, materialParams.materialBaseColor.rgb, 
+                        materialParams.materialBaseColor.a * 0.3);
+        
+        material.baseColor = vec4(glassColor, 0.85 + fresnel * 0.15);
+        material.roughness = 0.05;
+        material.metallic = 0.0;
+    }
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        // Pass world position to fragment
+        material.worldPosition = getWorldPosition();
+    }
+}
+*/
+
+// ============================================================================
+// MATERIAL: Obsidian Metal Marble
+// ============================================================================
+/*
+material {
+    name : ObsidianMetal,
+    requires : [
+        position,
+        normal,
+        tangent,
+        uv0
+    ],
+    shadingModel : lit,
+    blending : opaque,
+    depthWrite : true,
+    culling : back,
+    
+    parameters : [
+        { type : float,  name : uTime },
+        { type : float,  name : uAnisotropy },
+        { type : float,  name : uGrainScale },
+        { type : float,  name : uScratchesIntensity },
+        { type : sampler2d, name : grainTexture },
+        { type : sampler2d, name : anisoTexture },
+        { type : samplerCubemap, name : envMap }
+    ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        vec3 normal = normalize(getWorldGeometricNormalVector());
+        vec3 tangent = normalize(getWorldTangentVector());
+        vec3 bitangent = cross(normal, tangent);
+        vec3 viewDir = normalize(getWorldViewVector());
+        
+        // Procedural metal grain
+        vec2 uv = getUV0();
+        vec2 uvScaled = uv * materialParams.uGrainScale;
+        float grain = sin(uvScaled.x * 50.0) * sin(uvScaled.y * 50.0);
+        grain += sin(uvScaled.x * 120.0 + uvScaled.y * 80.0) * 0.5;
+        grain = grain / 1.75 * 0.5 + 0.5;
+        
+        // Obsidian base color
+        vec3 baseColor = mix(vec3(0.02, 0.02, 0.03), vec3(0.15, 0.15, 0.18), grain);
+        
+        // Anisotropic roughness
+        float roughness = mix(0.1, 0.3, grain);
+        
+        // Environment reflection
+        vec3 reflectDir = reflect(-viewDir, normal);
+        vec4 reflection = sampleMaterial(envMap, reflectDir);
+        
+        // Heat shimmer at edges
+        float fresnel = pow(1.0 - abs(dot(viewDir, normal)), 2.0);
+        float heat = sin(getWorldPosition().y * 10.0 + materialParams.uTime * 2.0) * 0.5 + 0.5;
+        heat *= pow(fresnel, 4.0) * 0.1;
+        
+        baseColor += reflection.rgb * (0.5 + grain * 0.3);
+        baseColor += vec3(heat * 0.5, heat * 0.2, 0.0);
+        baseColor *= (0.3 + 0.7 * fresnel);
+        
+        material.baseColor = vec4(baseColor, 1.0);
+        material.roughness = roughness;
+        material.metallic = 0.9;
+    }
+}
+*/
+
+// ============================================================================
+// MATERIAL: Neon Glow Marble
+// ============================================================================
+/*
+material {
+    name : NeonGlow,
+    requires : [
+        position,
+        normal,
+        uv0
+    ],
+    shadingModel : unlit,  // Full emission
+    blending : additive,
+    depthWrite : false,
+    culling : back,
+    
+    parameters : [
+        { type : float,  name : uTime },
+        { type : float,  name : uIridescenceScale },
+        { type : float,  name : uGlowIntensity },
+        { type : float,  name : uHologramSpeed },
+        { type : float,  name : uDistortionStrength },
+        { type : sampler2d, name : hologramTexture },
+        { type : sampler2d, name : noiseTexture },
+        { type : samplerCubemap, name : envMap }
+    ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        vec3 normal = normalize(getWorldGeometricNormalVector());
+        vec3 viewDir = normalize(getWorldViewVector());
+        vec2 uv = getUV0();
+        
+        // Thin-film iridescence
+        float cosTheta = abs(dot(viewDir, normal));
+        float filmThickness = 400.0 + sin(uv.x * 10.0 + uv.y * 8.0 + materialParams.uTime) * 100.0;
+        vec3 phase = vec3(
+            filmThickness,
+            filmThickness * 0.97,
+            filmThickness * 0.94
+        );
+        vec3 iridescence = 0.5 + 0.5 * cos(phase * 0.01);
+        
+        // Core glow
+        float distFromCenter = length(uv - 0.5);
+        float coreGlow = exp(-distFromCenter * 4.0) * materialParams.uGlowIntensity;
+        float pulse = sin(materialParams.uTime * 3.0) * 0.3 + 0.7;
+        coreGlow *= pulse;
+        
+        // Neon colors
+        vec3 neonCyan = vec3(0.0, 1.0, 1.0);
+        vec3 neonPink = vec3(1.0, 0.0, 0.5);
+        vec3 baseColor = mix(neonCyan, neonPink, sin(materialParams.uTime) * 0.5 + 0.5);
+        
+        // Combine
+        vec3 finalColor = baseColor * (0.3 + coreGlow);
+        finalColor += iridescence * materialParams.uIridescenceScale;
+        
+        // Rim lighting
+        float fresnel = pow(1.0 - cosTheta, 3.0);
+        finalColor += baseColor * fresnel * 2.0;
+        
+        material.baseColor = vec4(finalColor, 0.95);
+        material.emissive = vec4(finalColor * materialParams.uGlowIntensity, 1.0);
+    }
+}
+*/
+
+// ============================================================================
+// MATERIAL: Stone Vein Marble
+// ============================================================================
+/*
+material {
+    name : StoneVein,
+    requires : [
+        position,
+        normal,
+        uv0
+    ],
+    shadingModel : lit,
+    blending : opaque,
+    depthWrite : true,
+    culling : back,
+    subsurfaceScattering : true,
+    
+    parameters : [
+        { type : float,  name : uTime },
+        { type : float,  name : uSSSIntensity },
+        { type : float,  name : uSparkleDensity },
+        { type : float,  name : uSparkleSpeed },
+        { type : sampler2d, name : veinTexture },
+        { type : sampler2d, name : sparkleTexture },
+        { type : samplerCubemap, name : envMap }
+    ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        vec3 normal = normalize(getWorldGeometricNormalVector());
+        vec3 viewDir = normalize(getWorldViewVector());
+        vec2 uv = getUV0();
+        
+        // Procedural vein pattern
+        vec2 p = uv * 3.0;
+        float vein1 = sin(p.x * 2.0 + sin(p.y * 3.0 + materialParams.uTime * 0.1)) * 0.5 + 0.5;
+        vein1 = smoothstep(0.6, 0.65, vein1);
+        
+        float vein2 = sin(p.y * 4.0 + sin(p.x * 2.0 - materialParams.uTime * 0.05)) * 0.5 + 0.5;
+        vein2 = smoothstep(0.7, 0.75, vein2) * 0.5;
+        
+        float veins = vein1 + vein2;
+        
+        // Stone colors
+        vec3 baseStone = vec3(0.85, 0.82, 0.78);
+        vec3 veinColor = vec3(0.3, 0.25, 0.35);
+        vec3 stoneColor = mix(baseStone, veinColor, veins);
+        
+        // Subsurface scattering
+        float thickness = 1.0 - veins * 0.7;
+        material.subsurfaceColor = vec3(1.0, 0.85, 0.7) * materialParams.uSSSIntensity;
+        material.subsurfacePower = thickness * 10.0;
+        material.subsurfaceThickness = thickness;
+        
+        // Roughness variation
+        float roughness = mix(0.4, 0.8, veins);
+        
+        // Ambient occlusion in veins
+        float ao = 1.0 - veins * 0.3;
+        stoneColor *= ao;
+        
+        material.baseColor = vec4(stoneColor, 1.0);
+        material.roughness = roughness;
+        material.metallic = 0.0;
+    }
+}
+*/
+
+// ============================================================================
+// POST-PROCESS MATERIALS
+// ============================================================================
+
+/*
+// Bloom Downsample
+material {
+    name : BloomDownsample,
+    parameters : [
+        { type : sampler2d, name : source },
+        { type : float, name : threshold }
+    ],
+    variables : [
+        { name : uv }
+    ],
+    vertexDomain : device,
+    shadingModel : unlit,
+    depthWrite : false
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        vec2 uv = getUV0();
+        vec3 color = texture(materialParams.source, uv).rgb;
+        float luminance = dot(color, vec3(0.299, 0.587, 0.114));
+        color *= step(materialParams.threshold, luminance);
+        material.baseColor = vec4(color, 1.0);
+    }
+}
+*/
+
+/*
+// Motion Blur
+material {
+    name : MotionBlur,
+    parameters : [
+        { type : sampler2d, name : colorTexture },
+        { type : sampler2d, name : velocityTexture },
+        { type : int, name : sampleCount },
+        { type : float, name : intensity }
+    ],
+    vertexDomain : device,
+    shadingModel : unlit,
+    depthWrite : false
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        vec2 uv = getUV0();
+        vec2 velocity = texture(materialParams.velocityTexture, uv).rg * materialParams.intensity;
+        
+        vec3 result = vec3(0.0);
+        float totalWeight = 0.0;
+        
+        for (int i = 0; i < materialParams.sampleCount; i++) {
+            float t = float(i) / float(materialParams.sampleCount - 1);
+            vec2 sampleUV = uv + velocity * (t - 0.5);
+            float weight = 1.0 - abs(t - 0.5) * 2.0;
+            result += texture(materialParams.colorTexture, sampleUV).rgb * weight;
+            totalWeight += weight;
+        }
+        
+        material.baseColor = vec4(result / totalWeight, 1.0);
+    }
+}
+*/
+
+/*
+// Chromatic Aberration
+material {
+    name : ChromaticAberration,
+    parameters : [
+        { type : sampler2d, name : source },
+        { type : float, name : intensity }
+    ],
+    vertexDomain : device,
+    shadingModel : unlit,
+    depthWrite : false
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        vec2 uv = getUV0();
+        vec2 center = vec2(0.5, 0.5);
+        vec2 direction = uv - center;
+        float dist = length(direction);
+        vec2 offset = direction * materialParams.intensity * dist;
+        
+        float r = texture(materialParams.source, uv + offset * 1.0).r;
+        float g = texture(materialParams.source, uv + offset * 0.5).g;
+        float b = texture(materialParams.source, uv).b;
+        
+        material.baseColor = vec4(r, g, b, 1.0);
+    }
+}
+*/
+
+/*
+// Screen Space Reflections
+material {
+    name : SSR,
+    parameters : [
+        { type : sampler2d, name : colorTexture },
+        { type : sampler2d, name : depthTexture },
+        { type : sampler2d, name : normalTexture },
+        { type : float4x4, name : viewMatrix },
+        { type : float4x4, name : projMatrix },
+        { type : int, name : maxSteps },
+        { type : float, name : stepSize },
+        { type : float, name : thickness }
+    ],
+    vertexDomain : device,
+    shadingModel : unlit,
+    depthWrite : false
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        vec2 uv = getUV0();
+        float depth = texture(materialParams.depthTexture, uv).r;
+        
+        // Reconstruct world position
+        vec4 clipPos = vec4(uv * 2.0 - 1.0, depth, 1.0);
+        vec4 viewPos = inverse(materialParams.projMatrix) * clipPos;
+        viewPos /= viewPos.w;
+        vec3 worldPos = (inverse(materialParams.viewMatrix) * viewPos).xyz;
+        
+        // Get normal
+        vec3 normal = texture(materialParams.normalTexture, uv).xyz * 2.0 - 1.0;
+        normal = normalize(mat3(materialParams.viewMatrix) * normal);
+        
+        // Calculate reflection ray
+        vec3 viewDir = normalize(viewPos.xyz);
+        vec3 reflectDir = reflect(viewDir, normal);
+        
+        // Ray march in view space
+        vec3 rayPos = viewPos.xyz;
+        vec3 rayDir = reflectDir;
+        
+        vec4 reflectionColor = vec4(0.0);
+        
+        for (int i = 0; i < materialParams.maxSteps; i++) {
+            rayPos += rayDir * materialParams.stepSize;
+            
+            // Project to screen space
+            vec4 projPos = materialParams.projMatrix * vec4(rayPos, 1.0);
+            projPos.xy /= projPos.w;
+            projPos.xy = projPos.xy * 0.5 + 0.5;
+            
+            if (projPos.x < 0.0 || projPos.x > 1.0 || 
+                projPos.y < 0.0 || projPos.y > 1.0) {
+                break;
+            }
+            
+            float sceneDepth = texture(materialParams.depthTexture, projPos.xy).r;
+            float sceneZ = -(inverse(materialParams.projMatrix) * 
+                            vec4(projPos.xy * 2.0 - 1.0, sceneDepth, 1.0)).w;
+            
+            if (rayPos.z > sceneZ && rayPos.z < sceneZ + materialParams.thickness) {
+                reflectionColor = texture(materialParams.colorTexture, projPos.xy);
+                break;
+            }
+        }
+        
+        vec3 baseColor = texture(materialParams.colorTexture, uv).rgb;
+        float fresnel = pow(1.0 - abs(dot(-viewDir, normal)), 2.0);
+        
+        material.baseColor = vec4(mix(baseColor, reflectionColor.rgb, fresnel * reflectionColor.a), 1.0);
+    }
+}
+*/

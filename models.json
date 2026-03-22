@@ -1,0 +1,130 @@
+{
+  "providers": {
+    "xai": {
+      "name": "X.AI (Grok)",
+      "api_base": "https://api.x.ai/v1",
+      "env_key": "XAI_API_KEY",
+      "default_model": "grok-beta",
+      "models": ["grok-beta", "grok-2", "grok-2-mini"],
+      "capabilities": ["chat", "code", "reasoning"],
+      "max_tokens": 4096,
+      "temperature": 0.7
+    },
+    "kimi": {
+      "name": "Kimi",
+      "api_base": "https://api.moonshot.cn/v1",
+      "env_key": "KIMI_API_KEY",
+      "env_key_fallback": "MOONSHOT_API_KEY",
+      "default_model": "kimi-pro",
+      "models": ["kimi-pro", "moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k"],
+      "capabilities": ["chat", "code", "long-context"],
+      "context_window": 200000,
+      "max_output_tokens": 4096,
+      "max_tokens": 4096,
+      "temperature": 0.3
+    },
+    "openai": {
+      "name": "OpenAI",
+      "api_base": "https://api.openai.com/v1",
+      "env_key": "OPENAI_API_KEY",
+      "default_model": "gpt-4o",
+      "models": ["gpt-4o", "gpt-4o-mini", "o1", "o1-mini"],
+      "capabilities": ["chat", "code", "reasoning", "vision"],
+      "max_tokens": 4096,
+      "temperature": 0.7
+    },
+    "anthropic": {
+      "name": "Anthropic (Claude)",
+      "api_base": "https://api.anthropic.com/v1",
+      "env_key": "ANTHROPIC_API_KEY",
+      "default_model": "claude-sonnet-4-20250514",
+      "models": ["claude-sonnet-4-20250514", "claude-3-5-haiku-20241022"],
+      "capabilities": ["chat", "code", "reasoning", "long-context"],
+      "max_tokens": 4096,
+      "temperature": 0.7
+    }
+  },
+  "roles": {
+    "architect": {
+      "description": "High-level system design and architecture decisions",
+      "system_prompt": "You are an expert software architect. Provide high-level design guidance, identify patterns, and suggest architecture improvements. Be concise and actionable.",
+      "preferred_providers": ["xai", "openai"]
+    },
+    "coder": {
+      "description": "Implementation, debugging, and code generation",
+      "system_prompt": "You are an expert programmer specializing in WebAssembly, WebGPU, and audio processing. Write clean, efficient, well-documented code optimized for 2-core systems.",
+      "preferred_providers": ["kimi", "openai"]
+    },
+    "reviewer": {
+      "description": "Code review, quality assurance, and best practices",
+      "system_prompt": "You are a thorough code reviewer. Analyze code for bugs, security issues, performance problems, and adherence to best practices. Be specific and constructive.",
+      "preferred_providers": ["xai", "anthropic"]
+    },
+    "researcher": {
+      "description": "Information gathering, documentation, and analysis",
+      "system_prompt": "You are a technical researcher. Provide accurate, well-sourced information about technologies, APIs, and best practices. Focus on practical applicability.",
+      "preferred_providers": ["kimi", "xai"]
+    },
+    "planner": {
+      "description": "Decompose a complex task into a clear, ordered plan",
+      "system_prompt": "You are a strategic planner. Given a complex task, produce a numbered, step-by-step plan that fully covers the work needed. Be concise and specific.",
+      "preferred_providers": ["kimi", "openai"]
+    },
+    "splitter": {
+      "description": "Split a plan into discrete, parallelisable subtasks",
+      "system_prompt": "You are a task decomposer. Given a plan, break it into the smallest independent subtasks. Output each subtask on its own line prefixed with '- TASK:'.",
+      "preferred_providers": ["kimi", "openai"]
+    },
+    "worker": {
+      "description": "Execute a single well-defined subtask",
+      "system_prompt": "You are a focused executor. Complete the given subtask thoroughly. Output only the result with no extra commentary.",
+      "preferred_providers": ["kimi", "openai"]
+    },
+    "summarizer": {
+      "description": "Consolidate multiple outputs into a single coherent result",
+      "system_prompt": "You are a synthesis expert. Combine and de-duplicate the inputs into one clear, well-structured final answer. Remove any redundancy.",
+      "preferred_providers": ["kimi", "xai"]
+    }
+  },
+  "pipelines": {
+    "code-review": {
+      "description": "Generate code then review it",
+      "steps": [
+        { "role": "coder", "action": "Generate or modify code based on the request" },
+        { "role": "reviewer", "action": "Review the generated code for issues" }
+      ]
+    },
+    "design-implement": {
+      "description": "Design architecture then implement",
+      "steps": [
+        { "role": "architect", "action": "Design the approach and architecture" },
+        { "role": "coder", "action": "Implement the designed solution" }
+      ]
+    },
+    "research-implement-review": {
+      "description": "Research, implement, then review",
+      "steps": [
+        { "role": "researcher", "action": "Research the topic and gather requirements" },
+        { "role": "coder", "action": "Implement based on research findings" },
+        { "role": "reviewer", "action": "Review the implementation" }
+      ]
+    },
+    "kimi-assistant": {
+      "description": "Kimi one-shot assistant: direct, detailed answer using kimi-pro",
+      "temperature": 0.2,
+      "steps": [
+        { "role": "researcher", "action": "Answer the query directly and in detail using your long-context capability" }
+      ]
+    },
+    "kimi-swarm": {
+      "description": "Kimi multi-agent swarm: plan → split → work → summarize",
+      "temperature": 0.3,
+      "steps": [
+        { "role": "planner",    "action": "Plan the full approach needed to solve the task" },
+        { "role": "splitter",   "action": "Split the plan into discrete independent subtasks" },
+        { "role": "worker",     "action": "Execute all subtasks and produce detailed results" },
+        { "role": "summarizer", "action": "Consolidate all worker results into a final answer" }
+      ]
+    }
+  }
+}

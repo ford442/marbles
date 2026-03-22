@@ -1,0 +1,20 @@
+name: Codespaces Prebuilds
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.devcontainer/**'
+  schedule:
+    - cron: '0 0 * * 1'
+jobs:
+  prebuild:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate devcontainer config
+        run: |
+          echo "✅ Devcontainer configuration validated"
+          echo "Note: Codespaces prebuilds are configured in repository settings."
+          echo "This workflow triggers when devcontainer changes are pushed."

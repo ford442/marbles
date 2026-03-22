@@ -1,0 +1,853 @@
+{
+  "_description": "EXTREME LEVEL MARBLE DEFINITIONS - Multi-Agent Swarm Visual Overhaul",
+  "_version": "2.0.0",
+  "_last_updated": "2026-03-02",
+  
+  "shadow_ninja": {
+    "id": "shadow_ninja_extreme",
+    "name": "Shadow Ninja",
+    "tier": "EXTREME",
+    "rarity": "legendary",
+    "theme": "void_ninja",
+    
+    "_agent_notes": {
+      "agent_1_beauty": "Deep void black base, dramatic purple rim lighting, ethereal smoke emissive",
+      "agent_2_complexity": "Procedural smoke wisps, shadow tendril textures, void crack patterns",
+      "agent_3_advanced": "Void absorption shader (light-draining effect), volumetric smoke particles, darkness distortion",
+      "agent_4_polish": "Full PBR integration, physics-matched visuals, spatial audio integration"
+    },
+
+    "material": {
+      "name": "ShadowNinjaExtreme",
+      "shader_type": "custom_void",
+      "base_color": [0.01, 0.01, 0.015, 1.0],
+      "base_color_texture": {
+        "type": "procedural",
+        "pattern": "void_noise",
+        "scale": 8.0,
+        "octaves": 6,
+        "persistence": 0.6,
+        "lacunarity": 2.5
+      },
+      
+      "metallic": 0.1,
+      "roughness": 0.85,
+      "roughness_texture": {
+        "type": "procedural",
+        "pattern": "shadow_scratches",
+        "scale": 12.0,
+        "intensity": 0.4
+      },
+      
+      "normal_map": {
+        "type": "procedural",
+        "pattern": "shadow_tendrils",
+        "scale": 6.0,
+        "strength": 0.8,
+        "animation": {
+          "enabled": true,
+          "speed": 0.3,
+          "direction": [0, 1, 0]
+        }
+      },
+      
+      "emissive": {
+        "color": [0.4, 0.1, 0.6],
+        "intensity": 2.5,
+        "texture": {
+          "type": "procedural",
+          "pattern": "smoke_wisps",
+          "scale": 4.0,
+          "animation": {
+            "enabled": true,
+            "speed": 0.8,
+            "phase_shift": true
+          }
+        },
+        "rim_light": {
+          "enabled": true,
+          "color": [0.6, 0.2, 0.9],
+          "intensity": 3.0,
+          "power": 2.5,
+          "falloff": 0.4
+        }
+      },
+      
+      "subsurface_scattering": {
+        "enabled": true,
+        "color": [0.05, 0.02, 0.08],
+        "radius": 0.3,
+        "intensity": 0.4,
+        "wrap": 0.6
+      },
+      
+      "clearcoat": {
+        "enabled": false
+      },
+      
+      "anisotropy": {
+        "enabled": true,
+        "value": 0.3,
+        "direction": [1, 0, 0]
+      },
+      
+      "special_effects": {
+        "void_absorption": {
+          "enabled": true,
+          "strength": 0.7,
+          "radius": 2.0,
+          "darkening": 0.4,
+          "description": "Absorbs nearby light, creating a dark aura effect"
+        },
+        "shadow_distortion": {
+          "enabled": true,
+          "strength": 0.05,
+          "speed": 1.2,
+          "description": "Subtle vertex displacement for ethereal quality"
+        },
+        "smoke_layer": {
+          "enabled": true,
+          "opacity": 0.3,
+          "scroll_speed": 0.4,
+          "turbulence": 0.6,
+          "description": "Secondary smoke layer overlay"
+        }
+      }
+    },
+
+    "particle_effects": [
+      {
+        "name": "ShadowTrail",
+        "max_particles": 200,
+        "emission_rate": 40,
+        "lifetime": { "min": 0.8, "max": 1.5 },
+        "size": { "start": 0.15, "end": 0.0 },
+        "color": {
+          "start": [0.1, 0.05, 0.15, 0.6],
+          "end": [0.05, 0.02, 0.08, 0.0]
+        },
+        "velocity": {
+          "type": "directional",
+          "speed": 0.5,
+          "spread": 0.3
+        },
+        "acceleration": [0, 0.3, 0],
+        "texture": "particle_shadow_wisp.png",
+        "blending": "additive",
+        "trigger": "continuous",
+        "description": "Ethereal smoke trail following the marble"
+      },
+      {
+        "name": "VoidSparkle",
+        "max_particles": 100,
+        "emission_rate": 0,
+        "lifetime": { "min": 0.3, "max": 0.8 },
+        "size": { "start": 0.08, "end": 0.0 },
+        "color": {
+          "start": [0.5, 0.2, 0.8, 0.9],
+          "end": [0.2, 0.05, 0.4, 0.0]
+        },
+        "velocity": {
+          "type": "radial",
+          "speed": 3.0,
+          "spread": 1.0
+        },
+        "acceleration": [0, -1.0, 0],
+        "texture": "particle_purple_spark.png",
+        "blending": "additive",
+        "trigger": "speed",
+        "trigger_threshold": 4.0,
+        "description": "Purple void sparks emitted at high speed"
+      },
+      {
+        "name": "ShadowBurst",
+        "max_particles": 80,
+        "emission_rate": 0,
+        "lifetime": { "min": 0.4, "max": 1.0 },
+        "size": { "start": 0.2, "end": 0.0 },
+        "color": {
+          "start": [0.2, 0.1, 0.3, 0.8],
+          "end": [0.0, 0.0, 0.0, 0.0]
+        },
+        "velocity": {
+          "type": "burst",
+          "speed": 6.0,
+          "spread": 1.0
+        },
+        "acceleration": [0, -2.0, 0],
+        "texture": "particle_shadow_burst.png",
+        "blending": "additive",
+        "trigger": "impact",
+        "trigger_threshold": 2.5,
+        "description": "Shadow explosion on hard impact"
+      },
+      {
+        "name": "NinjaDash",
+        "max_particles": 150,
+        "emission_rate": 80,
+        "lifetime": { "min": 0.1, "max": 0.3 },
+        "size": { "start": 0.25, "end": 0.05 },
+        "color": {
+          "start": [0.3, 0.1, 0.5, 0.7],
+          "end": [0.1, 0.05, 0.2, 0.0]
+        },
+        "velocity": {
+          "type": "directional",
+          "speed": -12.0,
+          "spread": 0.2
+        },
+        "acceleration": [0, 0, 0],
+        "texture": "particle_dash_streak.png",
+        "blending": "additive",
+        "trigger": "boost",
+        "description": "High-speed dash shadow effect during boost"
+      }
+    ],
+
+    "post_process": {
+      "bloom": {
+        "enabled": true,
+        "intensity": 1.8,
+        "threshold": 0.4,
+        "radius": 0.9,
+        "iterations": 5,
+        "description": "Strong bloom for purple rim lighting"
+      },
+      "motion_blur": {
+        "enabled": true,
+        "intensity": 0.6,
+        "samples": 14,
+        "description": "Enhanced motion blur for stealth aesthetic"
+      },
+      "chromatic_aberration": {
+        "enabled": true,
+        "intensity": 0.015,
+        "description": "Subtle void distortion effect"
+      },
+      "vignette": {
+        "enabled": true,
+        "intensity": 0.4,
+        "smoothness": 0.8,
+        "color": [0.02, 0.01, 0.04],
+        "description": "Dark vignette for shadow theme"
+      },
+      "screen_space_reflections": {
+        "enabled": true,
+        "max_steps": 64,
+        "step_size": 0.05,
+        "thickness": 0.08,
+        "description": "Reflections in the dark surface"
+      },
+      "color_grading": {
+        "enabled": true,
+        "contrast": 1.25,
+        "saturation": 0.75,
+        "tint": [0.85, 0.8, 1.0],
+        "lift": [0.0, 0.0, 0.05],
+        "gamma": [0.9, 0.9, 1.0],
+        "gain": [0.9, 0.85, 1.1],
+        "description": "Dark moody grade with purple lift"
+      },
+      "ambient_occlusion": {
+        "enabled": true,
+        "intensity": 1.5,
+        "radius": 0.5,
+        "description": "Strong AO for deep shadow crevices"
+      }
+    },
+
+    "audio": {
+      "roll_sound": {
+        "file": "audio/shadow_roll_loop.ogg",
+        "volume": 0.4,
+        "pitch_range": [0.8, 1.2],
+        "description": "Muted ethereal rolling sound"
+      },
+      "impact_sound": {
+        "file": "audio/shadow_impact.ogg",
+        "volume": 0.6,
+        "variations": ["shadow_impact_1", "shadow_impact_2", "shadow_impact_3"],
+        "description": "Soft thud with echo"
+      },
+      "boost_sound": {
+        "file": "audio/ninja_dash.ogg",
+        "volume": 0.8,
+        "description": "Swift whoosh sound"
+      },
+      "ambient_loop": {
+        "file": "audio/void_ambience.ogg",
+        "volume": 0.2,
+        "description": "Subtle void hum when near the marble"
+      },
+      "spatial_audio": {
+        "enabled": true,
+        "attenuation": 0.3,
+        "min_distance": 1.0,
+        "max_distance": 20.0
+      }
+    },
+
+    "physics_visuals": {
+      "friction_sparks": {
+        "enabled": true,
+        "threshold": 0.7,
+        "color": [0.4, 0.2, 0.6],
+        "intensity": 0.5
+      },
+      "collision_deformation": {
+        "enabled": false
+      },
+      "velocity_trail": {
+        "enabled": true,
+        "length_multiplier": 1.5,
+        "opacity_falloff": 0.7,
+        "description": "Longer, more opaque trail at high speed"
+      }
+    },
+
+    "lod_config": {
+      "levels": [
+        {
+          "distance": 0,
+          "mesh": "marble_shadow_ninja_lod0.glb",
+          "material": "shadow_ninja_full",
+          "particle_quality": "high",
+          "shadow_casting": true,
+          "receive_shadows": true,
+          "effects": ["void_absorption", "smoke_layer", "shadow_distortion"]
+        },
+        {
+          "distance": 15,
+          "mesh": "marble_shadow_ninja_lod1.glb",
+          "material": "shadow_ninja_medium",
+          "particle_quality": "medium",
+          "shadow_casting": true,
+          "receive_shadows": true,
+          "effects": ["smoke_layer"]
+        },
+        {
+          "distance": 40,
+          "mesh": "marble_shadow_ninja_lod2.glb",
+          "material": "shadow_ninja_low",
+          "particle_quality": "low",
+          "shadow_casting": false,
+          "receive_shadows": true,
+          "effects": []
+        }
+      ],
+      "impostor": {
+        "enabled": true,
+        "distance": 80,
+        "texture_resolution": 256,
+        "update_rate": 8,
+        "billboard_mode": "spherical"
+      }
+    },
+
+    "meta": {
+      "creation_date": "2026-03-02",
+      "author": "Multi-Agent Swarm",
+      "complexity_score": 9.2,
+      "render_cost": "high",
+      "recommended_platform": "desktop_high_end",
+      "tags": ["void", "ninja", "shadow", "purple", "extreme", "legendary"],
+      "inspiration": ["void_ninja", "shadow_magic", "ethereal_darkness"]
+    }
+  },
+
+  "volcanic_magma": {
+    "id": "volcanic_magma_extreme",
+    "name": "Volcanic Magma",
+    "tier": "EXTREME",
+    "rarity": "legendary",
+    "theme": "lava_volcano",
+    
+    "_agent_notes": {
+      "agent_1_beauty": "Intense orange-red glow with heat shimmer, pulsating emissive core",
+      "agent_2_complexity": "Procedural cracked crust with animated lava underneath, cooling patterns",
+      "agent_3_advanced": "Heat distortion shader, lava flow animation, eruption spark particles",
+      "agent_4_polish": "Full PBR with emissive layering, physics-matched heat trails, volcanic audio"
+    },
+
+    "material": {
+      "name": "VolcanicMagmaExtreme",
+      "shader_type": "custom_lava",
+      "base_color": [0.15, 0.03, 0.01, 1.0],
+      "base_color_texture": {
+        "type": "procedural",
+        "pattern": "volcanic_rock",
+        "scale": 10.0,
+        "roughness_variation": 0.7,
+        "color_variation": [0.3, 0.1, 0.05]
+      },
+      
+      "metallic": 0.0,
+      "roughness": 0.9,
+      "roughness_texture": {
+        "type": "procedural",
+        "pattern": "cracked_crust",
+        "scale": 8.0,
+        "crack_depth": 0.6,
+        "cooling_zones": true
+      },
+      
+      "normal_map": {
+        "type": "procedural",
+        "pattern": "lava_crust_displacement",
+        "scale": 5.0,
+        "strength": 1.2,
+        "crack_highlight": true
+      },
+      
+      "emissive": {
+        "color": [1.0, 0.25, 0.05],
+        "intensity": 4.0,
+        "texture": {
+          "type": "procedural",
+          "pattern": "lava_flow",
+          "scale": 3.0,
+          "animation": {
+            "enabled": true,
+            "speed": 0.5,
+            "flow_direction": [0.3, -1, 0.1],
+            "turbulence": 0.4
+          }
+        },
+        "layers": [
+          {
+            "color": [1.0, 0.6, 0.1],
+            "intensity": 3.0,
+            "pattern": "crack_glow",
+            "scale": 8.0,
+            "phase": 0
+          },
+          {
+            "color": [1.0, 0.15, 0.0],
+            "intensity": 5.0,
+            "pattern": "core_pulse",
+            "scale": 1.5,
+            "animation": {
+              "type": "pulse",
+              "speed": 1.5,
+              "min": 0.7,
+              "max": 1.3
+            }
+          }
+        ]
+      },
+      
+      "subsurface_scattering": {
+        "enabled": true,
+        "color": [1.0, 0.3, 0.05],
+        "radius": 0.5,
+        "intensity": 0.8,
+        "wrap": 0.4,
+        "description": "Heat glow through thinner crust areas"
+      },
+      
+      "clearcoat": {
+        "enabled": true,
+        "roughness": 0.3,
+        "intensity": 0.15,
+        "description": "Molten surface sheen"
+      },
+      
+      "anisotropy": {
+        "enabled": false
+      },
+      
+      "special_effects": {
+        "heat_shimmer": {
+          "enabled": true,
+          "strength": 0.08,
+          "speed": 2.0,
+          "radius": 1.5,
+          "description": "Screen-space heat distortion around the marble"
+        },
+        "lava_flow": {
+          "enabled": true,
+          "speed": 0.6,
+          "crack_intensity": 0.7,
+          "cooling_rate": 0.1,
+          "description": "Animated lava flowing through cracks"
+        },
+        "eruption_glow": {
+          "enabled": true,
+          "intensity": 2.0,
+          "frequency": 0.3,
+          "random_burst": true,
+          "description": "Random bright pulses simulating volcanic activity"
+        },
+        "surface_bubbles": {
+          "enabled": true,
+          "count": 8,
+          "size_range": [0.02, 0.06],
+          "formation_rate": 0.4,
+          "pop_intensity": 0.8,
+          "description": "Bubbles forming and popping on surface"
+        }
+      }
+    },
+
+    "particle_effects": [
+      {
+        "name": "HeatShimmer",
+        "max_particles": 50,
+        "emission_rate": 15,
+        "lifetime": { "min": 0.5, "max": 1.2 },
+        "size": { "start": 0.3, "end": 0.6 },
+        "color": {
+          "start": [1.0, 0.4, 0.1, 0.2],
+          "end": [1.0, 0.6, 0.3, 0.0]
+        },
+        "velocity": {
+          "type": "directional",
+          "speed": 1.5,
+          "spread": 0.5,
+          "direction": [0, 1, 0]
+        },
+        "acceleration": [0, 0.8, 0],
+        "texture": "particle_heat_wave.png",
+        "blending": "additive",
+        "trigger": "continuous",
+        "description": "Rising heat distortion particles"
+      },
+      {
+        "name": "LavaSparks",
+        "max_particles": 150,
+        "emission_rate": 0,
+        "lifetime": { "min": 0.2, "max": 0.7 },
+        "size": { "start": 0.06, "end": 0.0 },
+        "color": {
+          "start": [1.0, 0.8, 0.2, 1.0],
+          "end": [0.8, 0.2, 0.0, 0.0]
+        },
+        "velocity": {
+          "type": "burst",
+          "speed": 10.0,
+          "spread": 0.8
+        },
+        "acceleration": [0, -8.0, 0],
+        "texture": "particle_lava_spark.png",
+        "blending": "additive",
+        "trigger": "speed",
+        "trigger_threshold": 5.0,
+        "description": "Sparks fly at high speed from friction"
+      },
+      {
+        "name": "EruptionBurst",
+        "max_particles": 100,
+        "emission_rate": 0,
+        "lifetime": { "min": 0.3, "max": 0.9 },
+        "size": { "start": 0.25, "end": 0.0 },
+        "color": {
+          "start": [1.0, 0.5, 0.1, 0.9],
+          "end": [0.5, 0.1, 0.0, 0.0]
+        },
+        "velocity": {
+          "type": "burst",
+          "speed": 12.0,
+          "spread": 1.0
+        },
+        "acceleration": [0, -6.0, 0],
+        "texture": "particle_eruption_fire.png",
+        "blending": "additive",
+        "trigger": "impact",
+        "trigger_threshold": 3.0,
+        "description": "Fiery explosion on hard impact"
+      },
+      {
+        "name": "MagmaTrail",
+        "max_particles": 120,
+        "emission_rate": 35,
+        "lifetime": { "min": 0.6, "max": 1.2 },
+        "size": { "start": 0.18, "end": 0.05 },
+        "color": {
+          "start": [1.0, 0.3, 0.05, 0.7],
+          "end": [0.4, 0.1, 0.02, 0.0]
+        },
+        "velocity": {
+          "type": "directional",
+          "speed": 0.3,
+          "spread": 0.2
+        },
+        "acceleration": [0, 0, 0],
+        "texture": "particle_magma_drip.png",
+        "blending": "additive",
+        "trigger": "continuous",
+        "description": "Glowing magma trail behind marble"
+      },
+      {
+        "name": "VolcanicBoost",
+        "max_particles": 200,
+        "emission_rate": 100,
+        "lifetime": { "min": 0.15, "max": 0.4 },
+        "size": { "start": 0.3, "end": 0.1 },
+        "color": {
+          "start": [1.0, 0.6, 0.1, 0.9],
+          "end": [0.8, 0.1, 0.0, 0.0]
+        },
+        "velocity": {
+          "type": "directional",
+          "speed": -15.0,
+          "spread": 0.4
+        },
+        "acceleration": [0, 0.5, 0],
+        "texture": "particle_fire_jet.png",
+        "blending": "additive",
+        "trigger": "boost",
+        "description": "Intense flame jet during boost"
+      },
+      {
+        "name": "SmokePlume",
+        "max_particles": 80,
+        "emission_rate": 20,
+        "lifetime": { "min": 1.0, "max": 2.0 },
+        "size": { "start": 0.2, "end": 0.5 },
+        "color": {
+          "start": [0.3, 0.3, 0.3, 0.4],
+          "end": [0.2, 0.2, 0.2, 0.0]
+        },
+        "velocity": {
+          "type": "directional",
+          "speed": 2.0,
+          "spread": 0.6,
+          "direction": [0, 1, 0]
+        },
+        "acceleration": [0, 1.2, 0],
+        "texture": "particle_volcanic_smoke.png",
+        "blending": "normal",
+        "trigger": "continuous",
+        "description": "Dark smoke rising from the hot marble"
+      }
+    ],
+
+    "post_process": {
+      "bloom": {
+        "enabled": true,
+        "intensity": 3.5,
+        "threshold": 0.25,
+        "radius": 1.2,
+        "iterations": 6,
+        "description": "Very strong bloom for intense lava glow"
+      },
+      "motion_blur": {
+        "enabled": true,
+        "intensity": 0.4,
+        "samples": 12,
+        "description": "Motion blur for speed sensation"
+      },
+      "chromatic_aberration": {
+        "enabled": true,
+        "intensity": 0.02,
+        "description": "Heat distortion chromatic separation"
+      },
+      "vignette": {
+        "enabled": true,
+        "intensity": 0.25,
+        "smoothness": 0.6,
+        "color": [0.1, 0.02, 0.0],
+        "description": "Warm dark vignette"
+      },
+      "screen_space_reflections": {
+        "enabled": false,
+        "description": "Disabled - emissive surface doesn't need SSR"
+      },
+      "color_grading": {
+        "enabled": true,
+        "contrast": 1.3,
+        "saturation": 1.4,
+        "tint": [1.1, 0.95, 0.85],
+        "lift": [0.05, 0.0, 0.0],
+        "gamma": [1.0, 0.9, 0.85],
+        "gain": [1.1, 0.95, 0.8],
+        "description": "Warm volcanic grade with orange-red emphasis"
+      },
+      "ambient_occlusion": {
+        "enabled": true,
+        "intensity": 1.2,
+        "radius": 0.4,
+        "description": "AO for crust depth"
+      },
+      "heat_distortion": {
+        "enabled": true,
+        "strength": 0.06,
+        "speed": 3.0,
+        "description": "Full-screen heat shimmer when close to camera"
+      }
+    },
+
+    "audio": {
+      "roll_sound": {
+        "file": "audio/magma_roll_loop.ogg",
+        "volume": 0.5,
+        "pitch_range": [0.7, 1.3],
+        "description": "Crackling lava rolling sound"
+      },
+      "impact_sound": {
+        "file": "audio/magma_impact.ogg",
+        "volume": 0.7,
+        "variations": ["magma_impact_1", "magma_impact_2", "magma_impact_3"],
+        "description": "Heavy thud with crackle"
+      },
+      "boost_sound": {
+        "file": "audio/volcanic_eruption.ogg",
+        "volume": 0.9,
+        "description": "Eruption sound with rumble"
+      },
+      "ambient_loop": {
+        "file": "audio/lava_crackle_loop.ogg",
+        "volume": 0.35,
+        "description": "Continuous lava crackling when near"
+      },
+      "bubble_pop": {
+        "file": "audio/lava_bubble_pop.ogg",
+        "volume": 0.3,
+        "variations": 5,
+        "trigger": "surface_bubble",
+        "description": "Random bubble pop sounds"
+      },
+      "spatial_audio": {
+        "enabled": true,
+        "attenuation": 0.4,
+        "min_distance": 1.0,
+        "max_distance": 25.0
+      }
+    },
+
+    "physics_visuals": {
+      "friction_sparks": {
+        "enabled": true,
+        "threshold": 0.6,
+        "color": [1.0, 0.5, 0.1],
+        "intensity": 1.2,
+        "description": "Bright sparks when sliding on surfaces"
+      },
+      "collision_deformation": {
+        "enabled": true,
+        "type": "soft_body",
+        "recovery_speed": 2.0,
+        "max_deformation": 0.05,
+        "description": "Slight molten deformation on impact"
+      },
+      "velocity_trail": {
+        "enabled": true,
+        "length_multiplier": 1.3,
+        "opacity_falloff": 0.6,
+        "color_shift": [0.2, 0.05, 0.0],
+        "description": "Glowing trail that brightens with speed"
+      },
+      "surface_scorch": {
+        "enabled": true,
+        "duration": 3.0,
+        "intensity": 0.6,
+        "description": "Temporarily scorches surfaces it contacts"
+      }
+    },
+
+    "lod_config": {
+      "levels": [
+        {
+          "distance": 0,
+          "mesh": "marble_volcanic_magma_lod0.glb",
+          "material": "volcanic_magma_full",
+          "particle_quality": "high",
+          "shadow_casting": true,
+          "receive_shadows": true,
+          "effects": ["heat_shimmer", "lava_flow", "eruption_glow", "surface_bubbles"]
+        },
+        {
+          "distance": 12,
+          "mesh": "marble_volcanic_magma_lod1.glb",
+          "material": "volcanic_magma_medium",
+          "particle_quality": "medium",
+          "shadow_casting": true,
+          "receive_shadows": true,
+          "effects": ["lava_flow", "eruption_glow"]
+        },
+        {
+          "distance": 35,
+          "mesh": "marble_volcanic_magma_lod2.glb",
+          "material": "volcanic_magma_low",
+          "particle_quality": "low",
+          "shadow_casting": false,
+          "receive_shadows": true,
+          "effects": ["eruption_glow"]
+        }
+      ],
+      "impostor": {
+        "enabled": true,
+        "distance": 70,
+        "texture_resolution": 256,
+        "update_rate": 10,
+        "billboard_mode": "spherical",
+        "emissive_preserve": true
+      }
+    },
+
+    "meta": {
+      "creation_date": "2026-03-02",
+      "author": "Multi-Agent Swarm",
+      "complexity_score": 9.5,
+      "render_cost": "very_high",
+      "recommended_platform": "desktop_high_end",
+      "tags": ["volcano", "lava", "magma", "fire", "heat", "extreme", "legendary"],
+      "inspiration": ["volcanic_eruption", "molten_metal", "lava_flow"]
+    }
+  },
+
+  "comparison": {
+    "obsidian_metal_reference": {
+      "complexity_score": 8.5,
+      "features": ["anisotropic_reflections", "metal_grain", "volcanic_scratches", "heat_shimmer"]
+    },
+    "shadow_ninja": {
+      "complexity_score": 9.2,
+      "new_features_over_obsidian": [
+        "void_absorption_shader",
+        "volumetric_smoke_particles",
+        "shadow_tendril_textures",
+        "darkness_distortion",
+        "purple_rim_lighting",
+        "spatial_audio_integration"
+      ]
+    },
+    "volcanic_magma": {
+      "complexity_score": 9.5,
+      "new_features_over_obsidian": [
+        "multi_layer_emissive",
+        "lava_flow_animation",
+        "heat_distortion",
+        "surface_bubble_simulation",
+        "cracked_crust_procedural",
+        "collision_deformation",
+        "surface_scorch_effect"
+      ]
+    }
+  },
+
+  "technical_notes": {
+    "shader_requirements": [
+      "GLSL 3.0+",
+      "Multiple render targets for bloom",
+      "Vertex texture fetch for displacement",
+      "Instancing support for particles"
+    ],
+    "performance_budget": {
+      "shadow_ninja": {
+        "max_instances": 8,
+        "target_fps": 60,
+        "gpu_memory": "128MB"
+      },
+      "volcanic_magma": {
+        "max_instances": 6,
+        "target_fps": 60,
+        "gpu_memory": "156MB"
+      }
+    },
+    "fallback_materials": {
+      "shadow_ninja": "simple_dark_purple",
+      "volcanic_magma": "simple_orange_emissive"
+    }
+  }
+}

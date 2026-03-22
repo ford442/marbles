@@ -1,0 +1,285 @@
+{
+  "id": "volcano_run_level5",
+  "name": "Volcano Run: Inferno Core",
+  "description": "EXTREME VOLCANO ESCAPE! Descend through 50+ zones of molten hell. Navigate magma spirals, survive eruption escapes, dodge lava tsunamis, and conquer the BOSS CALDERA. 4 aggressive AI rivals will PUSH you into hazards. Manage your HEAT METER or melt! Two paths: Rim Runner (safer, 55s) vs Crater Daredevil (deadly, 40s). Only the ultimate marble survives the inferno!",
+  "version": "3.0.0",
+  "author": "Marble Game Team - EXTREME Edition",
+  "difficulty": "EXTREME",
+  "survival_mechanics": {
+    "heat_meter": {
+      "enabled": true,
+      "max_heat": 100,
+      "heat_buildup_rate": 5,
+      "damage_threshold": 80,
+      "damage_per_second": 10,
+      "cooling_rate": 15,
+      "visual_warning_threshold": 70,
+      "critical_threshold": 90
+    },
+    "cooling_checkpoints": {
+      "enabled": true,
+      "cooling_amount": 50,
+      "duration": 3
+    }
+  },
+  "zones": [
+    {"type": "spawn_volcano", "pos": {"x": 0, "y": 45, "z": -20}, "size": {"x": 8, "y": 1, "z": 8}, "props": {"theme": "crater_edge", "heat_safe": true}},
+    
+    {"type": "floor_obsidian", "pos": {"x": 0, "y": 44, "z": -10}, "size": {"x": 12, "y": 0.5, "z": 15}, "props": {"heat_zone": true, "heat_intensity": 0.3}},
+    {"type": "track_volcanic", "pos": {"x": 0, "y": 44.5, "z": 0}, "size": {"x": 10, "y": 0.3, "z": 12}, "props": {"cracks": true, "steam_vents": 2}},
+    {"type": "heat_zone", "pos": {"x": 0, "y": 44, "z": 8}, "size": {"x": 14, "y": 0.5, "z": 10}, "props": {"intensity": 0.5, "damage": 2}},
+    
+    {"type": "checkpoint", "id": "cp_start", "pos": {"x": 0, "y": 44.5, "z": 15}, "linked": ["cp_split"], "size": {"x": 10, "y": 0.5, "z": 4}, "props": {"cooling": true, "cool_amount": 30}},
+    
+    {"type": "ramp_down", "pos": {"x": 0, "y": 43, "z": 22}, "rotation": {"x": -15, "y": 0, "z": 0}, "size": {"x": 8, "y": 0.3, "z": 10}, "props": {"lava_flow": true}},
+    {"type": "track_cracked", "pos": {"x": 0, "y": 40, "z": 32}, "size": {"x": 9, "y": 0.3, "z": 12}, "props": {"breakable": true, "respawn_point": "cp_start"}},
+    {"type": "heat_zone_extreme", "pos": {"x": 0, "y": 39.5, "z": 40}, "size": {"x": 16, "y": 0.5, "z": 12}, "props": {"intensity": 0.7, "damage": 5, "lava_bubbles": true}},
+    
+    {"type": "checkpoint", "id": "cp_split", "pos": {"x": 0, "y": 40, "z": 48}, "linked": ["cp_start", "cp_rim_1", "cp_crater_1"], "size": {"x": 14, "y": 0.5, "z": 6}, "props": {"cooling": true, "cool_amount": 40}},
+    
+    {"type": "branch_sign", "pos": {"x": -8, "y": 41, "z": 52}, "text": "RIM RUNNER - SAFER", "props": {"color": "green"}},
+    {"type": "branch_sign", "pos": {"x": 8, "y": 41, "z": 52}, "text": "CRATER DAREDEVIL - DEADLY", "props": {"color": "red"}},
+    
+    {"type": "track_rim", "pos": {"x": -18, "y": 38, "z": 58}, "size": {"x": 7, "y": 0.4, "z": 15}, "props": {"barrier": "low_wall", "heat_zone": false}},
+    {"type": "track_crater", "pos": {"x": 18, "y": 35, "z": 58}, "size": {"x": 5, "y": 0.2, "z": 15}, "props": {"narrow": true, "heat_zone": true, "intensity": 0.6}},
+    
+    {"type": "narrow_ledge", "pos": {"x": -20, "y": 37, "z": 70}, "size": {"x": 4, "y": 0.3, "z": 12}, "props": {"rim_path": true}},
+    {"type": "heat_bridge", "pos": {"x": 20, "y": 34, "z": 70}, "size": {"x": 3, "y": 0.2, "z": 12}, "props": {"crater_path": true, "lava_below": true, "damage": 8}},
+    
+    {"type": "checkpoint", "id": "cp_rim_1", "pos": {"x": -20, "y": 37.5, "z": 80}, "linked": ["cp_split", "cp_rim_2"], "size": {"x": 6, "y": 0.5, "z": 4}, "props": {"cooling": true, "cool_amount": 35}},
+    {"type": "checkpoint", "id": "cp_crater_1", "pos": {"x": 20, "y": 34.5, "z": 80}, "linked": ["cp_split", "cp_crater_2"], "size": {"x": 5, "y": 0.5, "z": 4}, "props": {"cooling": true, "cool_amount": 25}},
+    
+    {"type": "magma_spiral_start", "pos": {"x": -22, "y": 36, "z": 88}, "props": {"direction": "clockwise", "tunnel_radius": 4, "lava_walls": true}},
+    {"type": "magma_spiral_segment", "pos": {"x": -24, "y": 34, "z": 96}, "rotation": {"x": 0, "y": 30, "z": 0}, "size": {"x": 5, "y": 0.3, "z": 8}, "props": {"corkscrew": true, "heat_buildup": 3}},
+    {"type": "magma_spiral_segment", "pos": {"x": -20, "y": 32, "z": 104}, "rotation": {"x": 0, "y": 60, "z": 0}, "size": {"x": 5, "y": 0.3, "z": 8}, "props": {"corkscrew": true, "heat_buildup": 3}},
+    {"type": "magma_spiral_segment", "pos": {"x": -16, "y": 30, "z": 110}, "rotation": {"x": 0, "y": 90, "z": 0}, "size": {"x": 5, "y": 0.3, "z": 8}, "props": {"corkscrew": true, "heat_buildup": 3}},
+    
+    {"type": "lava_spray_hazard", "pos": {"x": 22, "y": 33, "z": 90}, "size": {"x": 8, "y": 10, "z": 8}, "props": {"interval": 3, "duration": 1.5, "damage": 20}},
+    {"type": "track_crater_deep", "pos": {"x": 20, "y": 32, "z": 98}, "size": {"x": 4, "y": 0.2, "z": 10}, "props": {"falling_rocks": true}},
+    {"type": "jump_gap", "pos": {"x": 20, "y": 31, "z": 106}, "target": {"x": 18, "y": 28, "z": 114}, "gap": 8, "props": {"lava_below": true}},
+    
+    {"type": "checkpoint", "id": "cp_rim_2", "pos": {"x": -14, "y": 29.5, "z": 118}, "linked": ["cp_rim_1", "cp_merge_1"], "size": {"x": 7, "y": 0.5, "z": 4}, "props": {"cooling": true, "cool_amount": 40}},
+    {"type": "checkpoint", "id": "cp_crater_2", "pos": {"x": 16, "y": 27.5, "z": 118}, "linked": ["cp_crater_1", "cp_merge_1"], "size": {"x": 6, "y": 0.5, "z": 4}, "props": {"cooling": true, "cool_amount": 30}},
+    
+    {"type": "eruption_escape_start", "pos": {"x": -10, "y": 28, "z": 125}, "props": {"warning_time": 5, "eruption_delay": 15}},
+    {"type": "track_volcanic", "pos": {"x": -8, "y": 26, "z": 132}, "size": {"x": 8, "y": 0.3, "z": 10}, "props": {"timed_section": true, "time_limit": 12}},
+    {"type": "falling_rocks_zone", "pos": {"x": -6, "y": 30, "z": 138}, "size": {"x": 12, "y": 8, "z": 12}, "props": {"density": "high", "damage": 15}},
+    {"type": "eruption_escape_end", "pos": {"x": -4, "y": 24, "z": 146}, "props": {"safe_zone": true}},
+    
+    {"type": "magma_boost_pad", "pos": {"x": 14, "y": 26, "z": 126}, "direction": {"x": 0, "y": 0.4, "z": 0.9}, "power": 4, "size": {"x": 4, "y": 0.3, "z": 3}, "props": {"lava_splash": true}},
+    {"type": "speed_section", "pos": {"x": 12, "y": 25, "z": 134}, "size": {"x": 6, "y": 0.3, "z": 12}, "props": {"auto_accelerate": true, "speed_mult": 1.5}},
+    {"type": "steam_blast_hazard", "pos": {"x": 10, "y": 25, "z": 142}, "size": {"x": 6, "y": 8, "z": 6}, "props": {"interval": 4, "knockback": true}},
+    
+    {"type": "checkpoint", "id": "cp_merge_1", "pos": {"x": 0, "y": 23.5, "z": 152}, "linked": ["cp_rim_2", "cp_crater_2", "cp_lava_field"], "size": {"x": 16, "y": 0.5, "z": 6}, "props": {"cooling": true, "cool_amount": 50}},
+    
+    {"type": "lava_tsunami_warning", "pos": {"x": 0, "y": 30, "z": 160}, "props": {"warning_time": 8, "wave_height": 5}},
+    {"type": "lava_field", "pos": {"x": 0, "y": 22, "z": 168}, "size": {"x": 20, "y": 0.5, "z": 15}, "props": {"safe_platforms": 5, "platform_size": 3}},
+    {"type": "moving_platform_lava", "pos": {"x": -6, "y": 22.5, "z": 172}, "range": {"x": [-8, -4], "z": [170, 178]}, "speed": 2.5, "props": {"sink_on_stand": true}},
+    {"type": "moving_platform_lava", "pos": {"x": 6, "y": 22.5, "z": 176}, "range": {"x": [4, 8], "z": [174, 182]}, "speed": 3, "props": {"sink_on_stand": true}},
+    {"type": "lava_tsunami_wave", "pos": {"x": 0, "y": 20, "z": 180}, "size": {"x": 25, "y": 4, "z": 8}, "props": {"wave_speed": 8, "clear_path": true, "damage": 30}},
+    
+    {"type": "checkpoint", "id": "cp_lava_field", "pos": {"x": 0, "y": 22.5, "z": 188}, "linked": ["cp_merge_1", "cp_spiral_deep"], "size": {"x": 12, "y": 0.5, "z": 4}, "props": {"cooling": true, "cool_amount": 45}},
+    
+    {"type": "magma_spiral_deep", "pos": {"x": 0, "y": 21, "z": 196}, "props": {"entry_radius": 5, "depth": 15, "rotations": 2}},
+    {"type": "spiral_segment", "pos": {"x": 3, "y": 19, "z": 204}, "rotation": {"x": -10, "y": 45, "z": 0}, "size": {"x": 4, "y": 0.3, "z": 8}, "props": {"lava_drips": true}},
+    {"type": "spiral_segment", "pos": {"x": 6, "y": 16, "z": 212}, "rotation": {"x": -15, "y": 90, "z": 0}, "size": {"x": 4, "y": 0.3, "z": 8}, "props": {"narrowing": true}},
+    {"type": "spiral_segment", "pos": {"x": 4, "y": 13, "z": 220}, "rotation": {"x": -20, "y": 135, "z": 0}, "size": {"x": 3.5, "y": 0.3, "z": 8}, "props": {"heat_zone": true, "intensity": 0.8}},
+    {"type": "spiral_segment", "pos": {"x": 0, "y": 10, "z": 228}, "rotation": {"x": -25, "y": 180, "z": 0}, "size": {"x": 3, "y": 0.3, "z": 8}, "props": {"exit_near": true}},
+    
+    {"type": "checkpoint", "id": "cp_spiral_deep", "pos": {"x": 0, "y": 10.5, "z": 236}, "linked": ["cp_lava_field", "cp_caldera_entry"], "size": {"x": 10, "y": 0.5, "z": 4}, "props": {"cooling": true, "cool_amount": 40}},
+    
+    {"type": "eruption_timer_zone", "pos": {"x": 0, "y": 9, "z": 244}, "size": {"x": 14, "y": 0.5, "z": 12}, "props": {"countdown": 20, "escape_required": true}},
+    {"type": "heat_zone_extreme", "pos": {"x": 0, "y": 8.5, "z": 252}, "size": {"x": 16, "y": 0.5, "z": 10}, "props": {"intensity": 0.9, "ground_cracking": true}},
+    
+    {"type": "checkpoint", "id": "cp_caldera_entry", "pos": {"x": 0, "y": 8.5, "z": 260}, "linked": ["cp_spiral_deep", "cp_boss_1"], "size": {"x": 12, "y": 0.5, "z": 4}, "props": {"cooling": true, "cool_amount": 60, "boss_warning": true}},
+    
+    {"type": "boss_caldera", "pos": {"x": 0, "y": 5, "z": 270}, "size": {"x": 24, "y": 8, "z": 24}, "props": {"lava_lake": true, "rising_level": true}},
+    {"type": "platform_boss_1", "pos": {"x": -8, "y": 7, "z": 276}, "size": {"x": 5, "y": 0.5, "z": 5}, "props": {"stable": true}},
+    {"type": "platform_boss_2", "pos": {"x": 8, "y": 9, "z": 280}, "size": {"x": 4, "y": 0.5, "z": 4}, "props": {"collapsing": true, "collapse_time": 8}},
+    {"type": "platform_boss_3", "pos": {"x": 0, "y": 12, "z": 286}, "size": {"x": 4, "y": 0.5, "z": 4}, "props": {"rising_lava_below": true}},
+    
+    {"type": "checkpoint", "id": "cp_boss_1", "pos": {"x": -8, "y": 7.5, "z": 276}, "linked": ["cp_caldera_entry", "cp_boss_2"], "size": {"x": 5, "y": 0.5, "z": 4}, "props": {"cooling": true, "cool_amount": 30}},
+    {"type": "checkpoint", "id": "cp_boss_2", "pos": {"x": 8, "y": 9.5, "z": 280}, "linked": ["cp_boss_1", "cp_boss_3"], "size": {"x": 4, "y": 0.5, "z": 4}, "props": {"cooling": true, "cool_amount": 30}},
+    {"type": "checkpoint", "id": "cp_boss_3", "pos": {"x": 0, "y": 12.5, "z": 286}, "linked": ["cp_boss_2", "cp_final_escape"], "size": {"x": 4, "y": 0.5, "z": 4}, "props": {"cooling": true, "cool_amount": 40}},
+    
+    {"type": "multi_jump_sequence", "pos": {"x": 0, "y": 15, "z": 294}, "props": {"jumps": 3, "ascending": true}},
+    {"type": "jump_pad_1", "pos": {"x": -4, "y": 16, "z": 298}, "power": 3, "target": {"x": 0, "y": 20, "z": 304}},
+    {"type": "jump_pad_2", "pos": {"x": 4, "y": 20, "z": 306}, "power": 3.5, "target": {"x": 0, "y": 26, "z": 312}},
+    {"type": "jump_pad_3", "pos": {"x": 0, "y": 26, "z": 314}, "power": 4, "target": {"x": 0, "y": 34, "z": 322}},
+    
+    {"type": "checkpoint", "id": "cp_final_escape", "pos": {"x": 0, "y": 34.5, "z": 324}, "linked": ["cp_boss_3", "cp_goal"], "size": {"x": 8, "y": 0.5, "z": 4}, "props": {"cooling": true, "cool_amount": 100, "victory_near": true}},
+    
+    {"type": "victory_ramp", "pos": {"x": 0, "y": 36, "z": 332}, "rotation": {"x": 12, "y": 0, "z": 0}, "size": {"x": 10, "y": 0.3, "z": 12}, "props": {"lava_escape_theme": true}},
+    {"type": "goal_platform_volcano", "pos": {"x": 0, "y": 40, "z": 345}, "size": {"x": 14, "y": 1, "z": 14}, "props": {"eruption_survivor": true, "theme": "escape_victory"}},
+    {"type": "goal", "pos": {"x": 0, "y": 41, "z": 345}, "color": [1.0, 0.3, 0.0], "props": {"extreme_completion": true}}
+  ],
+  "collectibles": [
+    {"id": "fire_gem_1", "type": "fire_gem", "pos": {"x": -20, "y": 39, "z": 65}, "value": 150, "difficulty": "medium", "props": {"heat_resistance": 5}},
+    {"id": "fire_gem_2", "type": "fire_gem", "pos": {"x": 20, "y": 36, "z": 65}, "value": 200, "difficulty": "hard", "props": {"heat_resistance": 5}},
+    {"id": "fire_gem_3", "type": "fire_gem", "pos": {"x": -18, "y": 32, "z": 100}, "value": 250, "difficulty": "hard", "props": {"heat_resistance": 8}},
+    {"id": "fire_gem_4", "type": "fire_gem", "pos": {"x": 22, "y": 30, "z": 100}, "value": 300, "difficulty": "expert", "props": {"heat_resistance": 8}},
+    {"id": "obsidian_shard_1", "type": "obsidian_shard", "pos": {"x": -6, "y": 27, "z": 140}, "value": 400, "difficulty": "expert", "props": {"invulnerability_time": 3}},
+    {"id": "obsidian_shard_2", "type": "obsidian_shard", "pos": {"x": 14, "y": 27, "z": 138}, "value": 400, "difficulty": "expert", "props": {"invulnerability_time": 3}},
+    {"id": "magma_core", "type": "magma_core", "pos": {"x": 0, "y": 14, "z": 216}, "value": 1000, "difficulty": "extreme", "props": {"heat_immunity": 10, "full_cool": true}},
+    {"id": "caldera_crystal", "type": "caldera_crystal", "pos": {"x": 0, "y": 28, "z": 310}, "value": 2000, "difficulty": "extreme", "props": {"boss_reward": true}},
+    {"id": "survivor_emblem", "type": "survivor_emblem", "pos": {"x": 5, "y": 38, "z": 340}, "value": 5000, "difficulty": "extreme", "props": {"complete_under_60s": true}}
+  ],
+  "ai_rivals": [
+    {
+      "id": "rival_magma_mike",
+      "name": "Magma Mike",
+      "color": [1.0, 0.2, 0.0],
+      "spawn_offset": {"x": -3, "y": 0, "z": 0},
+      "preferred_path": "crater",
+      "skill_level": 0.88,
+      "aggressiveness": 0.95,
+      "collectible_preference": 0.4,
+      "lava_tactics": {
+        "enabled": true,
+        "push_into_hazards": true,
+        "push_cooldown": 5,
+        "boost_knockback": true,
+        "lava_tsunami_immunity": 0.3
+      },
+      "heat_resistance": 30,
+      "taunts": ["Feel the burn!", "Into the lava with you!", "Magma is my home!"]
+    },
+    {
+      "id": "rival_ash_annie",
+      "name": "Ash Annie",
+      "color": [0.8, 0.4, 0.1],
+      "spawn_offset": {"x": 3, "y": 0, "z": 0},
+      "preferred_path": "adaptive",
+      "skill_level": 0.92,
+      "aggressiveness": 0.88,
+      "collectible_preference": 0.7,
+      "lava_tactics": {
+        "enabled": true,
+        "push_into_hazards": true,
+        "push_cooldown": 4,
+        "cut_off_path": true,
+        "eruption_prediction": true
+      },
+      "heat_resistance": 25,
+      "taunts": ["Ashes to ashes!", "I'll bury you!", "The volcano favors me!"]
+    },
+    {
+      "id": "rival_obsidian_oz",
+      "name": "Obsidian Oz",
+      "color": [0.1, 0.05, 0.15],
+      "spawn_offset": {"x": 0, "y": 0, "z": 2},
+      "preferred_path": "rim",
+      "skill_level": 0.85,
+      "aggressiveness": 0.75,
+      "collectible_preference": 0.5,
+      "lava_tactics": {
+        "enabled": true,
+        "push_into_hazards": true,
+        "push_cooldown": 6,
+        "defensive_push": true,
+        "platform_control": true
+      },
+      "heat_resistance": 40,
+      "taunts": ["Hard as obsidian!", "You shall not pass!", "I am unbreakable!"]
+    },
+    {
+      "id": "rival_pyro_pete",
+      "name": "Pyro Pete",
+      "color": [1.0, 0.6, 0.0],
+      "spawn_offset": {"x": 0, "y": 0, "z": -2},
+      "preferred_path": "adaptive",
+      "skill_level": 0.90,
+      "aggressiveness": 0.98,
+      "collectible_preference": 0.3,
+      "lava_tactics": {
+        "enabled": true,
+        "push_into_hazards": true,
+        "push_cooldown": 3,
+        "kamikaze_pushes": true,
+        "lava_rage_mode": true
+      },
+      "heat_resistance": 20,
+      "special_ability": {
+        "name": "Lava Rage",
+        "trigger": "behind_by_5_seconds",
+        "effect": "speed_boost_50_percent",
+        "duration": 8
+      },
+      "taunts": ["BURN!", "Everything burns!", "I'm on FIRE!", "HAHAHA!"]
+    }
+  ],
+  "hazards": [
+    {"type": "falling_rocks", "zones": [{"pos": {"x": -6, "y": 30, "z": 138}, "size": {"x": 12, "y": 8, "z": 12}}], "damage": 15, "interval": 2},
+    {"type": "lava_spray", "zones": [{"pos": {"x": 22, "y": 33, "z": 90}, "size": {"x": 8, "y": 10, "z": 8}}], "damage": 20, "interval": 3},
+    {"type": "steam_blast", "zones": [{"pos": {"x": 10, "y": 25, "z": 142}, "size": {"x": 6, "y": 8, "z": 6}}], "damage": 10, "knockback": true, "interval": 4},
+    {"type": "ground_crack", "zones": [{"pos": {"x": 0, "y": 8.5, "z": 252}, "size": {"x": 16, "y": 0.5, "z": 10}}], "fall_damage": 50},
+    {"type": "rising_lava", "zones": [{"pos": {"x": 0, "y": 5, "z": 270}, "size": {"x": 24, "y": 8, "z": 24}}], "rise_speed": 0.5, "max_height": 15}
+  ],
+  "paths": {
+    "rim_runner": {
+      "name": "Rim Runner (Outer Safer Path)",
+      "difficulty": "hard",
+      "checkpoints": ["cp_start", "cp_split", "cp_rim_1", "cp_rim_2", "cp_merge_1", "cp_lava_field", "cp_spiral_deep", "cp_caldera_entry", "cp_boss_1", "cp_boss_2", "cp_boss_3", "cp_final_escape", "cp_goal"],
+      "collectibles": ["fire_gem_1", "fire_gem_3", "obsidian_shard_1"],
+      "estimated_time": 55,
+      "heat_exposure": "medium",
+      "hazard_density": "moderate"
+    },
+    "crater_daredevil": {
+      "name": "Crater Daredevil (Inner Deadly Path)",
+      "difficulty": "EXTREME",
+      "checkpoints": ["cp_start", "cp_split", "cp_crater_1", "cp_crater_2", "cp_merge_1", "cp_lava_field", "cp_spiral_deep", "cp_caldera_entry", "cp_boss_1", "cp_boss_2", "cp_boss_3", "cp_final_escape", "cp_goal"],
+      "collectibles": ["fire_gem_2", "fire_gem_4", "obsidian_shard_2", "magma_core"],
+      "estimated_time": 40,
+      "heat_exposure": "extreme",
+      "hazard_density": "dense"
+    }
+  },
+  "special_mechanics": {
+    "magma_spirals": {
+      "enabled": true,
+      "count": 2,
+      "locations": [{"x": -22, "y": 36, "z": 88}, {"x": 0, "y": 21, "z": 196}],
+      "heat_buildup": 3,
+      "lava_wall_damage": 5
+    },
+    "eruption_escape": {
+      "enabled": true,
+      "warning_time": 5,
+      "countdown": 20,
+      "sections": [
+        {"start": {"x": -10, "y": 28, "z": 125}, "end": {"x": -4, "y": 24, "z": 146}, "time_limit": 12},
+        {"start": {"x": 0, "y": 9, "z": 244}, "end": {"x": 0, "y": 8.5, "z": 260}, "time_limit": 15}
+      ]
+    },
+    "lava_tsunami": {
+      "enabled": true,
+      "warning_time": 8,
+      "wave_speed": 8,
+      "wave_height": 5,
+      "damage": 30,
+      "clear_path": true,
+      "locations": [{"x": 0, "y": 20, "z": 180}]
+    },
+    "boss_caldera": {
+      "enabled": true,
+      "location": {"x": 0, "y": 5, "z": 270},
+      "stages": 3,
+      "rising_lava": true,
+      "collapsing_platforms": true,
+      "multi_jump_escape": true,
+      "final_climb": {"start": {"x": 0, "y": 15, "z": 294}, "end": {"x": 0, "y": 40, "z": 345}}
+    }
+  },
+  "spawn": {"x": 0, "y": 46, "z": -20},
+  "goals": [{"id": 1, "range": {"x": [-5, 5], "y": [38, 45], "z": [340, 350]}}],
+  "camera": {"mode": "follow_dynamic", "height": 30, "offset": -45, "zoom_on_speed": true},
+  "race_settings": {
+    "time_limit": 120,
+    "lap_count": 1,
+    "ai_rival_count": 4,
+    "heat_mechanic": true,
+    "survival_mode": true,
+    "respawn_penalty": 5
+  }
+}

@@ -1,0 +1,119 @@
+name: Debug Build (Codepit)
+
+on:
+  push:
+    branches: [main, debug-ci]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          
+      # Note: The web_sequencer submodule has its own debug_build.yml workflow
+      # that runs independently. This workflow is for codepit-level debugging.
+      # 
+      # For web_sequencer builds, see:
+      # projects/web_sequencer/.github/workflows/debug_build.yml
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+          run_install: false
+          
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+          
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+            
+      # Note: web_sequencer has its own workflow. 
+      # This is just a compatibility check for the codepit parent repo.
+      - name: Check web_sequencer workflow exists
+        run: |
+          if [ -f "projects/web_sequencer/.github/workflows/debug_build.yml" ]; then
+            echo "✅ web_sequencer has its own debug_build.yml"
+            echo "For detailed builds, check the web_sequencer workflow runs"
+          fi
+          
+      - name: Install dependencies (web_sequencer)
+        working-directory: ./projects/web_sequencer
+        run: pnpm install --no-frozen-lockfile
+        
+      # Setup Emscripten (matching web_sequencer workflow version)
+      - name: Setup Emscripten
+        # use tip-of-tree build by default; this keeps CI aligned with the
+        # local development environment that now installs `tot`.
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 'tot'
+          no-cache: true
+          
+      - name: Verify Emscripten
+        run: |
+          emcc --version
+          
+      # Build WASM modules
+      - name: Build JC303 WASM
+        working-directory: ./projects/web_sequencer
+        run: |
+          echo "=== Building JC303 WASM ==="
+          bash tools/build_jc303_omp.sh release single
+          
+      - name: Build Emscripten/Rubberband WASM
+        working-directory: ./projects/web_sequencer
+        continue-on-error: true
+        run: |
+          echo "=== Building Rubberband WASM ==="
+          bash emscripten/build.sh
+          
+      - name: Build AssemblyScript WASM modules
+        working-directory: ./projects/web_sequencer
+        run: |
+          echo "=== Building AssemblyScript modules ==="
+          pnpm run build:wasm:oscillators
+          pnpm run build:wasm:freezer
+          
+      - name: Build Rust WASM (optional)
+        working-directory: ./projects/web_sequencer
+        continue-on-error: true
+        run: |
+          echo "=== Building Rust WASM ==="
+          cd rust-audio && cargo update -p wasm-bindgen && cd ..
+          pnpm run build:wasm:rust
+          
+      - name: Build Vite app
+        working-directory: ./projects/web_sequencer
+        run: pnpm run build
+        
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-artifacts
+          path: |
+            projects/web_sequencer/dist/
+            projects/web_sequencer/public/*.wasm
+            projects/web_sequencer/public/*.js
+          retention-days: 7

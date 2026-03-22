@@ -1,0 +1,95 @@
+{
+  "name": "Cockpit Codespace",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/node:1.6.0": {
+      "version": "lts",
+      "nodeGypDependencies": true
+    },
+    "ghcr.io/devcontainers/features/python:1.6.3": {
+      "version": "3.11",
+      "installTools": true
+    },
+    "ghcr.io/devcontainers/features/desktop-lite:1.2.3": {
+      "password": "${localEnv:VNC_PASSWORD:codespace}",
+      "webPort": "6080",
+      "vncPort": "5901"
+    }
+  },
+  "customizations": {
+    "codespaces": {
+        "repositories": {
+            "ford442/*": {
+                "permissions": "write-all"
+            }
+        }
+    },
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-python.python",
+        "dbaeumer.vscode-eslint",
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "rust-lang.rust-analyzer",
+        "dtsvet.vscode-wasm",
+        "raczzalan.webgl-glsl-editor",
+        "slevesque.shader",
+        "ms-vscode.hexeditor",
+        "bierner.comment-tagged-templates",
+        "formulahendry.auto-rename-tag",
+        "christian-kohler.path-intellisense",
+        "eamodio.gitlens",
+        "ms-vscode.wasm-wasi-core"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash",
+            "args": ["-l"]
+          }
+        },
+        "files.watcherExclude": {
+          "**/projects/**": true,
+          "**/.git/objects/**": true,
+          "**/.git/subtree-cache/**": true,
+          "**/node_modules/**": true,
+          "**/build/**": true,
+          "**/dist/**": true
+        },
+        "search.exclude": {
+          "**/projects/**": false,
+          "**/node_modules": true,
+          "**/build": true,
+          "**/dist": true,
+          "**/*.wasm": true
+        },
+        "editor.formatOnSave": true,
+        "git.ignoreMissingGitWarning": true,
+        "workbench.startupEditor": "none"
+      }
+    }
+  },
+  "postCreateCommand": "bash setup.sh",
+  "postStartCommand": "source /opt/emsdk/emsdk_env.sh 2>/dev/null || true",
+  "postAttachCommand": "echo '🚀 Cockpit ready! Run ./dev.sh help for commands.'",
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "WORKSPACE_ROOT": "${containerWorkspaceFolder}",
+    "VNC_PASSWORD": "${localEnv:VNC_PASSWORD:codespace}"
+  },
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "8gb"
+  },
+  "forwardPorts": [3000, 5173, 6080, 8080],
+  "portsAttributes": {
+    "3000": { "label": "Dev Server", "onAutoForward": "notify" },
+    "5173": { "label": "Vite Dev Server", "onAutoForward": "notify" },
+    "6080": { "label": "Desktop VNC", "onAutoForward": "openBrowser" },
+    "8080": { "label": "Alt Dev Server", "onAutoForward": "notify" }
+  }
+}

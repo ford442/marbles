@@ -1,0 +1,108 @@
+{
+  "folders": [
+    {
+      "name": "🚀 Cockpit Root",
+      "path": "."
+    },
+    {
+      "name": "📁 Projects",
+      "path": "projects"
+    }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/.git": true,
+      "**/node_modules": true,
+      "**/__pycache__": true,
+      "**/.pytest_cache": true,
+      "**/dist": true,
+      "**/build": true,
+      "**/*.wasm": false
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/build": true
+    },
+    "files.watcherExclude": {
+      "**/.git/objects/**": true,
+      "**/node_modules/**": true,
+      "**/dist/**": true,
+      "**/build/**": true
+    },
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit"
+    },
+    "terminal.integrated.defaultProfile.linux": "bash",
+    "terminal.integrated.cwd": "${workspaceFolder}",
+    "C_Cpp.default.compilerPath": "/usr/bin/gcc",
+    "python.defaultInterpreterPath": "/usr/local/bin/python",
+    "emmet.includeLanguages": {
+      "javascript": "javascriptreact"
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-vscode.cpptools",
+      "ms-python.python",
+      "dbaeumer.vscode-eslint",
+      "GitHub.copilot",
+      "GitHub.copilot-chat",
+      "ms-vscode.wasm-wasi-core",
+      "ziglang.vscode-zig"
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Debug Current Project",
+        "type": "node",
+        "request": "launch",
+        "program": "${workspaceFolder}/projects/${input:projectName}/index.js",
+        "console": "integratedTerminal"
+      }
+    ],
+    "inputs": [
+      {
+        "id": "projectName",
+        "type": "promptString",
+        "description": "Enter project directory name",
+        "default": "example"
+      }
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Build WASM",
+        "type": "shell",
+        "command": "emcc",
+        "args": [
+          "${file}",
+          "-o",
+          "${fileDirname}/${fileBasenameNoExtension}.wasm",
+          "-O3",
+          "-s",
+          "WASM=1"
+        ],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "presentation": {
+          "reveal": "always",
+          "panel": "new"
+        }
+      },
+      {
+        "label": "Setup Projects",
+        "type": "shell",
+        "command": "bash setup.sh",
+        "problemMatcher": []
+      }
+    ]
+  }
+}

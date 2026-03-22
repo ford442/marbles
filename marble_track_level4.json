@@ -1,0 +1,126 @@
+{
+  "id": "staircase_level4",
+  "name": "Stairway to Heaven: Tower Race",
+  "description": "Race against 3 AI rivals through the treacherous twin towers! Choose your path: the easier Left Tower with steady progress, or the perilous Right Tower with valuable gems. Speed boosts, linked checkpoints, and deadly jumps await. Only the fastest marble claims victory at the summit!",
+  "version": "2.0.0",
+  "author": "Marble Game Team",
+  "difficulty": "expert",
+  "zones": [
+    {"type": "floor", "pos": {"x": 0, "y": -2, "z": 0}, "size": {"x": 100, "y": 0.5, "z": 180}},
+    {"type": "track", "pos": {"x": 0, "y": 3, "z": 0}},
+    {"type": "landing", "pos": {"x": 0, "y": 0, "z": 25}},
+    {"type": "slalom", "pos": {"x": 0, "y": -2, "z": 85}},
+    
+    {"type": "checkpoint", "id": "cp_split", "pos": {"x": 0, "y": -1, "z": 95}, "linked": ["cp_left_1", "cp_right_1"], "size": {"x": 12, "y": 0.5, "z": 4}},
+    
+    {"type": "track", "pos": {"x": -15, "y": 0, "z": 100}, "size": {"x": 20, "y": 0.5, "z": 15}},
+    {"type": "track", "pos": {"x": 15, "y": 0, "z": 100}, "size": {"x": 20, "y": 0.5, "z": 15}},
+    
+    {"type": "staircase", "pos": {"x": -12, "y": -2, "z": 110}, "steps": 8, "rise": 0.8},
+    {"type": "staircase", "pos": {"x": 12, "y": -2, "z": 110}, "steps": 8, "rise": 0.8},
+    
+    {"type": "checkpoint", "id": "cp_left_1", "pos": {"x": -12, "y": 4, "z": 118}, "linked": ["cp_split", "cp_left_2"], "size": {"x": 8, "y": 0.5, "z": 4}},
+    {"type": "checkpoint", "id": "cp_right_1", "pos": {"x": 12, "y": 4, "z": 118}, "linked": ["cp_split", "cp_right_2"], "size": {"x": 8, "y": 0.5, "z": 4}},
+    
+    {"type": "speed_boost", "pos": {"x": -12, "y": 4.5, "z": 122}, "direction": {"x": 0, "y": 0.3, "z": 1}, "power": 2.5, "size": {"x": 6, "y": 0.3, "z": 3}},
+    {"type": "jump", "pos": {"x": -12, "y": 5, "z": 126}, "target": {"x": -12, "y": 8, "z": 132}, "gap": 8},
+    {"type": "landing", "pos": {"x": -12, "y": 8, "z": 134}},
+    
+    {"type": "speed_boost", "pos": {"x": 12, "y": 4.5, "z": 122}, "direction": {"x": 0, "y": 0.5, "z": 1}, "power": 3.0, "size": {"x": 4, "y": 0.3, "z": 3}},
+    {"type": "jump", "pos": {"x": 12, "y": 6, "z": 126}, "target": {"x": 12, "y": 10, "z": 134}, "gap": 10},
+    {"type": "landing", "pos": {"x": 12, "y": 10, "z": 136}},
+    
+    {"type": "checkpoint", "id": "cp_left_2", "pos": {"x": -12, "y": 8.5, "z": 138}, "linked": ["cp_left_1", "cp_left_3"], "size": {"x": 8, "y": 0.5, "z": 4}},
+    {"type": "checkpoint", "id": "cp_right_2", "pos": {"x": 12, "y": 10.5, "z": 140}, "linked": ["cp_right_1", "cp_right_3"], "size": {"x": 8, "y": 0.5, "z": 4}},
+    
+    {"type": "narrow_bridge", "pos": {"x": -12, "y": 9, "z": 144}, "size": {"x": 4, "y": 0.3, "z": 12}},
+    {"type": "narrow_bridge", "pos": {"x": 12, "y": 11, "z": 146}, "size": {"x": 2.5, "y": 0.2, "z": 14}},
+    
+    {"type": "staircase_up", "pos": {"x": -12, "y": 9, "z": 152}, "steps": 5, "rise": 1.0},
+    {"type": "staircase_up", "pos": {"x": 12, "y": 11, "z": 154}, "steps": 6, "rise": 1.2},
+    
+    {"type": "checkpoint", "id": "cp_left_3", "pos": {"x": -12, "y": 14.5, "z": 160}, "linked": ["cp_left_2", "cp_merge"], "size": {"x": 8, "y": 0.5, "z": 4}},
+    {"type": "checkpoint", "id": "cp_right_3", "pos": {"x": 12, "y": 18.5, "z": 164}, "linked": ["cp_right_2", "cp_merge"], "size": {"x": 8, "y": 0.5, "z": 4}},
+    
+    {"type": "moving_platform", "pos": {"x": -12, "y": 15, "z": 166}, "range": {"x": [-14, -10], "z": [164, 168]}, "speed": 2.0},
+    {"type": "moving_platform", "pos": {"x": 12, "y": 19, "z": 170}, "range": {"x": [10, 14], "z": [168, 172]}, "speed": 3.0},
+    
+    {"type": "speed_boost", "pos": {"x": -12, "y": 15.5, "z": 172}, "direction": {"x": 0.4, "y": 0.2, "z": 0.8}, "power": 2.0, "size": {"x": 5, "y": 0.3, "z": 3}},
+    {"type": "jump", "pos": {"x": -10, "y": 16, "z": 178}, "target": {"x": -4, "y": 18, "z": 186}, "gap": 10},
+    
+    {"type": "speed_boost", "pos": {"x": 12, "y": 19.5, "z": 176}, "direction": {"x": -0.4, "y": 0.2, "z": 0.8}, "power": 2.5, "size": {"x": 4, "y": 0.3, "z": 3}},
+    {"type": "jump", "pos": {"x": 10, "y": 20, "z": 182}, "target": {"x": 4, "y": 18, "z": 190}, "gap": 12},
+    
+    {"type": "checkpoint", "id": "cp_merge", "pos": {"x": 0, "y": 17.5, "z": 192}, "linked": ["cp_left_3", "cp_right_3", "cp_final"], "size": {"x": 16, "y": 0.5, "z": 6}},
+    
+    {"type": "narrow_ledge", "pos": {"x": 0, "y": 18, "z": 198}, "size": {"x": 3, "y": 0.2, "z": 10}},
+    {"type": "moving_obstacle", "pos": {"x": 0, "y": 18, "z": 202}, "range": {"x": [-2, 2]}, "speed": 4.0},
+    
+    {"type": "checkpoint", "id": "cp_final", "pos": {"x": 0, "y": 18.5, "z": 210}, "linked": ["cp_merge"], "size": {"x": 10, "y": 0.5, "z": 4}},
+    
+    {"type": "staircase_up", "pos": {"x": 0, "y": 18, "z": 216}, "steps": 4, "rise": 0.8},
+    {"type": "speed_boost", "pos": {"x": 0, "y": 21.5, "z": 222}, "direction": {"x": 0, "y": 0, "z": 1}, "power": 1.5, "size": {"x": 6, "y": 0.3, "z": 4}},
+    
+    {"type": "goal_platform", "pos": {"x": 0, "y": 22, "z": 230}, "size": {"x": 12, "y": 0.5, "z": 12}},
+    {"type": "goal", "pos": {"x": 0, "y": 22.5, "z": 230}, "color": [1.0, 0.5, 0.0]}
+  ],
+  "collectibles": [
+    {"id": "gem_left_1", "type": "gem_sapphire", "pos": {"x": -12, "y": 6, "z": 128}, "value": 100, "difficulty": "medium"},
+    {"id": "gem_right_1", "type": "gem_ruby", "pos": {"x": 12, "y": 8, "z": 130}, "value": 200, "difficulty": "hard"},
+    {"id": "gem_right_2", "type": "gem_emerald", "pos": {"x": 12, "y": 13, "z": 150}, "value": 250, "difficulty": "expert"},
+    {"id": "gem_left_2", "type": "gem_amethyst", "pos": {"x": -14, "y": 16, "z": 168}, "value": 150, "difficulty": "hard"},
+    {"id": "gem_right_3", "type": "gem_diamond", "pos": {"x": 14, "y": 21, "z": 178}, "value": 500, "difficulty": "expert"},
+    {"id": "gem_merge", "type": "gem_gold", "pos": {"x": 0, "y": 20, "z": 204}, "value": 300, "difficulty": "expert"}
+  ],
+  "ai_rivals": [
+    {
+      "id": "rival_1",
+      "name": "Flash",
+      "color": [1.0, 0.0, 0.0],
+      "spawn_offset": {"x": -2, "y": 0, "z": 0},
+      "preferred_path": "left",
+      "skill_level": 0.85,
+      "aggressiveness": 0.7,
+      "collectible_preference": 0.3
+    },
+    {
+      "id": "rival_2",
+      "name": "Shadow",
+      "color": [0.2, 0.0, 0.4],
+      "spawn_offset": {"x": 2, "y": 0, "z": 0},
+      "preferred_path": "right",
+      "skill_level": 0.92,
+      "aggressiveness": 0.9,
+      "collectible_preference": 0.8
+    },
+    {
+      "id": "rival_3",
+      "name": "Bolt",
+      "color": [1.0, 0.8, 0.0],
+      "spawn_offset": {"x": 0, "y": 0, "z": -1},
+      "preferred_path": "adaptive",
+      "skill_level": 0.78,
+      "aggressiveness": 0.5,
+      "collectible_preference": 0.6
+    }
+  ],
+  "paths": {
+    "left_tower": {
+      "name": "Left Tower (Easier)",
+      "difficulty": "medium",
+      "checkpoints": ["cp_split", "cp_left_1", "cp_left_2", "cp_left_3", "cp_merge", "cp_final"],
+      "collectibles": ["gem_left_1", "gem_left_2"],
+      "estimated_time": 45
+    },
+    "right_tower": {
+      "name": "Right Tower (Harder)",
+      "difficulty": "expert",
+      "checkpoints": ["cp_split", "cp_right_1", "cp_right_2", "cp_right_3", "cp_merge", "cp_final"],
+      "collectibles": ["gem_right_1", "gem_right_2", "gem_right_3"],
+      "estimated_time": 50
+    }
+  },
+  "spawn": {"x": 0, "y": 8, "z": -12},
+  "goals": [{"id": 1, "range": {"x": [-4, 4], "y": [20, 25], "z": [226, 234]}}],
+  "camera": {"mode": "follow", "height": 25, "offset": -40}
+}

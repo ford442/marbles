@@ -1,0 +1,10 @@
+[
+  {"type": "start", "position": [0, 10, 0], "rotation": [0, 0, 0], "scale": [2, 0.5, 2], "props": {}},
+  {"type": "flat", "position": [0, 10, 5], "rotation": [0, 0, 0], "scale": [2, 0.2, 5], "props": {}},
+  {"type": "ramp", "position": [0, 8.5, 10], "rotation": [-22, 0, 0], "scale": [2, 0.2, 5], "props": {}},
+  {"type": "flat", "position": [0, 6.5, 15], "rotation": [0, 0, 0], "scale": [2, 0.2, 4], "props": {}},
+  {"type": "loop", "position": [0, 6.5, 20], "rotation": [0, 0, 0], "scale": [3, 3, 4], "props": {"radius": 2}},
+  {"type": "ramp", "position": [0, 5.5, 25], "rotation": [-12, 0, 0], "scale": [2, 0.2, 3], "props": {}},
+  {"type": "gap", "position": [0, 5, 28.5], "rotation": [0, 0, 0], "scale": [2, 0.1, 1], "props": {"width": 1.5}},
+  {"type": "goal", "position": [0, 5, 30], "rotation": [0, 0, 0], "scale": [3, 2, 1], "props": {}}
+]

@@ -1,0 +1,2495 @@
+[
+  {
+    "type": "start",
+    "position": [
+      0,
+      50,
+      0
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      3,
+      1,
+      3
+    ],
+    "props": {
+      "name": "Death Run Starting Grid",
+      "difficulty": "EXTREME"
+    }
+  },
+  {
+    "type": "flat",
+    "position": [
+      0,
+      50,
+      4
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      4,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 1,
+      "name": "Grid Line"
+    },
+    "surface": {
+      "surfaceType": "obsidian",
+      "roughnessOverride": 0.35,
+      "metallicOverride": 0.7,
+      "reflectionIntensity": 1.2,
+      "shadowIntensity": 0.9,
+      "shadowSoftness": 0.4
+    },
+    "reflection_probe_hint": "start_grid"
+  },
+  {
+    "type": "boost",
+    "position": [
+      -1.5,
+      50.2,
+      4
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.8,
+      0.1,
+      0.8
+    ],
+    "props": {
+      "zone": 1,
+      "force": 15,
+      "name": "Boost Chain A1"
+    }
+  },
+  {
+    "type": "boost",
+    "position": [
+      0,
+      50.2,
+      4
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.8,
+      0.1,
+      0.8
+    ],
+    "props": {
+      "zone": 1,
+      "force": 15,
+      "name": "Boost Chain A2"
+    }
+  },
+  {
+    "type": "boost",
+    "position": [
+      1.5,
+      50.2,
+      4
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.8,
+      0.1,
+      0.8
+    ],
+    "props": {
+      "zone": 1,
+      "force": 15,
+      "name": "Boost Chain A3"
+    }
+  },
+  {
+    "type": "flat",
+    "position": [
+      0,
+      50,
+      8
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      3,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 2,
+      "name": "Launch Pad"
+    },
+    "surface": {
+      "surfaceType": "crystal",
+      "roughnessOverride": 0.2,
+      "metallicOverride": 0.25,
+      "reflectionIntensity": 1.35,
+      "shadowIntensity": 0.8,
+      "shadowSoftness": 0.45
+    },
+    "reflection_probe_hint": "launch_pad"
+  },
+  {
+    "type": "ramp",
+    "position": [
+      0,
+      48,
+      12
+    ],
+    "rotation": [
+      -35,
+      0,
+      0
+    ],
+    "scale": [
+      3,
+      0.3,
+      5
+    ],
+    "props": {
+      "zone": 2,
+      "name": "Initial Drop",
+      "drop": 8
+    },
+    "surface": {
+      "surfaceType": "volcanic_rock",
+      "roughnessOverride": 0.62,
+      "metallicOverride": 0.1,
+      "reflectionIntensity": 0.8,
+      "shadowIntensity": 1.0,
+      "shadowSoftness": 0.55
+    }
+  },
+  {
+    "type": "banked_turn",
+    "position": [
+      0,
+      42,
+      17
+    ],
+    "rotation": [
+      0,
+      0,
+      45
+    ],
+    "scale": [
+      3,
+      0.3,
+      6
+    ],
+    "props": {
+      "zone": 3,
+      "name": "45° Banked Sweeper",
+      "bank_angle": 45,
+      "direction": "left"
+    },
+    "surface": {
+      "surfaceType": "obsidian",
+      "roughnessOverride": 0.28,
+      "metallicOverride": 0.65,
+      "reflectionIntensity": 1.25,
+      "shadowIntensity": 0.95,
+      "shadowSoftness": 0.35
+    }
+  },
+  {
+    "type": "collectible",
+    "position": [
+      2,
+      43,
+      17
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "props": {
+      "zone": 3,
+      "value": 100,
+      "name": "Sweeper Orb"
+    }
+  },
+  {
+    "type": "slalom",
+    "position": [
+      0,
+      40,
+      22
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      4,
+      0.3,
+      6
+    ],
+    "props": {
+      "zone": 4,
+      "name": "Warm-Up Gates",
+      "gate_width": 2.5,
+      "gates": 3
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      -1.5,
+      40.5,
+      22
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.5,
+      0.3
+    ],
+    "props": {
+      "zone": 4
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      1.5,
+      40.5,
+      24
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.5,
+      0.3
+    ],
+    "props": {
+      "zone": 4
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      -1.5,
+      40.5,
+      26
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.5,
+      0.3
+    ],
+    "props": {
+      "zone": 4
+    }
+  },
+  {
+    "type": "collectible",
+    "position": [
+      0,
+      41,
+      24
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "props": {
+      "zone": 4,
+      "value": 150
+    }
+  },
+  {
+    "type": "spiral_drop",
+    "position": [
+      0,
+      35,
+      30
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      4,
+      8,
+      4
+    ],
+    "props": {
+      "zone": 5,
+      "name": "Corkscrew Descent Alpha",
+      "rotations": 2,
+      "drop": 12,
+      "radius": 3
+    },
+    "surface": {
+      "surfaceType": "volcanic_rock",
+      "roughnessOverride": 0.58,
+      "metallicOverride": 0.15,
+      "reflectionIntensity": 0.85,
+      "shadowIntensity": 1.0,
+      "shadowSoftness": 0.5
+    }
+  },
+  {
+    "type": "collectible",
+    "position": [
+      2,
+      32,
+      30
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "props": {
+      "zone": 5,
+      "value": 200,
+      "name": "Spiral Core"
+    }
+  },
+  {
+    "type": "flat",
+    "position": [
+      0,
+      28,
+      35
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      3,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 6,
+      "name": "Spiral Exit"
+    },
+    "surface": {
+      "surfaceType": "obsidian",
+      "roughnessOverride": 0.3,
+      "metallicOverride": 0.55,
+      "reflectionIntensity": 1.15,
+      "shadowIntensity": 0.9,
+      "shadowSoftness": 0.4
+    }
+  },
+  {
+    "type": "boost",
+    "position": [
+      0,
+      28.2,
+      35
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      1,
+      0.1,
+      1
+    ],
+    "props": {
+      "zone": 6,
+      "force": 20,
+      "name": "Boost Chain B1"
+    }
+  },
+  {
+    "type": "switchback",
+    "position": [
+      5,
+      26,
+      38
+    ],
+    "rotation": [
+      0,
+      135,
+      15
+    ],
+    "scale": [
+      3,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 7,
+      "name": "Hairpin Alpha",
+      "turn_angle": 135
+    }
+  },
+  {
+    "type": "switchback",
+    "position": [
+      8,
+      24,
+      32
+    ],
+    "rotation": [
+      0,
+      -135,
+      15
+    ],
+    "scale": [
+      3,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 7,
+      "name": "Hairpin Beta",
+      "turn_angle": -135
+    }
+  },
+  {
+    "type": "collectible",
+    "position": [
+      6.5,
+      26,
+      35
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "props": {
+      "zone": 7,
+      "value": 250,
+      "name": "Hairpin Apex"
+    }
+  },
+  {
+    "type": "slalom",
+    "position": [
+      5,
+      22,
+      26
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      4,
+      0.3,
+      8
+    ],
+    "props": {
+      "zone": 8,
+      "name": "Narrow Gates I",
+      "gate_width": 1.8,
+      "gates": 4
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      3,
+      22.5,
+      24
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.5,
+      0.3
+    ],
+    "props": {
+      "zone": 8
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      7,
+      22.5,
+      25
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.5,
+      0.3
+    ],
+    "props": {
+      "zone": 8
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      3,
+      22.5,
+      27
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.5,
+      0.3
+    ],
+    "props": {
+      "zone": 8
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      7,
+      22.5,
+      28
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.5,
+      0.3
+    ],
+    "props": {
+      "zone": 8
+    }
+  },
+  {
+    "type": "collectible",
+    "position": [
+      5,
+      23,
+      26
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "props": {
+      "zone": 8,
+      "value": 200
+    }
+  },
+  {
+    "type": "trap_zone",
+    "position": [
+      0,
+      20,
+      22
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      3,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 9,
+      "name": "Fake Path Trap",
+      "trap_type": "collapse",
+      "delay": 2.0
+    }
+  },
+  {
+    "type": "decoy",
+    "position": [
+      0,
+      20.5,
+      22
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.8,
+      0.8,
+      0.8
+    ],
+    "props": {
+      "zone": 9,
+      "name": "Decoy Orb",
+      "fake_value": 500
+    }
+  },
+  {
+    "type": "flat",
+    "position": [
+      -5,
+      18,
+      18
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      3,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 10,
+      "name": "Safe Route Split"
+    }
+  },
+  {
+    "type": "boost",
+    "position": [
+      -5,
+      18.2,
+      18
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      1,
+      0.1,
+      1
+    ],
+    "props": {
+      "zone": 10,
+      "force": 18,
+      "name": "Boost Chain C1"
+    }
+  },
+  {
+    "type": "vertical_drop",
+    "position": [
+      -8,
+      12,
+      14
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      2.5,
+      8,
+      2.5
+    ],
+    "props": {
+      "zone": 11,
+      "name": "The Plunge",
+      "drop": 15,
+      "straight": true
+    }
+  },
+  {
+    "type": "collectible",
+    "position": [
+      -8,
+      8,
+      14
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "props": {
+      "zone": 11,
+      "value": 300,
+      "name": "Freefall Gem"
+    }
+  },
+  {
+    "type": "banked_turn",
+    "position": [
+      -12,
+      3,
+      10
+    ],
+    "rotation": [
+      0,
+      0,
+      60
+    ],
+    "scale": [
+      3,
+      0.3,
+      6
+    ],
+    "props": {
+      "zone": 12,
+      "name": "60° Extreme Bank",
+      "bank_angle": 60,
+      "direction": "right"
+    }
+  },
+  {
+    "type": "collectible",
+    "position": [
+      -14,
+      5,
+      10
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "props": {
+      "zone": 12,
+      "value": 250
+    }
+  },
+  {
+    "type": "spiral_drop",
+    "position": [
+      -18,
+      -2,
+      6
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      3.5,
+      10,
+      3.5
+    ],
+    "props": {
+      "zone": 13,
+      "name": "Corkscrew Descent Beta",
+      "rotations": 3,
+      "drop": 18,
+      "radius": 2.5
+    }
+  },
+  {
+    "type": "collectible",
+    "position": [
+      -16,
+      -5,
+      6
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "props": {
+      "zone": 13,
+      "value": 350
+    }
+  },
+  {
+    "type": "flat",
+    "position": [
+      -22,
+      -12,
+      2
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      3,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 14,
+      "name": "Deep Zone Entry"
+    }
+  },
+  {
+    "type": "slalom",
+    "position": [
+      -26,
+      -14,
+      -2
+    ],
+    "rotation": [
+      0,
+      90,
+      0
+    ],
+    "scale": [
+      4,
+      0.3,
+      10
+    ],
+    "props": {
+      "zone": 15,
+      "name": "Ultra Narrow Gauntlet",
+      "gate_width": 1.0,
+      "gates": 6
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      -26,
+      -13.5,
+      0
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.8,
+      0.3
+    ],
+    "props": {
+      "zone": 15
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      -24,
+      -13.5,
+      -2
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.8,
+      0.3
+    ],
+    "props": {
+      "zone": 15
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      -28,
+      -13.5,
+      -4
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.8,
+      0.3
+    ],
+    "props": {
+      "zone": 15
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      -26,
+      -13.5,
+      -6
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.8,
+      0.3
+    ],
+    "props": {
+      "zone": 15
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      -24,
+      -13.5,
+      -8
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.8,
+      0.3
+    ],
+    "props": {
+      "zone": 15
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      -28,
+      -13.5,
+      -10
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.8,
+      0.3
+    ],
+    "props": {
+      "zone": 15
+    }
+  },
+  {
+    "type": "collectible",
+    "position": [
+      -26,
+      -13,
+      -5
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "props": {
+      "zone": 15,
+      "value": 500,
+      "name": "Gauntlet Master"
+    }
+  },
+  {
+    "type": "switchback",
+    "position": [
+      -30,
+      -16,
+      -15
+    ],
+    "rotation": [
+      0,
+      180,
+      20
+    ],
+    "scale": [
+      3,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 16,
+      "name": "Hairpin Gamma",
+      "turn_angle": 180
+    }
+  },
+  {
+    "type": "switchback",
+    "position": [
+      -26,
+      -18,
+      -20
+    ],
+    "rotation": [
+      0,
+      -90,
+      20
+    ],
+    "scale": [
+      3,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 16,
+      "name": "Hairpin Delta",
+      "turn_angle": -90
+    }
+  },
+  {
+    "type": "collectible",
+    "position": [
+      -28,
+      -16,
+      -17
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "props": {
+      "zone": 16,
+      "value": 300
+    }
+  },
+  {
+    "type": "trap_zone",
+    "position": [
+      -22,
+      -20,
+      -24
+    ],
+    "rotation": [
+      0,
+      45,
+      0
+    ],
+    "scale": [
+      4,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 17,
+      "name": "Collapsing Bridge",
+      "trap_type": "shrink",
+      "delay": 1.5
+    }
+  },
+  {
+    "type": "trap_zone",
+    "position": [
+      -18,
+      -22,
+      -28
+    ],
+    "rotation": [
+      0,
+      45,
+      0
+    ],
+    "scale": [
+      4,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 17,
+      "name": "Second Collapse",
+      "trap_type": "shrink",
+      "delay": 1.0
+    }
+  },
+  {
+    "type": "flat",
+    "position": [
+      -14,
+      -24,
+      -32
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      3,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 18,
+      "name": "Gauntlet Checkpoint"
+    }
+  },
+  {
+    "type": "boost",
+    "position": [
+      -14,
+      -23.8,
+      -32
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      1,
+      0.1,
+      1
+    ],
+    "props": {
+      "zone": 18,
+      "force": 22,
+      "name": "Boost Chain D1"
+    }
+  },
+  {
+    "type": "boost",
+    "position": [
+      -14,
+      -23.8,
+      -33
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      1,
+      0.1,
+      1
+    ],
+    "props": {
+      "zone": 18,
+      "force": 22,
+      "name": "Boost Chain D2"
+    }
+  },
+  {
+    "type": "ramp",
+    "position": [
+      -10,
+      -26,
+      -36
+    ],
+    "rotation": [
+      -50,
+      0,
+      0
+    ],
+    "scale": [
+      2.5,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 19,
+      "name": "Steep Descent",
+      "drop": 10
+    }
+  },
+  {
+    "type": "loop",
+    "position": [
+      -6,
+      -30,
+      -40
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      3,
+      3,
+      4
+    ],
+    "props": {
+      "zone": 20,
+      "radius": 2.5,
+      "name": "Inversion Loop"
+    }
+  },
+  {
+    "type": "collectible",
+    "position": [
+      -6,
+      -28,
+      -40
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "props": {
+      "zone": 20,
+      "value": 400,
+      "name": "Loop Apex"
+    }
+  },
+  {
+    "type": "banked_turn",
+    "position": [
+      -2,
+      -32,
+      -44
+    ],
+    "rotation": [
+      0,
+      0,
+      50
+    ],
+    "scale": [
+      3,
+      0.3,
+      6
+    ],
+    "props": {
+      "zone": 21,
+      "name": "50° Sweeper",
+      "bank_angle": 50,
+      "direction": "left"
+    }
+  },
+  {
+    "type": "slalom",
+    "position": [
+      2,
+      -34,
+      -48
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      4,
+      0.3,
+      8
+    ],
+    "props": {
+      "zone": 22,
+      "name": "Narrow Gates II",
+      "gate_width": 1.5,
+      "gates": 5
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      0,
+      -33.5,
+      -46
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.6,
+      0.3
+    ],
+    "props": {
+      "zone": 22
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      4,
+      -33.5,
+      -47
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.6,
+      0.3
+    ],
+    "props": {
+      "zone": 22
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      0,
+      -33.5,
+      -49
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.6,
+      0.3
+    ],
+    "props": {
+      "zone": 22
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      4,
+      -33.5,
+      -50
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.6,
+      0.3
+    ],
+    "props": {
+      "zone": 22
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      0,
+      -33.5,
+      -52
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.6,
+      0.3
+    ],
+    "props": {
+      "zone": 22
+    }
+  },
+  {
+    "type": "collectible",
+    "position": [
+      2,
+      -33,
+      -49
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "props": {
+      "zone": 22,
+      "value": 300
+    }
+  },
+  {
+    "type": "spiral_drop",
+    "position": [
+      6,
+      -40,
+      -52
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      3,
+      12,
+      3
+    ],
+    "props": {
+      "zone": 23,
+      "name": "Corkscrew Descent Gamma",
+      "rotations": 2.5,
+      "drop": 20,
+      "radius": 2
+    }
+  },
+  {
+    "type": "flat",
+    "position": [
+      10,
+      -52,
+      -52
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      3,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 24,
+      "name": "Depth Checkpoint"
+    }
+  },
+  {
+    "type": "boost",
+    "position": [
+      10,
+      -51.8,
+      -52
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      1,
+      0.1,
+      1
+    ],
+    "props": {
+      "zone": 24,
+      "force": 25,
+      "name": "Boost Chain E1"
+    }
+  },
+  {
+    "type": "vertical_drop",
+    "position": [
+      14,
+      -60,
+      -52
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      2,
+      10,
+      2
+    ],
+    "props": {
+      "zone": 25,
+      "name": "Final Plunge",
+      "drop": 20,
+      "straight": true
+    }
+  },
+  {
+    "type": "collectible",
+    "position": [
+      14,
+      -65,
+      -52
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "props": {
+      "zone": 25,
+      "value": 500,
+      "name": "Depth Diver"
+    }
+  },
+  {
+    "type": "switchback",
+    "position": [
+      18,
+      -72,
+      -48
+    ],
+    "rotation": [
+      0,
+      90,
+      25
+    ],
+    "scale": [
+      2.5,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 26,
+      "name": "Hairpin Epsilon",
+      "turn_angle": 90
+    }
+  },
+  {
+    "type": "switchback",
+    "position": [
+      22,
+      -74,
+      -44
+    ],
+    "rotation": [
+      0,
+      -90,
+      25
+    ],
+    "scale": [
+      2.5,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 26,
+      "name": "Hairpin Zeta",
+      "turn_angle": -90
+    }
+  },
+  {
+    "type": "switchback",
+    "position": [
+      26,
+      -76,
+      -40
+    ],
+    "rotation": [
+      0,
+      90,
+      25
+    ],
+    "scale": [
+      2.5,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 26,
+      "name": "Hairpin Eta",
+      "turn_angle": 90
+    }
+  },
+  {
+    "type": "collectible",
+    "position": [
+      22,
+      -73,
+      -44
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "props": {
+      "zone": 26,
+      "value": 450,
+      "name": "Triple Apex"
+    }
+  },
+  {
+    "type": "trap_zone",
+    "position": [
+      30,
+      -78,
+      -36
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      4,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 27,
+      "name": "False Finish Trap",
+      "trap_type": "teleport",
+      "destination": [
+        0,
+        20,
+        22
+      ]
+    }
+  },
+  {
+    "type": "decoy",
+    "position": [
+      30,
+      -77.5,
+      -36
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      1.5,
+      1.5,
+      1.5
+    ],
+    "props": {
+      "zone": 27,
+      "name": "Fake Goal",
+      "fake_value": 1000
+    }
+  },
+  {
+    "type": "flat",
+    "position": [
+      26,
+      -80,
+      -32
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      3,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 28,
+      "name": "True Path"
+    },
+    "surface": {
+      "surfaceType": "crystal",
+      "roughnessOverride": 0.22,
+      "metallicOverride": 0.2,
+      "reflectionIntensity": 1.4,
+      "shadowIntensity": 0.75,
+      "shadowSoftness": 0.5
+    },
+    "reflection_probe_hint": "endgame_path"
+  },
+  {
+    "type": "banked_turn",
+    "position": [
+      22,
+      -82,
+      -28
+    ],
+    "rotation": [
+      0,
+      0,
+      70
+    ],
+    "scale": [
+      3,
+      0.3,
+      6
+    ],
+    "props": {
+      "zone": 29,
+      "name": "70° Death Bank",
+      "bank_angle": 70,
+      "direction": "right"
+    }
+  },
+  {
+    "type": "collectible",
+    "position": [
+      20,
+      -80,
+      -28
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "props": {
+      "zone": 29,
+      "value": 600
+    }
+  },
+  {
+    "type": "slalom",
+    "position": [
+      18,
+      -84,
+      -24
+    ],
+    "rotation": [
+      0,
+      90,
+      0
+    ],
+    "scale": [
+      3.5,
+      0.3,
+      10
+    ],
+    "props": {
+      "zone": 30,
+      "name": "Death Gates Ultra",
+      "gate_width": 0.8,
+      "gates": 7
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      18,
+      -83.5,
+      -22
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      2,
+      0.3
+    ],
+    "props": {
+      "zone": 30
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      20,
+      -83.5,
+      -23
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      2,
+      0.3
+    ],
+    "props": {
+      "zone": 30
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      16,
+      -83.5,
+      -24
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      2,
+      0.3
+    ],
+    "props": {
+      "zone": 30
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      18,
+      -83.5,
+      -25
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      2,
+      0.3
+    ],
+    "props": {
+      "zone": 30
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      20,
+      -83.5,
+      -26
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      2,
+      0.3
+    ],
+    "props": {
+      "zone": 30
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      16,
+      -83.5,
+      -27
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      2,
+      0.3
+    ],
+    "props": {
+      "zone": 30
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      18,
+      -83.5,
+      -28
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      2,
+      0.3
+    ],
+    "props": {
+      "zone": 30
+    }
+  },
+  {
+    "type": "collectible",
+    "position": [
+      18,
+      -83,
+      -25
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "props": {
+      "zone": 30,
+      "value": 1000,
+      "name": "Ultra Master"
+    }
+  },
+  {
+    "type": "boost",
+    "position": [
+      18,
+      -85.8,
+      -20
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      1,
+      0.1,
+      1
+    ],
+    "props": {
+      "zone": 31,
+      "force": 30,
+      "name": "Boost Chain F1"
+    }
+  },
+  {
+    "type": "boost",
+    "position": [
+      18,
+      -85.8,
+      -19
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      1,
+      0.1,
+      1
+    ],
+    "props": {
+      "zone": 31,
+      "force": 30,
+      "name": "Boost Chain F2"
+    }
+  },
+  {
+    "type": "boost",
+    "position": [
+      18,
+      -85.8,
+      -18
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      1,
+      0.1,
+      1
+    ],
+    "props": {
+      "zone": 31,
+      "force": 30,
+      "name": "Boost Chain F3"
+    }
+  },
+  {
+    "type": "flat",
+    "position": [
+      18,
+      -86,
+      -14
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      3,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 32,
+      "name": "Final Straight Entry"
+    }
+  },
+  {
+    "type": "slalom",
+    "position": [
+      18,
+      -86,
+      -10
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      3,
+      0.3,
+      6
+    ],
+    "props": {
+      "zone": 33,
+      "name": "Final Gates",
+      "gate_width": 1.2,
+      "gates": 3
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      16.5,
+      -85.5,
+      -10
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.8,
+      0.3
+    ],
+    "props": {
+      "zone": 33
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      19.5,
+      -85.5,
+      -12
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.8,
+      0.3
+    ],
+    "props": {
+      "zone": 33
+    }
+  },
+  {
+    "type": "slalom_gate",
+    "position": [
+      16.5,
+      -85.5,
+      -14
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.3,
+      1.8,
+      0.3
+    ],
+    "props": {
+      "zone": 33
+    }
+  },
+  {
+    "type": "collectible",
+    "position": [
+      18,
+      -85.5,
+      -12
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "props": {
+      "zone": 33,
+      "value": 750
+    }
+  },
+  {
+    "type": "gap",
+    "position": [
+      18,
+      -86,
+      -6
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      2.5,
+      0.1,
+      2
+    ],
+    "props": {
+      "zone": 34,
+      "width": 2.0,
+      "name": "Final Leap"
+    }
+  },
+  {
+    "type": "collectible",
+    "position": [
+      18,
+      -84,
+      -6
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "props": {
+      "zone": 34,
+      "value": 500,
+      "name": "Leap of Faith"
+    }
+  },
+  {
+    "type": "flat",
+    "position": [
+      18,
+      -86,
+      -2
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      4,
+      0.3,
+      4
+    ],
+    "props": {
+      "zone": 35,
+      "name": "Goal Platform"
+    },
+    "surface": {
+      "surfaceType": "crystal",
+      "roughnessOverride": 0.18,
+      "metallicOverride": 0.15,
+      "reflectionIntensity": 1.5,
+      "shadowIntensity": 0.7,
+      "shadowSoftness": 0.6
+    },
+    "reflection_probe_hint": "goal_platform"
+  },
+  {
+    "type": "stomp",
+    "position": [
+      16,
+      -86,
+      -2
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      1,
+      0.2,
+      1
+    ],
+    "props": {
+      "zone": 35,
+      "force": -10,
+      "name": "Final Brake"
+    }
+  },
+  {
+    "type": "stomp",
+    "position": [
+      20,
+      -86,
+      -2
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      1,
+      0.2,
+      1
+    ],
+    "props": {
+      "zone": 35,
+      "force": -10,
+      "name": "Final Brake"
+    }
+  },
+  {
+    "type": "goal",
+    "position": [
+      18,
+      -86,
+      2
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      5,
+      3,
+      2
+    ],
+    "props": {
+      "zone": 36,
+      "name": "DEATH RUN FINISH",
+      "difficulty": "EXTREME",
+      "par_time": 180
+    }
+  },
+  {
+    "type": "ai_rival",
+    "position": [
+      2,
+      50,
+      2
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      1,
+      1,
+      1
+    ],
+    "props": {
+      "name": "Rammer",
+      "behavior": "aggressive",
+      "strategy": "ramming",
+      "speed": 1.3,
+      "weight": 1.5,
+      "difficulty": "EXTREME"
+    }
+  },
+  {
+    "type": "ai_rival",
+    "position": [
+      -2,
+      50,
+      2
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      1,
+      1,
+      1
+    ],
+    "props": {
+      "name": "Cutter",
+      "behavior": "aggressive",
+      "strategy": "cutting_off",
+      "speed": 1.4,
+      "prediction": 0.8,
+      "difficulty": "EXTREME"
+    }
+  },
+  {
+    "type": "ai_rival",
+    "position": [
+      0,
+      50,
+      1
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      1,
+      1,
+      1
+    ],
+    "props": {
+      "name": "Speed Demon",
+      "behavior": "aggressive",
+      "strategy": "speed_boost",
+      "speed": 1.6,
+      "boost_efficiency": 1.5,
+      "difficulty": "EXTREME"
+    }
+  },
+  {
+    "type": "ai_rival",
+    "position": [
+      1,
+      50,
+      0
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      1,
+      1,
+      1
+    ],
+    "props": {
+      "name": "Trap Master",
+      "behavior": "aggressive",
+      "strategy": "trap_setting",
+      "speed": 1.2,
+      "trap_frequency": 0.3,
+      "difficulty": "EXTREME"
+    }
+  }
+]
