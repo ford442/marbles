@@ -20,9 +20,9 @@
         "postinstall": "echo '💡 Tip: Run npm run build to build the WASM renderer'"
     },
     "devDependencies": {
-        "@typescript-eslint/eslint-plugin": "^6.0.0",
-        "@typescript-eslint/parser": "^6.0.0",
-        "eslint": "^8.0.0",
+        "@typescript-eslint/eslint-plugin": "^8.57.1",
+        "@typescript-eslint/parser": "^8.57.1",
+        "eslint": "^8.57.1",
         "prettier": "^3.0.0",
         "typescript": "^5.0.0"
     },
