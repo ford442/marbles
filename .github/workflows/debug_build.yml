@@ -23,6 +23,13 @@ jobs:
       # For web_sequencer builds, see:
       # projects/web_sequencer/.github/workflows/debug_build.yml
           
+      - name: Clone projects
+        env:
+          WORKSPACE_ROOT: ${{ github.workspace }}
+          HOME: ${{ github.workspace }}
+        run: |
+          ./setup.sh clone web_sequencer
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
