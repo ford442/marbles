@@ -60,7 +60,7 @@ jobs:
       - name: Setup projects
         run: |
           chmod +x ./setup.sh
-          ./setup.sh clone web_sequencer || echo "Failed to clone web_sequencer, but continuing"
+          PROJECTS_DIR=./projects ./setup.sh clone web_sequencer || echo "Failed to clone web_sequencer, but continuing"
           ls -la projects/web_sequencer || true
           
       - name: Install dependencies (web_sequencer)

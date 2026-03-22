@@ -9,7 +9,7 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 # Configuration
-PROJECTS_DIR="${HOME}/projects"
+PROJECTS_DIR="${PROJECTS_DIR:-${HOME}/projects}"
 REPOS_FILE="${WORKSPACE_ROOT:-$(dirname "$0")}/repos.json"
 GITHUB_USER="ford442"
 
