@@ -14,6 +14,7 @@ export const MainLayout: React.FC = () => {
     const [loadedSong, setLoadedSong] = useState<AISongData | null>(null);
     const [showSwarm, setShowSwarm] = useState(false);
     const [swarmStatus, setSwarmStatus] = useState<string | null>(null);
+    const [score, setScore] = useState(0);
 
     const handleAiImport = (data: AISongData) => {
         setToast('AI song imported successfully');
@@ -34,6 +35,7 @@ export const MainLayout: React.FC = () => {
                 <button onClick={() => setShowAi(true)}>Import AI Song</button>
                 <button onClick={() => setShowSwarm(true)}>AI Swarm Mode</button>
                 <button onClick={() => setShowRbs(true)}>Import .rbs File...</button>
+                <div className="score-display">Jam Score: {score}</div>
             </header>
             {toast && <div className="toast">{toast}</div>}
             {showAi && <ImportAiSongModal onImport={handleAiImport} />}
@@ -42,7 +44,7 @@ export const MainLayout: React.FC = () => {
             {loadedSong && (
                 <>
                     <SequencerGrid song={loadedSong} />
-                    <EffectsChain onPlay={() => console.log('play')} />
+                    <EffectsChain onPlay={() => console.log('play')} onScore={(points: number) => setScore(s => s + points)} />
                 </>
             )}
             {swarmStatus && <div className="swarm-status">{swarmStatus}</div>}

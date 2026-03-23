@@ -63,6 +63,12 @@ jobs:
             echo "✅ web_sequencer has its own debug_build.yml"
             echo "For detailed builds, check the web_sequencer workflow runs"
           fi
+
+      - name: Setup projects
+        run: |
+          chmod +x ./setup.sh
+          PROJECTS_DIR=./projects ./setup.sh clone web_sequencer || echo "Failed to clone web_sequencer, but continuing"
+          ls -la projects/web_sequencer || true
           
       - name: Install dependencies (web_sequencer)
         working-directory: ./projects/web_sequencer
