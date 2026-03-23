@@ -70,6 +70,10 @@ jobs:
         run: |
           emcc --version
           
+      - name: Install dependencies
+        working-directory: .
+        run: npm install
+
       # Build WASM modules
       - name: Build Vite app
         working-directory: .
