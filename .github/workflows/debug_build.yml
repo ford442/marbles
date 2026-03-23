@@ -23,13 +23,6 @@ jobs:
       # For web_sequencer builds, see:
       # .github/workflows/debug_build.yml
           
-      - name: Clone projects
-        env:
-          WORKSPACE_ROOT: ${{ github.workspace }}
-          HOME: ${{ github.workspace }}
-        run: |
-          ./setup.sh clone web_sequencer
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -64,27 +57,6 @@ jobs:
             echo "For detailed builds, check the web_sequencer workflow runs"
           fi
 
-      - name: Setup projects
-        run: |
-          chmod +x ./setup.sh
-          PROJECTS_DIR=./projects ./setup.sh clone web_sequencer || echo "Failed to clone web_sequencer, but continuing"
-          ls -la projects/web_sequencer || true
-          
-      - name: Install dependencies (web_sequencer)
-        working-directory: ./projects/web_sequencer
-        run: |
-          # Retry pnpm install up to 3 times to mitigate transient network errors (e.g., 504 Gateway Timeout from GitHub Releases for wasm-pack)
-          for i in {1..3}; do
-            pnpm install --no-frozen-lockfile && break || {
-              echo "pnpm install failed, retrying ($i/3)..."
-              sleep 5
-              if [ $i -eq 3 ]; then
-                echo "Failed to install dependencies after 3 attempts."
-                exit 1
-              fi
-            }
-          done
-        
       # Setup Emscripten (matching web_sequencer workflow version)
       - name: Setup Emscripten
         # use tip-of-tree build by default; this keeps CI aligned with the
@@ -98,6 +70,10 @@ jobs:
         run: |
           emcc --version
           
+      - name: Install dependencies
+        working-directory: .
+        run: npm install
+
       # Build WASM modules
       - name: Build Vite app
         working-directory: .
