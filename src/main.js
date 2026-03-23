@@ -208,6 +208,13 @@ class MarblesGame {
         this.flipbarEl = document.getElementById('flipbar')
         this.flipbarContainerEl = document.getElementById('flipbar-container')
 
+        // Vortex Mechanic
+        this.vortexEnergy = 100
+        this.maxVortexEnergy = 100
+        this.vortexActive = false
+        this.vortexbarEl = document.getElementById('vortexbar')
+        this.vortexbarContainerEl = document.getElementById('vortexbar-container')
+
         // Chameleon Mechanic
         this.chameleonState = 0
         this.lastChameleonTime = 0
@@ -512,6 +519,9 @@ class MarblesGame {
             if (e.code === 'KeyJ' && this.playerMarble) {
                 this.jetpackActive = true
             }
+            if (e.code === 'KeyY' && this.playerMarble) {
+                this.vortexActive = true
+            }
             if (e.code === 'KeyK' && this.playerMarble) {
                 const now = Date.now()
                 if (now - this.lastChameleonTime > this.chameleonCooldown) {
@@ -546,6 +556,9 @@ class MarblesGame {
             }
             if (e.code === 'KeyG') {
                 this.iceActive = false
+            }
+            if (e.code === 'KeyY') {
+                this.vortexActive = false
             }
             if (e.code === 'KeyJ') {
                 this.jetpackActive = false
@@ -2729,6 +2742,86 @@ class MarblesGame {
             } else {
                 this.gravityBarEl.style.width = `0%`
                 this.gravityBarEl.style.filter = 'none'
+            }
+        }
+
+        // Vortex Mechanic
+        if (this.vortexActive && this.vortexEnergy > 0) {
+            this.vortexEnergy = Math.max(0, this.vortexEnergy - 1.0)
+            if (this.playerMarble) {
+                const playerPos = this.playerMarble.rigidBody.translation()
+                const radius = 15.0
+                const attractionForce = 2.0
+                const tangentialForce = 1.5
+
+                this.world.bodies.forEach(body => {
+                    if (body === this.playerMarble.rigidBody) return
+                    if (!body.isDynamic()) return
+
+                    const bodyPos = body.translation()
+                    const dx = bodyPos.x - playerPos.x
+                    const dy = bodyPos.y - playerPos.y
+                    const dz = bodyPos.z - playerPos.z
+                    const distSq = dx * dx + dy * dy + dz * dz
+
+                    if (distSq < radius * radius && distSq > 0.001) {
+                        const dist = Math.sqrt(distSq)
+
+                        // Pull towards player
+                        const fx = -(dx / dist) * attractionForce * body.mass()
+                        const fy = -(dy / dist) * attractionForce * body.mass()
+                        const fz = -(dz / dist) * attractionForce * body.mass()
+
+                        // Tangential swirling force (cross product of up vector and direction to player)
+                        // up = (0, 1, 0), dir = (dx, dy, dz)
+                        // cross(up, dir) = (dz, 0, -dx)
+                        const tx = (dz / dist) * tangentialForce * body.mass()
+                        const ty = 0
+                        const tz = -(dx / dist) * tangentialForce * body.mass()
+
+                        // Add a little upward force to lift them into the vortex
+                        const liftForce = body.mass() * 0.5
+
+                        body.applyImpulse({ x: fx + tx, y: fy + ty + liftForce, z: fz + tz }, true)
+                    }
+                })
+
+                // Visual feedback - tint magenta
+                const rcm = this.engine.getRenderableManager()
+                const inst = rcm.getInstance(this.playerMarble.entity)
+                if (inst) {
+                    const matInst = rcm.getMaterialInstanceAt(inst, 0)
+                    matInst.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 0.0, 1.0])
+                }
+            }
+        } else {
+            this.vortexEnergy = Math.min(this.maxVortexEnergy, this.vortexEnergy + 0.5)
+
+            // Restore original color when not using vortex or out of energy
+            if (!this.shieldActive && this.playerMarble && this.playerMarble.originalColor) {
+                const rcm = this.engine.getRenderableManager()
+                const inst = rcm.getInstance(this.playerMarble.entity)
+                if (inst) {
+                    const matInst = rcm.getMaterialInstanceAt(inst, 0)
+                    matInst.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, this.playerMarble.originalColor)
+                }
+            }
+        }
+
+        if (this.vortexbarContainerEl && this.vortexbarEl) {
+            const pct = (this.vortexEnergy / this.maxVortexEnergy) * 100
+            this.vortexbarEl.style.width = `${pct}%`
+
+            if (this.vortexEnergy < this.maxVortexEnergy || this.vortexActive) {
+                this.vortexbarContainerEl.style.display = 'block'
+            } else {
+                this.vortexbarContainerEl.style.display = 'none'
+            }
+
+            if (this.vortexActive && this.vortexEnergy > 0) {
+                this.vortexbarEl.style.boxShadow = '0 0 10px #ff00ff'
+            } else {
+                this.vortexbarEl.style.boxShadow = 'none'
             }
         }
 
