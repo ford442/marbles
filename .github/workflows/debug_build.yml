@@ -21,7 +21,7 @@ jobs:
       # that runs independently. This workflow is for codepit-level debugging.
       # 
       # For web_sequencer builds, see:
-      # projects/web_sequencer/.github/workflows/debug_build.yml
+      # .github/workflows/debug_build.yml
           
       - name: Clone projects
         env:
@@ -59,7 +59,7 @@ jobs:
       # This is just a compatibility check for the codepit parent repo.
       - name: Check web_sequencer workflow exists
         run: |
-          if [ -f "projects/web_sequencer/.github/workflows/debug_build.yml" ]; then
+          if [ -f ".github/workflows/debug_build.yml" ]; then
             echo "✅ web_sequencer has its own debug_build.yml"
             echo "For detailed builds, check the web_sequencer workflow runs"
           fi
@@ -85,7 +85,7 @@ jobs:
         # local development environment that now installs `tot`.
         uses: mymindstorm/setup-emsdk@v14
         with:
-          version: 'tot'
+          version: '3.1.50'
           no-cache: true
           
       - name: Verify Emscripten
@@ -93,37 +93,9 @@ jobs:
           emcc --version
           
       # Build WASM modules
-      - name: Build JC303 WASM
-        working-directory: ./projects/web_sequencer
-        run: |
-          echo "=== Building JC303 WASM ==="
-          bash tools/build_jc303_omp.sh release single
-          
-      - name: Build Emscripten/Rubberband WASM
-        working-directory: ./projects/web_sequencer
-        continue-on-error: true
-        run: |
-          echo "=== Building Rubberband WASM ==="
-          bash emscripten/build.sh
-          
-      - name: Build AssemblyScript WASM modules
-        working-directory: ./projects/web_sequencer
-        run: |
-          echo "=== Building AssemblyScript modules ==="
-          pnpm run build:wasm:oscillators
-          pnpm run build:wasm:freezer
-          
-      - name: Build Rust WASM (optional)
-        working-directory: ./projects/web_sequencer
-        continue-on-error: true
-        run: |
-          echo "=== Building Rust WASM ==="
-          cd rust-audio && cargo update -p wasm-bindgen && cd ..
-          pnpm run build:wasm:rust
-          
       - name: Build Vite app
-        working-directory: ./projects/web_sequencer
-        run: pnpm run build
+        working-directory: .
+        run: npm run build
         
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -131,7 +103,7 @@ jobs:
         with:
           name: build-artifacts
           path: |
-            projects/web_sequencer/dist/
-            projects/web_sequencer/public/*.wasm
-            projects/web_sequencer/public/*.js
+            dist/
+            public/*.wasm
+            public/*.js
           retention-days: 7

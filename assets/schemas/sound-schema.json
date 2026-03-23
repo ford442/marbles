@@ -1,0 +1,117 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Sound Definition Schema",
+  "description": "Schema for defining custom sounds",
+  "type": "object",
+  "required": ["id", "name", "version", "files"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the sound",
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name for the sound"
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief description"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "author": {
+      "type": "string",
+      "description": "Author name or identifier"
+    },
+    "category": {
+      "type": "string",
+      "enum": ["sfx", "music", "ambient", "ui"],
+      "description": "Sound category"
+    },
+    "files": {
+      "type": "array",
+      "description": "Audio file variants (for randomization)",
+      "items": {
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Path to audio file"
+          },
+          "weight": {
+            "type": "number",
+            "minimum": 0,
+            "default": 1,
+            "description": "Selection weight for randomization"
+          }
+        }
+      }
+    },
+    "properties": {
+      "type": "object",
+      "description": "Playback properties",
+      "properties": {
+        "volume": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 1
+        },
+        "pitchMin": {
+          "type": "number",
+          "minimum": 0.1,
+          "default": 1
+        },
+        "pitchMax": {
+          "type": "number",
+          "minimum": 0.1,
+          "default": 1
+        },
+        "loop": {
+          "type": "boolean",
+          "default": false
+        },
+        "spatial": {
+          "type": "boolean",
+          "default": false,
+          "description": "3D positional audio"
+        },
+        "maxDistance": {
+          "type": "number",
+          "description": "Max distance for spatial audio"
+        },
+        "fadeIn": {
+          "type": "number",
+          "description": "Fade in duration in seconds"
+        },
+        "fadeOut": {
+          "type": "number",
+          "description": "Fade out duration in seconds"
+        }
+      }
+    },
+    "trigger": {
+      "type": "object",
+      "description": "When this sound plays (for SFX)",
+      "properties": {
+        "event": {
+          "type": "string",
+          "enum": ["collision", "roll", "jump", "land", "goal", "button_click", "custom"]
+        },
+        "threshold": {
+          "type": "number",
+          "description": "Minimum velocity/impact for collision sounds"
+        },
+        "cooldown": {
+          "type": "number",
+          "description": "Minimum seconds between plays"
+        }
+      }
+    }
+  }
+}

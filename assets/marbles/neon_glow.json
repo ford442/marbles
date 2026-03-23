@@ -1,0 +1,48 @@
+{
+  "id": "neon_glow",
+  "name": "Neon Glow",
+  "description": "Cyberpunk marble with intense magenta glow, circuit patterns, and holographic hex grid. Emits light and leaves energy trails.",
+  "version": "5.0.0",
+  "author": "Marble Game Team - Visual Overhaul",
+  "rarity": "legendary",
+  "appearance": {
+    "color": {"r": 0.95, "g": 0.0, "b": 0.6},
+    "roughness": 0.2,
+    "metallic": 0.3,
+    "emissive": {"r": 1.0, "g": 0.2, "b": 0.8, "intensity": 2.5},
+    "clearCoat": 0.6,
+    "clearCoatRoughness": 0.1,
+    "rimLightColor": {"r": 0.0, "g": 1.0, "b": 0.8},
+    "rimLightIntensity": 1.5,
+    "subsurfaceScattering": 0.2,
+    "reflectance": 0.3,
+    "ambientOcclusion": 0.1,
+    "texture": "procedural_circuit",
+    "particleEffect": "neon_trail"
+  },
+  "physics": {
+    "radius": 0.5,
+    "density": 0.8,
+    "friction": 0.2,
+    "restitution": 0.7,
+    "linearDamping": 0.03,
+    "angularDamping": 0.03
+  },
+  "audio": {
+    "rollSound": "electric_hum",
+    "collisionSound": "energy_burst",
+    "pitchVariation": 0.3
+  },
+  "abilities": {
+    "speedBoost": 1.2
+  },
+  "visual_overhaul": {
+    "agent_features": [
+      "Agent 1: High emissive 2.5, cyan rim light, glossy surface",
+      "Agent 2: Circuit maze patterns, hex grid overlay, data streams",
+      "Agent 3: Iridescence, holographic shimmer, bloom 2.0, chromatic aberration"
+    ],
+    "effects": ["bloom", "iridescence", "circuit_glow", "energy_trail", "chromatic_aberration"],
+    "lod_variants": ["high_neon", "medium_neon", "low_neon", "impostor"]
+  }
+}

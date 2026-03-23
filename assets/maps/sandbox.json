@@ -1,0 +1,23 @@
+{
+  "id": "sandbox",
+  "name": "Sandbox",
+  "description": "Open area to test all marbles",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "difficulty": "easy",
+  "zones": [
+    {
+      "type": "floor",
+      "pos": { "x": 0, "y": -2, "z": 0 },
+      "size": { "x": 100, "y": 0.5, "z": 100 }
+    }
+  ],
+  "spawn": { "x": 0, "y": 5, "z": 0 },
+  "goals": [],
+  "camera": {
+    "mode": "orbit",
+    "angle": 0,
+    "height": 15,
+    "radius": 40
+  }
+}

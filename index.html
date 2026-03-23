@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marbles 3D</title>
+    <script src="/filament.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            z-index: 0;
+        }
+
+        /* Level Selection Menu */
+        #level-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        #level-menu h1 {
+            color: #e94560;
+            font-size: 3rem;
+            margin: 0 0 10px 0;
+            text-shadow: 0 0 20px rgba(233, 69, 96, 0.5);
+            letter-spacing: 2px;
+        }
+
+        #level-menu .subtitle {
+            color: #888;
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+        }
+
+        #level-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            width: 90%;
+            max-height: 70vh;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .level-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(233, 69, 96, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .level-card:hover {
+            background: rgba(233, 69, 96, 0.1);
+            border-color: #e94560;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(233, 69, 96, 0.2);
+        }
+
+        .level-card h3 {
+            color: #fff;
+            margin: 0 0 10px 0;
+            font-size: 1.3rem;
+        }
+
+        .level-card p {
+            color: #aaa;
+            margin: 0 0 15px 0;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .level-card .goals {
+            display: inline-block;
+            background: rgba(233, 69, 96, 0.2);
+            color: #e94560;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        /* Game UI */
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            pointer-events: none;
+            user-select: none;
+            display: none;
+            z-index: 10;
+        }
+
+        #level-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #e94560;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        #score {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        #combo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff00ff;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 0px #000;
+            transition: transform 0.1s;
+        }
+
+        #combobar-container {
+            width: 200px;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+            margin-top: -5px;
+        }
+
+        #combobar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff00ff 0%, #00ffff 100%);
+            transition: width 0.1s linear;
+        }
+
+        #timer {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0ff;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        #selected {
+            font-size: 16px;
+            color: #0f0;
+            margin-bottom: 5px;
+            text-shadow: 1px 1px 0px #000;
+        }
+
+        #aim {
+            font-size: 16px;
+            color: #ff0;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 0px #000;
+        }
+
+        #powerbar-container {
+            width: 200px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        #powerbar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #0f0 0%, #ff0 50%, #f00 100%);
+            transition: width 0.05s;
+        }
+
+        #jumpbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #jumpbar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #00f 0%, #0ff 100%);
+            transition: width 0.05s;
+        }
+
+        #boostbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #boostbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #f0f 0%, #0ff 100%);
+            transition: width 0.05s, background-color 0.2s;
+        }
+
+        #dashbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #dashbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff8c00 0%, #ffff00 100%);
+            transition: width 0.05s, background-color 0.2s;
+        }
+
+        #magnetbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #magnetbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #00ffff 0%, #ff00ff 100%);
+            transition: width 0.1s;
+        }
+
+        #focusbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #focusbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #7b00ff 0%, #0000ff 100%);
+            transition: width 0.1s;
+        }
+
+        #rewindbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #rewindbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000 0%, #ff4500 100%);
+            transition: width 0.1s;
+        }
+
+        #gravitybar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #gravitybar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ffff00 0%, #ffcc00 100%);
+            transition: width 0.1s;
+        }
+
+        #holobar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #holobar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #00ffff 0%, #0088ff 100%);
+            transition: width 0.1s;
+        }
+
+        #hoverbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #hoverbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ffffff 0%, #00ffcc 100%);
+            transition: width 0.1s;
+        }
+
+        #jetpackbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #jetpackbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ffaa00 0%, #ffff00 100%);
+            transition: width 0.1s;
+        }
+
+        #icebar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #icebar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #00ffff 0%, #ffffff 100%);
+            transition: width 0.1s;
+        }
+
+        #flipbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #flipbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff00ff 0%, #ffffff 100%);
+            transition: width 0.1s;
+        }
+
+        #bombbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #bombbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff4500 0%, #ff0000 100%);
+            transition: width 0.1s;
+        }
+
+        #missilebar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #missilebar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff8c00 0%, #ff0000 100%);
+            transition: width 0.1s;
+        }
+
+        #buildbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #buildbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #32cd32 0%, #00ff00 100%);
+            transition: width 0.1s;
+        }
+
+        #missilebar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #missilebar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff8800 0%, #ffff00 100%);
+            transition: width 0.1s;
+        }
+
+
+        #teleportbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #teleportbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #9900ff 0%, #cc00ff 100%);
+            transition: width 0.1s;
+        }
+
+        #instructions {
+            font-size: 14px;
+            opacity: 0.9;
+            text-shadow: 1px 1px 0px #000;
+            line-height: 1.6;
+        }
+
+        #instructions kbd {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        #mute-btn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 20px;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #mute-btn:hover {
+            background: rgba(233, 69, 96, 0.3);
+            border-color: rgba(233, 69, 96, 0.8);
+            transform: scale(1.1);
+        }
+
+        #mute-btn.muted {
+            opacity: 0.5;
+        }
+
+        /* Scrollbar for level grid */
+        #level-grid::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #level-grid::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        #level-grid::-webkit-scrollbar-thumb {
+            background: rgba(233, 69, 96, 0.5);
+            border-radius: 4px;
+        }
+
+        #level-grid::-webkit-scrollbar-thumb:hover {
+            background: rgba(233, 69, 96, 0.8);
+        }
+
+        /* Debug overlay */
+        #debug-overlay {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #0f0;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 10px;
+            border-radius: 4px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Loading Screen -->
+    <div id="loading"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a1a2e; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; color: #e94560; font-family: sans-serif;">
+        <div style="font-size: 3rem; margin-bottom: 20px;">🎱</div>
+        <div style="font-size: 1.5rem; margin-bottom: 10px;">Loading Marbles 3D...</div>
+        <div style="color: #888; font-size: 0.9rem;">Initializing physics & rendering engine</div>
+    </div>
+
+    <!-- Level Selection Menu -->
+    <div id="level-menu">
+        <h1>🎱 MARBLES 3D</h1>
+        <div class="subtitle">Choose your challenge</div>
+        <div id="level-grid"></div>
+    </div>
+
+    <!-- Game UI -->
+    <div id="ui">
+        <div id="level-name">Level</div>
+        <div id="score">Score: 0</div>
+        <div id="combo" style="display: none;">Combo: x1</div>
+        <div id="combobar-container" style="display: none;">
+            <div id="combobar"></div>
+        </div>
+        <div id="timer">Time: 0.00s</div>
+        <div id="selected">Selected: 1</div>
+        <div id="aim">Aim: 0°</div>
+        <div id="powerbar-container">
+            <div id="powerbar"></div>
+        </div>
+        <div id="jumpbar-container">
+            <div id="jumpbar"></div>
+        </div>
+        <div id="boostbar-container">
+            <div id="boostbar"></div>
+        </div>
+        <div id="dashbar-container">
+            <div id="dashbar"></div>
+        </div>
+        <div id="magnetbar-container">
+            <div id="magnetbar"></div>
+        </div>
+        <div id="focusbar-container">
+            <div id="focusbar"></div>
+        </div>
+        <div id="rewindbar-container">
+            <div id="rewindbar"></div>
+        </div>
+        <div id="gravitybar-container">
+            <div id="gravitybar"></div>
+        </div>
+        <div id="holobar-container" style="display: none;">
+            <div id="holobar"></div>
+        </div>
+        <div id="bombbar-container">
+            <div id="bombbar"></div>
+        </div>
+        <div id="missilebar-container">
+            <div id="missilebar"></div>
+        </div>
+        <div id="chameleonbar-container" style="display: none;">
+            <div id="chameleonbar"></div>
+        </div>
+        <div id="hoverbar-container">
+            <div id="hoverbar"></div>
+        </div>
+        <div id="jetpackbar-container" style="display: none;">
+            <div id="jetpackbar"></div>
+        </div>
+        <div id="icebar-container" style="display: none;">
+            <div id="icebar"></div>
+        </div>
+        <div id="flipbar-container" style="display: none;">
+            <div id="flipbar"></div>
+        </div>
+        <div id="teleportbar-container">
+            <div id="teleportbar"></div>
+        </div>
+        <div id="buildbar-container">
+            <div id="buildbar"></div>
+        </div>
+        <div id="missilebar-container">
+            <div id="missilebar"></div>
+        </div>
+        <div id="instructions">
+            <kbd>1</kbd> Ramp | <kbd>2</kbd> Floor | <kbd>3</kbd> Bouncer &nbsp;|&nbsp;
+            <kbd>WASD</kbd> / <kbd>Arrows</kbd> Move &nbsp;|&nbsp;
+            <kbd>Shift</kbd> Boost &nbsp;|&nbsp;
+            <kbd>Space</kbd> Jump (Hold) &nbsp;|&nbsp;
+            <kbd>V</kbd> Dash &nbsp;|&nbsp;
+            <kbd>F</kbd> Focus &nbsp;|&nbsp;
+            <kbd>E</kbd> / <kbd>Q</kbd> Magnet &nbsp;|&nbsp;
+            <kbd>R</kbd> Reset &nbsp;|&nbsp;
+            <kbd>Tab</kbd> Switch Marble &nbsp;|&nbsp;
+            <kbd>C</kbd> Camera &nbsp;|&nbsp;
+            <kbd>M</kbd> Menu &nbsp;|&nbsp;
+            <kbd>N</kbd> Mute &nbsp;|&nbsp;
+            <kbd>[</kbd> <kbd>]</kbd> Vol &nbsp;|&nbsp;
+            <kbd>Z</kbd> Stomp &nbsp;|&nbsp;
+            <kbd>T</kbd> Rewind &nbsp;|&nbsp;
+            <kbd>B</kbd> Holo-Platform &nbsp;|&nbsp;
+            <kbd>X</kbd> Bomb &nbsp;|&nbsp;
+            <kbd>L</kbd> Missile &nbsp;|&nbsp;
+            <kbd>H</kbd> Hover &nbsp;|&nbsp;
+            <kbd>J</kbd> Jetpack &nbsp;|&nbsp;
+            <kbd>G</kbd> Frost Bridge &nbsp;|&nbsp;
+            <kbd>U</kbd> Gravity Flip &nbsp;|&nbsp;
+            <kbd>K</kbd> Chameleon &nbsp;|&nbsp;
+            <kbd>P</kbd> Teleport &nbsp;|&nbsp;
+            <kbd>L</kbd> Missile
+        </div>
+        <button id="mute-btn" title="Toggle Sound">🔊</button>
+    </div>
+        <div id="active-effects" style="margin-bottom: 15px; font-weight: bold; color: #0ff; text-shadow: 1px 1px 0 #000;"></div>
+    <canvas id="canvas"></canvas>
+    <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>

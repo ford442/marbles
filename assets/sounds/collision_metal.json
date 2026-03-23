@@ -1,0 +1,28 @@
+{
+  "id": "collision_metal",
+  "name": "Metal Collision",
+  "description": "Metallic impact sound for marble collisions",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "category": "sfx",
+  "files": [
+    { "path": "sounds/metal_hit_01.mp3", "weight": 1 },
+    { "path": "sounds/metal_hit_02.mp3", "weight": 1 },
+    { "path": "sounds/metal_hit_03.mp3", "weight": 1 }
+  ],
+  "properties": {
+    "volume": 0.7,
+    "pitchMin": 0.9,
+    "pitchMax": 1.1,
+    "loop": false,
+    "spatial": true,
+    "maxDistance": 50,
+    "fadeIn": 0.01,
+    "fadeOut": 0.1
+  },
+  "trigger": {
+    "event": "collision",
+    "threshold": 1.0,
+    "cooldown": 0.1
+  }
+}
