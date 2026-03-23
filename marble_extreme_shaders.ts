@@ -191,6 +191,57 @@ void main() {
  * Features: Cracked crust with animated lava, heat shimmer, surface bubbles,
  *           eruption glow, multi-layer emissive
  */
+
+/**
+ * Custom Fragment Shader: Galactic Core Extreme
+ * Features: High-energy blue emissive core, starfield parallax, accretion disk
+ */
+const GALACTIC_CORE_FRAGMENT_SHADER = `
+#include "common_types.glsl"
+
+uniform float uTime;
+uniform float uCoreEnergy;
+uniform float uStarDensity;
+uniform float uAccretionSpeed;
+uniform sampler2D noiseTexture;
+uniform samplerCube envMap;
+
+void material(inout MaterialInputs material) {
+    prepareMaterial(material);
+
+    vec3 normal = normalize(shading_normal);
+    vec3 viewDir = normalize(cameraPosition - getWorldPosition());
+    float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), 3.0);
+
+    // Core energy simulation using noise
+    vec2 uv = getUV0();
+    float noiseVal = texture(noiseTexture, uv * 2.0 + uTime * uAccretionSpeed).r;
+
+    // Deep space blue/purple palette
+    vec3 coreColor = vec3(0.1, 0.4, 1.0);
+    vec3 edgeColor = vec3(0.6, 0.1, 0.8);
+    vec3 accretionColor = vec3(0.0, 0.8, 1.0);
+
+    // Mix colors based on fresnel and noise
+    vec3 baseColor = mix(coreColor, edgeColor, fresnel);
+    baseColor += accretionColor * noiseVal * uCoreEnergy;
+
+    // Stars
+    float starNoise = texture(noiseTexture, uv * uStarDensity).g;
+    float stars = step(0.95, starNoise) * (sin(uTime * 5.0 + starNoise * 10.0) * 0.5 + 0.5);
+    baseColor += vec3(1.0) * stars;
+
+    // Emission
+    vec3 emission = baseColor * uCoreEnergy * (1.0 + fresnel * 2.0);
+
+    material.baseColor = vec4(baseColor, 1.0);
+    material.metallic = 0.9;
+    material.roughness = 0.1 + noiseVal * 0.2;
+    material.emissive = vec4(emission, 1.0);
+}
+`;
+
+
 const VOLCANIC_MAGMA_FRAGMENT_SHADER = `
 #include "common_types.glsl"
 
@@ -448,6 +499,165 @@ export const VolcanicMagmaMaterialConfig = {
   depthWrite: true,
   cullFace: 'back'
 };
+
+
+export const GalacticCoreMaterialConfig = {
+  name: 'GalacticCoreExtreme',
+  vertexShader: 'MARBLE_VERTEX_SHADER',
+  fragmentShader: GALACTIC_CORE_FRAGMENT_SHADER,
+  uniforms: {
+    uTime: { type: 'float', value: 0.0 },
+    uCoreEnergy: { type: 'float', value: 2.5 },
+    uStarDensity: { type: 'float', value: 15.0 },
+    uAccretionSpeed: { type: 'float', value: 0.4 },
+    noiseTexture: { type: 'sampler2D', value: null },
+    envMap: { type: 'samplerCube', value: null }
+  },
+  blending: 'opaque',
+  depthWrite: true,
+  cullFace: 'back'
+};
+
+export const GalacticCoreParticleEffects = [
+  {
+    name: 'CosmicDust',
+    maxParticles: 300,
+    emissionRate: 50,
+    lifetime: { min: 1.0, max: 2.5 },
+    size: { start: 0.1, end: 0.0 },
+    color: {
+      start: [0.1, 0.4, 1.0, 0.8],
+      end: [0.6, 0.1, 0.8, 0.0]
+    },
+    velocity: { type: 'directional', speed: 0.8, spread: 0.5 },
+    acceleration: [0, 0.1, 0],
+    texture: 'particle_star.png',
+    blending: 'additive',
+    trigger: 'continuous'
+  },
+  {
+    name: 'NovaBurst',
+    maxParticles: 150,
+    emissionRate: 0,
+    lifetime: { min: 0.5, max: 1.2 },
+    size: { start: 0.3, end: 0.0 },
+    color: {
+      start: [0.0, 0.8, 1.0, 1.0],
+      end: [0.1, 0.2, 1.0, 0.0]
+    },
+    velocity: { type: 'burst', speed: 8.0, spread: 1.0 },
+    acceleration: [0, -1.0, 0],
+    texture: 'particle_nova.png',
+    blending: 'additive',
+    trigger: 'impact',
+    triggerThreshold: 3.5
+  },
+  {
+    name: 'WarpTrail',
+    maxParticles: 200,
+    emissionRate: 100,
+    lifetime: { min: 0.2, max: 0.6 },
+    size: { start: 0.2, end: 0.05 },
+    color: {
+      start: [0.4, 0.8, 1.0, 0.9],
+      end: [0.1, 0.2, 0.8, 0.0]
+    },
+    velocity: { type: 'directional', speed: -20.0, spread: 0.1 },
+    acceleration: [0, 0, 0],
+    texture: 'particle_warp_streak.png',
+    blending: 'additive',
+    trigger: 'boost'
+  }
+];
+
+export const GalacticCorePostProcess = {
+  bloom: {
+    enabled: true,
+    intensity: 2.5,
+    threshold: 0.3,
+    radius: 1.0,
+    iterations: 6
+  },
+  motionBlur: {
+    enabled: true,
+    intensity: 0.8,
+    samples: 16
+  },
+  chromaticAberration: {
+    enabled: true,
+    intensity: 0.025
+  },
+  vignette: {
+    enabled: true,
+    intensity: 0.5,
+    smoothness: 0.7,
+    color: [0.01, 0.02, 0.05]
+  },
+  screenSpaceReflections: {
+    enabled: true,
+    maxSteps: 48,
+    stepSize: 0.06,
+    thickness: 0.1
+  },
+  colorGrading: {
+    enabled: true,
+    contrast: 1.4,
+    saturation: 1.2,
+    tint: [0.9, 0.95, 1.1]
+  },
+  ambientOcclusion: {
+    enabled: true,
+    intensity: 1.0,
+    radius: 0.6
+  }
+};
+
+export const GalacticCoreExtremeMarble = {
+  name: 'GalacticCoreExtreme',
+  materialConfig: GalacticCoreMaterialConfig,
+  particleEffects: GalacticCoreParticleEffects,
+  postProcessConfig: GalacticCorePostProcess,
+  lodConfig: {
+    levels: [
+      {
+        distance: 0,
+        mesh: 'marble_galactic_core_lod0.glb',
+        material: 'galactic_core_full',
+        shadowCasting: true,
+        receiveShadows: true
+      },
+      {
+        distance: 20,
+        mesh: 'marble_galactic_core_lod1.glb',
+        material: 'galactic_core_medium',
+        shadowCasting: true,
+        receiveShadows: true
+      },
+      {
+        distance: 50,
+        mesh: 'marble_galactic_core_lod2.glb',
+        material: 'galactic_core_low',
+        shadowCasting: false,
+        receiveShadows: true
+      }
+    ],
+    impostor: {
+      enabled: true,
+      distance: 90,
+      textureResolution: 512,
+      updateRate: 15,
+      billboardMode: 'spherical'
+    },
+    instancing: {
+      enabled: true,
+      maxInstances: 100,
+      frustumCulling: true,
+      occlusionCulling: true,
+      dynamicBatching: true
+    }
+  }
+};
+
 
 // ============================================================================
 // AGENT 4: PARTICLE EFFECT CONFIGURATIONS
@@ -812,11 +1022,13 @@ export const VolcanicMagmaExtremeMarble = {
 // Export all shader source for external use
 export const ExtremeShaderSource = {
   shadowNinjaFragment: SHADOW_NINJA_FRAGMENT_SHADER,
-  volcanicMagmaFragment: VOLCANIC_MAGMA_FRAGMENT_SHADER
+  volcanicMagmaFragment: VOLCANIC_MAGMA_FRAGMENT_SHADER,
+  galacticCoreFragment: GALACTIC_CORE_FRAGMENT_SHADER
 };
 
 // Integration helper - add to AllMarbleRenderingPackages
 export const AllExtremeMarbles = [
   ShadowNinjaExtremeMarble,
-  VolcanicMagmaExtremeMarble
+  VolcanicMagmaExtremeMarble,
+  GalacticCoreExtremeMarble
 ];
