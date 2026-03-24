@@ -1,13 +1,14 @@
 export const marbleDraft = {
-    name: "Quantum Pulsar",
-    color: [0.0, 1.0, 0.7],
+    name: "Bismuth Prism",
+    color: [0.8, 0.2, 0.9],
     offset: { x: 0.0, y: 5, z: 0 },
-    radius: 0.8,
-    density: 0.5,
-    restitution: 1.4,
-    gravityScale: 0.2,
-    friction: 0.1,
+    radius: 0.6,
+    density: 6.0,
+    restitution: 0.1,
+    gravityScale: 2.0,
+    friction: 0.8,
+    roughness: 0.1,
     emissive: true,
-    lightIntensity: 80000.0,
-    lightColor: [0.0, 1.0, 0.7]
+    lightIntensity: 25000.0,
+    lightColor: [0.9, 0.4, 1.0]
 };
