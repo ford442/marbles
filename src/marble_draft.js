@@ -1,14 +1,14 @@
 export const marbleDraft = {
-    name: "Bismuth Prism",
-    color: [0.8, 0.2, 0.9],
+    name: "Radiant Pearl",
+    color: [1.0, 0.9, 0.9],
     offset: { x: 0.0, y: 5, z: 0 },
-    radius: 0.6,
-    density: 6.0,
-    restitution: 0.1,
-    gravityScale: 2.0,
-    friction: 0.8,
-    roughness: 0.1,
+    radius: 0.55,
+    density: 2.0,
+    restitution: 0.8,
+    gravityScale: 0.5,
+    friction: 0.2,
+    roughness: 0.05,
     emissive: true,
-    lightIntensity: 25000.0,
-    lightColor: [0.9, 0.4, 1.0]
+    lightIntensity: 15000.0,
+    lightColor: [1.0, 0.8, 0.8]
 };
