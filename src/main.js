@@ -113,6 +113,12 @@ class MarblesGame {
         this.missileBarEl = document.getElementById('missilebar')
         this.missileBarContainerEl = document.getElementById('missilebar-container')
 
+        // Size Shift Mechanic
+        this.lastSizeShiftTime = 0
+        this.sizeShiftCooldown = 1000
+        this.sizebarEl = document.getElementById('sizebar')
+        this.sizebarContainerEl = document.getElementById('sizebar-container')
+
         // Shield Mechanic
         this.shieldEnergy = 100
         this.maxShieldEnergy = 100
@@ -533,6 +539,47 @@ class MarblesGame {
             }
             if (e.code === 'KeyY' && this.playerMarble) {
                 this.vortexActive = true
+            }
+            if (e.code === 'KeyI' && this.playerMarble) {
+                const now = Date.now()
+                if (now - this.lastSizeShiftTime > this.sizeShiftCooldown) {
+                    this.lastSizeShiftTime = now
+
+                    const sizes = [
+                        { name: 'Normal', scale: 1.0 },
+                        { name: 'Mini', scale: 0.5 },
+                        { name: 'Giant', scale: 2.0 }
+                    ]
+
+                    this.playerMarble.sizeState = ((this.playerMarble.sizeState || 0) + 1) % 3
+                    const sizeProfile = sizes[this.playerMarble.sizeState]
+
+                    const rb = this.playerMarble.rigidBody
+
+                    if (this.playerMarble.collider) {
+                        this.world.removeCollider(this.playerMarble.collider, true)
+                    }
+
+                    const newRadius = (this.playerMarble.baseRadius || 0.5) * sizeProfile.scale
+                    const desc = RAPIER.ColliderDesc.ball(newRadius)
+                        .setRestitution(this.playerMarble.baseRestitution !== undefined ? this.playerMarble.baseRestitution : 0.5)
+                        .setFriction(this.playerMarble.baseFriction !== undefined ? this.playerMarble.baseFriction : 0.5)
+
+                    if (this.playerMarble.baseDensity) {
+                        desc.setDensity(this.playerMarble.baseDensity)
+                    }
+
+                    this.playerMarble.collider = this.world.createCollider(desc, rb)
+                    this.playerMarble.scale = sizeProfile.scale * (this.playerMarble.baseScale || 1.0)
+
+                    if (sizeProfile.scale > 1.0) {
+                        const pos = rb.translation()
+                        rb.setTranslation({ x: pos.x, y: pos.y + newRadius, z: pos.z }, true)
+                    }
+
+                    this.showTrickMessage(`Size: ${sizeProfile.name}`, '#ffff00')
+                    if (audio && audio.playCollect) audio.playCollect()
+                }
             }
             if (e.code === 'KeyK' && this.playerMarble) {
                 const now = Date.now()
@@ -1503,7 +1550,7 @@ class MarblesGame {
             if (info.density) colliderDesc.setDensity(info.density)
             if (info.friction !== undefined) colliderDesc.setFriction(info.friction)
 
-            this.world.createCollider(colliderDesc, rigidBody)
+            const collider = this.world.createCollider(colliderDesc, rigidBody)
 
             const entity = this.Filament.EntityManager.get().create()
             const matInstance = this.material.createInstance()
@@ -1524,8 +1571,14 @@ class MarblesGame {
             const marbleObj = {
                 name: info.name || `Marble ${this.marbles.length + 1}`,
                 rigidBody,
+                collider,
                 entity,
                 scale,
+                baseScale: scale,
+                baseRadius: radius,
+                baseRestitution: info.restitution !== undefined ? info.restitution : 0.5,
+                baseFriction: info.friction !== undefined ? info.friction : 0.5,
+                baseDensity: info.density,
                 color: [...info.color],
                 originalColor: [...info.color],
                 initialPos: pos,
@@ -1577,6 +1630,22 @@ class MarblesGame {
             m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true)
             m.scoredGoals.clear()
             m.respawnPos = { ...m.initialPos }
+
+            // Reset Size Shift
+            m.sizeState = 0
+            if (m.scale !== m.baseScale) {
+                if (m.collider) {
+                    this.world.removeCollider(m.collider, true)
+                }
+                const desc = RAPIER.ColliderDesc.ball(m.baseRadius)
+                    .setRestitution(m.baseRestitution !== undefined ? m.baseRestitution : 0.5)
+                    .setFriction(m.baseFriction !== undefined ? m.baseFriction : 0.5)
+                if (m.baseDensity) {
+                    desc.setDensity(m.baseDensity)
+                }
+                m.collider = this.world.createCollider(desc, m.rigidBody)
+                m.scale = m.baseScale
+            }
         }
 
         for (const cp of this.checkpoints) {
@@ -3614,6 +3683,18 @@ class MarblesGame {
                 }
             }
             effectsContainer.textContent = active.join(' | ')
+        }
+
+        if (this.sizebarContainerEl && this.sizebarEl) {
+            const timeSinceSizeShift = now - this.lastSizeShiftTime
+            if (timeSinceSizeShift < this.sizeShiftCooldown) {
+                this.sizebarContainerEl.style.display = 'block'
+                const pct = (timeSinceSizeShift / this.sizeShiftCooldown) * 100
+                this.sizebarEl.style.width = pct + '%'
+            } else {
+                this.sizebarEl.style.width = '100%'
+                this.sizebarContainerEl.style.display = 'none'
+            }
         }
 
         if (this.holobarContainerEl && this.holobarEl) {
