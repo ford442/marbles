@@ -1,14 +1,14 @@
 export const marbleDraft = {
-    name: "Radiant Pearl",
-    color: [1.0, 0.9, 0.9],
+    name: "Abyssal Void",
+    color: [0.05, 0.0, 0.1],
     offset: { x: 0.0, y: 5, z: 0 },
-    radius: 0.55,
-    density: 2.0,
-    restitution: 0.8,
-    gravityScale: 0.5,
-    friction: 0.2,
-    roughness: 0.05,
+    radius: 0.65,
+    density: 25.0,
+    restitution: 0.1,
+    gravityScale: 2.0,
+    friction: 0.8,
+    roughness: 0.9,
     emissive: true,
-    lightIntensity: 15000.0,
-    lightColor: [1.0, 0.8, 0.8]
+    lightIntensity: 30000.0,
+    lightColor: [0.3, 0.0, 0.6]
 };
