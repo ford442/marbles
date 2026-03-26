@@ -207,6 +207,13 @@ class MarblesGame {
         this.icebarEl = document.getElementById('icebar')
         this.icebarContainerEl = document.getElementById('icebar-container')
 
+        // Phase Shift Mechanic
+        this.phaseEnergy = 100
+        this.maxPhaseEnergy = 100
+        this.phaseActive = false
+        this.phasebarEl = document.getElementById('phasebar')
+        this.phasebarContainerEl = document.getElementById('phasebar-container')
+
         // Gravity Flip Mechanic
         this.flipEnergy = 100
         this.maxFlipEnergy = 100
@@ -516,6 +523,9 @@ class MarblesGame {
             if (e.code === 'Digit5' && this.playerMarble) {
                 this.firePortal('B')
             }
+            if (e.code === 'Digit6' && this.playerMarble) {
+                this.phaseActive = true
+            }
             if (e.code === 'KeyX' && this.playerMarble) {
                 this.spawnBomb()
             }
@@ -607,6 +617,9 @@ class MarblesGame {
         })
 
         window.addEventListener('keyup', (e) => {
+            if (e.code === 'Digit6') {
+                this.phaseActive = false
+            }
             if (e.code === 'KeyO') {
                 this.shieldActive = false
             }
@@ -1409,6 +1422,47 @@ class MarblesGame {
             .color([0.08, 0.10, 0.18, 1.0])
             .build(this.engine)
         this.scene.setSkybox(this.skyboxEntity)
+    }
+
+    createPhaseBox(pos, rotation, halfExtents, color, material = 'glass') {
+        const bodyDesc = RAPIER.RigidBodyDesc.fixed()
+            .setTranslation(pos.x, pos.y, pos.z)
+            .setRotation(rotation)
+        const body = this.world.createRigidBody(bodyDesc)
+        const colliderDesc = RAPIER.ColliderDesc.cuboid(halfExtents.x, halfExtents.y, halfExtents.z)
+        const collider = this.world.createCollider(colliderDesc, body)
+        // Group 2, collides with Group 1
+        collider.setCollisionGroups(0x00020001)
+        this.staticBodies.push(body)
+
+        audio.registerBodyMaterial(body, material)
+
+        const entity = this.Filament.EntityManager.get().create()
+        const matInstance = this.material.createInstance()
+        matInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, color)
+        matInstance.setFloatParameter('roughness', 0.2) // Glassy
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.vb, this.ib)
+            .build(this.engine, entity)
+
+        const tcm = this.engine.getTransformManager()
+        const inst = tcm.getInstance(entity)
+
+        const mat = quaternionToMat4(pos, rotation)
+        const sx = halfExtents.x * 2
+        const sy = halfExtents.y * 2
+        const sz = halfExtents.z * 2
+
+        mat[0] *= sx; mat[1] *= sx; mat[2] *= sx
+        mat[4] *= sy; mat[5] *= sy; mat[6] *= sy
+        mat[8] *= sz; mat[9] *= sz; mat[10] *= sz
+
+        tcm.setTransform(inst, mat)
+        this.scene.addEntity(entity)
+        this.staticEntities.push(entity)
     }
 
     createStaticBox(pos, rotation, halfExtents, color, material = 'wood') {
@@ -3283,6 +3337,62 @@ class MarblesGame {
                 this.flipbarEl.style.boxShadow = '0 0 10px #ff00ff'
             } else {
                 this.flipbarEl.style.boxShadow = 'none'
+            }
+        }
+
+        // Phase Shift Logic
+        if (this.phaseActive && this.phaseEnergy > 1.0 && this.playerMarble) {
+            this.phaseEnergy = Math.max(0, this.phaseEnergy - 1.0)
+
+            if (!this.wasPhasing) {
+                this.wasPhasing = true
+                // Set collision group to 1, ignore group 2
+                this.playerMarble.collider.setCollisionGroups(0x0001FFFD)
+
+                // Visual feedback - tint purple
+                const rcm = this.engine.getRenderableManager()
+                const inst = rcm.getInstance(this.playerMarble.entity)
+                if (inst) {
+                    const matInst = rcm.getMaterialInstanceAt(inst, 0)
+                    matInst.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.7, 0.0, 1.0])
+                }
+            }
+        } else {
+            this.phaseEnergy = Math.min(this.maxPhaseEnergy, this.phaseEnergy + 0.5)
+
+            if (this.wasPhasing && this.playerMarble) {
+                this.wasPhasing = false
+                // Restore normal collision (collides with everything)
+                if (this.playerMarble.collider) {
+                    this.playerMarble.collider.setCollisionGroups(0x0001FFFF)
+                }
+
+                // Restore original color when not phasing or out of energy
+                if (!this.shieldActive && !this.vortexActive && this.playerMarble.originalColor) {
+                    const rcm = this.engine.getRenderableManager()
+                    const inst = rcm.getInstance(this.playerMarble.entity)
+                    if (inst) {
+                        const matInst = rcm.getMaterialInstanceAt(inst, 0)
+                        matInst.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, this.playerMarble.originalColor)
+                    }
+                }
+            }
+        }
+
+        if (this.phasebarContainerEl && this.phasebarEl) {
+            const pct = (this.phaseEnergy / this.maxPhaseEnergy) * 100
+            this.phasebarEl.style.width = `${pct}%`
+
+            if (this.phaseEnergy < this.maxPhaseEnergy || this.phaseActive) {
+                this.phasebarContainerEl.style.display = 'block'
+            } else {
+                this.phasebarContainerEl.style.display = 'none'
+            }
+
+            if (this.phaseActive && this.phaseEnergy > 0) {
+                this.phasebarEl.style.boxShadow = '0 0 10px #aa00ff'
+            } else {
+                this.phasebarEl.style.boxShadow = 'none'
             }
         }
 

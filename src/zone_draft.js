@@ -401,6 +401,16 @@ export function createAsteroidFieldZone(game, offset) {
         }
     }
 
+    // --- Phase Wall Obstacle ---
+    // A transparent wall players must phase through before the exit
+    game.createPhaseBox(
+        { x: offset.x, y: offset.y + 1, z: fieldStartZ + fieldLength },
+        floorQ,
+        { x: 10, y: 5, z: 0.5 },
+        [0.8, 0.0, 1.0], // Purple glass
+        'glass'
+    );
+
     // --- Exit Platform ---
     const exitZ = fieldStartZ + fieldLength + 5;
     game.createStaticBox(
