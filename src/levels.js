@@ -488,6 +488,20 @@ export const LEVELS = {
         nightMode: true,
         backgroundColor: [0.05, 0.1, 0.2, 1.0]
     },
+    trampoline_park: {
+        name: 'Trampoline Park',
+        description: 'Bounce your way to the exit!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'trampoline_park', pos: { x: 0, y: 0, z: 25 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [80, 90], y: [-2, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,

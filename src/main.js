@@ -17,6 +17,7 @@ import { createWaterSlideZone } from './water_slide_zone.js';
 import { createGrappleCourseZone } from './grapple_course_zone.js';
 import { createIceCaveZone } from './ice_cave_zone.js';
 import { createAntigravityZone } from './antigravity_zone.js';
+import { createTrampolineParkZone } from './zone_draft.js';
 import { audio } from './audio.js';
 import { LEVELS } from './levels.js';
 import { quatFromEuler, quaternionToMat4 } from './math.js';
@@ -1098,6 +1099,9 @@ class MarblesGame {
                 break
             case 'antigravity':
                 createAntigravityZone(this, offset)
+                break
+            case 'trampoline_park':
+                createTrampolineParkZone(this, offset)
                 break
         }
     }
