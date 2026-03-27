@@ -133,6 +133,13 @@ class MarblesGame {
         this.teleportBarEl = document.getElementById('teleportbar')
         this.teleportBarContainerEl = document.getElementById('teleportbar-container')
 
+        // Glider Mechanic
+        this.gliderEnergy = 100
+        this.maxGliderEnergy = 100
+        this.gliderActive = false
+        this.gliderBarEl = document.getElementById('gliderbar')
+        this.gliderBarContainerEl = document.getElementById('gliderbar-container')
+
         this.chameleonBarEl = document.getElementById('chameleonbar')
         this.chameleonBarContainerEl = document.getElementById('chameleonbar-container')
         this.hoverBarEl = document.getElementById('hoverbar')
@@ -493,7 +500,7 @@ class MarblesGame {
                     rb.setAngvel({ x: 0, y: 0, z: 0 }, true)
 
                     this.lastDashTime = now
-                    if (audio && audio.playBoost) audio.playBoost()
+                    if (typeof audio !== 'undefined' && audio.playBoost) audio.playBoost()
                 }
             }
             if (e.code === 'KeyZ' && this.playerMarble && !this.isGrounded(this.playerMarble)) {
@@ -525,6 +532,9 @@ class MarblesGame {
             }
             if (e.code === 'Digit6' && this.playerMarble) {
                 this.phaseActive = true
+            }
+            if (e.code === 'Digit7' && this.playerMarble) {
+                this.gliderActive = true
             }
             if (e.code === 'KeyX' && this.playerMarble) {
                 this.spawnBomb()
@@ -619,6 +629,9 @@ class MarblesGame {
         window.addEventListener('keyup', (e) => {
             if (e.code === 'Digit6') {
                 this.phaseActive = false
+            }
+            if (e.code === 'Digit7') {
+                this.gliderActive = false
             }
             if (e.code === 'KeyO') {
                 this.shieldActive = false
@@ -2479,7 +2492,7 @@ class MarblesGame {
             duration: 3000
         })
 
-        if (audio && audio.playBoost) audio.playBoost()
+        if (typeof audio !== 'undefined' && audio.playBoost) audio.playBoost()
     }
 
     explodeMissile(missilePos) {
@@ -3239,6 +3252,44 @@ class MarblesGame {
             }
         }
 
+        // Glider Logic
+        if (this.gliderActive && this.gliderEnergy > 0) {
+            if (this.playerMarble) {
+                const mass = this.playerMarble.rigidBody.mass()
+                const linvel = this.playerMarble.rigidBody.linvel()
+                const gravityDir = this.playerMarble.rigidBody.gravityScale() < 0 ? -1 : 1
+
+                // Counteract some gravity to fall slower
+                if ((gravityDir > 0 && linvel.y < 0) || (gravityDir < 0 && linvel.y > 0)) {
+                    this.playerMarble.rigidBody.setLinvel({ x: linvel.x, y: linvel.y * 0.9, z: linvel.z }, true)
+                    this.playerMarble.rigidBody.applyImpulse({ x: 0, y: 0.1 * mass * gravityDir, z: 0 }, true)
+                }
+
+                // Apply forward thrust based on view direction
+                const cosP = Math.cos(this.pitchAngle)
+                const sinP = Math.sin(this.pitchAngle)
+                const dirX = Math.sin(this.aimYaw) * cosP
+                const dirY = sinP // Allowing slight pitch to affect upward/downward glide
+                const dirZ = Math.cos(this.aimYaw) * cosP
+
+                const glideThrust = 0.5 * mass
+                this.playerMarble.rigidBody.applyImpulse({
+                    x: dirX * glideThrust,
+                    y: dirY * glideThrust,
+                    z: dirZ * glideThrust
+                }, true)
+
+                if (audio && audio.playBoost && Math.random() < 0.1) {
+                    audio.playBoost() // Play sound occasionally for feedback
+                }
+            }
+            this.gliderEnergy = Math.max(0, this.gliderEnergy - 0.4)
+        } else {
+            if (this.playerMarble && this.isGrounded(this.playerMarble)) {
+                this.gliderEnergy = Math.min(this.maxGliderEnergy, this.gliderEnergy + 0.3)
+            }
+        }
+
         // Jetpack Logic
         if (this.jetpackActive && this.jetpackEnergy > 0) {
             if (this.playerMarble) {
@@ -3304,6 +3355,23 @@ class MarblesGame {
                 this.hoverBarEl.style.boxShadow = '0 0 10px #00ffcc'
             } else {
                 this.hoverBarEl.style.boxShadow = 'none'
+            }
+        }
+
+        if (this.gliderBarEl && this.gliderBarContainerEl) {
+            const pct = (this.gliderEnergy / this.maxGliderEnergy) * 100
+            this.gliderBarEl.style.width = `${pct}%`
+
+            if (this.gliderEnergy < this.maxGliderEnergy || this.gliderActive) {
+                this.gliderBarContainerEl.style.display = 'block'
+            } else {
+                this.gliderBarContainerEl.style.display = 'none'
+            }
+
+            if (this.gliderActive && this.gliderEnergy > 0) {
+                this.gliderBarEl.style.boxShadow = '0 0 10px #aaffaa'
+            } else {
+                this.gliderBarEl.style.boxShadow = 'none'
             }
         }
 
