@@ -236,6 +236,14 @@ class MarblesGame {
         this.vortexbarEl = document.getElementById('vortexbar')
         this.vortexbarContainerEl = document.getElementById('vortexbar-container')
 
+        // Time Stop Mechanic
+        this.timeStopEnergy = 100
+        this.maxTimeStopEnergy = 100
+        this.timeStopActive = false
+        this.timeStopbarEl = document.getElementById('timestopbar')
+        this.timeStopbarContainerEl = document.getElementById('timestopbar-container')
+        this.timeStopSavedStates = new Map() // Store linear and angular velocity
+
         // Portal Mechanic
         this.portalA = null
         this.portalB = null
@@ -536,6 +544,27 @@ class MarblesGame {
             }
             if (e.code === 'Digit7' && this.playerMarble) {
                 this.gliderActive = true
+            }
+            if (e.code === 'Digit8' && this.playerMarble) {
+                this.timeStopActive = !this.timeStopActive
+                if (this.timeStopActive) {
+                    if (audio && audio.playTrick) audio.playTrick()
+                    this.showTrickMessage('TIME STOP!', '#ffffff')
+                } else {
+                    // Restore velocities immediately
+                    this.world.bodies.forEach(body => {
+                        if (body.isDynamic() && body !== this.playerMarble.rigidBody) {
+                            if (this.timeStopSavedStates.has(body.handle)) {
+                                const state = this.timeStopSavedStates.get(body.handle)
+                                body.setLinvel(state.linvel, true)
+                                body.setAngvel(state.angvel, true)
+                                this.timeStopSavedStates.delete(body.handle)
+                            }
+                            body.setGravityScale(1.0, true)
+                        }
+                    })
+                    this.timeStopSavedStates.clear()
+                }
             }
             if (e.code === 'KeyX' && this.playerMarble) {
                 this.spawnBomb()
@@ -2974,6 +3003,73 @@ class MarblesGame {
             this.world.timestep = (1/60) * this.timeScale
         }
 
+        // Time Stop Mechanic Logic
+        if (this.timeStopActive && this.timeStopEnergy > 0) {
+            this.timeStopEnergy = Math.max(0, this.timeStopEnergy - 0.5)
+
+            if (this.playerMarble) {
+                this.world.bodies.forEach(body => {
+                    if (body === this.playerMarble.rigidBody) return
+                    if (!body.isDynamic()) return
+
+                    // Save state if not already saved
+                    if (!this.timeStopSavedStates.has(body.handle)) {
+                        const linvel = body.linvel()
+                        const angvel = body.angvel()
+                        this.timeStopSavedStates.set(body.handle, {
+                            linvel: { x: linvel.x, y: linvel.y, z: linvel.z },
+                            angvel: { x: angvel.x, y: angvel.y, z: angvel.z }
+                        })
+                    }
+
+                    // Freeze body
+                    body.setLinvel({ x: 0, y: 0, z: 0 }, true)
+                    body.setAngvel({ x: 0, y: 0, z: 0 }, true)
+                    body.setGravityScale(0, true)
+                })
+            }
+        } else {
+            if (this.timeStopActive) {
+                // Out of energy, deactivate
+                this.timeStopActive = false
+                this.world.bodies.forEach(body => {
+                    if (body.isDynamic() && this.playerMarble && body !== this.playerMarble.rigidBody) {
+                        if (this.timeStopSavedStates.has(body.handle)) {
+                            const state = this.timeStopSavedStates.get(body.handle)
+                            body.setLinvel(state.linvel, true)
+                            body.setAngvel(state.angvel, true)
+                            this.timeStopSavedStates.delete(body.handle)
+                        }
+                        body.setGravityScale(1.0, true)
+                    }
+                })
+                this.timeStopSavedStates.clear()
+            }
+            this.timeStopEnergy = Math.min(this.maxTimeStopEnergy, this.timeStopEnergy + 0.2)
+        }
+
+        if (this.timeStopbarContainerEl && this.timeStopbarEl) {
+            const pct = (this.timeStopEnergy / this.maxTimeStopEnergy) * 100
+            this.timeStopbarEl.style.width = `${pct}%`
+
+            if (this.timeStopEnergy < this.maxTimeStopEnergy || this.timeStopActive) {
+                this.timeStopbarContainerEl.style.display = 'block'
+            } else {
+                this.timeStopbarContainerEl.style.display = 'none'
+            }
+
+            if (this.timeStopActive && this.timeStopEnergy > 0) {
+                this.timeStopbarEl.style.boxShadow = '0 0 10px #ffffff'
+                // Optional: apply grayscale or color tint to the whole body via CSS
+                document.body.style.filter = 'grayscale(80%) contrast(1.2)'
+            } else {
+                this.timeStopbarEl.style.boxShadow = 'none'
+                if (!this.focusActive) { // ensure we don't clear focus active filter
+                    document.body.style.filter = 'none'
+                }
+            }
+        }
+
         // Portal Teleportation Logic
         const nowTime = Date.now()
         if (this.portalA && this.portalB && this.playerMarble && (nowTime - this.lastPortalTeleportTime > this.portalCooldown)) {
@@ -3718,7 +3814,22 @@ class MarblesGame {
 
         // Update Moving Platforms
         const now = Date.now()
-        const timeSec = now / 1000
+        // If time stop is active, we don't advance the timeSec for moving platforms
+        if (this.timeStopActive) {
+            if (!this.lastTimeStopSavedTime) {
+                this.lastTimeStopSavedTime = now
+            }
+        } else {
+            if (this.lastTimeStopSavedTime) {
+                // Adjust a global offset to keep platforms smooth after unpausing
+                if (!this.timeStopOffset) this.timeStopOffset = 0
+                this.timeStopOffset += (now - this.lastTimeStopSavedTime)
+                this.lastTimeStopSavedTime = null
+            }
+        }
+
+        const timeSec = (now - (this.timeStopOffset || 0)) / 1000
+
         for (const p of this.movingPlatforms) {
             let x = p.initialPos.x
             let y = p.initialPos.y
@@ -3746,7 +3857,9 @@ class MarblesGame {
         }
 
         for (const p of this.rotatingPlatforms) {
-            p.angle += p.speed
+            if (!this.timeStopActive) {
+                p.angle += p.speed
+            }
             // Assuming Y axis rotation for now as per createRotatingBox
             const q = quatFromEuler(0, p.angle, 0)
 
@@ -3770,9 +3883,11 @@ class MarblesGame {
 
         // Update PowerUps
         for (const p of this.powerUps) {
-            p.rotation += 0.05
+            if (!this.timeStopActive) {
+                p.rotation += 0.05
+            }
             const q = quatFromEuler(p.rotation, Math.PI / 4, 0)
-            const bob = Math.sin(timeSec * 3) * 0.2
+            const bob = this.timeStopActive ? 0 : Math.sin(timeSec * 3) * 0.2
             const t = { x: p.pos.x, y: p.baseY + bob, z: p.pos.z }
             
             const mat = quaternionToMat4(t, q)
@@ -3787,12 +3902,14 @@ class MarblesGame {
         }
 
         // Update Collectibles
-        this.collectibleRotation += 0.05
+        if (!this.timeStopActive) {
+            this.collectibleRotation += 0.05
+        }
         if (this.collectibles && this.collectibles.length > 0) {
             const tcm = this.engine.getTransformManager()
             for (let i = this.collectibles.length - 1; i >= 0; i--) {
                 const c = this.collectibles[i]
-                const bobOffset = Math.sin(this.collectibleRotation * 2) * 0.2
+                const bobOffset = this.timeStopActive ? 0 : Math.sin(this.collectibleRotation * 2) * 0.2
                 const newY = c.baseY + bobOffset
                 const q = quatFromEuler(this.collectibleRotation, 0, Math.PI / 4)
                 
