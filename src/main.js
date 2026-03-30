@@ -271,6 +271,9 @@ class MarblesGame {
         this.levelComplete = false
         this.goalDefinitions = []
         this.checkpointDefinitions = []
+
+        // Gamepad State
+        this.gamepadState = {}
     }
 
     initMouseControls() {
@@ -315,6 +318,123 @@ class MarblesGame {
                 }
             }
         })
+    }
+
+    pollGamepads() {
+        const gamepads = navigator.getGamepads ? navigator.getGamepads() : []
+        for (let i = 0; i < gamepads.length; i++) {
+            const gp = gamepads[i]
+            if (!gp) continue
+
+            const prevState = this.gamepadState[gp.index] || { buttons: [] }
+            const currState = { buttons: [] }
+
+            // Common Gamepad Button Mapping (Standard Gamepad)
+            // 0: A/Cross (Jump)
+            // 1: B/Circle (Dash)
+            // 2: X/Square (Bomb)
+            // 3: Y/Triangle (Vortex)
+            // 4: LB/L1 (Hover)
+            // 5: RB/R1 (Magnet)
+            // 6: LT/L2 (Focus)
+            // 7: RT/R2 (Boost)
+            // 8: Back/Select (Reset)
+            // 9: Start (Menu)
+            // 12: D-pad Up (Missile)
+            // 13: D-pad Down (Gravity Flip)
+            // 14: D-pad Left (Phase Shift)
+            // 15: D-pad Right (Glider)
+
+            const buttonMap = {
+                0: 'Space',       // A -> Jump
+                1: 'KeyV',        // B -> Dash
+                2: 'KeyX',        // X -> Bomb
+                3: 'KeyY',        // Y -> Vortex
+                4: 'KeyH',        // LB -> Hover
+                5: 'KeyE',        // RB -> Magnet Attract
+                6: 'KeyF',        // LT -> Focus
+                7: 'ShiftLeft',   // RT -> Boost
+                8: 'KeyR',        // Select -> Reset
+                9: 'KeyM',        // Start -> Menu
+                12: 'KeyL',       // D-pad Up -> Missile
+                13: 'KeyU',       // D-pad Down -> Gravity Flip
+                14: 'Digit6',     // D-pad Left -> Phase Shift
+                15: 'Digit7'      // D-pad Right -> Glider
+            }
+
+            for (let b = 0; b < gp.buttons.length; b++) {
+                const pressed = gp.buttons[b].pressed || gp.buttons[b].value > 0.5
+                currState.buttons[b] = pressed
+
+                const keyCode = buttonMap[b]
+                if (keyCode) {
+                    const wasPressed = prevState.buttons[b]
+                    if (pressed && !wasPressed) {
+                        window.dispatchEvent(new KeyboardEvent('keydown', { code: keyCode }))
+                    } else if (!pressed && wasPressed) {
+                        window.dispatchEvent(new KeyboardEvent('keyup', { code: keyCode }))
+                    }
+                }
+            }
+
+            // Left Stick -> WASD Mapping (Movement)
+            const deadzone = 0.2
+            const axesMap = {
+                // Left Stick X -> A / D
+                0: { pos: 'ArrowRight', neg: 'ArrowLeft' },
+                // Left Stick Y -> W / S
+                1: { pos: 'ArrowDown', neg: 'ArrowUp' }
+            }
+
+            for (let a = 0; a <= 1; a++) {
+                const val = gp.axes[a]
+                const mapping = axesMap[a]
+
+                // Positive axis
+                const posPressed = val > deadzone
+                const posKeyCode = mapping.pos
+                const posWasPressed = prevState[posKeyCode] || false
+                currState[posKeyCode] = posPressed
+                if (posPressed && !posWasPressed) {
+                    window.dispatchEvent(new KeyboardEvent('keydown', { code: posKeyCode }))
+                } else if (!posPressed && posWasPressed) {
+                    window.dispatchEvent(new KeyboardEvent('keyup', { code: posKeyCode }))
+                }
+
+                // Negative axis
+                const negPressed = val < -deadzone
+                const negKeyCode = mapping.neg
+                const negWasPressed = prevState[negKeyCode] || false
+                currState[negKeyCode] = negPressed
+                if (negPressed && !negWasPressed) {
+                    window.dispatchEvent(new KeyboardEvent('keydown', { code: negKeyCode }))
+                } else if (!negPressed && negWasPressed) {
+                    window.dispatchEvent(new KeyboardEvent('keyup', { code: negKeyCode }))
+                }
+            }
+
+            // Right Stick -> Camera Controls (Aim / Pitch)
+            // Axes 2 (X) and 3 (Y)
+            if (this.cameraMode !== 'orbit') {
+                const camDeadzone = 0.1
+                const camSensitivity = 0.05
+
+                const rx = gp.axes[2]
+                const ry = gp.axes[3]
+
+                if (Math.abs(rx) > camDeadzone) {
+                    this.aimYaw -= rx * camSensitivity
+                }
+
+                if (Math.abs(ry) > camDeadzone) {
+                    this.pitchAngle -= ry * camSensitivity
+                    const maxPitch = 1.4
+                    this.pitchAngle = Math.max(-maxPitch, Math.min(maxPitch, this.pitchAngle))
+                }
+            }
+
+            this.gamepadState[gp.index] = currState
+        }
     }
 
     isGrounded(marble) {
@@ -384,6 +504,24 @@ class MarblesGame {
 
     async init() {
         console.log('[INIT] Starting game initialization...')
+
+        window.addEventListener('gamepadconnected', (e) => {
+            console.log(`[GAMEPAD] Connected: ${e.gamepad.id} at index ${e.gamepad.index}`)
+            this.gamepadIndices = this.gamepadIndices || []
+            if (!this.gamepadIndices.includes(e.gamepad.index)) {
+                this.gamepadIndices.push(e.gamepad.index)
+            }
+        })
+
+        window.addEventListener('gamepaddisconnected', (e) => {
+            console.log(`[GAMEPAD] Disconnected: ${e.gamepad.id} at index ${e.gamepad.index}`)
+            if (this.gamepadIndices) {
+                this.gamepadIndices = this.gamepadIndices.filter(i => i !== e.gamepad.index)
+            }
+            if (this.gamepadState) {
+                delete this.gamepadState[e.gamepad.index]
+            }
+        })
 
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space' && !this.keys['Space']) {
@@ -2953,6 +3091,8 @@ class MarblesGame {
     }
 
     loop() {
+        this.pollGamepads()
+
         if (!this.frameCount) this.frameCount = 0
         this.frameCount++
         if (this.frameCount <= 3) {
