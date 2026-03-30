@@ -266,6 +266,14 @@ class MarblesGame {
         this.isRewinding = false
         this.maxRewindFrames = 300 // 5 seconds at 60fps
 
+        // Ghost Mechanic
+        this.ghostRecording = []
+        this.bestGhosts = {}
+        this.ghostPlaybackIndex = 0
+        this.ghostEntity = null
+        this.ghostMaterialInstance = null
+        this.ghostLightEntity = null
+
         this.currentLevel = null
         this.levelStartTime = 0
         this.levelComplete = false
@@ -967,6 +975,9 @@ class MarblesGame {
         this.clearLevel()
         console.log('[LEVEL] Cleared previous level')
 
+        this.ghostRecording = []
+        this.ghostPlaybackIndex = 0
+
         this.currentLevel = levelId
         this.levelNameEl.textContent = level.name
         this.goalDefinitions = level.goals
@@ -1008,7 +1019,40 @@ class MarblesGame {
         console.log(`[LEVEL] Spawning marbles at ${JSON.stringify(level.spawn)}...`)
         this.createMarbles(level.spawn)
         console.log(`[LEVEL] Created ${this.marbles.length} marbles`)
+
+        if (this.bestGhosts[levelId]) {
+            this.createGhostMarble()
+        }
+
         console.log('[LEVEL] Level loading complete!')
+    }
+
+    createGhostMarble() {
+        this.ghostEntity = this.Filament.EntityManager.get().create()
+        this.ghostMaterialInstance = this.material.createInstance()
+        this.ghostMaterialInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.0, 1.0, 1.0])
+        this.ghostMaterialInstance.setFloatParameter('roughness', 0.2)
+
+        // Ghost is slightly larger/smaller or translucent, but we use existing material limits
+        // We render it similarly to a regular marble
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
+            .material(0, this.ghostMaterialInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
+            .build(this.engine, this.ghostEntity)
+
+        this.scene.addEntity(this.ghostEntity)
+
+        this.ghostLightEntity = this.Filament.EntityManager.get().create()
+        this.Filament.LightManager.Builder(this.Filament.LightManager$Type.POINT)
+            .color([0.0, 1.0, 1.0])
+            .intensity(15000.0)
+            .falloff(15.0)
+            .build(this.engine, this.ghostLightEntity)
+
+        this.scene.addEntity(this.ghostLightEntity)
+
+        console.log('[GAME] Spawned Speedrun Ghost')
     }
 
     clearLevel() {
@@ -1075,6 +1119,22 @@ class MarblesGame {
             this.engine.destroyEntity(platform.entity)
         }
         this.rotatingPlatforms = []
+
+        if (this.ghostEntity) {
+            this.scene.remove(this.ghostEntity)
+            if (this.ghostMaterialInstance) this.engine.destroyMaterialInstance(this.ghostMaterialInstance)
+            this.engine.destroyEntity(this.ghostEntity)
+            this.Filament.EntityManager.get().destroy(this.ghostEntity)
+            this.ghostEntity = null
+            this.ghostMaterialInstance = null
+        }
+
+        if (this.ghostLightEntity) {
+            this.scene.remove(this.ghostLightEntity)
+            this.engine.destroyEntity(this.ghostLightEntity)
+            this.Filament.EntityManager.get().destroy(this.ghostLightEntity)
+            this.ghostLightEntity = null
+        }
 
         if (this.portalA) this.destroyPortal(this.portalA)
         if (this.portalB) this.destroyPortal(this.portalB)
@@ -1930,6 +1990,9 @@ class MarblesGame {
         this.powerbarEl.style.width = '0%'
         this.levelComplete = false
         this.rewindHistory = []
+        this.ghostRecording = []
+        this.ghostPlaybackIndex = 0
+        this.levelStartTime = Date.now()
 
         if (this.portalA) this.destroyPortal(this.portalA)
         if (this.portalB) this.destroyPortal(this.portalB)
@@ -2397,8 +2460,15 @@ class MarblesGame {
         if (allGoalsScored && !this.levelComplete) {
             this.levelComplete = true
             const time = ((Date.now() - this.levelStartTime) / 1000).toFixed(1)
+
+            let newRecordStr = ""
+            if (!this.bestGhosts[this.currentLevel] || this.ghostRecording.length < this.bestGhosts[this.currentLevel].length) {
+                this.bestGhosts[this.currentLevel] = [...this.ghostRecording]
+                newRecordStr = "\nNEW GHOST RECORD!"
+            }
+
             setTimeout(() => {
-                alert(`Level Complete!\nTime: ${time}s\nPress M to return to menu`)
+                alert(`Level Complete!\nTime: ${time}s${newRecordStr}\nPress M to return to menu`)
             }, 100)
         }
     }
@@ -3106,6 +3176,44 @@ class MarblesGame {
                 document.getElementById('debug-level').textContent = this.currentLevel
                 document.getElementById('debug-marbles').textContent = this.marbles.length
                 document.getElementById('debug-camera').textContent = this.cameraMode
+            }
+        }
+
+        // Record Ghost
+        if (!this.levelComplete && this.levelStartTime && this.playerMarble && !this.timeStopActive) {
+            const t = this.playerMarble.rigidBody.translation()
+            const r = this.playerMarble.rigidBody.rotation()
+            this.ghostRecording.push({
+                t: { x: t.x, y: t.y, z: t.z },
+                r: { x: r.x, y: r.y, z: r.z, w: r.w },
+                s: this.playerMarble.scale
+            })
+        }
+
+        // Playback Ghost
+        if (this.ghostEntity && this.bestGhosts[this.currentLevel] && !this.timeStopActive) {
+            const bestGhost = this.bestGhosts[this.currentLevel]
+            if (this.ghostPlaybackIndex < bestGhost.length) {
+                const frameData = bestGhost[this.ghostPlaybackIndex]
+                const tcm = this.engine.getTransformManager()
+
+                const mat = quaternionToMat4(frameData.t, frameData.r)
+                if (frameData.s && frameData.s !== 1.0) {
+                    const s = frameData.s
+                    mat[0] *= s; mat[1] *= s; mat[2] *= s
+                    mat[4] *= s; mat[5] *= s; mat[6] *= s
+                    mat[8] *= s; mat[9] *= s; mat[10] *= s
+                }
+                const inst = tcm.getInstance(this.ghostEntity)
+                tcm.setTransform(inst, mat)
+
+                if (this.ghostLightEntity) {
+                    const lightInst = tcm.getInstance(this.ghostLightEntity)
+                    const lightMat = quaternionToMat4(frameData.t, { x: 0, y: 0, z: 0, w: 1 })
+                    tcm.setTransform(lightInst, lightMat)
+                }
+
+                this.ghostPlaybackIndex++
             }
         }
 
