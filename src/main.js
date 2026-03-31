@@ -165,7 +165,7 @@ class MarblesGame {
         this.powerUpRotation = 0
         this.isStomping = false
         this.stompStartTime = 0
-        this.trickState = { airTime: 0, spin: 0, wallRides: 0, highSpeed: 0 }
+        this.trickState = { airTime: 0, spin: 0, wallRides: 0, highSpeed: 0, flips: 0, rolls: 0 }
 
         this.isWallRiding = false
         this.wallRideTime = 0
@@ -2231,21 +2231,53 @@ class MarblesGame {
             }
 
             if (this.trickState.airTime > 30 || this.trickState.wallRides > 0) {
-                let points = Math.floor(this.trickState.airTime * 2 + this.trickState.spin * 10)
-                let msg = 'Air Time + Spin'
+                let points = Math.floor(this.trickState.airTime * 2)
+                let messages = []
+
+                // 1 full rotation = approx 2*PI radians. We check accumulated radians rotated.
+                const totalFlips = Math.floor(Math.abs(this.trickState.flips) / (Math.PI * 2))
+                const totalRolls = Math.floor(Math.abs(this.trickState.rolls) / (Math.PI * 2))
+
+                if (totalFlips > 0) {
+                    points += totalFlips * 100
+                    messages.push(totalFlips > 1 ? `x${totalFlips} Flip` : (this.trickState.flips > 0 ? 'Front Flip' : 'Back Flip'))
+                }
+
+                if (totalRolls > 0) {
+                    points += totalRolls * 100
+                    messages.push(totalRolls > 1 ? `x${totalRolls} Roll` : 'Barrel Roll')
+                }
+
+                // Spin bonus logic: total accumulated rotation magnitude in radians
+                if (totalFlips === 0 && totalRolls === 0 && this.trickState.spin > (Math.PI * 2)) {
+                    const totalSpins = Math.floor(this.trickState.spin / (Math.PI * 2))
+                    points += totalSpins * 50
+                    messages.push(totalSpins > 1 ? `x${totalSpins} Spin` : 'Spin')
+                } else if (this.trickState.spin > Math.PI) { // At least half a rotation of combined spin
+                    points += Math.floor(this.trickState.spin * 10)
+                }
+
+                if (this.trickState.airTime > 60) {
+                    messages.push('Big Air')
+                } else if (messages.length === 0) {
+                    messages.push('Air Time')
+                }
 
                 if (this.trickState.wallRides > 0) {
                     points += this.trickState.wallRides * 50
-                    msg += ' + Wall Ride'
+                    messages.push('Wall Ride')
                 }
 
                 if (points > 0) {
+                    const msg = messages.join(' + ')
                     this.awardTrickPoints(msg, points, '#00ffcc')
                 }
             }
             this.trickState.airTime = 0
             this.trickState.spin = 0
             this.trickState.wallRides = 0
+            this.trickState.flips = 0
+            this.trickState.rolls = 0
 
             this.isWallRiding = false
             this.wallRideTime = 0
@@ -2264,7 +2296,13 @@ class MarblesGame {
         } else if (this.playerMarble) {
             this.trickState.airTime += 1
             const angvel = this.playerMarble.rigidBody.angvel()
-            this.trickState.spin += Math.hypot(angvel.x, angvel.y, angvel.z)
+
+            // Multiply angular velocity by approximate delta time (1/60th of a second)
+            // to accumulate true radians rotated instead of radians per second.
+            const dt = 1.0 / 60.0
+            this.trickState.spin += Math.hypot(angvel.x, angvel.y, angvel.z) * dt
+            this.trickState.flips += angvel.x * dt
+            this.trickState.rolls += angvel.z * dt
 
             const wallContact = this.getWallContact(this.playerMarble)
             const rb = this.playerMarble.rigidBody
