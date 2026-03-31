@@ -10,7 +10,7 @@ export const marbleDraft = {
     roughness: 0.1,
     emissive: true,
     lightIntensity: 30000.0,
-    lightColor: [0.5, 0.0, 1.0]
+    lightColor: [0.5, 0.0, 1.0],
     name: "Bouncing Star",
     color: [1.0, 1.0, 0.0],
     offset: { x: 0.0, y: 5, z: 0 },
