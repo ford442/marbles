@@ -617,42 +617,19 @@ class MarblesGame {
                 const now = Date.now()
                 if (now - this.lastDashTime > this.dashCooldown) {
                     const rb = this.playerMarble.rigidBody
-                    const pos = rb.translation()
                     const cosP = Math.cos(this.pitchAngle)
                     const sinP = Math.sin(this.pitchAngle)
                     const dirX = Math.sin(this.aimYaw) * cosP
                     const dirY = sinP
                     const dirZ = Math.cos(this.aimYaw) * cosP
 
-                    const rayOrigin = { x: pos.x, y: pos.y, z: pos.z }
-                    const rayDir = { x: dirX, y: dirY, z: dirZ }
-                    const ray = new RAPIER.Ray(rayOrigin, rayDir)
-
-                    // ignore marble itself during raycast
-                    // In RAPIER js compat we can use filterExcludeRigidBody parameter
-                    const hit = this.world.castRay(ray, 15.0, true, 0xffffffff, undefined, undefined, undefined, rb)
-
-                    let newPos
-                    if (hit) {
-                        // hit something else, stop short
-                        const dist = Math.max(0, hit.toi - 0.5)
-                        newPos = {
-                            x: rayOrigin.x + rayDir.x * dist,
-                            y: rayOrigin.y + rayDir.y * dist,
-                            z: rayOrigin.z + rayDir.z * dist
-                        }
-                    } else {
-                        // Max distance
-                        newPos = {
-                            x: rayOrigin.x + rayDir.x * 15.0,
-                            y: rayOrigin.y + rayDir.y * 15.0,
-                            z: rayOrigin.z + rayDir.z * 15.0
-                        }
-                    }
-
-                    rb.setTranslation(newPos, true)
-                    rb.setLinvel({ x: 0, y: 0, z: 0 }, true)
-                    rb.setAngvel({ x: 0, y: 0, z: 0 }, true)
+                    // Apply a strong physics impulse instead of teleporting
+                    const force = 100.0
+                    rb.applyImpulse({
+                        x: dirX * force,
+                        y: dirY * force,
+                        z: dirZ * force
+                    }, true)
 
                     this.lastDashTime = now
                     if (typeof audio !== 'undefined' && audio.playBoost) audio.playBoost()
@@ -2168,6 +2145,35 @@ class MarblesGame {
             const inst = rcm.getInstance(this.playerMarble.entity)
             rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, this.playerMarble.color)
         }
+
+        // Add a visual particle ring at the impact point
+        const ringEntity = this.Filament.EntityManager.get().create()
+        const ringMatInstance = this.material.createInstance()
+        ringMatInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 0.2, 0.0])
+        ringMatInstance.setFloatParameter('roughness', 0.8)
+
+        const halfExtents = { x: 0.1, y: 0.1, z: 0.1 }
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
+            .material(0, ringMatInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .build(this.engine, ringEntity)
+
+        this.scene.addEntity(ringEntity)
+
+        // Add to visualParticles to be animated and cleaned up in loop()
+        // We'll give it a special flag or use the scale to animate it growing outward
+        this.visualParticles.push({
+            entity: ringEntity,
+            matInstance: ringMatInstance,
+            spawnTime: Date.now(),
+            pos: { x: center.x, y: center.y - 0.4, z: center.z },
+            vel: { x: 0, y: 0, z: 0 }, // It expands rather than moves
+            duration: 500,
+            scale: 1.0,
+            isRing: true // Custom flag to animate differently
+        })
     }
 
     awardTrickPoints(message, points, color) {
@@ -2274,6 +2280,13 @@ class MarblesGame {
                 if (points > 0) {
                     const msg = messages.join(' + ')
                     this.awardTrickPoints(msg, points, '#00ffcc')
+
+                    // Perfect Landing logic: Low downward vertical velocity after a big trick or long airtime
+                    if (Math.abs(linvel.y) < 2.0 && !this.isStomping) {
+                        setTimeout(() => {
+                            this.awardTrickPoints('Perfect Landing!', 50, '#00ff00')
+                        }, 500)
+                    }
                 }
             }
             this.trickState.airTime = 0
@@ -4502,33 +4515,58 @@ class MarblesGame {
                 this.Filament.EntityManager.get().destroy(p.entity)
                 this.visualParticles.splice(i, 1)
             } else {
-                // Animate position
-                p.pos.x += p.vel.x * 0.016
-                p.pos.y += p.vel.y * 0.016
-                p.pos.z += p.vel.z * 0.016
-
-                // Shrink
-                p.scale = Math.max(0, 1.0 - (timeAlive / p.duration))
-
-                // Fade to dark red/smoke
-                if (p.matInstance) {
+                if (p.isRing) {
+                    // Expanding ring logic
                     const progress = timeAlive / p.duration
-                    const r = 1.0 - progress * 0.8
-                    const g = 0.6 - progress * 0.6
-                    const b = 0.0
-                    p.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [r, g, b])
+                    p.scale = 1.0 + progress * 20.0 // Expands outwards
+
+                    if (p.matInstance) {
+                        const r = 1.0 - progress
+                        const g = 0.2 - progress * 0.2
+                        const b = 0.0
+                        p.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [r, g, b])
+                    }
+
+                    const tcm = this.engine.getTransformManager()
+                    const inst = tcm.getInstance(p.entity)
+                    const mat = quaternionToMat4(p.pos, { x: 0, y: 0, z: 0, w: 1 })
+
+                    const sXZ = 0.1 * p.scale // Base size * expansion
+                    const sY = 0.1 * (1.0 - progress) // Flatten out as it expands
+                    mat[0] *= sXZ; mat[1] *= sXZ; mat[2] *= sXZ
+                    mat[4] *= sY; mat[5] *= sY; mat[6] *= sY
+                    mat[8] *= sXZ; mat[9] *= sXZ; mat[10] *= sXZ
+
+                    tcm.setTransform(inst, mat)
+                } else {
+                    // Animate position
+                    p.pos.x += p.vel.x * 0.016
+                    p.pos.y += p.vel.y * 0.016
+                    p.pos.z += p.vel.z * 0.016
+
+                    // Shrink
+                    p.scale = Math.max(0, 1.0 - (timeAlive / p.duration))
+
+                    // Fade to dark red/smoke
+                    if (p.matInstance) {
+                        const progress = timeAlive / p.duration
+                        const r = 1.0 - progress * 0.8
+                        const g = 0.6 - progress * 0.6
+                        const b = 0.0
+                        p.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [r, g, b])
+                    }
+
+                    const tcm = this.engine.getTransformManager()
+                    const inst = tcm.getInstance(p.entity)
+                    const mat = quaternionToMat4(p.pos, { x: 0, y: 0, z: 0, w: 1 })
+
+                    const s = 0.2 * p.scale // Base size * animation scale
+                    mat[0] *= s; mat[1] *= s; mat[2] *= s
+                    mat[4] *= s; mat[5] *= s; mat[6] *= s
+                    mat[8] *= s; mat[9] *= s; mat[10] *= s
+
+                    tcm.setTransform(inst, mat)
                 }
-
-                const tcm = this.engine.getTransformManager()
-                const inst = tcm.getInstance(p.entity)
-                const mat = quaternionToMat4(p.pos, { x: 0, y: 0, z: 0, w: 1 })
-
-                const s = 0.2 * p.scale // Base size * animation scale
-                mat[0] *= s; mat[1] *= s; mat[2] *= s
-                mat[4] *= s; mat[5] *= s; mat[6] *= s
-                mat[8] *= s; mat[9] *= s; mat[10] *= s
-
-                tcm.setTransform(inst, mat)
             }
         }
 
