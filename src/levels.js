@@ -532,6 +532,21 @@ export const LEVELS = {
         nightMode: true,
         backgroundColor: [0.05, 0.05, 0.1, 1.0]
     },
+    cloud_city_run: {
+        name: 'Cloud City Run',
+        description: 'Bounce across the clouds!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'cloud_city', pos: { x: 0, y: 0, z: 25 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [115, 125], y: [-2, 2] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: false
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
