@@ -131,6 +131,11 @@ class MarblesGame {
         this.lastTeleportTime = 0
         this.teleportCooldown = 5000
         this.teleportDistance = 15.0
+
+        // Blink Mechanic
+        this.blinkCooldown = 0
+        this.maxBlinkCooldown = 600
+
         this.teleportBarEl = document.getElementById('teleportbar')
         this.teleportBarContainerEl = document.getElementById('teleportbar-container')
 
@@ -712,6 +717,41 @@ class MarblesGame {
             }
             if (e.code === 'KeyY' && this.playerMarble) {
                 this.vortexActive = true
+            }
+            if (e.code === 'KeyN' && this.playerMarble && this.blinkCooldown <= 0) {
+                const maxDist = 20.0
+                const cosP = Math.cos(this.pitchAngle)
+                const sinP = Math.sin(this.pitchAngle)
+                const dirX = Math.sin(this.aimYaw) * cosP
+                const dirY = sinP
+                const dirZ = Math.cos(this.aimYaw) * cosP
+
+                const rb = this.playerMarble.rigidBody
+                const pos = rb.translation()
+                const pRadius = this.playerMarble.scale * 0.5 || 0.5
+
+                const ray = new this.RAPIER.Ray(pos, { x: dirX, y: dirY, z: dirZ })
+                const hit = this.world.castRay(ray, maxDist, true, 0xffffffff, undefined, undefined, undefined, rb)
+
+                let newPos
+                if (hit) {
+                    newPos = {
+                        x: pos.x + dirX * Math.max(0, hit.toi - pRadius - 0.1),
+                        y: pos.y + dirY * Math.max(0, hit.toi - pRadius - 0.1),
+                        z: pos.z + dirZ * Math.max(0, hit.toi - pRadius - 0.1)
+                    }
+                } else {
+                    newPos = {
+                        x: pos.x + dirX * maxDist,
+                        y: pos.y + dirY * maxDist,
+                        z: pos.z + dirZ * maxDist
+                    }
+                }
+
+                rb.setTranslation(newPos, true)
+                this.blinkCooldown = this.maxBlinkCooldown
+                this.awardTrickPoints('Blink!', 100, '#ff00ff')
+                if (typeof audio !== 'undefined' && audio.playTrick) audio.playTrick()
             }
             if (e.code === 'KeyI' && this.playerMarble) {
                 const now = Date.now()
@@ -3372,6 +3412,21 @@ class MarblesGame {
                 if (!this.focusActive) { // ensure we don't clear focus active filter
                     document.body.style.filter = 'none'
                 }
+            }
+        }
+
+        // Blink Cooldown Logic
+        if (this.blinkCooldown > 0) {
+            this.blinkCooldown--
+        }
+        if (this.teleportBarEl && this.teleportBarContainerEl) {
+            if (this.blinkCooldown > 0) {
+                this.teleportBarContainerEl.style.display = 'block'
+                const pct = ((this.maxBlinkCooldown - this.blinkCooldown) / this.maxBlinkCooldown) * 100
+                this.teleportBarEl.style.width = `${pct}%`
+                this.teleportBarEl.style.background = '#ff00ff'
+            } else {
+                this.teleportBarContainerEl.style.display = 'none'
             }
         }
 
