@@ -547,6 +547,21 @@ export const LEVELS = {
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: false
     },
+    desert_ruins_run: {
+        name: 'Desert Ruins Run',
+        description: 'Navigate through ancient ruins and dodging falling blocks!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'desert_ruins', pos: { x: 0, y: 0, z: 25 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [100, 110], y: [-2, 3] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: false
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
