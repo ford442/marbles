@@ -266,6 +266,16 @@ class MarblesGame {
             { name: 'Floaty', color: [0.2, 0.8, 1.0], gravityScale: 0.1 }
         ]
 
+        // Adrenaline Mechanic
+        this.adrenaline = 0
+        this.maxAdrenaline = 100
+        this.baseFov = 45
+        this.currentFov = 45
+        this.cameraShake = { x: 0, y: 0, z: 0 }
+        this.nearMisses = new Map()
+        this.adrenalineBarEl = document.getElementById('adrenalinebar')
+        this.adrenalineBarContainerEl = document.getElementById('adrenalinebar-container')
+
         // Rewind Mechanic
         this.rewindHistory = []
         this.isRewinding = false
@@ -925,7 +935,7 @@ class MarblesGame {
 
         const Fov = this.Filament.Camera$Fov
         const aspect = width / height
-        this.camera.setProjectionFov(45, aspect, 0.1, 1000.0, Fov.VERTICAL)
+        this.camera.setProjectionFov(this.currentFov, aspect, 0.1, 1000.0, Fov.VERTICAL)
         this.camera.lookAt([0, 10, 20], [0, 0, 0], [0, 1, 0])
 
         this.renderer.setClearOptions({ clearColor: [0.1, 0.1, 0.1, 1.0], clear: true })
@@ -1231,6 +1241,9 @@ class MarblesGame {
             }
             this.activeMissiles = []
         }
+
+        this.adrenaline = 0
+        if (this.nearMisses) this.nearMisses.clear()
 
         this.setNightMode(false)
     }
@@ -1997,6 +2010,10 @@ class MarblesGame {
         this.playerMarble = this.marbles[0]
         this.selectedEl.textContent = `Selected: ${this.playerMarble ? this.playerMarble.name : 'None'}`
 
+        this.adrenaline = 0
+        this.currentFov = this.baseFov
+        if (this.nearMisses) this.nearMisses.clear()
+
         // Reset Chameleon State
         this.chameleonState = 0
         if (this.playerMarble) {
@@ -2397,6 +2414,44 @@ class MarblesGame {
             }
         }
 
+        // Near Miss Logic
+        if (this.playerMarble) {
+            const rb = this.playerMarble.rigidBody
+            const linvel = rb.linvel()
+            const speed = Math.hypot(linvel.x, linvel.y, linvel.z)
+
+            if (speed > 15) {
+                const playerPos = rb.translation()
+                const now = Date.now()
+
+                const checkNearMiss = (body, handleStr) => {
+                    const pos = body.translation()
+                    const dx = playerPos.x - pos.x
+                    const dy = playerPos.y - pos.y
+                    const dz = playerPos.z - pos.z
+                    const distSq = dx * dx + dy * dy + dz * dz
+
+                    if (distSq > 1.0 && distSq < 16.0) {
+                        const lastMissTime = this.nearMisses.get(handleStr) || 0
+                        if (now - lastMissTime > 2000) {
+                            this.awardTrickPoints("Near Miss!", 50, "#ff8800")
+                            this.nearMisses.set(handleStr, now)
+                        }
+                    }
+                }
+
+                for (const obj of this.dynamicObjects) {
+                    checkNearMiss(obj.rigidBody, `dyn_${obj.rigidBody.handle}`)
+                }
+                for (const obj of this.movingPlatforms) {
+                    checkNearMiss(obj.rigidBody, `mov_${obj.rigidBody.handle}`)
+                }
+                for (const obj of this.rotatingPlatforms) {
+                    checkNearMiss(obj.rigidBody, `rot_${obj.rigidBody.handle}`)
+                }
+            }
+        }
+
         const level = LEVELS[this.currentLevel]
         let allGoalsScored = level.goals.length > 0
 
@@ -2591,7 +2646,7 @@ class MarblesGame {
             this.view.setViewport([0, 0, width, height])
             const aspect = width / height
             const Fov = this.Filament.Camera$Fov
-            this.camera.setProjectionFov(45, aspect, 0.1, 1000.0, Fov.VERTICAL)
+            this.camera.setProjectionFov(this.currentFov, aspect, 0.1, 1000.0, Fov.VERTICAL)
             this.camera.lookAt([0, 10, 20], [0, 0, 0], [0, 1, 0])
         }
     }
@@ -3322,6 +3377,58 @@ class MarblesGame {
 
         const rotSpeed = 0.02
         const zoomSpeed = 0.5
+
+        // Adrenaline Logic Update
+        if (this.playerMarble) {
+            const linvel = this.playerMarble.rigidBody.linvel()
+            const speed = Math.hypot(linvel.x, linvel.y, linvel.z)
+
+            if (speed > 15) {
+                // Increase adrenaline based on speed above 15
+                this.adrenaline = Math.min(this.maxAdrenaline, this.adrenaline + (speed - 15) * 0.05)
+            } else {
+                // Decay adrenaline slowly
+                this.adrenaline = Math.max(0, this.adrenaline - 0.2)
+            }
+
+            // Camera FOV target
+            const targetFov = this.baseFov + (this.adrenaline / this.maxAdrenaline) * 20.0
+            this.currentFov = this.currentFov * 0.9 + targetFov * 0.1
+
+            // Generate Camera Shake
+            if (this.adrenaline > 20) {
+                const shakeIntensity = (this.adrenaline - 20) / 80.0 * 0.5
+                this.cameraShake = {
+                    x: (Math.random() - 0.5) * shakeIntensity,
+                    y: (Math.random() - 0.5) * shakeIntensity,
+                    z: (Math.random() - 0.5) * shakeIntensity
+                }
+            } else {
+                this.cameraShake = { x: 0, y: 0, z: 0 }
+            }
+
+            // Update Projection FOV each frame
+            if (this.camera && this.view && this.Filament && this.Filament.Camera$Fov) {
+                const aspect = this.canvas.width / this.canvas.height
+                this.camera.setProjectionFov(this.currentFov, aspect, 0.1, 1000.0, this.Filament.Camera$Fov.VERTICAL)
+            }
+        }
+
+        if (this.adrenalineBarEl && this.adrenalineBarContainerEl) {
+            const pct = (this.adrenaline / this.maxAdrenaline) * 100
+            this.adrenalineBarEl.style.width = `${pct}%`
+            if (this.adrenaline > 0) {
+                this.adrenalineBarContainerEl.style.display = 'block'
+            } else {
+                this.adrenalineBarContainerEl.style.display = 'none'
+            }
+
+            if (this.adrenaline > 80) {
+                this.adrenalineBarEl.style.boxShadow = '0 0 15px #ff0000'
+            } else {
+                this.adrenalineBarEl.style.boxShadow = '0 0 5px #ff0000'
+            }
+        }
 
         // Sandbox Builder Logic
         this.buildEnergy = Math.min(this.maxBuildEnergy, this.buildEnergy + 0.1)
@@ -4151,15 +4258,16 @@ class MarblesGame {
                     const height = level?.camera?.height || 10
                     const dist = 20
 
-                    const eyeX = t.x - Math.sin(this.aimYaw) * dist
-                    const eyeZ = t.z - Math.cos(this.aimYaw) * dist
+                    const eyeX = t.x - Math.sin(this.aimYaw) * dist + this.cameraShake.x
+                    const eyeY = t.y + height + this.cameraShake.y
+                    const eyeZ = t.z - Math.cos(this.aimYaw) * dist + this.cameraShake.z
 
-                    this.camera.lookAt([eyeX, t.y + height, eyeZ], [t.x, t.y, t.z], [0, 1, 0])
+                    this.camera.lookAt([eyeX, eyeY, eyeZ], [t.x, t.y, t.z], [0, 1, 0])
                 } else if (this.cameraMode === 'fpv') {
                     const r = target.scale * 0.5 || 0.5
-                    const eyeX = t.x
-                    const eyeY = t.y + r + 0.1
-                    const eyeZ = t.z
+                    const eyeX = t.x + this.cameraShake.x
+                    const eyeY = t.y + r + 0.1 + this.cameraShake.y
+                    const eyeZ = t.z + this.cameraShake.z
 
                     const cosP = Math.cos(this.pitchAngle)
                     const sinP = Math.sin(this.pitchAngle)
@@ -4169,13 +4277,14 @@ class MarblesGame {
 
                     this.camera.lookAt([eyeX, eyeY, eyeZ], [eyeX + dirX, eyeY + dirY, eyeZ + dirZ], [0, 1, 0])
                 } else if (this.cameraMode === 'topdown') {
-                    this.camera.lookAt([t.x, t.y + 40, t.z], [t.x, t.y, t.z], [0, 0, -1])
+                    this.camera.lookAt([t.x + this.cameraShake.x, t.y + 40 + this.cameraShake.y, t.z + this.cameraShake.z], [t.x, t.y, t.z], [0, 0, -1])
                 }
             }
         } else {
-            const eyeX = this.camRadius * Math.sin(this.camAngle)
-            const eyeZ = this.camRadius * Math.cos(this.camAngle)
-            this.camera.lookAt([eyeX, this.camHeight, eyeZ], [0, 0, 0], [0, 1, 0])
+            const eyeX = this.camRadius * Math.sin(this.camAngle) + this.cameraShake.x
+            const eyeY = this.camHeight + this.cameraShake.y
+            const eyeZ = this.camRadius * Math.cos(this.camAngle) + this.cameraShake.z
+            this.camera.lookAt([eyeX, eyeY, eyeZ], [0, 0, 0], [0, 1, 0])
         }
 
         // Update Moving Platforms
@@ -4319,7 +4428,13 @@ class MarblesGame {
         }
 
         // Combo Timer Logic
-        const comboTimeElapsed = Date.now() - this.comboTimer
+        let comboTimeElapsed = Date.now() - this.comboTimer
+
+        // Adrenaline pauses combo decay if high
+        if (this.adrenaline && this.adrenaline > 80) {
+            this.comboTimer = Date.now() // Keep resetting it so it never expires
+            comboTimeElapsed = 0
+        }
         if (comboTimeElapsed > this.maxComboTime && this.combo > 1) {
             this.combo = 1
             if (this.comboEl) {
