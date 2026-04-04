@@ -249,6 +249,13 @@ class MarblesGame {
         this.timeStopbarContainerEl = document.getElementById('timestopbar-container')
         this.timeStopSavedStates = new Map() // Store linear and angular velocity
 
+        // Black Hole Mechanic
+        this.activeBlackHoles = []
+        this.lastBlackHoleTime = 0
+        this.blackHoleCooldown = 15000 // 15 seconds cooldown
+        this.blackHoleBarEl = document.getElementById('blackholebar')
+        this.blackHoleBarContainerEl = document.getElementById('blackholebar-container')
+
         // Portal Mechanic
         this.portalA = null
         this.portalB = null
@@ -703,6 +710,9 @@ class MarblesGame {
                     })
                     this.timeStopSavedStates.clear()
                 }
+            }
+            if (e.code === 'Digit9' && this.playerMarble) {
+                this.spawnBlackHole()
             }
             if (e.code === 'KeyX' && this.playerMarble) {
                 this.spawnBomb()
@@ -1240,6 +1250,23 @@ class MarblesGame {
                 }
             }
             this.activeMissiles = []
+        }
+
+        if (this.activeBlackHoles) {
+            for (const bh of this.activeBlackHoles) {
+                this.world.removeRigidBody(bh.rigidBody)
+                this.scene.remove(bh.entity)
+                if (bh.matInstance) this.engine.destroyMaterialInstance(bh.matInstance)
+                this.engine.destroyEntity(bh.entity)
+                this.Filament.EntityManager.get().destroy(bh.entity)
+
+                if (bh.lightEntity) {
+                    this.scene.remove(bh.lightEntity)
+                    this.engine.destroyEntity(bh.lightEntity)
+                    this.Filament.EntityManager.get().destroy(bh.lightEntity)
+                }
+            }
+            this.activeBlackHoles = []
         }
 
         this.adrenaline = 0
@@ -2097,6 +2124,23 @@ class MarblesGame {
             }
             this.activeMissiles = []
         }
+
+        if (this.activeBlackHoles) {
+            for (const bh of this.activeBlackHoles) {
+                this.world.removeRigidBody(bh.rigidBody)
+                this.scene.remove(bh.entity)
+                if (bh.matInstance) this.engine.destroyMaterialInstance(bh.matInstance)
+                this.engine.destroyEntity(bh.entity)
+                this.Filament.EntityManager.get().destroy(bh.entity)
+
+                if (bh.lightEntity) {
+                    this.scene.remove(bh.lightEntity)
+                    this.engine.destroyEntity(bh.lightEntity)
+                    this.Filament.EntityManager.get().destroy(bh.lightEntity)
+                }
+            }
+            this.activeBlackHoles = []
+        }
     }
 
     returnToMenu() {
@@ -2734,6 +2778,70 @@ class MarblesGame {
             duration: 3000,
             lastPos: { x: spawnPos.x, y: spawnPos.y, z: spawnPos.z }
         })
+    }
+
+    spawnBlackHole() {
+        const now = Date.now()
+        if (now - this.lastBlackHoleTime < this.blackHoleCooldown) return
+        this.lastBlackHoleTime = now
+
+        const pos = this.playerMarble.rigidBody.translation()
+        const cosP = Math.cos(this.pitchAngle)
+        const sinP = Math.sin(this.pitchAngle)
+
+        const dirX = Math.sin(this.aimYaw) * cosP
+        const dirY = sinP
+        const dirZ = Math.cos(this.aimYaw) * cosP
+
+        const spawnPos = {
+            x: pos.x + dirX * 2.0,
+            y: pos.y + dirY * 2.0,
+            z: pos.z + dirZ * 2.0
+        }
+
+        const moveSpeed = 5.0
+
+        const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+            .setTranslation(spawnPos.x, spawnPos.y, spawnPos.z)
+            .setLinvel(dirX * moveSpeed, dirY * moveSpeed, dirZ * moveSpeed)
+            .setGravityScale(0)
+
+        const body = this.world.createRigidBody(bodyDesc)
+        const colliderDesc = RAPIER.ColliderDesc.ball(0.5)
+            .setDensity(50.0) // Very dense, so it's hard to push around
+        this.world.createCollider(colliderDesc, body)
+
+        const entity = this.Filament.EntityManager.get().create()
+        const matInstance = this.material.createInstance()
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.05, 0.0, 0.1])
+        matInstance.setFloatParameter('roughness', 0.1)
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
+            .build(this.engine, entity)
+
+        this.scene.addEntity(entity)
+
+        const lightEntity = this.Filament.EntityManager.get().create()
+        this.Filament.LightManager.Builder(this.Filament.LightManager$Type.POINT)
+            .color([0.3, 0.0, 0.8])
+            .intensity(80000.0)
+            .falloff(20.0)
+            .build(this.engine, lightEntity)
+        this.scene.addEntity(lightEntity)
+
+        this.activeBlackHoles.push({
+            entity: entity,
+            rigidBody: body,
+            matInstance: matInstance,
+            lightEntity: lightEntity,
+            spawnTime: now,
+            duration: 8000 // Lasts for 8 seconds
+        })
+
+        if (typeof audio !== 'undefined' && audio.playTrick) audio.playTrick()
     }
 
     explodeMissile(missile) {
@@ -4516,6 +4624,25 @@ class MarblesGame {
             }
         }
 
+        if (this.blackHoleBarEl && this.blackHoleBarContainerEl) {
+            const timeSinceBlackHole = now - this.lastBlackHoleTime
+            const progress = Math.min(1.0, timeSinceBlackHole / this.blackHoleCooldown)
+            this.blackHoleBarEl.style.width = `${progress * 100}%`
+
+            if (progress >= 1.0) {
+               this.blackHoleBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #aa00ff)'
+            } else {
+               this.blackHoleBarEl.style.filter = 'brightness(0.7)'
+            }
+
+            if (this.activeBlackHoles.length > 0) {
+                this.blackHoleBarContainerEl.style.display = 'block'
+                this.blackHoleBarEl.style.boxShadow = '0 0 10px #aa00ff'
+            } else {
+                this.blackHoleBarEl.style.boxShadow = 'none'
+            }
+        }
+
         if (this.missileBarEl) {
             const timeSinceMissile = now - this.lastMissileTime
             const progress = Math.min(1.0, timeSinceMissile / this.missileCooldown)
@@ -4674,6 +4801,79 @@ class MarblesGame {
                 if (b.lightEntity) {
                     const lightInst = tcm.getInstance(b.lightEntity)
                     const lightMat = quaternionToMat4(t, { x: 0, y: 0, z: 0, w: 1 })
+                    tcm.setTransform(lightInst, lightMat)
+                }
+            }
+        }
+
+        // Handle Active Black Holes lifecycle
+        for (let i = this.activeBlackHoles.length - 1; i >= 0; i--) {
+            const bh = this.activeBlackHoles[i]
+            const timeAlive = now - bh.spawnTime
+
+            if (timeAlive > bh.duration) {
+                this.world.removeRigidBody(bh.rigidBody)
+                this.scene.remove(bh.entity)
+                if (bh.matInstance) this.engine.destroyMaterialInstance(bh.matInstance)
+                this.engine.destroyEntity(bh.entity)
+                this.Filament.EntityManager.get().destroy(bh.entity)
+
+                if (bh.lightEntity) {
+                    this.scene.remove(bh.lightEntity)
+                    this.engine.destroyEntity(bh.lightEntity)
+                    this.Filament.EntityManager.get().destroy(bh.lightEntity)
+                }
+
+                this.activeBlackHoles.splice(i, 1)
+            } else {
+                const pos = bh.rigidBody.translation()
+                const radius = 25.0
+                const attractionForce = 20.0
+
+                // Attract dynamic bodies
+                this.world.bodies.forEach(body => {
+                    // Don't attract the black hole itself, or the player
+                    if (body === bh.rigidBody) return
+                    if (this.playerMarble && body === this.playerMarble.rigidBody) return
+                    if (!body.isDynamic()) return
+
+                    const bodyPos = body.translation()
+                    const dx = pos.x - bodyPos.x
+                    const dy = pos.y - bodyPos.y
+                    const dz = pos.z - bodyPos.z
+                    const distSq = dx * dx + dy * dy + dz * dz
+
+                    if (distSq < radius * radius && distSq > 0.01) {
+                        const dist = Math.sqrt(distSq)
+                        // Inverse square law-ish pull
+                        const forceStr = (attractionForce * body.mass()) / dist
+
+                        const fx = (dx / dist) * forceStr
+                        const fy = (dy / dist) * forceStr + (body.mass() * 0.2) // Lift slightly
+                        const fz = (dz / dist) * forceStr
+
+                        body.applyImpulse({ x: fx, y: fy, z: fz }, true)
+                    }
+                })
+
+                // Sync Filament transform to Rapier rigid body
+                const tcm = this.engine.getTransformManager()
+                const inst = tcm.getInstance(bh.entity)
+                const r = bh.rigidBody.rotation()
+                const mat = quaternionToMat4(pos, r)
+
+                // The scale visual effect (pulsing slightly)
+                const pulse = 1.0 + Math.sin(timeAlive * 0.01) * 0.1
+                const s = 1.5 * pulse // Adjust visual size
+                mat[0] *= s; mat[1] *= s; mat[2] *= s
+                mat[4] *= s; mat[5] *= s; mat[6] *= s
+                mat[8] *= s; mat[9] *= s; mat[10] *= s
+
+                tcm.setTransform(inst, mat)
+
+                if (bh.lightEntity) {
+                    const lightInst = tcm.getInstance(bh.lightEntity)
+                    const lightMat = quaternionToMat4(pos, { x: 0, y: 0, z: 0, w: 1 })
                     tcm.setTransform(lightInst, lightMat)
                 }
             }
