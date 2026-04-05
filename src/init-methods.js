@@ -206,6 +206,9 @@ export class InitMethods {
                     this.timeStopSavedStates.clear()
                 }
             }
+            if (e.code === 'Digit9' && this.playerMarble) {
+                this.spawnBlackHole()
+            }
             if (e.code === 'KeyX' && this.playerMarble) {
                 this.spawnBomb()
             }
@@ -742,6 +745,23 @@ export class InitMethods {
                 }
             }
             this.activeMissiles = []
+        }
+
+        if (this.activeBlackHoles) {
+            for (const bh of this.activeBlackHoles) {
+                this.world.removeRigidBody(bh.rigidBody)
+                this.scene.remove(bh.entity)
+                if (bh.matInstance) this.engine.destroyMaterialInstance(bh.matInstance)
+                this.engine.destroyEntity(bh.entity)
+                this.Filament.EntityManager.get().destroy(bh.entity)
+
+                if (bh.lightEntity) {
+                    this.scene.remove(bh.lightEntity)
+                    this.engine.destroyEntity(bh.lightEntity)
+                    this.Filament.EntityManager.get().destroy(bh.lightEntity)
+                }
+            }
+            this.activeBlackHoles = []
         }
 
         this.adrenaline = 0

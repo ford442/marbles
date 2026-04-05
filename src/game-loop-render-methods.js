@@ -450,19 +450,26 @@ export class GameLoopRenderMethods {
             }
         }
 
-        if (this.missileBarEl) {
-            const timeSinceMissile = now - this.lastMissileTime
-            const progress = Math.min(1.0, timeSinceMissile / this.missileCooldown)
-            this.missileBarEl.style.width = `${progress * 100}%`
+        if (this.blackHoleBarEl && this.blackHoleBarContainerEl) {
+            const timeSinceBlackHole = now - this.lastBlackHoleTime
+            const progress = Math.min(1.0, timeSinceBlackHole / this.blackHoleCooldown)
+            this.blackHoleBarEl.style.width = `${progress * 100}%`
 
             if (progress >= 1.0) {
-               this.missileBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ff8c00)'
+               this.blackHoleBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #aa00ff)'
             } else {
-               this.missileBarEl.style.filter = 'brightness(0.7)'
+               this.blackHoleBarEl.style.filter = 'brightness(0.7)'
+            }
+
+            if (this.activeBlackHoles.length > 0) {
+                this.blackHoleBarContainerEl.style.display = 'block'
+                this.blackHoleBarEl.style.boxShadow = '0 0 10px #aa00ff'
+            } else {
+                this.blackHoleBarEl.style.boxShadow = 'none'
             }
         }
 
-        if (this.bombBarEl) {
+        if (this.missileBarEl) {
             const timeSinceBomb = now - this.lastBombTime
             const progress = Math.min(1.0, timeSinceBomb / this.bombCooldown)
             this.bombBarEl.style.width = `${progress * 100}%`
@@ -483,6 +490,79 @@ export class GameLoopRenderMethods {
                this.missileBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ff8800)'
             } else {
                this.missileBarEl.style.filter = 'brightness(0.7)'
+            }
+        }
+
+        // Handle Active Black Holes lifecycle
+        for (let i = this.activeBlackHoles.length - 1; i >= 0; i--) {
+            const bh = this.activeBlackHoles[i]
+            const timeAlive = now - bh.spawnTime
+
+            if (timeAlive > bh.duration) {
+                this.world.removeRigidBody(bh.rigidBody)
+                this.scene.remove(bh.entity)
+                if (bh.matInstance) this.engine.destroyMaterialInstance(bh.matInstance)
+                this.engine.destroyEntity(bh.entity)
+                this.Filament.EntityManager.get().destroy(bh.entity)
+
+                if (bh.lightEntity) {
+                    this.scene.remove(bh.lightEntity)
+                    this.engine.destroyEntity(bh.lightEntity)
+                    this.Filament.EntityManager.get().destroy(bh.lightEntity)
+                }
+
+                this.activeBlackHoles.splice(i, 1)
+            } else {
+                const pos = bh.rigidBody.translation()
+                const radius = 25.0
+                const attractionForce = 20.0
+
+                // Attract dynamic bodies
+                this.world.bodies.forEach(body => {
+                    // Don't attract the black hole itself, or the player
+                    if (body === bh.rigidBody) return
+                    if (this.playerMarble && body === this.playerMarble.rigidBody) return
+                    if (!body.isDynamic()) return
+
+                    const bodyPos = body.translation()
+                    const dx = pos.x - bodyPos.x
+                    const dy = pos.y - bodyPos.y
+                    const dz = pos.z - bodyPos.z
+                    const distSq = dx * dx + dy * dy + dz * dz
+
+                    if (distSq < radius * radius && distSq > 0.01) {
+                        const dist = Math.sqrt(distSq)
+                        // Inverse square law-ish pull
+                        const forceStr = (attractionForce * body.mass()) / dist
+
+                        const fx = (dx / dist) * forceStr
+                        const fy = (dy / dist) * forceStr + (body.mass() * 0.2) // Lift slightly
+                        const fz = (dz / dist) * forceStr
+
+                        body.applyImpulse({ x: fx, y: fy, z: fz }, true)
+                    }
+                })
+
+                // Sync Filament transform to Rapier rigid body
+                const tcm = this.engine.getTransformManager()
+                const inst = tcm.getInstance(bh.entity)
+                const r = bh.rigidBody.rotation()
+                const mat = quaternionToMat4(pos, r)
+
+                // The scale visual effect (pulsing slightly)
+                const pulse = 1.0 + Math.sin(timeAlive * 0.01) * 0.1
+                const s = 1.5 * pulse // Adjust visual size
+                mat[0] *= s; mat[1] *= s; mat[2] *= s
+                mat[4] *= s; mat[5] *= s; mat[6] *= s
+                mat[8] *= s; mat[9] *= s; mat[10] *= s
+
+                tcm.setTransform(inst, mat)
+
+                if (bh.lightEntity) {
+                    const lightInst = tcm.getInstance(bh.lightEntity)
+                    const lightMat = quaternionToMat4(pos, { x: 0, y: 0, z: 0, w: 1 })
+                    tcm.setTransform(lightInst, lightMat)
+                }
             }
         }
 

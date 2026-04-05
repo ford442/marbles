@@ -543,6 +543,24 @@
             transition: width 0.1s;
         }
 
+        #blackholebar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #blackholebar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #1a0033 0%, #4b0082 100%);
+            transition: width 0.1s;
+        }
+
         #teleportbar-container {
             width: 200px;
             height: 10px;
@@ -776,6 +794,9 @@
         <div id="vortexbar-container" style="display: none;">
             <div id="vortexbar"></div>
         </div>
+        <div id="blackholebar-container" style="display: none;">
+            <div id="blackholebar"></div>
+        </div>
         <div id="timestopbar-container" style="display: none;">
             <div id="timestopbar"></div>
         </div>
@@ -809,7 +830,8 @@
             <kbd>I</kbd> Size Shift &nbsp;|&nbsp;
             <kbd>6</kbd> Phase Shift &nbsp;|&nbsp;
             <kbd>7</kbd> Glider &nbsp;|&nbsp;
-            <kbd>8</kbd> Time Stop
+            <kbd>8</kbd> Time Stop &nbsp;|&nbsp;
+            <kbd>9</kbd> Black Hole
             <div id="portal-indicators" style="margin-top: 5px; font-weight: bold;">
                 Portal A <span id="portal-a-status" style="color: #444;">⚫</span> &nbsp;|&nbsp;
                 Portal B <span id="portal-b-status" style="color: #444;">⚫</span>
