@@ -461,7 +461,7 @@ export class GameLoopRenderMethods {
                this.blackHoleBarEl.style.filter = 'brightness(0.7)'
             }
 
-            if (this.activeBlackHoles.length > 0) {
+            if (this.activeBlackHoles && this.activeBlackHoles.length > 0) {
                 this.blackHoleBarContainerEl.style.display = 'block'
                 this.blackHoleBarEl.style.boxShadow = '0 0 10px #aa00ff'
             } else {
@@ -494,6 +494,7 @@ export class GameLoopRenderMethods {
         }
 
         // Handle Active Black Holes lifecycle
+        if (this.activeBlackHoles && this.activeBlackHoles.length > 0) {
         for (let i = this.activeBlackHoles.length - 1; i >= 0; i--) {
             const bh = this.activeBlackHoles[i]
             const timeAlive = now - bh.spawnTime
@@ -564,6 +565,7 @@ export class GameLoopRenderMethods {
                     tcm.setTransform(lightInst, lightMat)
                 }
             }
+        }
         }
 
         // Handle Active Missiles lifecycle

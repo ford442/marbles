@@ -40,6 +40,12 @@ class MarblesGame {
         this.missileBarEl = document.getElementById('missilebar')
         this.missileBarContainerEl = document.getElementById('missilebar-container')
 
+        this.activeBlackHoles = []
+        this.lastBlackHoleTime = 0
+        this.blackHoleCooldown = 5000
+        this.blackHoleBarEl = document.getElementById('blackholebar')
+        this.blackHoleBarContainerEl = document.getElementById('blackholebar-container')
+
         this.Filament = null
         this.material = null
         this.cubeMesh = null
