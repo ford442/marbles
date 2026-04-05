@@ -9,6 +9,7 @@ import { applyGameLogicMethods } from './game-logic-methods.js';
 import { applyAbilityMethods } from './ability-methods.js';
 import { applyGameLoopMethods } from './game-loop-methods.js';
 import { applyGameLoopRenderMethods } from './game-loop-render-methods.js';
+import { applyGameLoopSyncMethods } from './game-loop-sync-methods.js';
 
 class MarblesGame {
     constructor() {
@@ -273,6 +274,7 @@ applyGameLogicMethods(MarblesGame);
 applyAbilityMethods(MarblesGame);
 applyGameLoopMethods(MarblesGame);
 applyGameLoopRenderMethods(MarblesGame);
+applyGameLoopSyncMethods(MarblesGame);
 
 window.game = new MarblesGame();
 window.game.init();
