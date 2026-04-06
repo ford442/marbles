@@ -134,6 +134,29 @@ export class GameLogicMethods {
     checkGameLogic() {
         if (!this.currentLevel || this.levelComplete) return
 
+        if (this.playerMarble) {
+            const linvel = this.playerMarble.rigidBody.linvel()
+            const horizSpeed = Math.hypot(linvel.x, linvel.z)
+
+            if (this.highSpeedTime === undefined) this.highSpeedTime = 0
+            if (this.lastSpeedAwardTime === undefined) this.lastSpeedAwardTime = 0
+
+            if (horizSpeed > 15.0) {
+                this.highSpeedTime += 1
+            } else {
+                this.highSpeedTime = 0
+            }
+
+            if (this.highSpeedTime > 120) {
+                const now = Date.now()
+                if (now - this.lastSpeedAwardTime > 2000) {
+                    this.awardTrickPoints('Speed Demon!', 30, '#ff4444')
+                    this.lastSpeedAwardTime = now
+                    this.highSpeedTime = 0
+                }
+            }
+        }
+
         if (this.playerMarble && this.isGrounded(this.playerMarble)) {
             const linvel = this.playerMarble.rigidBody.linvel()
             const gravityDir = this.playerMarble.rigidBody.gravityScale() < 0 ? -1 : 1
