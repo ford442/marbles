@@ -3,6 +3,57 @@ import { audio } from './audio.js';
 import { quatFromEuler, quaternionToMat4 } from './math.js';
 
 export class AbilityMethods {
+    fireEMP() {
+        if (!this.playerMarble) return
+        const now = Date.now()
+        if (now - this.lastEmpTime < this.empCooldown) return
+        this.lastEmpTime = now
+
+        const pos = this.playerMarble.rigidBody.translation()
+        const empRadius = 15.0
+        const empForce = 50.0
+
+        // Find all dynamic objects
+        let hits = 0
+        const bodiesToCheck = [...(this.marbles || []), ...(this.dynamicObjects || [])]
+
+        for (const obj of bodiesToCheck) {
+            if (obj === this.playerMarble) continue
+            if (!obj.rigidBody) continue
+
+            const objPos = obj.rigidBody.translation()
+            const dx = objPos.x - pos.x
+            const dy = objPos.y - pos.y
+            const dz = objPos.z - pos.z
+            const distSq = dx * dx + dy * dy + dz * dz
+
+            if (distSq < empRadius * empRadius) {
+                const dist = Math.sqrt(distSq)
+                const forceScale = 1.0 - (dist / empRadius)
+                const nx = dx / (dist || 1)
+                const ny = dy / (dist || 1)
+                const nz = dz / (dist || 1)
+
+                obj.rigidBody.applyImpulse({
+                    x: nx * empForce * forceScale,
+                    y: (ny + 0.5) * empForce * forceScale, // Give a bit of upward lift
+                    z: nz * empForce * forceScale
+                }, true)
+                hits++
+            }
+        }
+
+        if (hits > 0 && typeof this.awardTrickPoints === 'function') {
+            this.awardTrickPoints('EMP Blast!', 30 * hits, '#aaddff')
+        }
+
+        if (typeof audio !== 'undefined' && audio.playBomb) {
+            audio.playBomb()
+        }
+
+        console.log(`[GAME] EMP Shockwave fired! Hit ${hits} objects.`)
+    }
+
     triggerTeleport() {
         if (!this.playerMarble) return
         this.lastTeleportTime = Date.now()

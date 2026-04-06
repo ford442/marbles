@@ -435,6 +435,35 @@
             transition: width 0.1s;
         }
 
+        #empbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            overflow: visible;
+            display: none;
+            position: relative;
+        }
+
+        #empbar-container::after {
+            content: "EMP Shockwave (K)";
+            position: absolute;
+            left: 5px;
+            top: -15px;
+            font-size: 10px;
+            color: #fff;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        #empbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #aaffff 0%, #00ccff 100%);
+            transition: width 0.1s;
+        }
+
         #bombbar-container {
             width: 200px;
             height: 10px;
@@ -752,6 +781,9 @@
         <div id="holobar-container" style="display: none;">
             <div id="holobar"></div>
         </div>
+        <div id="empbar-container" style="display: none;">
+            <div id="empbar"></div>
+        </div>
         <div id="bombbar-container">
             <div id="bombbar"></div>
         </div>
@@ -823,7 +855,8 @@
             <kbd>J</kbd> Jetpack &nbsp;|&nbsp;
             <kbd>G</kbd> Frost Bridge &nbsp;|&nbsp;
             <kbd>U</kbd> Gravity Flip &nbsp;|&nbsp;
-            <kbd>K</kbd> Chameleon &nbsp;|&nbsp;
+            <kbd>N</kbd> Chameleon &nbsp;|&nbsp;
+            <kbd>K</kbd> EMP &nbsp;|&nbsp;
             <kbd>P</kbd> Teleport &nbsp;|&nbsp;
             <kbd>L</kbd> Missile &nbsp;|&nbsp;
             <kbd>Y</kbd> Vortex &nbsp;|&nbsp;

@@ -210,6 +210,15 @@ class MarblesGame {
         this.vortexbarEl = document.getElementById('vortexbar')
         this.vortexbarContainerEl = document.getElementById('vortexbar-container')
 
+        // EMP Shockwave Mechanic
+        this.empEnergy = 100
+        this.maxEmpEnergy = 100
+        this.empActive = false
+        this.lastEmpTime = 0
+        this.empCooldown = 3000
+        this.empBarEl = document.getElementById('empbar')
+        this.empBarContainerEl = document.getElementById('empbar-container')
+
         // Time Stop Mechanic
         this.timeStopEnergy = 100
         this.maxTimeStopEnergy = 100
