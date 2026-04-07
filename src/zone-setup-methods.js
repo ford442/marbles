@@ -17,7 +17,7 @@ import { createWaterSlideZone } from './water_slide_zone.js';
 import { createGrappleCourseZone } from './grapple_course_zone.js';
 import { createIceCaveZone } from './ice_cave_zone.js';
 import { createAntigravityZone } from './antigravity_zone.js';
-import { createTrampolineParkZone, createSpaceElevatorZone, createMysticForestZone, createCloudCityZone, createDesertRuinsZone, createNeonGridZone, createIceBridgesZone, createJungleRunZone } from './zone_draft.js';
+import { createTrampolineParkZone, createSpaceElevatorZone, createMysticForestZone, createCloudCityZone, createDesertRuinsZone, createNeonGridZone, createIceBridgesZone, createJungleRunZone, createLavaTubesZone } from './zone_draft.js';
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import { audio } from './audio.js';
 
@@ -167,6 +167,9 @@ export class ZoneSetupMethods {
                 break
             case 'jungle_run':
                 createJungleRunZone(this, offset)
+                break
+            case 'lava_tubes':
+                createLavaTubesZone(this, offset)
                 break
         }
     }
