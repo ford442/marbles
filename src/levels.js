@@ -590,6 +590,20 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
+    jungle_run: {
+        name: 'Jungle Run',
+        description: 'Navigate the jungle logs!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'jungle_run', pos: { x: 0, y: 0, z: 25 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [85, 95], y: [-2, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
