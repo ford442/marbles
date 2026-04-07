@@ -218,6 +218,20 @@ export class GameLoopMethods {
             }
         }
 
+        // EMP Bar Logic
+        if (this.empBarEl && this.empBarContainerEl) {
+            const now = Date.now()
+            const timeSinceLastEmp = now - this.lastEmpTime
+            if (timeSinceLastEmp < this.empCooldown) {
+                this.empBarContainerEl.style.display = 'block'
+                const pct = (timeSinceLastEmp / this.empCooldown) * 100
+                this.empBarEl.style.width = `${pct}%`
+            } else {
+                this.empBarContainerEl.style.display = 'none'
+                this.empBarEl.style.width = '100%'
+            }
+        }
+
         // Blink Cooldown Logic
         if (this.blinkCooldown > 0) {
             this.blinkCooldown--

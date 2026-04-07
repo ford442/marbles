@@ -81,6 +81,9 @@ export class InitMethods {
                             rb.applyImpulse({ x: 0, y: 10.0 * gravityDir, z: 0 }, true)
                             this.jumpCount++
                             audio.playJump()
+
+                            // Award points for double jump
+                            this.awardTrickPoints('Double Jump!', 20, '#00bfff')
                         }
                     }
                 }
@@ -310,6 +313,11 @@ export class InitMethods {
                 }
             }
             if (e.code === 'KeyK' && this.playerMarble) {
+                if (typeof this.fireEMP === 'function') {
+                    this.fireEMP()
+                }
+            }
+            if (e.code === 'KeyN' && this.playerMarble) {
                 const now = Date.now()
                 if (now - this.lastChameleonTime > this.chameleonCooldown) {
                     this.chameleonState = (this.chameleonState + 1) % this.chameleonProfiles.length
