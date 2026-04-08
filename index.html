@@ -435,6 +435,35 @@
             transition: width 0.1s;
         }
 
+        #empbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            overflow: visible;
+            display: none;
+            position: relative;
+        }
+
+        #empbar-container::after {
+            content: "EMP Shockwave (K)";
+            position: absolute;
+            left: 5px;
+            top: -15px;
+            font-size: 10px;
+            color: #fff;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        #empbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #aaffff 0%, #00ccff 100%);
+            transition: width 0.1s;
+        }
+
         #bombbar-container {
             width: 200px;
             height: 10px;
@@ -468,6 +497,25 @@
             width: 100%;
             height: 100%;
             background: linear-gradient(90deg, #ff8c00 0%, #ff0000 100%);
+            transition: width 0.1s;
+        }
+
+        #gravitypulsebar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+            display: none;
+        }
+
+        #gravitypulsebar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ffff00 0%, #ffffff 100%);
             transition: width 0.1s;
         }
 
@@ -540,6 +588,24 @@
             width: 100%;
             height: 100%;
             background: linear-gradient(90deg, #ff00ff 0%, #00ffff 100%);
+            transition: width 0.1s;
+        }
+
+        #blackholebar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #blackholebar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #1a0033 0%, #4b0082 100%);
             transition: width 0.1s;
         }
 
@@ -701,6 +767,9 @@
         <div id="combobar-container" style="display: none;">
             <div id="combobar"></div>
         </div>
+        <div id="adrenalinebar-container" style="display: none;">
+            <div id="adrenalinebar"></div>
+        </div>
         <div id="timer">Time: 0.00s</div>
         <div id="selected">Selected: 1</div>
         <div id="aim">Aim: 0°</div>
@@ -730,6 +799,9 @@
         </div>
         <div id="holobar-container" style="display: none;">
             <div id="holobar"></div>
+        </div>
+        <div id="empbar-container" style="display: none;">
+            <div id="empbar"></div>
         </div>
         <div id="bombbar-container">
             <div id="bombbar"></div>
@@ -767,11 +839,17 @@
         <div id="missilebar-container">
             <div id="missilebar"></div>
         </div>
+        <div id="gravitypulsebar-container">
+            <div id="gravitypulsebar"></div>
+        </div>
         <div id="sizebar-container" style="display: none;">
             <div id="sizebar"></div>
         </div>
         <div id="vortexbar-container" style="display: none;">
             <div id="vortexbar"></div>
+        </div>
+        <div id="blackholebar-container" style="display: none;">
+            <div id="blackholebar"></div>
         </div>
         <div id="timestopbar-container" style="display: none;">
             <div id="timestopbar"></div>
@@ -797,16 +875,18 @@
             <kbd>L</kbd> Missile &nbsp;|&nbsp;
             <kbd>H</kbd> Hover &nbsp;|&nbsp;
             <kbd>J</kbd> Jetpack &nbsp;|&nbsp;
-            <kbd>G</kbd> Frost Bridge &nbsp;|&nbsp;
+            <kbd>G</kbd> Grav Pulse &nbsp;|&nbsp;
             <kbd>U</kbd> Gravity Flip &nbsp;|&nbsp;
-            <kbd>K</kbd> Chameleon &nbsp;|&nbsp;
+            <kbd>N</kbd> Chameleon &nbsp;|&nbsp;
+            <kbd>K</kbd> EMP &nbsp;|&nbsp;
             <kbd>P</kbd> Teleport &nbsp;|&nbsp;
             <kbd>L</kbd> Missile &nbsp;|&nbsp;
             <kbd>Y</kbd> Vortex &nbsp;|&nbsp;
             <kbd>I</kbd> Size Shift &nbsp;|&nbsp;
             <kbd>6</kbd> Phase Shift &nbsp;|&nbsp;
             <kbd>7</kbd> Glider &nbsp;|&nbsp;
-            <kbd>8</kbd> Time Stop
+            <kbd>8</kbd> Time Stop &nbsp;|&nbsp;
+            <kbd>9</kbd> Black Hole
             <div id="portal-indicators" style="margin-top: 5px; font-weight: bold;">
                 Portal A <span id="portal-a-status" style="color: #444;">⚫</span> &nbsp;|&nbsp;
                 Portal B <span id="portal-b-status" style="color: #444;">⚫</span>
