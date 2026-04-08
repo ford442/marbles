@@ -273,6 +273,12 @@ class MarblesGame {
         this.goalDefinitions = []
         this.checkpointDefinitions = []
 
+        // Gravity Pulse Mechanic
+        this.gravityPulseCooldown = 5000
+        this.lastGravityPulseTime = 0
+        this.gravityPulseBarEl = document.getElementById('gravitypulsebar')
+        this.gravityPulseBarContainerEl = document.getElementById('gravitypulsebar-container')
+
         // Gamepad State
         this.gamepadState = {}
     }

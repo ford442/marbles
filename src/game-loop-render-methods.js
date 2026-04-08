@@ -450,6 +450,18 @@ export class GameLoopRenderMethods {
             }
         }
 
+        if (this.gravityPulseBarContainerEl && this.gravityPulseBarEl) {
+            const timeSincePulse = now - this.lastGravityPulseTime
+            if (timeSincePulse < this.gravityPulseCooldown) {
+                this.gravityPulseBarContainerEl.style.display = 'block'
+                const pct = (timeSincePulse / this.gravityPulseCooldown) * 100
+                this.gravityPulseBarEl.style.width = pct + '%'
+            } else {
+                this.gravityPulseBarEl.style.width = '100%'
+                this.gravityPulseBarContainerEl.style.display = 'none'
+            }
+        }
+
         if (this.blackHoleBarEl && this.blackHoleBarContainerEl) {
             const timeSinceBlackHole = now - this.lastBlackHoleTime
             const progress = Math.min(1.0, timeSinceBlackHole / this.blackHoleCooldown)

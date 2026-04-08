@@ -84,7 +84,7 @@ export class InputMethods {
                 12: 'KeyL',       // D-pad Up -> Missile
                 13: 'KeyU',       // D-pad Down -> Gravity Flip
                 14: 'Digit6',     // D-pad Left -> Phase Shift
-                15: 'Digit7'      // D-pad Right -> Glider
+                15: 'KeyG'        // D-pad Right -> Gravity Pulse
             }
 
             for (let b = 0; b < gp.buttons.length; b++) {

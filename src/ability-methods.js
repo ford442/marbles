@@ -733,6 +733,56 @@ export class AbilityMethods {
         })
     }
 
+    fireGravityPulse() {
+        if (!this.playerMarble) return
+        const now = Date.now()
+        if (now - this.lastGravityPulseTime < this.gravityPulseCooldown) return
+        this.lastGravityPulseTime = now
+
+        const pos = this.playerMarble.rigidBody.translation()
+        const pulseRadius = 20.0
+        let hits = 0
+
+        const bodiesToCheck = [...(this.marbles || []), ...(this.dynamicObjects || [])]
+
+        for (const obj of bodiesToCheck) {
+            if (obj === this.playerMarble) continue
+            if (!obj.rigidBody) continue
+
+            const objPos = obj.rigidBody.translation()
+            const dx = objPos.x - pos.x
+            const dy = objPos.y - pos.y
+            const dz = objPos.z - pos.z
+            const distSq = dx * dx + dy * dy + dz * dz
+
+            if (distSq < pulseRadius * pulseRadius) {
+                // Invert gravity scale
+                const currentGravity = obj.rigidBody.gravityScale()
+                // Ensure we invert based on the original gravity, or just flip the sign
+                obj.rigidBody.setGravityScale(-currentGravity, true)
+                hits++
+
+                // Set a timeout to revert the gravity scale
+                setTimeout(() => {
+                    if (obj && obj.rigidBody) {
+                        const revertedGravity = obj.rigidBody.gravityScale()
+                        obj.rigidBody.setGravityScale(-revertedGravity, true)
+                    }
+                }, 3000)
+            }
+        }
+
+        if (hits > 0 && typeof this.awardTrickPoints === 'function') {
+            this.awardTrickPoints('Gravity Pulse!', 20 * hits, '#ffff00')
+        }
+
+        if (typeof audio !== 'undefined' && audio.playBoost) {
+            audio.playBoost() // Or another suitable sound effect
+        }
+
+        console.log(`[GAME] Gravity Pulse fired! Hit ${hits} objects.`)
+    }
+
     spawnHoloPlatform() {
         const now = Date.now()
         if (now - this.lastHoloTime < this.holoCooldown) return

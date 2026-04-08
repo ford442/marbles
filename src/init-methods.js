@@ -123,7 +123,9 @@ export class InitMethods {
                 this.hoverActive = true
             }
             if (e.code === 'KeyG' && this.playerMarble) {
-                this.iceActive = true
+                if (typeof this.fireGravityPulse === 'function') {
+                    this.fireGravityPulse()
+                }
             }
             if (e.code === 'KeyU' && this.playerMarble) {
                 this.flipActive = !this.flipActive
