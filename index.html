@@ -113,6 +113,7 @@
             position: absolute;
             top: 20px;
             left: 20px;
+            width: 200px;
             color: white;
             pointer-events: none;
             user-select: none;
@@ -670,6 +671,8 @@
             opacity: 0.9;
             text-shadow: 1px 1px 0px #000;
             line-height: 1.6;
+            overflow-wrap: break-word;
+            word-break: break-word;
         }
 
         #instructions kbd {
@@ -855,38 +858,34 @@
             <div id="timestopbar"></div>
         </div>
         <div id="instructions">
-            <kbd>1</kbd> Ramp | <kbd>2</kbd> Floor | <kbd>3</kbd> Bouncer | <kbd>4</kbd> Portal A | <kbd>5</kbd> Portal B &nbsp;|&nbsp;
-            <kbd>WASD</kbd> / <kbd>Arrows</kbd> Move &nbsp;|&nbsp;
-            <kbd>Shift</kbd> Boost &nbsp;|&nbsp;
-            <kbd>Space</kbd> Jump (Hold) &nbsp;|&nbsp;
-            <kbd>V</kbd> Dash &nbsp;|&nbsp;
-            <kbd>F</kbd> Focus &nbsp;|&nbsp;
-            <kbd>E</kbd> / <kbd>Q</kbd> Magnet &nbsp;|&nbsp;
-            <kbd>R</kbd> Reset &nbsp;|&nbsp;
-            <kbd>Tab</kbd> Switch Marble &nbsp;|&nbsp;
-            <kbd>C</kbd> Camera &nbsp;|&nbsp;
-            <kbd>M</kbd> Menu &nbsp;|&nbsp;
-            <kbd>N</kbd> Mute &nbsp;|&nbsp;
-            <kbd>[</kbd> <kbd>]</kbd> Vol &nbsp;|&nbsp;
-            <kbd>Z</kbd> Stomp &nbsp;|&nbsp;
-            <kbd>T</kbd> Rewind &nbsp;|&nbsp;
-            <kbd>B</kbd> Holo-Platform &nbsp;|&nbsp;
-            <kbd>X</kbd> Bomb &nbsp;|&nbsp;
-            <kbd>L</kbd> Missile &nbsp;|&nbsp;
-            <kbd>H</kbd> Hover &nbsp;|&nbsp;
-            <kbd>J</kbd> Jetpack &nbsp;|&nbsp;
-            <kbd>G</kbd> Grav Pulse &nbsp;|&nbsp;
-            <kbd>U</kbd> Gravity Flip &nbsp;|&nbsp;
-            <kbd>N</kbd> Chameleon &nbsp;|&nbsp;
-            <kbd>K</kbd> EMP &nbsp;|&nbsp;
-            <kbd>P</kbd> Teleport &nbsp;|&nbsp;
-            <kbd>L</kbd> Missile &nbsp;|&nbsp;
-            <kbd>Y</kbd> Vortex &nbsp;|&nbsp;
-            <kbd>I</kbd> Size Shift &nbsp;|&nbsp;
-            <kbd>6</kbd> Phase Shift &nbsp;|&nbsp;
-            <kbd>7</kbd> Glider &nbsp;|&nbsp;
-            <kbd>8</kbd> Time Stop &nbsp;|&nbsp;
-            <kbd>9</kbd> Black Hole
+            <kbd>1</kbd> Ramp | <kbd>2</kbd> Floor | <kbd>3</kbd> Bouncer | <kbd>4</kbd> Portal A | <kbd>5</kbd> Portal B |
+            <kbd>WASD</kbd> / <kbd>Arrows</kbd> Move |
+            <kbd>Shift</kbd> Boost |
+            <kbd>Space</kbd> Jump (Hold) |
+            <kbd>V</kbd> Dash |
+            <kbd>F</kbd> Focus |
+            <kbd>E</kbd> / <kbd>Q</kbd> Magnet |
+            <kbd>R</kbd> Reset |
+            <kbd>Tab</kbd> Switch Marble |
+            <kbd>C</kbd> Camera |
+            <kbd>M</kbd> Menu |
+            <kbd>N</kbd> Mute |
+            <kbd>[</kbd> <kbd>]</kbd> Vol |
+            <kbd>Z</kbd> Stomp |
+            <kbd>T</kbd> Rewind |
+            <kbd>B</kbd> Holo-Platform |
+            <kbd>X</kbd> Bomb |
+            <kbd>L</kbd> Missile |
+            <kbd>H</kbd> Hover |
+            <kbd>J</kbd> Jetpack |
+            <kbd>G</kbd> Frost Bridge |
+            <kbd>U</kbd> Gravity Flip |
+            <kbd>K</kbd> Chameleon |
+            <kbd>P</kbd> Teleport |
+            <kbd>L</kbd> Missile |
+            <kbd>Y</kbd> Vortex |
+            <kbd>I</kbd> Size Shift |
+            <kbd>6</kbd> Phase Shift
             <div id="portal-indicators" style="margin-top: 5px; font-weight: bold;">
                 Portal A <span id="portal-a-status" style="color: #444;">⚫</span> &nbsp;|&nbsp;
                 Portal B <span id="portal-b-status" style="color: #444;">⚫</span>
