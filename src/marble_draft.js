@@ -9,6 +9,18 @@ export const marbleDraft = {
     friction: 0.01,
     roughness: 0.05,
     emissive: true,
-    lightIntensity: 25000.0,
-    lightColor: [0.7, 1.0, 0.8]
+    lightIntensity: 30000.0,
+    lightColor: [0.5, 0.0, 1.0],
+    name: "Graviton Star",
+    color: [0.1, 0.9, 0.5],
+    offset: { x: 0.0, y: 5, z: 0 },
+    radius: 0.55,
+    density: 6.0,
+    restitution: 0.9,
+    gravityScale: 1.5,
+    friction: 0.8,
+    roughness: 0.2,
+    emissive: true,
+    lightIntensity: 60000.0,
+    lightColor: [0.2, 1.0, 0.6]
 };
