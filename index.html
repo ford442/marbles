@@ -436,6 +436,35 @@
             transition: width 0.1s;
         }
 
+        #empbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            overflow: visible;
+            display: none;
+            position: relative;
+        }
+
+        #empbar-container::after {
+            content: "EMP Shockwave (K)";
+            position: absolute;
+            left: 5px;
+            top: -15px;
+            font-size: 10px;
+            color: #fff;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        #empbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #aaffff 0%, #00ccff 100%);
+            transition: width 0.1s;
+        }
+
         #bombbar-container {
             width: 200px;
             height: 10px;
@@ -469,6 +498,25 @@
             width: 100%;
             height: 100%;
             background: linear-gradient(90deg, #ff8c00 0%, #ff0000 100%);
+            transition: width 0.1s;
+        }
+
+        #gravitypulsebar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+            display: none;
+        }
+
+        #gravitypulsebar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ffff00 0%, #ffffff 100%);
             transition: width 0.1s;
         }
 
@@ -544,6 +592,24 @@
             transition: width 0.1s;
         }
 
+        #blackholebar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+        }
+
+        #blackholebar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #1a0033 0%, #4b0082 100%);
+            transition: width 0.1s;
+        }
+
         #teleportbar-container {
             width: 200px;
             height: 10px;
@@ -559,6 +625,44 @@
             width: 100%;
             height: 100%;
             background: linear-gradient(90deg, #9900ff 0%, #cc00ff 100%);
+            transition: width 0.1s;
+        }
+
+        #timestopbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+            display: none;
+        }
+
+        #timestopbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ffffff 0%, #bbbbbb 100%);
+            transition: width 0.1s;
+        }
+
+        #gliderbar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            margin-top: -5px;
+            display: none;
+        }
+
+        #gliderbar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88 0%, #aaffaa 100%);
             transition: width 0.1s;
         }
 
@@ -666,6 +770,9 @@
         <div id="combobar-container" style="display: none;">
             <div id="combobar"></div>
         </div>
+        <div id="adrenalinebar-container" style="display: none;">
+            <div id="adrenalinebar"></div>
+        </div>
         <div id="timer">Time: 0.00s</div>
         <div id="selected">Selected: 1</div>
         <div id="aim">Aim: 0°</div>
@@ -696,6 +803,9 @@
         <div id="holobar-container" style="display: none;">
             <div id="holobar"></div>
         </div>
+        <div id="empbar-container" style="display: none;">
+            <div id="empbar"></div>
+        </div>
         <div id="bombbar-container">
             <div id="bombbar"></div>
         </div>
@@ -723,17 +833,29 @@
         <div id="teleportbar-container">
             <div id="teleportbar"></div>
         </div>
+        <div id="gliderbar-container" style="display: none;">
+            <div id="gliderbar"></div>
+        </div>
         <div id="buildbar-container">
             <div id="buildbar"></div>
         </div>
         <div id="missilebar-container">
             <div id="missilebar"></div>
         </div>
+        <div id="gravitypulsebar-container">
+            <div id="gravitypulsebar"></div>
+        </div>
         <div id="sizebar-container" style="display: none;">
             <div id="sizebar"></div>
         </div>
         <div id="vortexbar-container" style="display: none;">
             <div id="vortexbar"></div>
+        </div>
+        <div id="blackholebar-container" style="display: none;">
+            <div id="blackholebar"></div>
+        </div>
+        <div id="timestopbar-container" style="display: none;">
+            <div id="timestopbar"></div>
         </div>
         <div id="instructions">
             <kbd>1</kbd> Ramp | <kbd>2</kbd> Floor | <kbd>3</kbd> Bouncer | <kbd>4</kbd> Portal A | <kbd>5</kbd> Portal B |

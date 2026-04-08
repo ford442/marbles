@@ -114,6 +114,109 @@ export function createVolcanoZone(game, offset) {
     }
 }
 
+export function createMysticForestZone(game, offset) {
+    const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+    // --- Entrance Platform ---
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: offset.z },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.1, 0.2, 0.1],
+        'wood'
+    );
+
+    // --- Forest Floor Area ---
+    const forestStartZ = offset.z + 10;
+    const forestLength = 80;
+    const forestWidth = 30;
+
+    // Dark grassy floor
+    game.createStaticBox(
+        { x: offset.x, y: offset.y - 2, z: forestStartZ + forestLength / 2 },
+        floorQ,
+        { x: forestWidth / 2, y: 0.5, z: forestLength / 2 },
+        [0.05, 0.1, 0.05], // Very dark green
+        'wood'
+    );
+
+    // --- Glowing Trees (Static Obstacles) ---
+    // Cyan/Magenta glowing pillars representing magical trees
+    for (let i = 0; i < 12; i++) {
+        const zPos = forestStartZ + 5 + i * 6;
+        const xPos = offset.x + (Math.random() * 20 - 10);
+        const color = i % 2 === 0 ? [0.0, 1.0, 1.0] : [1.0, 0.0, 1.0]; // Alternating cyan and magenta
+
+        // Tree trunk
+        game.createStaticBox(
+            { x: xPos, y: offset.y + 3, z: zPos },
+            floorQ,
+            { x: 1, y: 5, z: 1 },
+            color,
+            'glass'
+        );
+
+        // Sometimes spawn a jump power-up near a tree
+        if (i % 4 === 0) {
+            game.createPowerUp(
+                { x: xPos, y: offset.y + 0.5, z: zPos - 2 },
+                'jump'
+            );
+        }
+    }
+
+    // --- Moving Enchanted Roots (Kinematic Horizontal) ---
+    // Roots that sweep across the forest floor
+    for (let i = 0; i < 5; i++) {
+        const zPos = forestStartZ + 15 + i * 15;
+        const amplitude = 8.0 + Math.random() * 4.0;
+
+        game.createKinematicBox(
+            { x: offset.x - amplitude, y: offset.y - 0.5, z: zPos },
+            { x: 3, y: 0.5, z: 0.5 },
+            [0.2, 0.8, 0.2], // Glowing green roots
+            'horizontal',
+            offset.x,
+            amplitude
+        );
+    }
+
+    // --- Floating Magic Platforms (Kinematic Vertical) ---
+    // Platforms that move up and down, requiring timing to cross gaps or reach higher areas
+    for (let i = 0; i < 3; i++) {
+        const zPos = forestStartZ + 20 + i * 20;
+        const xPos = offset.x + (i % 2 === 0 ? -5 : 5);
+
+        game.createKinematicBox(
+            { x: xPos, y: offset.y + 2, z: zPos },
+            { x: 2, y: 0.2, z: 2 },
+            [0.8, 0.0, 1.0], // Purple magic platforms
+            'vertical',
+            offset.y + 2,
+            4.0
+        );
+    }
+
+    // --- Exit Platform ---
+    const exitZ = forestStartZ + forestLength + 5;
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: exitZ },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.8, 0.8, 0.9],
+        'metal'
+    );
+
+    // Provide a small goal or jump point here, but the actual level goal is separate
+    game.createStaticBox(
+        { x: offset.x, y: offset.y + 0.5, z: exitZ + 5 },
+        floorQ,
+        { x: 2, y: 0.2, z: 2 },
+        [0.0, 1.0, 0.5],
+        'metal'
+    );
+}
+
 export function createFloatingIslandsZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
@@ -501,6 +604,94 @@ export function createLaserMazeZone(game, offset) {
     game.createGoalZone(
         { x: offset.x, y: offset.y + 1.0, z: exitZ },
         [0.0, 1.0, 0.5] // Greenish goal
+    );
+}
+
+export function createTrampolineParkZone(game, offset) {
+    const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+    // --- Entrance Platform ---
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: offset.z },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.2, 0.2, 0.25],
+        'concrete'
+    );
+
+    // --- Trampoline Area ---
+    const parkStartZ = offset.z + 10;
+    const parkLength = 50;
+
+    // Safety net floor below everything
+    game.createStaticBox(
+        { x: offset.x, y: offset.y - 5, z: parkStartZ + parkLength / 2 },
+        floorQ,
+        { x: 15, y: 0.5, z: parkLength / 2 + 5 },
+        [0.1, 0.5, 0.1],
+        'concrete'
+    );
+
+    // --- Bouncy Trampolines (Static) ---
+    // High restitution boxes
+    for (let i = 0; i < 5; i++) {
+        const zPos = parkStartZ + i * 10;
+        const xPos = offset.x + (i % 2 === 0 ? -4 : 4);
+
+        game.createStaticBox(
+            { x: xPos, y: offset.y, z: zPos },
+            floorQ,
+            { x: 3, y: 0.5, z: 3 },
+            [1.0, 0.2, 0.8], // Pink bouncy pad
+            'wood'
+            // We would ideally set restitution here, but createStaticBox doesn't expose it yet.
+            // We'll rely on the player's bouncy profile or powerups for now.
+        );
+    }
+
+    // --- Central Moving Platforms (Kinematic) ---
+    for (let i = 0; i < 4; i++) {
+        const zPos = parkStartZ + 5 + i * 10;
+
+        game.createKinematicBox(
+            { x: offset.x, y: offset.y + 2, z: zPos },
+            { x: 2, y: 0.5, z: 2 },
+            [0.2, 0.8, 0.2], // Green platform
+            'vertical',
+            offset.y + 2,
+            3.0 // Move up and down
+        );
+    }
+
+    // --- Dynamic Bouncing Obstacles ---
+    for (let i = 0; i < 8; i++) {
+        const zPos = parkStartZ + Math.random() * parkLength;
+        const xPos = offset.x + (Math.random() * 10 - 5);
+
+        game.createDynamicBox(
+            { x: xPos, y: offset.y + 5 + Math.random() * 5, z: zPos },
+            floorQ,
+            { x: 1, y: 1, z: 1 },
+            [0.8, 0.8, 0.1], // Yellow blocks
+            1.0,
+            'wood',
+            0.5 // Lower gravity so they bounce floaty
+        );
+    }
+
+    // --- Exit Platform ---
+    const exitZ = parkStartZ + parkLength + 5;
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: exitZ },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.8, 0.8, 0.9],
+        'metal'
+    );
+
+    game.createGoalZone(
+        { x: offset.x, y: offset.y + 1.0, z: exitZ },
+        [1.0, 0.5, 0.0] // Orange goal
     );
 }
 
@@ -897,5 +1088,712 @@ export function createNeonTrackZone(game, offset) {
     game.createGoalZone(
         { x: offset.x, y: offset.y + 1.0, z: exitZ },
         [0.0, 1.0, 0.5] // Greenish goal
+    );
+}
+
+export function createWipeoutCourseZone(game, offset) {
+    const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+    // --- Entrance Platform ---
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: offset.z },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.2, 0.4, 0.8],
+        'concrete'
+    );
+
+    const courseStartZ = offset.z + 10;
+    const courseLength = 60;
+
+    // --- Water Hazard Floor ---
+    game.createStaticBox(
+        { x: offset.x, y: offset.y - 5, z: courseStartZ + courseLength / 2 },
+        floorQ,
+        { x: 15, y: 0.5, z: courseLength / 2 },
+        [0.0, 0.5, 1.0], // Blue water
+        'glass'
+    );
+
+    // --- Bouncing Platforms ---
+    for (let i = 0; i < 4; i++) {
+        const zPos = courseStartZ + 5 + i * 12;
+        const xPos = offset.x + (i % 2 === 0 ? -3 : 3);
+
+        game.createDynamicBox(
+            { x: xPos, y: offset.y, z: zPos },
+            floorQ,
+            { x: 2, y: 0.5, z: 2 },
+            [1.0, 0.2, 0.2], // Red platforms
+            0, // static dynamic box
+            'wood',
+            -1.0 // Bouncy logic (negative gravity scale can create interesting effects or act as a base for custom logic)
+        );
+    }
+
+    // --- Sweeper Obstacles (Horizontal Kinematic) ---
+    for (let i = 0; i < 3; i++) {
+        const zPos = courseStartZ + 15 + i * 15;
+
+        game.createKinematicBox(
+            { x: offset.x, y: offset.y + 1, z: zPos },
+            { x: 6, y: 0.5, z: 0.5 },
+            [0.8, 0.8, 0.2], // Yellow sweepers
+            'horizontal',
+            offset.x,
+            4.0
+        );
+    }
+
+    // --- Vertical Pistons (Vertical Kinematic) ---
+    for (let i = 0; i < 2; i++) {
+        const zPos = courseStartZ + 25 + i * 20;
+
+        game.createKinematicBox(
+            { x: offset.x, y: offset.y - 2, z: zPos },
+            { x: 2, y: 3, z: 2 },
+            [0.2, 0.8, 0.2], // Green pistons
+            'vertical',
+            offset.y,
+            4.0
+        );
+    }
+
+    // --- Exit Platform ---
+    const exitZ = courseStartZ + courseLength + 5;
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: exitZ },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.8, 0.8, 0.9],
+        'metal'
+    );
+
+    game.createGoalZone(
+        { x: offset.x, y: offset.y + 1.0, z: exitZ },
+        [0.0, 1.0, 0.5] // Greenish goal
+    );
+}
+
+export function createCannonVolleyZone(game, offset) {
+    const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+    // --- Entrance Platform ---
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: offset.z },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.2, 0.2, 0.25],
+        'concrete'
+    );
+
+    // --- The Bridge ---
+    const bridgeStartZ = offset.z + 10;
+    const bridgeLength = 60;
+
+    // Narrow bridge for the player to cross
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: bridgeStartZ + bridgeLength / 2 - 5 },
+        floorQ,
+        { x: 1.5, y: 0.5, z: bridgeLength / 2 },
+        [0.6, 0.5, 0.4],
+        'wood'
+    );
+
+    // --- Cannon Volleys / Sweepers ---
+    // Moving kinematic boxes that shoot across the bridge
+    const numCannons = 6;
+    for (let i = 0; i < numCannons; i++) {
+        const zPos = bridgeStartZ + 5 + i * 8;
+
+        // Stagger the movement
+        const amplitude = 5.0;
+
+        // createKinematicBox(pos, halfExtents, color, type, center, amplitude)
+        game.createKinematicBox(
+            { x: offset.x, y: offset.y + 0.5, z: zPos },
+            { x: 0.5, y: 0.5, z: 0.5 }, // Cannonball
+            [0.1, 0.1, 0.1], // Dark Iron
+            'horizontal',
+            offset.x,
+            amplitude + Math.random() // slightly different speeds/amplitudes
+        );
+    }
+
+    // --- Exit Platform ---
+    const exitZ = bridgeStartZ + bridgeLength;
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: exitZ },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.8, 0.8, 0.9],
+        'metal'
+    );
+
+    game.createGoalZone(
+        { x: offset.x, y: offset.y + 1.0, z: exitZ },
+        [0.8, 0.2, 0.2] // Red goal
+    );
+}
+
+export function createCrystalCavernZone(game, offset) {
+    const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+    // --- Entrance Platform ---
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: offset.z },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.2, 0.2, 0.25],
+        'concrete'
+    );
+
+    // --- Cavern Area ---
+    const cavernStartZ = offset.z + 10;
+    const cavernLength = 60;
+    const cavernWidth = 20;
+
+    // Floor of the cavern
+    game.createStaticBox(
+        { x: offset.x, y: offset.y - 2, z: cavernStartZ + cavernLength / 2 },
+        floorQ,
+        { x: cavernWidth / 2, y: 0.5, z: cavernLength / 2 },
+        [0.4, 0.1, 0.6], // Glassy purple
+        'glass'
+    );
+
+    // --- Crystal Pillars (Static) ---
+    // Cyan static obstacles
+    for (let i = 0; i < 6; i++) {
+        const zPos = cavernStartZ + 5 + i * 10;
+        const xPos = offset.x + (i % 2 === 0 ? -4 : 4);
+
+        game.createStaticBox(
+            { x: xPos, y: offset.y + 3, z: zPos },
+            floorQ,
+            { x: 1, y: 5, z: 1 },
+            [0.0, 1.0, 1.0], // Cyan crystal
+            'glass'
+        );
+    }
+
+    // --- Moving Crystal Platforms (Kinematic) ---
+    // Horizontal moving glowing pink platforms
+    for (let i = 0; i < 4; i++) {
+        const zPos = cavernStartZ + 10 + i * 12;
+
+        game.createKinematicBox(
+            { x: offset.x, y: offset.y + 0.5, z: zPos },
+            { x: 2, y: 0.5, z: 2 },
+            [1.0, 0.0, 0.8], // Glowing pink
+            'horizontal',
+            offset.x,
+            4.0
+        );
+    }
+
+    // --- Power-Up (Jump) ---
+    game.createPowerUp(
+        { x: offset.x, y: offset.y + 1.0, z: cavernStartZ + 30 },
+        'jump'
+    );
+
+    // --- Exit Platform ---
+    const exitZ = cavernStartZ + cavernLength + 5;
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: exitZ },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.8, 0.8, 0.9],
+        'metal'
+    );
+
+    game.createGoalZone(
+        { x: offset.x, y: offset.y + 1.0, z: exitZ },
+        [0.5, 0.0, 1.0] // Purple goal
+    );
+}
+
+export function createSpaceElevatorZone(game, offset) {
+    const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+    // --- Entrance Platform ---
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: offset.z },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.2, 0.2, 0.25],
+        'concrete'
+    );
+
+    // --- Elevator Shaft Walls ---
+    const shaftStartZ = offset.z + 10;
+    const shaftHeight = 60;
+    const shaftWidth = 12;
+    const shaftDepth = 12;
+
+    // We leave the front and back partially open or closed. Let's make an open framework.
+    const pillarColors = [0.3, 0.3, 0.4];
+
+    // Four corner pillars
+    game.createStaticBox(
+        { x: offset.x - shaftWidth/2, y: offset.y + shaftHeight/2, z: shaftStartZ - shaftDepth/2 },
+        floorQ,
+        { x: 1, y: shaftHeight/2, z: 1 },
+        pillarColors,
+        'metal'
+    );
+    game.createStaticBox(
+        { x: offset.x + shaftWidth/2, y: offset.y + shaftHeight/2, z: shaftStartZ - shaftDepth/2 },
+        floorQ,
+        { x: 1, y: shaftHeight/2, z: 1 },
+        pillarColors,
+        'metal'
+    );
+    game.createStaticBox(
+        { x: offset.x - shaftWidth/2, y: offset.y + shaftHeight/2, z: shaftStartZ + shaftDepth/2 },
+        floorQ,
+        { x: 1, y: shaftHeight/2, z: 1 },
+        pillarColors,
+        'metal'
+    );
+    game.createStaticBox(
+        { x: offset.x + shaftWidth/2, y: offset.y + shaftHeight/2, z: shaftStartZ + shaftDepth/2 },
+        floorQ,
+        { x: 1, y: shaftHeight/2, z: 1 },
+        pillarColors,
+        'metal'
+    );
+
+    // --- Moving Elevator Platforms (Vertical Kinematic) ---
+    // Platforms moving up and down the shaft
+    for (let i = 0; i < 4; i++) {
+        // Stagger them
+        const baseY = offset.y + 10 + i * 12;
+
+        game.createKinematicBox(
+            { x: offset.x + (i % 2 === 0 ? -2 : 2), y: baseY, z: shaftStartZ },
+            { x: 3, y: 0.5, z: 3 },
+            [0.2, 0.8, 0.8], // Cyan platforms
+            'vertical',
+            baseY,
+            8.0 // Amplitude
+        );
+    }
+
+    // --- Horizontal Obstacle Sweepers (Kinematic) ---
+    // Moving back and forth across the shaft
+    for (let i = 0; i < 5; i++) {
+        const yPos = offset.y + 15 + i * 10;
+
+        game.createKinematicBox(
+            { x: offset.x, y: yPos, z: shaftStartZ + (i % 2 === 0 ? -2 : 2) },
+            { x: 4, y: 0.5, z: 0.5 },
+            [0.9, 0.2, 0.1], // Red sweeper
+            'horizontal',
+            offset.x,
+            4.0 // Amplitude
+        );
+    }
+
+    // --- Exit Platform at the Top ---
+    const topY = offset.y + shaftHeight;
+    const exitZ = shaftStartZ + shaftDepth + 5;
+
+    // Bridge from top of shaft to exit
+    game.createStaticBox(
+        { x: offset.x, y: topY, z: shaftStartZ + shaftDepth/2 + 2.5 },
+        floorQ,
+        { x: 2, y: 0.5, z: 2.5 },
+        [0.4, 0.4, 0.45],
+        'concrete'
+    );
+
+    game.createStaticBox(
+        { x: offset.x, y: topY, z: exitZ },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.8, 0.8, 0.9],
+        'metal'
+    );
+
+    game.createGoalZone(
+        { x: offset.x, y: topY + 1.0, z: exitZ },
+        [1.0, 0.84, 0.0] // Gold goal
+    );
+}
+
+export function createDesertRuinsZone(game, offset) {
+    const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+    // --- Entrance Platform ---
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: offset.z },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.8, 0.7, 0.5], // Sandy color
+        'concrete'
+    );
+
+    const ruinsStartZ = offset.z + 10;
+    const ruinsLength = 70;
+
+    // --- Sandy Floor ---
+    game.createStaticBox(
+        { x: offset.x, y: offset.y - 2, z: ruinsStartZ + ruinsLength / 2 },
+        floorQ,
+        { x: 15, y: 0.5, z: ruinsLength / 2 },
+        [0.9, 0.8, 0.6], // Sand
+        'concrete'
+    );
+
+    // --- Static Stone Pillars ---
+    for (let i = 0; i < 6; i++) {
+        const zPos = ruinsStartZ + 5 + i * 12;
+        const xPos = offset.x + (i % 2 === 0 ? -6 : 6);
+        game.createStaticBox(
+            { x: xPos, y: offset.y + 4, z: zPos },
+            floorQ,
+            { x: 2, y: 6, z: 2 },
+            [0.6, 0.5, 0.4], // Stone
+            'concrete'
+        );
+    }
+
+    // --- Falling Blocks (Dynamic) ---
+    for (let i = 0; i < 4; i++) {
+        const zPos = ruinsStartZ + 15 + i * 15;
+        const xPos = offset.x + (Math.random() * 8 - 4);
+        game.createDynamicBox(
+            { x: xPos, y: offset.y + 15 + Math.random() * 5, z: zPos },
+            floorQ,
+            { x: 1.5, y: 1.5, z: 1.5 },
+            [0.7, 0.6, 0.5], // Sandstone block
+            2.0,
+            'concrete'
+        );
+    }
+
+    // --- Moving Kinematic Sandstone Platforms ---
+    for (let i = 0; i < 3; i++) {
+        const zPos = ruinsStartZ + 10 + i * 20;
+        game.createKinematicBox(
+            { x: offset.x, y: offset.y + 1, z: zPos },
+            { x: 3, y: 0.5, z: 3 },
+            [0.8, 0.7, 0.5], // Sandstone
+            'horizontal',
+            offset.x,
+            5.0
+        );
+    }
+
+    // --- Exit Platform ---
+    const exitZ = ruinsStartZ + ruinsLength + 5;
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: exitZ },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.8, 0.7, 0.5],
+        'concrete'
+    );
+
+    game.createGoalZone(
+        { x: offset.x, y: offset.y + 1.0, z: exitZ },
+        [1.0, 0.8, 0.0] // Gold goal
+    );
+}
+
+export function createCloudCityZone(game, offset) {
+    const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+    // --- Entrance Platform ---
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: offset.z },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.8, 0.9, 1.0], // Light blue / white
+        'concrete'
+    );
+
+    const cityStartZ = offset.z + 10;
+    const cityLength = 80;
+
+    // --- Floating Cloud Platforms ---
+    for (let i = 0; i < 6; i++) {
+        const zPos = cityStartZ + i * 12;
+        const xPos = offset.x + (i % 2 === 0 ? -4 : 4);
+
+        // These can be bouncy or just look soft
+        game.createDynamicBox(
+            { x: xPos, y: offset.y + (i % 3), z: zPos },
+            floorQ,
+            { x: 3, y: 0.5, z: 3 },
+            [0.95, 0.95, 1.0], // White/blue clouds
+            0, // static dynamic box
+            'wood',
+            -0.5 // Slightly bouncy
+        );
+    }
+
+    // --- Sweeping Gusts (Kinematic) ---
+    for (let i = 0; i < 4; i++) {
+        const zPos = cityStartZ + 15 + i * 15;
+        game.createKinematicBox(
+            { x: offset.x, y: offset.y + 2, z: zPos },
+            { x: 5, y: 1.5, z: 0.5 },
+            [0.8, 0.9, 1.0], // Pale blue gust
+            'horizontal',
+            offset.x,
+            6.0
+        );
+    }
+
+    // --- Exit Platform ---
+    const exitZ = cityStartZ + cityLength + 5;
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: exitZ },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.8, 0.9, 1.0],
+        'concrete'
+    );
+
+    game.createGoalZone(
+        { x: offset.x, y: offset.y + 1.0, z: exitZ },
+        [0.8, 0.9, 1.0] // Soft blue goal
+    );
+}
+
+export function createNeonGridZone(game, offset) {
+    const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+    // --- Entrance Platform ---
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: offset.z },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.1, 0.9, 0.1],
+        'glass'
+    );
+
+    // --- Main Floor Area ---
+    game.createStaticBox(
+        { x: offset.x, y: offset.y - 2, z: offset.z + 30 },
+        floorQ,
+        { x: 10, y: 0.5, z: 20 },
+        [0.05, 0.05, 0.1],
+        'metal'
+    );
+
+    // --- Moving Kinematic Walls ---
+    game.createKinematicBox(
+        { x: offset.x, y: offset.y + 1, z: offset.z + 20 },
+        { x: 3, y: 1.5, z: 0.5 },
+        [1.0, 0.0, 0.8],
+        'horizontal',
+        offset.x,
+        6.0
+    );
+
+    game.createKinematicBox(
+        { x: offset.x, y: offset.y + 1, z: offset.z + 40 },
+        { x: 3, y: 1.5, z: 0.5 },
+        [0.0, 1.0, 1.0],
+        'horizontal',
+        offset.x,
+        -6.0
+    );
+
+    // --- Exit Platform ---
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: offset.z + 60 },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.1, 0.9, 0.1],
+        'glass'
+    );
+
+    game.createGoalZone(
+        { x: offset.x, y: offset.y + 1.0, z: offset.z + 60 },
+        [0.2, 0.9, 0.2]
+    );
+}
+
+export function createIceBridgesZone(game, offset) {
+    const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+    // --- Entrance Platform ---
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: offset.z },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.6, 0.8, 1.0], // Light icy blue
+        'glass'
+    );
+
+    const bridgeStartZ = offset.z + 10;
+    const bridgeLength = 60;
+
+    // --- Ice Bridges (Static) ---
+    // Multiple narrow segments
+    const segmentCount = 6;
+    const segmentLength = bridgeLength / segmentCount;
+
+    for (let i = 0; i < segmentCount; i++) {
+        const zPos = bridgeStartZ + i * segmentLength;
+        // Make gaps between segments
+        if (i % 2 !== 0) {
+            continue;
+        }
+
+        game.createStaticBox(
+            { x: offset.x, y: offset.y, z: zPos },
+            floorQ,
+            { x: 1.5, y: 0.2, z: segmentLength / 2 - 1.0 }, // Narrow, thin bridges
+            [0.8, 0.9, 1.0], // Ice color
+            'glass'
+        );
+    }
+
+    // --- Spinning Ice Obstacles (Kinematic) ---
+    for (let i = 0; i < 3; i++) {
+        const zPos = bridgeStartZ + 15 + i * 20;
+
+        game.createKinematicBox(
+            { x: offset.x, y: offset.y + 1, z: zPos },
+            { x: 4, y: 0.5, z: 0.5 },
+            [0.5, 0.8, 1.0], // Darker ice blue
+            'horizontal',
+            offset.x,
+            4.0
+        );
+    }
+
+    // --- Exit Platform ---
+    const exitZ = bridgeStartZ + bridgeLength;
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: exitZ },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.6, 0.8, 1.0],
+        'glass'
+    );
+
+    game.createGoalZone(
+        { x: offset.x, y: offset.y + 1.0, z: exitZ },
+        [0.0, 1.0, 1.0] // Cyan goal
+    );
+}
+
+export function createLavaTubesZone(game, offset) {
+    const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+    // Entrance Platform
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: offset.z },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.2, 0.2, 0.25],
+        'concrete'
+    );
+
+    // Lava Floor
+    const tubeStartZ = offset.z + 10;
+    const tubeLength = 60;
+    game.createStaticBox(
+        { x: offset.x, y: offset.y - 5, z: tubeStartZ + tubeLength / 2 },
+        floorQ,
+        { x: 15, y: 0.5, z: tubeLength / 2 },
+        [1.0, 0.2, 0.0],
+        'glass'
+    );
+
+    // Tube Segments (Static)
+    for (let i = 0; i < 4; i++) {
+        const zPos = tubeStartZ + 5 + i * 15;
+        game.createStaticBox(
+            { x: offset.x, y: offset.y, z: zPos },
+            floorQ,
+            { x: 3, y: 0.5, z: 4 },
+            [0.3, 0.3, 0.35],
+            'metal'
+        );
+    }
+
+    // Kinematic Sweepers
+    for (let i = 0; i < 3; i++) {
+        const zPos = tubeStartZ + 12 + i * 15;
+        game.createKinematicBox(
+            { x: offset.x, y: offset.y + 2, z: zPos },
+            { x: 4, y: 0.5, z: 1 },
+            [1.0, 0.5, 0.0],
+            'vertical',
+            offset.y + 2,
+            4.0
+        );
+    }
+
+    // Exit Platform
+    const exitZ = tubeStartZ + tubeLength + 5;
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: exitZ },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.8, 0.8, 0.9],
+        'metal'
+    );
+
+    game.createGoalZone(
+        { x: offset.x, y: offset.y + 1.0, z: exitZ },
+        [1.0, 0.0, 0.0] // Red goal
+    );
+}
+
+export function createJungleRunZone(game, offset) {
+    const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+
+    // --- Entrance Platform ---
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: offset.z },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.4, 0.6, 0.4],
+        'wood'
+    );
+
+    // --- Water Floor ---
+    game.createStaticBox(
+        { x: offset.x, y: offset.y - 5, z: offset.z + 30 },
+        floorQ,
+        { x: 15, y: 0.5, z: 30 },
+        [0.0, 0.5, 0.8],
+        'glass'
+    );
+
+    // --- Kinematic Swinging Logs ---
+    for (let i = 0; i < 3; i++) {
+        game.createKinematicBox(
+            { x: offset.x - 4, y: offset.y + 1, z: offset.z + 10 + i * 15 },
+            { x: 3, y: 0.5, z: 0.5 },
+            [0.5, 0.3, 0.1],
+            'horizontal',
+            offset.x,
+            4.0
+        );
+    }
+
+    // --- Exit Platform ---
+    game.createStaticBox(
+        { x: offset.x, y: offset.y, z: offset.z + 65 },
+        floorQ,
+        { x: 5, y: 0.5, z: 5 },
+        [0.4, 0.6, 0.4],
+        'wood'
+    );
+
+    // --- Goal ---
+    game.createGoalZone(
+        { x: offset.x, y: offset.y + 1.0, z: offset.z + 65 },
+        [0.0, 1.0, 0.0]
     );
 }
