@@ -502,6 +502,122 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
+    space_elevator: {
+        name: 'Space Elevator',
+        description: 'Take the elevator to the top!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'space_elevator', pos: { x: 0, y: 0, z: 25 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [35, 45], y: [50, 70] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
+    },
+    mystic_forest_run: {
+        name: 'Mystic Forest Run',
+        description: 'Navigate the glowing forest!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'mystic_forest', pos: { x: 0, y: 0, z: 25 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [115, 125], y: [-2, 2] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.05, 0.05, 0.1, 1.0]
+    },
+    cloud_city_run: {
+        name: 'Cloud City Run',
+        description: 'Bounce across the clouds!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'cloud_city', pos: { x: 0, y: 0, z: 25 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [115, 125], y: [-2, 2] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: false
+    },
+    desert_ruins_run: {
+        name: 'Desert Ruins Run',
+        description: 'Navigate through ancient ruins and dodging falling blocks!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'desert_ruins', pos: { x: 0, y: 0, z: 25 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [100, 110], y: [-2, 3] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: false
+    },
+    neon_grid_run: {
+        name: 'Neon Grid Run',
+        description: 'Navigate the glowing neon grid and avoid moving walls!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'neon_grid', pos: { x: 0, y: 0, z: 25 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [80, 90], y: [-2, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
+    },
+    ice_bridges_run: {
+        name: 'Ice Bridges Run',
+        description: 'Cross the slippery, spinning ice bridges!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'ice_bridges', pos: { x: 0, y: 0, z: 25 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [80, 90], y: [-2, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
+    },
+    jungle_run: {
+        name: 'Jungle Run',
+        description: 'Navigate the jungle logs!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'jungle_run', pos: { x: 0, y: 0, z: 25 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [85, 95], y: [-2, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
+    },
+    lava_tubes_run: {
+        name: 'Lava Tubes Run',
+        description: 'Navigate the treacherous lava tubes!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'lava_tubes', pos: { x: 0, y: 0, z: 25 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [95, 105], y: [-2, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
