@@ -1,4 +1,16 @@
 export const marbleDraft = {
+    name: "Spectral Orb",
+    color: [0.0, 1.0, 1.0],
+    offset: { x: 0.0, y: 5, z: 0 },
+    radius: 0.5,
+    density: 0.5,
+    restitution: 1.5,
+    gravityScale: 0.5,
+    friction: 0.05,
+    roughness: 0.1,
+    emissive: true,
+    lightIntensity: 30000.0,
+    lightColor: [0.5, 0.0, 1.0]
     name: "Graviton Star",
     color: [0.1, 0.9, 0.5],
     offset: { x: 0.0, y: 5, z: 0 },
