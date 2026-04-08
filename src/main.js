@@ -219,6 +219,14 @@ class MarblesGame {
         this.empBarEl = document.getElementById('empbar')
         this.empBarContainerEl = document.getElementById('empbar-container')
 
+        // Violet Light Mechanic
+        this.violetEnergy = 100
+        this.maxVioletEnergy = 100
+        this.violetActive = false
+        this.violetLightEntity = null
+        this.violetbarEl = document.getElementById('violetbar')
+        this.violetbarContainerEl = document.getElementById('violetbar-container')
+
         // Time Stop Mechanic
         this.timeStopEnergy = 100
         this.maxTimeStopEnergy = 100

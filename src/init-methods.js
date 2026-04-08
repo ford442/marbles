@@ -218,7 +218,7 @@ export class InitMethods {
                 this.spawnBomb()
             }
             if (e.code === 'KeyO' && this.playerMarble) {
-                this.shieldActive = true
+                this.violetActive = true
             }
             if (e.code === 'KeyL' && this.playerMarble) {
                 this.spawnMissile()
@@ -352,7 +352,7 @@ export class InitMethods {
                 this.gliderActive = false
             }
             if (e.code === 'KeyO') {
-                this.shieldActive = false
+                this.violetActive = false
             }
             if (e.code === 'KeyH') {
                 this.hoverActive = false
