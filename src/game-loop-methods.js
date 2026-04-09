@@ -492,7 +492,7 @@ export class GameLoopMethods {
             if (this.shieldEnergy > this.maxShieldEnergy) this.shieldEnergy = this.maxShieldEnergy
 
             // Restore original color when not shielding or out of energy
-            if (this.playerMarble && this.playerMarble.originalColor) {
+            if (this.playerMarble && this.playerMarble.originalColor && !this.violetActive) {
                 const rcm = this.engine.getRenderableManager()
                 const inst = rcm.getInstance(this.playerMarble.entity)
                 if (inst) {
@@ -509,6 +509,103 @@ export class GameLoopMethods {
                 this.shieldbarEl.style.boxShadow = '0 0 10px #00ffff'
             } else {
                 this.shieldbarEl.style.boxShadow = 'none'
+            }
+        }
+
+        // Violet Light Logic
+        if (this.violetActive && this.violetEnergy > 0) {
+            this.violetEnergy -= 1.0
+            if (this.violetEnergy < 0) this.violetEnergy = 0
+
+            if (this.playerMarble) {
+                const playerPos = this.playerMarble.rigidBody.translation()
+                const radius = 15.0
+                const force = 0.5
+
+                // Repel other dynamic bodies
+                this.world.bodies.forEach(body => {
+                    if (body === this.playerMarble.rigidBody) return
+                    if (!body.isDynamic()) return
+
+                    const bodyPos = body.translation()
+                    const dx = bodyPos.x - playerPos.x
+                    const dy = bodyPos.y - playerPos.y
+                    const dz = bodyPos.z - playerPos.z
+                    const distSq = dx * dx + dy * dy + dz * dz
+
+                    if (distSq < radius * radius && distSq > 0.001) {
+                        const dist = Math.sqrt(distSq)
+                        const fx = (dx / dist) * force * body.mass()
+                        const fy = (dy / dist) * force * body.mass()
+                        const fz = (dz / dist) * force * body.mass()
+
+                        body.applyImpulse({ x: fx, y: fy, z: fz }, true)
+                    }
+                })
+
+                // Create or update Violet Light Entity
+                if (!this.violetLightEntity) {
+                    this.violetLightEntity = this.Filament.EntityManager.get().create()
+                    this.Filament.LightManager.Builder(this.Filament.LightManager$Type.POINT)
+                        .color([0.6, 0.0, 1.0])
+                        .intensity(100000.0)
+                        .falloff(radius)
+                        .build(this.engine, this.violetLightEntity)
+                    this.scene.addEntity(this.violetLightEntity)
+                }
+
+                const tcm = this.engine.getTransformManager()
+                const lightInst = tcm.getInstance(this.violetLightEntity)
+                const lightMat = quaternionToMat4(playerPos, { x: 0, y: 0, z: 0, w: 1 })
+                tcm.setTransform(lightInst, lightMat)
+
+                // Visual feedback - tint violet
+                if (!this.shieldActive) {
+                    const rcm = this.engine.getRenderableManager()
+                    const inst = rcm.getInstance(this.playerMarble.entity)
+                    if (inst) {
+                        const matInst = rcm.getMaterialInstanceAt(inst, 0)
+                        matInst.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.6, 0.0, 1.0])
+                    }
+                }
+            }
+        } else {
+            this.violetEnergy += 0.2
+            if (this.violetEnergy > this.maxVioletEnergy) this.violetEnergy = this.maxVioletEnergy
+
+            // Destroy Violet Light Entity
+            if (this.violetLightEntity) {
+                this.scene.remove(this.violetLightEntity)
+                this.engine.destroyEntity(this.violetLightEntity)
+                this.Filament.EntityManager.get().destroy(this.violetLightEntity)
+                this.violetLightEntity = null
+            }
+
+            // Restore original color when not shielding, phasing, vortexing, or violetting
+            if (this.playerMarble && this.playerMarble.originalColor && !this.shieldActive && !this.vortexActive && !this.wasPhasing) {
+                const rcm = this.engine.getRenderableManager()
+                const inst = rcm.getInstance(this.playerMarble.entity)
+                if (inst) {
+                    const matInst = rcm.getMaterialInstanceAt(inst, 0)
+                    matInst.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, this.playerMarble.originalColor)
+                }
+            }
+        }
+
+        if (this.violetbarEl && this.violetbarContainerEl) {
+            const pct = (this.violetEnergy / this.maxVioletEnergy) * 100
+            this.violetbarEl.style.width = `${pct}%`
+
+            if (this.violetEnergy < this.maxVioletEnergy || this.violetActive) {
+                this.violetbarContainerEl.style.display = 'block'
+            } else {
+                this.violetbarContainerEl.style.display = 'none'
+            }
+
+            if (this.violetActive && this.violetEnergy > 0) {
+                this.violetbarEl.style.boxShadow = '0 0 10px #ee82ee'
+            } else {
+                this.violetbarEl.style.boxShadow = 'none'
             }
         }
 
