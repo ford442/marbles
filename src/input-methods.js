@@ -43,6 +43,28 @@ export class InputMethods {
                 }
             }
         })
+
+        document.addEventListener('wheel', (e) => {
+            if (document.pointerLockElement === this.canvas) {
+                // Adjust field of view based on wheel scroll direction
+                const zoomSensitivity = 2.0;
+                    this.currentFov = this.currentFov || 45;
+                if (e.deltaY > 0) {
+                    this.currentFov = Math.min(this.currentFov + zoomSensitivity, 120); // Zoom out
+                } else if (e.deltaY < 0) {
+                    this.currentFov = Math.max(this.currentFov - zoomSensitivity, 20); // Zoom in
+                }
+
+                // Immediately update camera projection if view and camera are available
+                if (this.view && this.camera && this.Filament) {
+                    const width = this.canvas.width;
+                    const height = this.canvas.height;
+                    const aspect = width / height;
+                    const Fov = this.Filament.Camera$Fov;
+                    this.camera.setProjectionFov(this.currentFov, aspect, 0.1, 1000.0, Fov.VERTICAL);
+                }
+            }
+        })
     }
 
     pollGamepads() {
