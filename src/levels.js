@@ -634,6 +634,18 @@ export const LEVELS = {
         nightMode: true,
         backgroundColor: [0.02, 0.02, 0.08, 1.0]
     },
+    zen_garden_run: {
+        name: 'Zen Garden',
+        description: 'Find inner peace among the sand and stones',
+        zones: [
+            { type: 'zen_garden', pos: { x: 0, y: 0, z: 0 } }
+        ],
+        spawn: { x: 0, y: 5, z: -2 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [75, 85], y: [-2, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
