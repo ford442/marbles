@@ -164,7 +164,7 @@ export class GameLogicMethods {
                 this.jumpCount = 0
             }
 
-            if (this.trickState.airTime > 30 || this.trickState.wallRides > 0) {
+            if (this.trickState.airTime > 30 || this.trickState.wallRides > 0 || this.trickState.wallBounces > 0) {
                 let points = Math.floor(this.trickState.airTime * 2)
                 let messages = []
 
@@ -202,6 +202,11 @@ export class GameLogicMethods {
                     messages.push('Wall Ride')
                 }
 
+                if (this.trickState.wallBounces > 0) {
+                    points += this.trickState.wallBounces * 30
+                    messages.push(this.trickState.wallBounces > 1 ? `x${this.trickState.wallBounces} Ricochet` : 'Ricochet')
+                }
+
                 if (points > 0) {
                     const msg = messages.join(' + ')
                     this.awardTrickPoints(msg, points, '#00ffcc')
@@ -219,6 +224,7 @@ export class GameLogicMethods {
             this.trickState.wallRides = 0
             this.trickState.flips = 0
             this.trickState.rolls = 0
+            this.trickState.wallBounces = 0
 
             this.isWallRiding = false
             this.wallRideTime = 0
@@ -272,6 +278,25 @@ export class GameLogicMethods {
                 if (this.isWallRiding) {
                     this.isWallRiding = false
                     if (audio.stopRolling) audio.stopRolling('wallride')
+                }
+            }
+
+            // Ricochet check when not wallriding
+            if (wallContact && !this.isWallRiding && horizSpeed > 3.0) {
+                const now = Date.now()
+                if (!this.lastWallBounceTime || now - this.lastWallBounceTime > 200) {
+                    this.trickState.wallBounces += 1
+                    this.lastWallBounceTime = now
+
+                    // Add slight bounce physics since we are not wall-riding
+                    const mass = rb.mass()
+                    const bounciness = 5.0
+                    rb.applyImpulse({ x: wallContact.normal.x * bounciness * mass, y: 0, z: wallContact.normal.z * bounciness * mass }, true)
+
+                    if (audio && audio.playClink) {
+                        const radius = this.playerMarble.scale * 0.5 || 0.5
+                        audio.playClink(horizSpeed, radius, `bounce-${this.currentMarbleIndex}`)
+                    }
                 }
             }
         }

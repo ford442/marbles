@@ -38,7 +38,7 @@ export class GameLoopRenderMethods {
             if (this.keys['ArrowRight'] || this.keys['KeyD']) this.camAngle += rotSpeed
             if (this.keys['ArrowUp'] || this.keys['KeyW']) this.camRadius = Math.max(5, this.camRadius - zoomSpeed)
             if (this.keys['ArrowDown'] || this.keys['KeyS']) this.camRadius = Math.min(100, this.camRadius + zoomSpeed)
-        } else if (this.cameraMode === 'follow' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown') {
+        } else if (this.cameraMode === 'follow' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown' || this.cameraMode === 'cinematic') {
             let impulseStrength = 0.5
             if (this.activeEffects.speed && Date.now() < this.activeEffects.speed) {
                 impulseStrength *= 2.0
@@ -183,7 +183,7 @@ export class GameLoopRenderMethods {
         this.aimEl.textContent = `Yaw: ${yawDeg}° Pitch: ${pitchDeg}°`
         this.powerbarEl.style.width = `${this.chargePower * 100}%`
 
-        if ((this.cameraMode === 'follow' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown') && this.currentLevel) {
+        if ((this.cameraMode === 'follow' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown' || this.cameraMode === 'cinematic') && this.currentLevel) {
             const level = LEVELS[this.currentLevel]
             const target = this.playerMarble || this.getLeader()
             if (target) {
@@ -212,6 +212,16 @@ export class GameLoopRenderMethods {
                     this.camera.lookAt([eyeX, eyeY, eyeZ], [eyeX + dirX, eyeY + dirY, eyeZ + dirZ], [0, 1, 0])
                 } else if (this.cameraMode === 'topdown') {
                     this.camera.lookAt([t.x + this.cameraShake.x, t.y + 40 + this.cameraShake.y, t.z + this.cameraShake.z], [t.x, t.y, t.z], [0, 0, -1])
+                } else if (this.cameraMode === 'cinematic') {
+                    // Slowly orbit around the target
+                    const now = Date.now()
+                    const cinematicAngle = now * 0.0005
+                    const dist = 25
+                    const height = 15
+                    const eyeX = t.x + Math.sin(cinematicAngle) * dist + this.cameraShake.x
+                    const eyeY = t.y + height + this.cameraShake.y
+                    const eyeZ = t.z + Math.cos(cinematicAngle) * dist + this.cameraShake.z
+                    this.camera.lookAt([eyeX, eyeY, eyeZ], [t.x, t.y, t.z], [0, 1, 0])
                 }
             }
         } else {
