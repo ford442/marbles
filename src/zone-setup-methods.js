@@ -1,3 +1,4 @@
+import { createMushroomBounceZone } from './mushroom_bounce_zone.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { createSphere } from './sphere.js';
 import { createSpaceStationZone } from './space_station.js';
@@ -17,7 +18,7 @@ import { createWaterSlideZone } from './water_slide_zone.js';
 import { createGrappleCourseZone } from './grapple_course_zone.js';
 import { createIceCaveZone } from './ice_cave_zone.js';
 import { createAntigravityZone } from './antigravity_zone.js';
-import { createTrampolineParkZone, createSpaceElevatorZone, createMysticForestZone, createCloudCityZone, createDesertRuinsZone, createNeonGridZone, createIceBridgesZone, createJungleRunZone, createLavaTubesZone, createStarlightAscentZone, createZenGardenZone } from './zone_draft.js';
+import { createTrampolineParkZone, createSpaceElevatorZone, createMysticForestZone, createCloudCityZone, createDesertRuinsZone, createNeonGridZone, createIceBridgesZone, createJungleRunZone, createLavaTubesZone, createStarlightAscentZone, createZenGardenZone, createToxicSwampZone } from './zone_draft.js';
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import { audio } from './audio.js';
 
@@ -126,6 +127,9 @@ export class ZoneSetupMethods {
             case 'volcano':
                 createVolcanoZone(this, offset)
                 break
+            case 'mushroom_bounce':
+                createMushroomBounceZone(this, offset)
+                break
             case 'wind_tunnel':
                 createWindTunnelZone(this, offset)
                 break
@@ -176,6 +180,9 @@ export class ZoneSetupMethods {
                 break
             case 'zen_garden':
                 createZenGardenZone(this, offset)
+                break
+            case 'toxic_swamp':
+                createToxicSwampZone(this, offset)
                 break
         }
     }

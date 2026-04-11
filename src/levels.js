@@ -5,6 +5,19 @@ import { canyonRunLevel } from './canyon_run.js';
 import { antigravityLevel } from './antigravity_zone.js';
 
 export const LEVELS = {
+    mushroom_hop: {
+        name: 'Mushroom Hop',
+        description: 'Bounce across the giant mushrooms!',
+        zones: [
+            { type: 'mushroom_bounce', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: 0, z: 50 } }
+        ],
+        spawn: { x: 0, y: 5, z: -5 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [45, 55], y: [-2, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
+    },
     wind_tunnel: {
         name: 'Wind Tunnel',
         description: 'Navigate through the giant fans!',
@@ -645,6 +658,22 @@ export const LEVELS = {
             { id: 1, range: { x: [-5, 5], z: [75, 85], y: [-2, 5] } }
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
+    },
+    toxic_swamp_run: {
+        name: 'Toxic Swamp Run',
+        description: 'Navigate the toxic swamp!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'toxic_swamp', pos: { x: 0, y: 0, z: 25 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [110, 120], y: [-2, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.01, 0.05, 0.01, 1.0]
     },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
