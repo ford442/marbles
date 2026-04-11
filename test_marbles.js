@@ -6,14 +6,40 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const mainJsPath = path.join(__dirname, 'src', 'marbles_data.js');
+const marbleDraftPath = path.join(__dirname, 'src', 'marble_draft.js');
 
 try {
-    const content = fs.readFileSync(mainJsPath, 'utf8');
-    const lines = content.split('\n');
+    const dataContent = fs.readFileSync(mainJsPath, 'utf8');
+    const draftContent = fs.readFileSync(marbleDraftPath, 'utf8');
+
+    const lines = [...dataContent.split('\n')];
 
     let success = true;
 
-    function checkMarble(name, requiredProps) {
+    function checkMarble(name, requiredProps, isDraft=false) {
+        if (isDraft) {
+            console.log(`Checking draft marble: ${name}`);
+            if (draftContent.includes(`name: "${name}"`)) {
+                console.log(`SUCCESS: ${name} marble found.`);
+                const missing = [];
+                for (const p of requiredProps) {
+                    if (!draftContent.includes(p)) {
+                        missing.push(p);
+                    }
+                }
+                if (missing.length > 0) {
+                    console.error(`FAILURE: ${name} marble missing properties: ${missing.join(', ')}`);
+                    success = false;
+                } else {
+                    console.log(`SUCCESS: ${name} marble has all required properties.`);
+                }
+            } else {
+                console.error(`FAILURE: ${name} marble NOT found.`);
+                success = false;
+            }
+            return;
+        }
+
         let marbleLine = null;
         for (const line of lines) {
             if (line.includes(`name: "${name}"`)) {
@@ -23,7 +49,7 @@ try {
         }
 
         if (marbleLine) {
-            console.log(`SUCCESS: ${name} marble found in marblesInfo.`);
+            console.log(`SUCCESS: ${name} marble found.`);
 
             const missing = [];
             for (const p of requiredProps) {
@@ -39,7 +65,7 @@ try {
                 console.log(`SUCCESS: ${name} marble has all required properties.`);
             }
         } else {
-            console.error(`FAILURE: ${name} marble NOT found in marblesInfo.`);
+            console.error(`FAILURE: ${name} marble NOT found.`);
             success = false;
         }
     }
@@ -57,6 +83,7 @@ try {
     checkMarble("Galactic Core", ['color', 'radius', 'density', 'friction', 'restitution', 'emissive: true', 'lightIntensity', 'lightColor']);
     checkMarble("Thunderbolt", ['color', 'radius', 'density', 'gravityScale', 'restitution', 'friction', 'roughness', 'emissive: true', 'lightIntensity', 'lightColor']);
     checkMarble("Echo Prism", ['color', 'radius', 'density', 'emissive: true', 'lightIntensity']);
+    checkMarble("Celestial Pearl", ['color', 'radius', 'density', 'restitution', 'gravityScale', 'friction', 'roughness', 'emissive: true', 'lightIntensity', 'lightColor'], true);
 
     if (!success) {
         console.error("Some marble checks failed.");
