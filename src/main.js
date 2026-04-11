@@ -102,8 +102,10 @@ class MarblesGame {
         this.teleportDistance = 15.0
 
         // Blink Mechanic
-        this.blinkCooldown = 0
-        this.maxBlinkCooldown = 600
+        this.lastBlinkTime = 0
+        this.blinkCooldown = 2000
+        this.blinkBarEl = document.getElementById('blinkbar')
+        this.blinkBarContainerEl = document.getElementById('blinkbar-container')
 
         this.teleportBarEl = document.getElementById('teleportbar')
         this.teleportBarContainerEl = document.getElementById('teleportbar-container')

@@ -448,6 +448,23 @@ export class GameLoopRenderMethods {
             }
         }
 
+
+        if (this.blinkBarEl) {
+            const timeSinceBlink = now - this.lastBlinkTime
+            const progress = Math.min(1.0, timeSinceBlink / this.blinkCooldown)
+            this.blinkBarEl.style.width = `${progress * 100}%`
+
+            if (progress >= 1.0) {
+               this.blinkBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ffcc00)'
+            } else {
+               this.blinkBarEl.style.filter = 'brightness(0.7)'
+            }
+
+            if (this.blinkBarContainerEl) {
+                this.blinkBarContainerEl.style.display = 'block'
+            }
+        }
+
         if (this.teleportBarEl) {
             const timeSinceTeleport = now - this.lastTeleportTime
             const progress = Math.min(1.0, timeSinceTeleport / this.teleportCooldown)
