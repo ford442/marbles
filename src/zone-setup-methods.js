@@ -1,3 +1,4 @@
+import { createMushroomBounceZone } from './mushroom_bounce_zone.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { createSphere } from './sphere.js';
 import { createSpaceStationZone } from './space_station.js';
@@ -125,6 +126,9 @@ export class ZoneSetupMethods {
                 break
             case 'volcano':
                 createVolcanoZone(this, offset)
+                break
+            case 'mushroom_bounce':
+                createMushroomBounceZone(this, offset)
                 break
             case 'wind_tunnel':
                 createWindTunnelZone(this, offset)
