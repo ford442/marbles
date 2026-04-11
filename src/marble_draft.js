@@ -21,6 +21,8 @@ export const marbleDraft = {
     friction: 0.1,
     roughness: 0.05,
     emissive: true,
+    lightIntensity: 30000.0,
+    lightColor: [0.5, 0.0, 1.0]
     lightIntensity: 45000.0,
     lightColor: [0.3, 0.7, 1.0]
 };

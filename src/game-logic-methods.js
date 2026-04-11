@@ -198,8 +198,8 @@ export class GameLogicMethods {
                 }
 
                 if (this.trickState.wallRides > 0) {
-                    points += this.trickState.wallRides * 50
-                    messages.push('Wall Ride')
+                    points += this.trickState.wallRides * 150
+                    messages.push(this.trickState.wallRides > 1 ? `x${this.trickState.wallRides} Wall Runner` : 'Wall Runner')
                 }
 
                 if (this.trickState.wallBounces > 0) {
@@ -256,7 +256,7 @@ export class GameLogicMethods {
             const linvel = rb.linvel()
             const horizSpeed = Math.hypot(linvel.x, linvel.z)
 
-            if (wallContact && horizSpeed > 5.0 && this.wallRideTime < 90) {
+            if (wallContact && horizSpeed > 15.0 && this.wallRideTime < 90) {
                 if (!this.isWallRiding) {
                     this.isWallRiding = true
                     this.trickState.wallRides += 1
@@ -264,7 +264,7 @@ export class GameLogicMethods {
 
                 const mass = rb.mass()
                 const gravityDir = rb.gravityScale() < 0 ? -1 : 1
-                rb.applyImpulse({ x: 0, y: 0.16 * mass * gravityDir, z: 0 }, true)
+                rb.applyImpulse({ x: 0, y: 9.81 * mass * (1.0/60.0) * gravityDir, z: 0 }, true)
                 rb.applyImpulse({ x: -wallContact.normal.x * 2.0, y: 0, z: -wallContact.normal.z * 2.0 }, true)
 
                 this.wallRideTime += 1
