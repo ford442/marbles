@@ -117,7 +117,7 @@ export class InitMethods {
                 this.magnetActive = true
             }
             if (e.code === 'KeyB' && this.playerMarble) {
-                this.spawnHoloPlatform()
+                this.triggerBlink()
             }
             if (e.code === 'KeyH' && this.playerMarble) {
                 this.hoverActive = true
