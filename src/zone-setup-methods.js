@@ -199,21 +199,53 @@ export class ZoneSetupMethods {
     }
 
     async setupAssets() {
-        console.log('[ASSETS] Loading baked_procedural.filament...')
-        let response
-        try {
-            response = await fetch('./baked_procedural.filament')
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        // Try loading the enhanced procedural PBR material first, fall back to the simple material
+        const materialFiles = ['./baked_procedural.filament', './baked_color.filmat']
+        let materialBuffer = null
+        let materialFile = null
+
+        for (const file of materialFiles) {
+            try {
+                console.log(`[ASSETS] Trying to load material: ${file}`)
+                const response = await fetch(file)
+                if (!response.ok) {
+                    console.warn(`[ASSETS] ${file} HTTP ${response.status}, trying next...`)
+                    continue
+                }
+                materialBuffer = await response.arrayBuffer()
+                materialFile = file
+                console.log(`[ASSETS] Loaded ${materialBuffer.byteLength} bytes from ${file}`)
+                break
+            } catch (e) {
+                console.warn(`[ASSETS] Failed to fetch ${file}:`, e)
             }
-        } catch (e) {
-            console.error('[ASSETS] Failed to fetch material:', e)
-            throw e
         }
-        const buffer = await response.arrayBuffer()
-        console.log(`[ASSETS] Loaded ${buffer.byteLength} bytes`)
-        this.material = this.engine.createMaterial(new Uint8Array(buffer))
-        console.log('[ASSETS] Material created successfully')
+
+        if (!materialBuffer) {
+            throw new Error('[ASSETS] Could not load any material file')
+        }
+
+        try {
+            this.material = this.engine.createMaterial(new Uint8Array(materialBuffer))
+            console.log(`[ASSETS] Material created from ${materialFile}`)
+        } catch (e) {
+            // If the preferred material fails, try the fallback directly
+            if (materialFile !== './baked_color.filmat') {
+                console.warn('[ASSETS] Primary material creation failed, trying baked_color.filmat...', e)
+                const resp = await fetch('./baked_color.filmat')
+                const buf = await resp.arrayBuffer()
+                this.material = this.engine.createMaterial(new Uint8Array(buf))
+                materialFile = './baked_color.filmat'
+                console.log('[ASSETS] Fallback material created')
+            } else {
+                throw e
+            }
+        }
+
+        // Track whether the enhanced procedural material is active so we know
+        // which material parameters are safe to set on material instances.
+        this.hasProceduralMaterial = (materialFile === './baked_procedural.filament')
+        console.log(`[ASSETS] Procedural material active: ${this.hasProceduralMaterial}`)
 
         const VertexAttribute = this.Filament['VertexAttribute']
         const AttributeType = this.Filament['VertexBuffer$AttributeType']
@@ -255,16 +287,21 @@ export class ZoneSetupMethods {
 
     createGrappleLine() {
         this.grappleEntity = this.Filament.EntityManager.get().create()
-        // Bright cyan/blue color for the grapple line
         const grappleColor = [0.0, 1.0, 1.0]
         const matInstance = this.material.createInstance()
-        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, grappleColor)
+        matInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, grappleColor)
         matInstance.setFloatParameter('roughness', 0.2)
+        if (this.hasProceduralMaterial) {
+            matInstance.setFloatParameter('metallic', 0.8)
+            matInstance.setFloatParameter('reflectance', 1.0)
+            matInstance.setFloatParameter('bumpScale', 0.0)
+            matInstance.setFloatParameter('bumpFrequency', 0.0)
+        }
 
         this.Filament.RenderableManager.Builder(1)
             .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
             .material(0, matInstance)
-            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.vb, this.ib)
             .receiveShadows(true)
             .castShadows(true)
             .build(this.engine, this.grappleEntity)
@@ -284,13 +321,19 @@ export class ZoneSetupMethods {
         this.cueEntity = this.Filament.EntityManager.get().create()
         const cueColor = [1.0, 1.0, 0.0]
         const matInstance = this.material.createInstance()
-        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, cueColor)
+        matInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, cueColor)
         matInstance.setFloatParameter('roughness', 0.2)
+        if (this.hasProceduralMaterial) {
+            matInstance.setFloatParameter('metallic', 0.0)
+            matInstance.setFloatParameter('reflectance', 0.6)
+            matInstance.setFloatParameter('bumpScale', 0.005)
+            matInstance.setFloatParameter('bumpFrequency', 15.0)
+        }
 
         this.Filament.RenderableManager.Builder(1)
             .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
             .material(0, matInstance)
-            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.vb, this.ib)
             .receiveShadows(true)
             .castShadows(true)
             .build(this.engine, this.cueEntity)
@@ -436,32 +479,49 @@ export class ZoneSetupMethods {
     createLight() {
         const F = this.Filament
         
+        // Primary sun light - warm daylight
         this.light = F.EntityManager.get().create()
-        F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
-            .color([1.0, 0.95, 0.85])
-            .intensity(120000.0)
-            .direction([0.5, -1.0, -0.7])
+        let sunBuilder = F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
+            .color([1.0, 0.96, 0.88])
+            .intensity(150000.0)
+            .direction([0.4, -1.0, -0.65])
             .castShadows(true)
             .sunAngularRadius(1.9)
             .sunHaloSize(10.0)
             .sunHaloFalloff(80.0)
-            .build(this.engine, this.light)
+        // Apply shadow options only when the API is available to avoid passing undefined
+        if (typeof F.shadowOptions === 'function') {
+            sunBuilder = sunBuilder.shadowOptions(F.shadowOptions({
+                mapSize: 2048,
+                shadowCascades: 2,
+                constantBias: 0.002,
+                normalBias: 1.5,
+                stable: true,
+                polygonOffsetConstant: 0.3,
+                polygonOffsetSlope: 1.0,
+                screenSpaceContactShadows: true,
+                stepCount: 16,
+            }))
+        }
+        sunBuilder.build(this.engine, this.light)
         this.scene.addEntity(this.light)
 
+        // Blue-sky fill light from opposite direction
         this.fillLight = F.EntityManager.get().create()
         F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
-            .color([0.7, 0.8, 1.0])
-            .intensity(35000.0)
-            .direction([-0.5, -0.3, 0.6])
+            .color([0.65, 0.78, 1.0])
+            .intensity(45000.0)
+            .direction([-0.4, -0.2, 0.7])
             .castShadows(false)
             .build(this.engine, this.fillLight)
         this.scene.addEntity(this.fillLight)
 
+        // Warm ambient back light (simulates ground-reflected light)
         this.backLight = F.EntityManager.get().create()
         F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
-            .color([0.6, 0.6, 0.75])
-            .intensity(25000.0)
-            .direction([0.0, -0.5, 1.0])
+            .color([0.72, 0.62, 0.52])
+            .intensity(30000.0)
+            .direction([0.0, -0.3, 1.0])
             .castShadows(false)
             .build(this.engine, this.backLight)
         this.scene.addEntity(this.backLight)
@@ -469,63 +529,111 @@ export class ZoneSetupMethods {
 
     setupPostProcessing() {
         // Bloom - makes bright marbles and lights glow
-        this.view.setBloomOptions({
-            enabled: true,
-            strength: 0.3,
-            resolution: 256,
-            levels: 6,
-            threshold: true,
-            highlight: 10.0,
-            blendMode: this.Filament['View$BloomOptions$BlendMode'].ADD,
-            quality: this.Filament['View$QualityLevel'].MEDIUM,
-        })
+        try {
+            this.view.setBloomOptions({
+                enabled: true,
+                strength: 0.4,
+                resolution: 384,
+                levels: 6,
+                threshold: true,
+                highlight: 8.0,
+                blendMode: this.Filament['View$BloomOptions$BlendMode'].ADD,
+                quality: this.Filament['View$QualityLevel'].HIGH,
+                lensFlare: false,
+            })
+        } catch (e) {
+            console.warn('[POST] Bloom setup failed:', e)
+        }
 
         // SSAO - ambient occlusion for contact shadows under marbles
-        this.view.setAmbientOcclusion(this.Filament['View$AmbientOcclusion'].SSAO)
-        this.view.setAmbientOcclusionOptions({
-            radius: 0.5,
-            power: 1.8,
-            bias: 0.005,
-            resolution: 0.5,
-            intensity: 1.5,
-            quality: this.Filament['View$QualityLevel'].MEDIUM,
-            enabled: true,
-        })
+        // Use the modern API (setAmbientOcclusionOptions with enabled:true) instead of
+        // the deprecated setAmbientOcclusion() which may not exist or have valid enum values.
+        try {
+            this.view.setAmbientOcclusionOptions({
+                radius: 0.4,
+                power: 2.0,
+                bias: 0.005,
+                resolution: 0.5,
+                intensity: 1.8,
+                quality: this.Filament['View$QualityLevel'].MEDIUM,
+                enabled: true,
+            })
+        } catch (e) {
+            console.warn('[POST] SSAO setup failed:', e)
+        }
 
         // MSAA 4x - smooth sphere edges
-        this.view.setMultiSampleAntiAliasingOptions({ enabled: true, sampleCount: 4 })
+        try {
+            this.view.setMultiSampleAntiAliasingOptions({ enabled: true, sampleCount: 4 })
+        } catch (e) {
+            console.warn('[POST] MSAA setup failed:', e)
+        }
 
         // ACES tone mapping for cinematic, physically-correct look
-        const colorGrading = this.Filament.ColorGrading.Builder()
-            .toneMapping(this.Filament['ColorGrading$ToneMapping'].ACES)
-            .contrast(1.05)
-            .saturation(1.1)
-            .build(this.engine)
-        this.view.setColorGrading(colorGrading)
+        try {
+            const colorGrading = this.Filament.ColorGrading.Builder()
+                .toneMapping(this.Filament['ColorGrading$ToneMapping'].ACES)
+                .contrast(1.08)
+                .saturation(1.15)
+                .build(this.engine)
+            this.view.setColorGrading(colorGrading)
+        } catch (e) {
+            console.warn('[POST] Color grading setup failed:', e)
+        }
 
-        // Indirect Light (IBL) via 2-band Spherical Harmonics
-        // Simulates a cool blue sky above with warm ground bounce below
-        const iblSh = new Float32Array([
-            // L00 - overall ambient (neutral blue-white)
-            0.9, 0.92, 1.05,
-            // L1-1 - warm floor bounce (Y negative)
-            0.12, 0.10, 0.06,
-            // L10 - sky direction (Y positive)
-            -0.18, -0.18, -0.28,
-            // L11 - X side contribution
-            0.04, 0.04, 0.05,
-        ])
-        this.ibl = this.Filament.IndirectLight.Builder()
-            .irradianceSh(2, iblSh)
-            .intensity(30000.0)
-            .build(this.engine)
-        this.scene.setIndirectLight(this.ibl)
+        // Indirect Light (IBL) via 3-band Spherical Harmonics
+        // Simulates a vibrant blue sky above with warm amber ground bounce below.
+        // Coefficients represent a physically-plausible studio-like environment.
+        try {
+            const iblSh = new Float32Array([
+                // L00 - DC term: base ambient brightness (blue-white sky tone)
+                 1.10,  1.12,  1.28,
+                // L1-1 - Y-axis negative (warm floor/ground bounce, amber-orange)
+                 0.18,  0.14,  0.06,
+                // L10  - Y-axis positive (blue sky contribution above)
+                -0.22, -0.20, -0.35,
+                // L11  - X-axis side contribution
+                 0.06,  0.06,  0.07,
+                // L2-2 - horizontal diagonal
+                 0.02,  0.02,  0.02,
+                // L2-1 - front-bottom
+                 0.04,  0.03,  0.01,
+                // L20  - vertical axis
+                -0.02, -0.02, -0.03,
+                // L21  - front-top
+                 0.03,  0.03,  0.02,
+                // L22  - horizontal diagonal 2
+                 0.01,  0.01,  0.01,
+            ])
+            this.ibl = this.Filament.IndirectLight.Builder()
+                .irradianceSh(3, iblSh)
+                .intensity(40000.0)
+                .build(this.engine)
+            this.scene.setIndirectLight(this.ibl)
+        } catch (e) {
+            console.warn('[POST] IBL setup failed:', e)
+            // Fallback: minimal 1-band IBL
+            try {
+                const iblShFallback = new Float32Array([1.0, 1.0, 1.1])
+                this.ibl = this.Filament.IndirectLight.Builder()
+                    .irradianceSh(1, iblShFallback)
+                    .intensity(30000.0)
+                    .build(this.engine)
+                this.scene.setIndirectLight(this.ibl)
+            } catch (e2) {
+                console.warn('[POST] IBL fallback also failed:', e2)
+            }
+        }
 
-        // Skybox - replace flat gray background with a deep space blue
-        this.skyboxEntity = this.Filament.Skybox.Builder()
-            .color([0.08, 0.10, 0.18, 1.0])
-            .build(this.engine)
-        this.scene.setSkybox(this.skyboxEntity)
+        // Skybox - deep space blue with subtle gradient
+        try {
+            this.skyboxEntity = this.Filament.Skybox.Builder()
+                .color([0.06, 0.08, 0.16, 1.0])
+                .build(this.engine)
+            this.scene.setSkybox(this.skyboxEntity)
+        } catch (e) {
+            console.warn('[POST] Skybox setup failed:', e)
+        }
     }
 
 }

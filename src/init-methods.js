@@ -530,9 +530,10 @@ export class InitMethods {
         this.view.setScene(this.scene)
         this.view.setViewport([0, 0, width, height])
 
-        const Fov = this.Filament.Camera$Fov
+        const CameraFov = this.Filament?.['Camera$Fov']
         const aspect = width / height
-        this.camera.setProjectionFov(this.currentFov, aspect, 0.1, 1000.0, Fov.VERTICAL)
+        const fovMode = CameraFov ? CameraFov.VERTICAL : 0
+        this.camera.setProjectionFov(this.currentFov, aspect, 0.1, 1000.0, fovMode)
         this.camera.lookAt([0, 10, 20], [0, 0, 0], [0, 1, 0])
 
         this.renderer.setClearOptions({ clearColor: [0.1, 0.1, 0.1, 1.0], clear: true })
@@ -557,14 +558,18 @@ export class InitMethods {
         if (typeof window.updateLoadingProgress === 'function') {
             window.updateLoadingProgress(85, 'Setting up post-processing...')
         }
-        this.setupPostProcessing()
-        console.log('[INIT] Post-processing enabled')
+        try {
+            this.setupPostProcessing()
+            console.log('[INIT] Post-processing enabled')
+        } catch (e) {
+            console.error('[INIT] Post-processing setup failed (non-fatal):', e)
+        }
 
         if (typeof window.updateLoadingProgress === 'function') {
             window.updateLoadingProgress(95, 'Preparing level menu...')
         }
         
-        // Initialize pause menu handlers
+        // Initialize pause menu handlers (once only)
         this.initPauseMenu()
         console.log('[INIT] Pause menu initialized')
         
@@ -590,10 +595,8 @@ export class InitMethods {
         this.resize()
         window.addEventListener('resize', () => this.resize())
 
-        // Initialize pause menu and settings
-        this.initPauseMenu()
         this.loadSettings()
-        console.log('[INIT] Pause menu and settings initialized')
+        console.log('[INIT] Settings loaded')
 
         // Initialize speed lines effect
         this.initSpeedLines()

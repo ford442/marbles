@@ -38,8 +38,8 @@ export class MarbleManagementMethods {
             const entity = this.Filament.EntityManager.get().create()
             const matInstance = this.material.createInstance()
             
-            // Apply base color
-            matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, info.color)
+            // Apply base color using bracket notation for sRGB (consistent with other methods)
+            matInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, info.color)
             
             // Apply PBR material properties from preset, with marble-specific overrides
             const preset = info.materialType ? materialPresets[info.materialType] : null
@@ -48,34 +48,34 @@ export class MarbleManagementMethods {
             const roughness = info.roughness !== undefined ? info.roughness : (preset ? preset.roughness : 0.4)
             matInstance.setFloatParameter('roughness', roughness)
             
-            // Apply additional PBR properties from preset if available
-            if (preset) {
-                // Metallic: marble override > preset > default (0.0)
-                const metallic = info.metallic !== undefined ? info.metallic : preset.metallic
-                matInstance.setFloatParameter('metallic', metallic)
-                
-                // Reflectance: marble override > preset > default (0.5)
-                const reflectance = info.reflectance !== undefined ? info.reflectance : preset.reflectance
-                matInstance.setFloatParameter('reflectance', reflectance)
-                
-                // Clear coat: apply if preset has it (> 0)
-                if (preset.clearCoat > 0) {
-                    const clearCoat = info.clearCoat !== undefined ? info.clearCoat : preset.clearCoat
-                    matInstance.setFloatParameter('clearCoat', clearCoat)
+            // Extended PBR parameters are only available in the procedural material
+            if (this.hasProceduralMaterial) {
+                if (preset) {
+                    // Metallic: marble override > preset > 0.0
+                    const metallic = info.metallic !== undefined ? info.metallic : preset.metallic
+                    matInstance.setFloatParameter('metallic', metallic)
                     
-                    const clearCoatRoughness = info.clearCoatRoughness !== undefined ? info.clearCoatRoughness : preset.clearCoatRoughness
-                    matInstance.setFloatParameter('clearCoatRoughness', clearCoatRoughness)
+                    // Reflectance: marble override > preset > 0.5
+                    const reflectance = info.reflectance !== undefined ? info.reflectance : preset.reflectance
+                    matInstance.setFloatParameter('reflectance', reflectance)
+                    
+                    // Clear coat: apply if preset has it (> 0)
+                    if (preset.clearCoat > 0) {
+                        const clearCoat = info.clearCoat !== undefined ? info.clearCoat : preset.clearCoat
+                        matInstance.setFloatParameter('clearCoat', clearCoat)
+                        const clearCoatRoughness = info.clearCoatRoughness !== undefined ? info.clearCoatRoughness : preset.clearCoatRoughness
+                        matInstance.setFloatParameter('clearCoatRoughness', clearCoatRoughness)
+                    }
+                    
+                    const bumpScale = info.bumpScale !== undefined ? info.bumpScale : (preset.bumpScale !== undefined ? preset.bumpScale : 0.02)
+                    const bumpFrequency = info.bumpFrequency !== undefined ? info.bumpFrequency : (preset.bumpFrequency !== undefined ? preset.bumpFrequency : 50.0)
+                    matInstance.setFloatParameter('bumpScale', bumpScale)
+                    matInstance.setFloatParameter('bumpFrequency', bumpFrequency)
+                } else {
+                    // Default procedural bump for marbles without a preset
+                    matInstance.setFloatParameter('bumpScale', info.bumpScale !== undefined ? info.bumpScale : 0.02)
+                    matInstance.setFloatParameter('bumpFrequency', info.bumpFrequency !== undefined ? info.bumpFrequency : 50.0)
                 }
-                
-                // Procedural bump mapping parameters
-                const bumpScale = info.bumpScale !== undefined ? info.bumpScale : (preset.bumpScale !== undefined ? preset.bumpScale : 0.02)
-                const bumpFrequency = info.bumpFrequency !== undefined ? info.bumpFrequency : (preset.bumpFrequency !== undefined ? preset.bumpFrequency : 50.0)
-                matInstance.setFloatParameter('bumpScale', bumpScale)
-                matInstance.setFloatParameter('bumpFrequency', bumpFrequency)
-            } else {
-                // Apply default bump parameters when no preset is defined
-                matInstance.setFloatParameter('bumpScale', info.bumpScale !== undefined ? info.bumpScale : 0.02)
-                matInstance.setFloatParameter('bumpFrequency', info.bumpFrequency !== undefined ? info.bumpFrequency : 50.0)
             }
 
             const vb = info.geometry === 'cube' ? this.vb : this.sphereVb

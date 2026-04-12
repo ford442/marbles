@@ -66,8 +66,9 @@ export class InputMethods {
                     const width = this.canvas.width;
                     const height = this.canvas.height;
                     const aspect = width / height;
-                    const Fov = this.Filament.Camera$Fov;
-                    this.camera.setProjectionFov(this.currentFov, aspect, 0.1, 1000.0, Fov.VERTICAL);
+                    const CameraFov = this.Filament?.['Camera$Fov'];
+                    const fovMode = CameraFov ? CameraFov.VERTICAL : 0;
+                    this.camera.setProjectionFov(this.currentFov, aspect, 0.1, 1000.0, fovMode);
                 }
             }
         })

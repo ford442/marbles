@@ -313,4 +313,11 @@ applyGameLoopRenderMethods(MarblesGame);
 applyGameLoopSyncMethods(MarblesGame);
 
 window.game = new MarblesGame();
-window.game.init();
+window.game.init().catch(err => {
+    console.error('[FATAL] Game initialization failed:', err)
+    const loading = document.getElementById('loading')
+    const status = loading && loading.querySelector('.loading-status')
+    if (status) status.textContent = 'Error: ' + err.message
+    const spinner = loading && loading.querySelector('.loading-spinner')
+    if (spinner) spinner.style.borderTopColor = '#ff4444'
+});

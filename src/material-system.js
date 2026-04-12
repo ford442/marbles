@@ -114,36 +114,40 @@ export function generateProceduralTexture(type, size = 256) {
 // Material presets with PBR properties
 export const materialPresets = {
     polishedMarble: {
-        roughness: 0.05,
+        roughness: 0.04,
         metallic: 0.0,
-        reflectance: 0.8,
-        clearCoat: 0.3,
-        clearCoatRoughness: 0.1,
-        bumpScale: 0.02
+        reflectance: 0.85,
+        clearCoat: 0.4,
+        clearCoatRoughness: 0.05,
+        bumpScale: 0.015,
+        bumpFrequency: 60.0
     },
     roughConcrete: {
-        roughness: 0.9,
+        roughness: 0.85,
         metallic: 0.0,
-        reflectance: 0.2,
+        reflectance: 0.18,
         clearCoat: 0.0,
         clearCoatRoughness: 1.0,
-        bumpScale: 0.15
+        bumpScale: 0.12,
+        bumpFrequency: 25.0
     },
     shinyMetal: {
-        roughness: 0.2,
+        roughness: 0.15,
         metallic: 1.0,
         reflectance: 1.0,
         clearCoat: 0.0,
         clearCoatRoughness: 0.0,
-        bumpScale: 0.05
+        bumpScale: 0.03,
+        bumpFrequency: 40.0
     },
     woodenFloor: {
         roughness: 0.6,
         metallic: 0.0,
-        reflectance: 0.3,
-        clearCoat: 0.1,
+        reflectance: 0.28,
+        clearCoat: 0.08,
         clearCoatRoughness: 0.4,
-        bumpScale: 0.1
+        bumpScale: 0.08,
+        bumpFrequency: 15.0
     },
     glass: {
         roughness: 0.0,
@@ -151,7 +155,8 @@ export const materialPresets = {
         reflectance: 1.0,
         clearCoat: 1.0,
         clearCoatRoughness: 0.0,
-        bumpScale: 0.0
+        bumpScale: 0.0,
+        bumpFrequency: 0.0
     }
 }
 
