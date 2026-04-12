@@ -1,5 +1,5 @@
 import RAPIER from '@dimforge/rapier3d-compat';
-import { applyZoneMethods } from './zone-methods.js';
+import { applyZoneMethods } from './zones/methods/index.js';
 import { applyInputMethods } from './input-methods.js';
 import { loadFilament, applyInitMethods } from './init-methods.js';
 import { applyZoneSetupMethods } from './zone-setup-methods.js';
