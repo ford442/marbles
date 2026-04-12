@@ -26,5 +26,19 @@ export const marbleDraft = [
         emissive: true,
         lightIntensity: 30000.0,
         lightColor: [0.5, 0.0, 1.0]
+    },
+    {
+        name: "Abyssal Eye",
+        color: [0.1, 0.0, 0.2],
+        offset: { x: 0.0, y: 5, z: 0 },
+        radius: 0.55,
+        density: 5.0,
+        restitution: 0.2,
+        gravityScale: 1.5,
+        friction: 0.8,
+        roughness: 0.0,
+        emissive: true,
+        lightIntensity: 60000.0,
+        lightColor: [0.3, 0.0, 0.8]
     }
 ];
