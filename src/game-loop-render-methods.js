@@ -48,6 +48,11 @@ export class GameLoopRenderMethods {
     }
 
     updateSpeedLines(speed) {
+        // Guard against NaN or undefined speed
+        if (!isFinite(speed)) {
+            speed = 0
+        }
+        
         // Calculate target intensity based on speed
         let targetIntensity = 0
         if (speed > this.SPEED_THRESHOLD) {
@@ -55,7 +60,7 @@ export class GameLoopRenderMethods {
         }
         
         // Smooth fade in/out
-        this.speedLinesIntensity = this.speedLinesIntensity * 0.9 + targetIntensity * 0.1
+        this.speedLinesIntensity = (this.speedLinesIntensity || 0) * 0.9 + targetIntensity * 0.1
         
         // Update canvas opacity
         if (this.speedLinesCanvas) {
@@ -65,6 +70,10 @@ export class GameLoopRenderMethods {
 
     renderSpeedLines() {
         if (!this.speedLinesCtx || !this.speedLinesCanvas || this.speedLinesIntensity <= 0.01) return
+        
+        // Guard against NaN intensity
+        const intensity = Math.max(0, Math.min(1, this.speedLinesIntensity || 0))
+        if (!isFinite(intensity)) return
         
         const ctx = this.speedLinesCtx
         const w = this.speedLinesCanvas.width
@@ -77,8 +86,6 @@ export class GameLoopRenderMethods {
         
         // Set additive blending for streak effect
         ctx.globalCompositeOperation = 'screen'
-        
-        const intensity = this.speedLinesIntensity
         const maxRadius = Math.max(w, h) * 0.8
         
         // Draw radial motion blur gradient
