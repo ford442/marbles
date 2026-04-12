@@ -112,23 +112,35 @@ export class MarbleManagementMethods {
                 originalGravityScale: info.gravityScale !== undefined ? info.gravityScale : 1.0
             }
 
-            if (info.emissive) {
-                const lightEntity = this.Filament.EntityManager.get().create()
-                this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].POINT)
-                    .color(info.lightColor || info.color)
-                    .intensity(info.lightIntensity || 10000.0)
-                    .falloff(20.0)
-                    .build(this.engine, lightEntity)
-                this.scene.addEntity(lightEntity)
-                marbleObj.lightEntity = lightEntity
-            }
-
             this.marbles.push(marbleObj)
         }
 
         this.currentMarbleIndex = 0
         this.playerMarble = this.marbles[0]
         this.selectedEl.textContent = `Selected: ${this.playerMarble.name}`
+        this.updateActiveMarbleLight()
+    }
+
+    updateActiveMarbleLight() {
+        if (this.activeMarbleLightEntity) {
+            this.scene.remove(this.activeMarbleLightEntity)
+            this.engine.destroyEntity(this.activeMarbleLightEntity)
+            this.Filament.EntityManager.get().destroy(this.activeMarbleLightEntity)
+            this.activeMarbleLightEntity = null
+        }
+
+        const marble = this.playerMarble
+        if (marble && marble.emissive) {
+            const lightEntity = this.Filament.EntityManager.get().create()
+            this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].POINT)
+                .color(marble.lightColor || marble.color)
+                .intensity(marble.lightIntensity || 10000.0)
+                .falloff(20.0)
+                .build(this.engine, lightEntity)
+            this.scene.addEntity(lightEntity)
+            this.activeMarbleLightEntity = lightEntity
+            marble.lightEntity = lightEntity
+        }
     }
 
     getLeader() {
