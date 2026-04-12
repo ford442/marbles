@@ -3,7 +3,7 @@
  * Agent 2: Complexity Layer
  */
 
-import { VeinTextureConfig } from '../../types';
+import { VeinTextureConfig } from '../types';
 import { generateWorleyNoise2D, generateFBMNoise2D } from '../noise';
 import { initializeTextureCanvas, textureCanvas, textureContext, textureCache, lerp, smoothstep } from './shared';
 

@@ -3,7 +3,7 @@
  * Agent 2: Complexity Layer
  */
 
-import { WeatheringConfig } from '../../types';
+import { WeatheringConfig } from '../types';
 import { generateFBMNoise2D } from '../noise';
 import { initializeTextureCanvas, textureCanvas, textureContext, smoothstep } from './shared';
 

@@ -39,7 +39,7 @@ export {
   PerformanceMetrics,
   QualityTierMapping,
   RefinedShaderSource
-} from './agent1_beauty_refinement.js';
+} from './agent1/index.js';
 
 // ============================================================================
 // AGENT 2: COMPLEXITY LAYER
@@ -85,7 +85,7 @@ export {
   MetalGrainPresets,
   WeatheringPresets,
   AllPresets
-} from './agent2_complexity_refinement.js';
+} from './agent2/index.js';
 
 // ============================================================================
 // AGENT 3: ADVANCED RENDERING
@@ -127,7 +127,7 @@ export {
   
   // Utilities
   estimateGpuCost
-} from './agent3_advanced_rendering.js';
+} from './agent3/index.js';
 
 // ============================================================================
 // AGENT 4: TRACK MATERIALS
@@ -162,7 +162,7 @@ export {
   
   // Classes
   TrackMaterialBatchUpdater
-} from './agent4_track_materials.js';
+} from './agent4/index.js';
 
 // ============================================================================
 // SWARM INTEGRATION
@@ -224,10 +224,10 @@ export const VisualsManifest = {
   seed: VISUALS_SEED,
   modules: {
     base: 'MarbleVisual.ts',
-    agent1: 'agent1_beauty_refinement.ts',
-    agent2: 'agent2_complexity_refinement.ts',
-    agent3: 'agent3_advanced_rendering.ts',
-    agent4: 'agent4_track_materials.ts',
+    agent1: 'agent1/index.ts',
+    agent2: 'agent2/index.ts',
+    agent3: 'agent3/index.ts',
+    agent4: 'agent4/index.ts',
     integration: 'MarbleVisualSwarmIntegration.ts',
     swarm: 'SWARM_INTEGRATION.ts'
   },

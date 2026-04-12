@@ -1,5 +1,5 @@
 import { SeededRandom } from './seeded-random';
-import { NoiseOptions } from '../../types';
+import { NoiseOptions } from '../types';
 
 /**
  * Permutation table for Simplex noise

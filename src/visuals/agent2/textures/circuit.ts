@@ -3,7 +3,7 @@
  * Agent 2: Complexity Layer
  */
 
-import { CircuitPatternConfig } from '../../types';
+import { CircuitPatternConfig } from '../types';
 import { initializeTextureCanvas, textureCanvas, textureContext, lerp, smoothstep } from './shared';
 
 /**

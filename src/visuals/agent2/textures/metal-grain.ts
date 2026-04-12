@@ -3,7 +3,7 @@
  * Agent 2: Complexity Layer
  */
 
-import { MetalGrainConfig } from '../../types';
+import { MetalGrainConfig } from '../types';
 import { generateFBMNoise2D } from '../noise';
 import { initializeTextureCanvas, textureCanvas, textureContext, smoothstep } from './shared';
 
