@@ -559,6 +559,51 @@ export class GameLogicMethods {
         }, 1500)
     }
 
+    spawnDriftSparks(pos) {
+        if (!this.visualParticles) return
+
+        for (let i = 0; i < 3; i++) {
+            const rayEntity = this.Filament.EntityManager.get().create()
+            const rayMatInstance = this.material.createInstance()
+
+            // Orange/Yellow sparks
+            const isYellow = Math.random() > 0.5
+            const color = isYellow ? [1.0, 1.0, 0.0] : [1.0, 0.5, 0.0]
+
+            rayMatInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color)
+            rayMatInstance.setFloatParameter('roughness', 0.2)
+            rayMatInstance.setFloatParameter('metallic', 0.0)
+
+            this.Filament.RenderableManager.Builder(1)
+                .boundingBox({ center: [0, 0, 0], halfExtent: [0.05, 0.05, 0.05] })
+                .material(0, rayMatInstance)
+                .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+                .receiveShadows(false)
+                .castShadows(false)
+                .build(this.engine, rayEntity)
+
+            this.scene.addEntity(rayEntity)
+
+            const angle = Math.random() * Math.PI * 2
+            const speed = 2.0 + Math.random() * 3.0
+
+            this.visualParticles.push({
+                entity: rayEntity,
+                matInstance: rayMatInstance,
+                spawnTime: Date.now(),
+                pos: { x: pos.x, y: pos.y, z: pos.z },
+                vel: {
+                    x: Math.cos(angle) * speed,
+                    y: 2.0 + Math.random() * 2.0,
+                    z: Math.sin(angle) * speed
+                },
+                duration: 200 + Math.random() * 200,
+                isCollectionRay: true, // Reuse ray physics
+                angle: angle
+            })
+        }
+    }
+
     checkGameLogic() {
         if (!this.currentLevel || this.levelComplete) return
 
@@ -588,8 +633,32 @@ export class GameLogicMethods {
         if (this.playerMarble && this.isGrounded(this.playerMarble)) {
             const linvel = this.playerMarble.rigidBody.linvel()
             const gravityDir = this.playerMarble.rigidBody.gravityScale() < 0 ? -1 : 1
+
             if ((gravityDir > 0 && linvel.y <= 0.1) || (gravityDir < 0 && linvel.y >= -0.1)) {
                 this.jumpCount = 0
+            }
+
+            const radius = this.playerMarble.scale * 0.5 || 0.5
+            const angvel = this.playerMarble.rigidBody.angvel()
+            const slideVx = linvel.x + angvel.z * radius
+            const slideVz = linvel.z - angvel.x * radius
+            const slideSpeed = Math.hypot(slideVx, slideVz)
+
+            if (this.trickState.driftTime === undefined) this.trickState.driftTime = 0
+
+            if (slideSpeed > 10.0 && horizSpeed > 10.0) {
+                this.trickState.driftTime += 1
+                if (this.trickState.driftTime % 3 === 0) {
+                    const pos = this.playerMarble.rigidBody.translation()
+                    const sparkPos = { x: pos.x, y: pos.y - radius, z: pos.z }
+                    this.spawnDriftSparks(sparkPos)
+                }
+            } else {
+                if (this.trickState.driftTime > 30) {
+                    const points = Math.floor(this.trickState.driftTime * 2)
+                    this.awardTrickPoints('Drift King!', points, '#ffff00')
+                }
+                this.trickState.driftTime = 0
             }
 
             if (this.trickState.airTime > 30 || this.trickState.wallRides > 0 || this.trickState.wallBounces > 0) {
@@ -653,6 +722,7 @@ export class GameLogicMethods {
             this.trickState.flips = 0
             this.trickState.rolls = 0
             this.trickState.wallBounces = 0
+            this.trickState.driftTime = 0
 
             this.isWallRiding = false
             this.wallRideTime = 0
@@ -669,6 +739,12 @@ export class GameLogicMethods {
                 this.isStomping = false
             }
         } else if (this.playerMarble) {
+            if (this.trickState.driftTime > 30) {
+                const points = Math.floor(this.trickState.driftTime * 2)
+                this.awardTrickPoints('Drift King!', points, '#ffff00')
+            }
+            this.trickState.driftTime = 0
+
             this.trickState.airTime += 1
             const angvel = this.playerMarble.rigidBody.angvel()
 
