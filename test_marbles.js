@@ -84,6 +84,7 @@ try {
     checkMarble("Thunderbolt", ['color', 'radius', 'density', 'gravityScale', 'restitution', 'friction', 'roughness', 'emissive: true', 'lightIntensity', 'lightColor']);
     checkMarble("Echo Prism", ['color', 'radius', 'density', 'emissive: true', 'lightIntensity']);
     checkMarble("Celestial Pearl", ['color', 'radius', 'density', 'restitution', 'gravityScale', 'friction', 'roughness', 'emissive: true', 'lightIntensity', 'lightColor'], true);
+    checkMarble("Abyssal Eye", ['color', 'radius', 'density', 'restitution', 'gravityScale', 'friction', 'roughness', 'emissive: true', 'lightIntensity', 'lightColor'], true);
 
     if (!success) {
         console.error("Some marble checks failed.");
