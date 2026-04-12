@@ -41,23 +41,11 @@ export class MarbleManagementMethods {
             // Apply base color
             matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, info.color)
             
-            // Apply PBR material properties with enhanced defaults
+            // Apply PBR material properties - only roughness is defined in our material
             const preset = info.materialType ? materialPresets[info.materialType] : null
             const roughness = info.roughness !== undefined ? info.roughness : (preset ? preset.roughness : 0.4)
-            const metallic = info.metallic !== undefined ? info.metallic : (preset ? preset.metallic : 0.0)
-            const reflectance = info.reflectance !== undefined ? info.reflectance : (preset ? preset.reflectance : 0.5)
-            const clearCoat = info.clearCoat !== undefined ? info.clearCoat : (preset ? preset.clearCoat : 0.0)
-            const clearCoatRoughness = info.clearCoatRoughness !== undefined ? info.clearCoatRoughness : (preset ? preset.clearCoatRoughness : 0.0)
             
             matInstance.setFloatParameter('roughness', roughness)
-            if (matInstance.setFloatParameter) {
-                matInstance.setFloatParameter('metallic', metallic)
-                matInstance.setFloatParameter('reflectance', reflectance)
-                if (clearCoat > 0) {
-                    matInstance.setFloatParameter('clearCoat', clearCoat)
-                    matInstance.setFloatParameter('clearCoatRoughness', clearCoatRoughness)
-                }
-            }
 
             const vb = info.geometry === 'cube' ? this.vb : this.sphereVb
             const ib = info.geometry === 'cube' ? this.ib : this.sphereIb
