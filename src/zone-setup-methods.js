@@ -442,13 +442,6 @@ export class ZoneSetupMethods {
             .intensity(120000.0)
             .direction([0.5, -1.0, -0.7])
             .castShadows(true)
-            .shadowOptions({
-                mapSize: 2048,
-                shadowCascades: 2,
-                constantBias: 0.001,
-                normalBias: 1.0,
-                stable: true
-            })
             .sunAngularRadius(1.9)
             .sunHaloSize(10.0)
             .sunHaloFalloff(80.0)

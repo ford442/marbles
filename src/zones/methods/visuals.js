@@ -267,16 +267,6 @@ export const visualMethods = {
             this.currentClearColor = bgColor || [0.02, 0.02, 0.08, 1.0];
             this.renderer.setClearOptions({ clearColor: this.currentClearColor, clear: true });
 
-            const shadowOpts = F.shadowOptions ? F.shadowOptions({
-                mapSize: 2048,
-                shadowCascades: 2,
-                constantBias: 0.0005,
-                normalBias: 1.5,
-                stable: true,
-                screenSpaceContactShadows: true,
-                stepCount: 16
-            }) : undefined;
-
             F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
                 .color([0.4, 0.5, 0.7])
                 .intensity(20000.0)
