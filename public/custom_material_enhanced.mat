@@ -1,0 +1,73 @@
+material {
+    name : "Enhanced PBR Material",
+    parameters : [
+        {
+           type : float3,
+           name : baseColor
+        },
+        {
+           type : float,
+           name : roughness
+        },
+        {
+           type : float,
+           name : metallic
+        },
+        {
+           type : float,
+           name : normalScale
+        },
+        {
+           type : float,
+           name : aoStrength
+        },
+        {
+           type : sampler2d,
+           name : normalMap
+        },
+        {
+           type : sampler2d,
+           name : roughnessMap
+        },
+        {
+           type : sampler2d,
+           name : aoMap
+        }
+    ],
+    requires : [ uv0, tangents ],
+    shadingModel : lit,
+    blending : opaque,
+    specularAntiAliasing : true
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        vec2 uv = getUV0();
+        
+        // Sample normal map if available, otherwise use default
+        vec3 normalTangent = texture(materialParams_normalMap, uv).xyz * 2.0 - 1.0;
+        normalTangent.xy *= materialParams.normalScale;
+        material.normal = normalize(normalTangent);
+        
+        // Prepare the material after setting normal
+        prepareMaterial(material);
+        
+        // Base color
+        material.baseColor.rgb = materialParams.baseColor;
+        material.baseColor.a = 1.0;
+        
+        // Sample roughness from texture or use parameter
+        float sampledRoughness = texture(materialParams_roughnessMap, uv).r;
+        material.roughness = sampledRoughness * materialParams.roughness;
+        
+        // Sample AO and apply
+        float ao = texture(materialParams_aoMap, uv).r;
+        material.ambientOcclusion = mix(1.0, ao, materialParams.aoStrength);
+        
+        // Metallic (for now just use parameter)
+        material.metallic = materialParams.metallic;
+        
+        // Add subtle specular highlights
+        material.reflectance = 0.5;
+    }
+}

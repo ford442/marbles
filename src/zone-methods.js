@@ -959,25 +959,36 @@ export class ZoneMethods {
     }
 
     setNightMode(enabled, bgColor) {
+        const F = this.Filament
         if (enabled) {
             this.currentClearColor = bgColor || [0.02, 0.02, 0.08, 1.0];
             this.renderer.setClearOptions({ clearColor: this.currentClearColor, clear: true });
 
-            this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
+            const shadowOpts = F.shadowOptions ? F.shadowOptions({
+                mapSize: 2048,
+                shadowCascades: 2,
+                constantBias: 0.0005,
+                normalBias: 1.5,
+                stable: true,
+                screenSpaceContactShadows: true,
+                stepCount: 16
+            }) : undefined
+
+            F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
                 .color([0.4, 0.5, 0.7])
                 .intensity(20000.0)
                 .direction([0.3, -1.0, -0.5])
                 .castShadows(true)
                 .build(this.engine, this.light);
 
-            this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
+            F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
                 .color([0.3, 0.2, 0.5])
                 .intensity(5000.0)
                 .direction([-0.3, -0.3, 0.8])
                 .castShadows(false)
                 .build(this.engine, this.fillLight);
 
-            this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
+            F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
                 .color([0.2, 0.2, 0.3])
                 .intensity(3000.0)
                 .direction([0.0, 1.0, 0.0])

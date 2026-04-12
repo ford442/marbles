@@ -1,0 +1,12 @@
+- generic [active]:
+  - generic:
+    - generic: Mushroom Hop
+    - generic: "Score: 0"
+    - generic: "Time: 12.85s"
+    - generic: "Selected: 1"
+    - generic: "Yaw: 0° Pitch: 0°"
+    - text: EMP Shockwave (K)
+    - generic:
+      - text: 1 Ramp | 2 Floor | 3 Bouncer | 4 Portal A | 5 Portal B | WASD / Arrows Move | Shift Boost | Space Jump (Hold) | V Dash | F Focus | E / Q Magnet | R Reset | Tab Switch Marble | C Camera | M Menu | N Mute | [ ] Vol | Z Stomp | T Rewind | B Blink | X Bomb | L Missile | H Hover | J Jetpack | G Frost Bridge | U Gravity Flip | K Chameleon | P Teleport | L Missile | Y Vortex | I Size Shift | 6 Phase Shift | O Violet Light
+      - generic: Portal A ⚫ | Portal B ⚫
+    - button "🔊"

@@ -417,8 +417,10 @@ export class ZoneSetupMethods {
     }
 
     createLight() {
-        this.light = this.Filament.EntityManager.get().create()
-        this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
+        const F = this.Filament
+        
+        this.light = F.EntityManager.get().create()
+        F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
             .color([1.0, 0.95, 0.85])
             .intensity(120000.0)
             .direction([0.5, -1.0, -0.7])
@@ -429,8 +431,8 @@ export class ZoneSetupMethods {
             .build(this.engine, this.light)
         this.scene.addEntity(this.light)
 
-        this.fillLight = this.Filament.EntityManager.get().create()
-        this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
+        this.fillLight = F.EntityManager.get().create()
+        F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
             .color([0.7, 0.8, 1.0])
             .intensity(35000.0)
             .direction([-0.5, -0.3, 0.6])
@@ -438,8 +440,8 @@ export class ZoneSetupMethods {
             .build(this.engine, this.fillLight)
         this.scene.addEntity(this.fillLight)
 
-        this.backLight = this.Filament.EntityManager.get().create()
-        this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
+        this.backLight = F.EntityManager.get().create()
+        F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
             .color([0.6, 0.6, 0.75])
             .intensity(25000.0)
             .direction([0.0, -0.5, 1.0])
