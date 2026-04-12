@@ -210,8 +210,9 @@ export class ZoneSetupMethods {
         this.vb = this.Filament.VertexBuffer.Builder()
             .vertexCount(24)
             .bufferCount(1)
-            .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, 28)
-            .attribute(VertexAttribute.TANGENTS, 0, AttributeType.FLOAT4, 12, 28)
+            .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, 36)
+            .attribute(VertexAttribute.TANGENTS, 0, AttributeType.FLOAT4, 12, 36)
+            .attribute(VertexAttribute.UV0, 0, AttributeType.FLOAT2, 28, 36)
             .build(this.engine)
         this.vb.setBufferAt(this.engine, 0, CUBE_VERTICES)
 
@@ -223,10 +224,11 @@ export class ZoneSetupMethods {
 
         const sphereData = createSphere(0.5, 64, 32)
         this.sphereVb = this.Filament.VertexBuffer.Builder()
-            .vertexCount(sphereData.vertices.length / 7)
+            .vertexCount(sphereData.vertices.length / 9)
             .bufferCount(1)
-            .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, 28)
-            .attribute(VertexAttribute.TANGENTS, 0, AttributeType.FLOAT4, 12, 28)
+            .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, 36)
+            .attribute(VertexAttribute.TANGENTS, 0, AttributeType.FLOAT4, 12, 36)
+            .attribute(VertexAttribute.UV0, 0, AttributeType.FLOAT2, 28, 36)
             .build(this.engine)
         this.sphereVb.setBufferAt(this.engine, 0, sphereData.vertices)
 

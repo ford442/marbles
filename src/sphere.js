@@ -1,4 +1,3 @@
-
 function cross(a, b) {
     return [
         a[1] * b[2] - a[2] * b[1],
@@ -47,7 +46,7 @@ function tbnToQuaternion(t, b, n) {
 }
 
 export function createSphere(radius, widthSegments = 32, heightSegments = 16) {
-    const vertices = []; // x, y, z, qx, qy, qz, qw
+    const vertices = []; // x, y, z, qx, qy, qz, qw, u, v
     const indices = [];
 
     for (let iy = 0; iy <= heightSegments; iy++) {
@@ -92,6 +91,7 @@ export function createSphere(radius, widthSegments = 32, heightSegments = 16) {
 
             vertices.push(x, y, z);
             vertices.push(...q);
+            vertices.push(u, v); // UV coordinates
         }
     }
 
