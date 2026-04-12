@@ -530,7 +530,7 @@ export class InitMethods {
         this.view.setScene(this.scene)
         this.view.setViewport([0, 0, width, height])
 
-        const CameraFov = this.Filament['Camera$Fov']
+        const CameraFov = this.Filament?.['Camera$Fov']
         const aspect = width / height
         const fovMode = CameraFov ? CameraFov.VERTICAL : 0
         this.camera.setProjectionFov(this.currentFov, aspect, 0.1, 1000.0, fovMode)

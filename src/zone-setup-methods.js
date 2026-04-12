@@ -243,7 +243,7 @@ export class ZoneSetupMethods {
         }
 
         // Track whether the enhanced procedural material is active so we know
-        // which parameters are safe to set on instances.
+        // which material parameters are safe to set on material instances.
         this.hasProceduralMaterial = (materialFile === './baked_procedural.filament')
         console.log(`[ASSETS] Procedural material active: ${this.hasProceduralMaterial}`)
 
@@ -481,12 +481,17 @@ export class ZoneSetupMethods {
         
         // Primary sun light - warm daylight
         this.light = F.EntityManager.get().create()
-        F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
+        let sunBuilder = F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
             .color([1.0, 0.96, 0.88])
             .intensity(150000.0)
             .direction([0.4, -1.0, -0.65])
             .castShadows(true)
-            .shadowOptions(F.shadowOptions ? F.shadowOptions({
+            .sunAngularRadius(1.9)
+            .sunHaloSize(10.0)
+            .sunHaloFalloff(80.0)
+        // Apply shadow options only when the API is available to avoid passing undefined
+        if (typeof F.shadowOptions === 'function') {
+            sunBuilder = sunBuilder.shadowOptions(F.shadowOptions({
                 mapSize: 2048,
                 shadowCascades: 2,
                 constantBias: 0.002,
@@ -496,11 +501,9 @@ export class ZoneSetupMethods {
                 polygonOffsetSlope: 1.0,
                 screenSpaceContactShadows: true,
                 stepCount: 16,
-            }) : undefined)
-            .sunAngularRadius(1.9)
-            .sunHaloSize(10.0)
-            .sunHaloFalloff(80.0)
-            .build(this.engine, this.light)
+            }))
+        }
+        sunBuilder.build(this.engine, this.light)
         this.scene.addEntity(this.light)
 
         // Blue-sky fill light from opposite direction
