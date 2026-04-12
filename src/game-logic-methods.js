@@ -1172,8 +1172,10 @@ export class GameLogicMethods {
         if (this.view && this.camera) {
             this.view.setViewport([0, 0, width, height])
             const aspect = width / height
-            const Fov = this.Filament.Camera$Fov
-            this.camera.setProjectionFov(this.currentFov, aspect, 0.1, 1000.0, Fov.VERTICAL)
+            // Use bracket notation to safely access $-prefixed enums across all environments
+            const CameraFov = this.Filament && this.Filament['Camera$Fov']
+            const fovMode = CameraFov ? CameraFov.VERTICAL : 0
+            this.camera.setProjectionFov(this.currentFov, aspect, 0.1, 1000.0, fovMode)
             this.camera.lookAt([0, 10, 20], [0, 0, 0], [0, 1, 0])
         }
     }

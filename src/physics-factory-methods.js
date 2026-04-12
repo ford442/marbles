@@ -21,6 +21,13 @@ export class PhysicsFactoryMethods {
         const matInstance = this.material.createInstance()
         matInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, color)
         matInstance.setFloatParameter('roughness', 0.2) // Glassy
+        if (this.hasProceduralMaterial) {
+            matInstance.setFloatParameter('reflectance', 1.0)
+            matInstance.setFloatParameter('clearCoat', 1.0)
+            matInstance.setFloatParameter('clearCoatRoughness', 0.0)
+            matInstance.setFloatParameter('bumpScale', 0.0)
+            matInstance.setFloatParameter('bumpFrequency', 0.0)
+        }
 
         this.Filament.RenderableManager.Builder(1)
             .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
@@ -62,21 +69,30 @@ export class PhysicsFactoryMethods {
         const matInstance = this.material.createInstance()
         matInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, color)
 
-        // Apply PBR properties from preset if provided
+        // Apply PBR properties. Only set extended parameters when the procedural
+        // material is active (simple baked_color.filmat only supports baseColor + roughness).
         if (materialPreset && typeof materialPreset === 'object') {
             matInstance.setFloatParameter('roughness', materialPreset.roughness ?? 0.4)
-            if (materialPreset.metallic !== undefined) {
-                matInstance.setFloatParameter('metallic', materialPreset.metallic)
-            }
-            if (materialPreset.reflectance !== undefined) {
-                matInstance.setFloatParameter('reflectance', materialPreset.reflectance)
-            }
-            if (materialPreset.clearCoat !== undefined && materialPreset.clearCoat > 0) {
-                matInstance.setFloatParameter('clearCoat', materialPreset.clearCoat)
-                matInstance.setFloatParameter('clearCoatRoughness', materialPreset.clearCoatRoughness ?? 0.0)
+            if (this.hasProceduralMaterial) {
+                if (materialPreset.metallic !== undefined) {
+                    matInstance.setFloatParameter('metallic', materialPreset.metallic)
+                }
+                if (materialPreset.reflectance !== undefined) {
+                    matInstance.setFloatParameter('reflectance', materialPreset.reflectance)
+                }
+                if (materialPreset.clearCoat !== undefined && materialPreset.clearCoat > 0) {
+                    matInstance.setFloatParameter('clearCoat', materialPreset.clearCoat)
+                    matInstance.setFloatParameter('clearCoatRoughness', materialPreset.clearCoatRoughness ?? 0.0)
+                }
+                matInstance.setFloatParameter('bumpScale', materialPreset.bumpScale ?? 0.015)
+                matInstance.setFloatParameter('bumpFrequency', materialPreset.bumpFrequency ?? 30.0)
             }
         } else {
             matInstance.setFloatParameter('roughness', 0.4)
+            if (this.hasProceduralMaterial) {
+                matInstance.setFloatParameter('bumpScale', 0.01)
+                matInstance.setFloatParameter('bumpFrequency', 20.0)
+            }
         }
 
         this.Filament.RenderableManager.Builder(1)
@@ -118,13 +134,17 @@ export class PhysicsFactoryMethods {
 
         const entity = this.Filament.EntityManager.get().create()
         const matInstance = this.material.createInstance()
-        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color)
+        matInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, color)
         matInstance.setFloatParameter('roughness', 0.4)
+        if (this.hasProceduralMaterial) {
+            matInstance.setFloatParameter('bumpScale', 0.02)
+            matInstance.setFloatParameter('bumpFrequency', 25.0)
+        }
 
         this.Filament.RenderableManager.Builder(1)
             .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
             .material(0, matInstance)
-            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.vb, this.ib)
             .receiveShadows(true)
             .build(this.engine, entity)
 
@@ -154,13 +174,19 @@ export class PhysicsFactoryMethods {
 
         const entity = this.Filament.EntityManager.get().create()
         const matInstance = this.material.createInstance()
-        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color)
+        matInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, color)
         matInstance.setFloatParameter('roughness', 0.2)
+        if (this.hasProceduralMaterial) {
+            matInstance.setFloatParameter('metallic', 0.6)
+            matInstance.setFloatParameter('reflectance', 0.8)
+            matInstance.setFloatParameter('bumpScale', 0.01)
+            matInstance.setFloatParameter('bumpFrequency', 30.0)
+        }
 
         this.Filament.RenderableManager.Builder(1)
             .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
             .material(0, matInstance)
-            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.vb, this.ib)
             .receiveShadows(true)
             .build(this.engine, entity)
 
