@@ -5,23 +5,29 @@ export class InputMethods {
         this.canvas.addEventListener('contextmenu', e => e.preventDefault())
 
         this.canvas.addEventListener('click', () => {
+            // Don't acquire pointer lock if paused
+            if (this.isPaused) return
             if (document.pointerLockElement !== this.canvas) {
                 this.canvas.requestPointerLock()
             }
         })
 
         document.addEventListener('mousemove', (e) => {
-            if (document.pointerLockElement === this.canvas) {
-                const sensitivity = 0.002
+            if (document.pointerLockElement === this.canvas && !this.isPaused) {
+                // Use settings-based sensitivity if available, otherwise default
+                const baseSensitivity = this.getMouseSensitivity ? this.getMouseSensitivity() : 0.002
+                const sensitivity = baseSensitivity
+                const yMultiplier = this.isYAxisInverted ? -1 : 1
+                
                 this.aimYaw -= e.movementX * sensitivity
-                this.pitchAngle -= e.movementY * sensitivity
+                this.pitchAngle -= e.movementY * sensitivity * yMultiplier
                 const maxPitch = 1.4
                 this.pitchAngle = Math.max(-maxPitch, Math.min(maxPitch, this.pitchAngle))
             }
         })
 
         document.addEventListener('mousedown', (e) => {
-            if (document.pointerLockElement === this.canvas) {
+            if (document.pointerLockElement === this.canvas && !this.isPaused) {
                 if (e.button === 0) {
                     this.charging = true
                     this.chargePower = 0
@@ -32,7 +38,7 @@ export class InputMethods {
         })
 
         document.addEventListener('mouseup', (e) => {
-            if (document.pointerLockElement === this.canvas) {
+            if (document.pointerLockElement === this.canvas && !this.isPaused) {
                 if (e.button === 0) {
                     if (this.charging) {
                         this.charging = false
@@ -45,7 +51,7 @@ export class InputMethods {
         })
 
         document.addEventListener('wheel', (e) => {
-            if (document.pointerLockElement === this.canvas) {
+            if (document.pointerLockElement === this.canvas && !this.isPaused) {
                 // Adjust field of view based on wheel scroll direction
                 const zoomSensitivity = 2.0;
                     this.currentFov = this.currentFov || 45;
@@ -68,6 +74,9 @@ export class InputMethods {
     }
 
     pollGamepads() {
+        // Don't process gamepad input when paused
+        if (this.isPaused) return
+        
         const gamepads = navigator.getGamepads ? navigator.getGamepads() : []
         for (let i = 0; i < gamepads.length; i++) {
             const gp = gamepads[i]

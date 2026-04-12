@@ -1,12 +1,15 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from './audio.js';
 import { quatFromEuler, quaternionToMat4 } from './math.js';
+import { materialPresets } from './material-system.js';
 
 export class ZoneMethods {
     createCheckpointZone(offset, size) {
         const sz = size || { x: 10, y: 5, z: 2 };
         const center = { x: offset.x, y: offset.y + sz.y / 2, z: offset.z };
         const q = { x: 0, y: 0, z: 0, w: 1 };
+        
+        // Create checkpoint visual entity
         const entity = this.Filament.EntityManager.get().create();
         const matInstance = this.material.createInstance();
         matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.0, 1.0, 1.0]);
@@ -15,7 +18,20 @@ export class ZoneMethods {
             .boundingBox({ center: [0, 0, 0], halfExtent: [sz.x / 2, sz.y / 2, sz.z / 2] })
             .material(0, matInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, entity);
+        
+        // Create point light for checkpoint glow
+        const lightEntity = this.Filament.EntityManager.get().create();
+        this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].POINT)
+            .color([0.0, 0.8, 1.0]) // Cyan/blue color
+            .intensity(10000.0) // Base intensity (will increase on activation)
+            .position([center.x, center.y, center.z])
+            .falloff(10.0) // Light radius
+            .build(this.engine, lightEntity);
+        this.scene.addEntity(lightEntity);
+        
         const tcm = this.engine.getTransformManager();
         const inst = tcm.getInstance(entity);
         const mat = quaternionToMat4(center, q);
@@ -24,11 +40,13 @@ export class ZoneMethods {
         mat[8] *= sz.z; mat[9] *= sz.z; mat[10] *= sz.z;
         tcm.setTransform(inst, mat);
         this.scene.addEntity(entity);
+        
         this.checkpoints.push({
             pos: center,
             halfExtents: { x: sz.x / 2, y: sz.y / 2, z: sz.z / 2 },
             entity: entity,
             matInstance: matInstance,
+            lightEntity: lightEntity,
             activated: false
         });
     }
@@ -100,6 +118,8 @@ export class ZoneMethods {
             .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
             .material(0, matInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, entity);
 
         this.scene.addEntity(entity);
@@ -165,6 +185,8 @@ export class ZoneMethods {
             .boundingBox({ center: [0, 0, 0], halfExtent: [0.4, 0.4, 0.4] })
             .material(0, matInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, entity);
 
         this.scene.addEntity(entity);
@@ -517,12 +539,13 @@ export class ZoneMethods {
             [1.0, 0.5, 0.0]
         ];
 
+        // Cyber platform with shiny metallic/clear coat finish
         this.createStaticBox(
             { x: offset.x, y: offset.y, z: offset.z },
             floorQ,
             { x: 4, y: 0.5, z: 5 },
             [0.1, 0.1, 0.2],
-            'concrete'
+            { ...materialPresets.shinyMetal, roughness: 0.3, clearCoat: 0.5, clearCoatRoughness: 0.2 }
         );
 
         for (let i = 0; i < 15; i++) {
@@ -533,20 +556,22 @@ export class ZoneMethods {
             const h = 1.5 + Math.abs(Math.sin(i * 12.9898)) * 2.5;
             const color = buildingColors[i % buildingColors.length];
 
+            // Neon buildings with metallic finish and clear coat
             this.createStaticBox(
                 { x: x, y: offset.y + h/2, z: z },
                 floorQ,
                 { x: 1.5, y: h/2, z: 1.5 },
                 color,
-                'metal'
+                { ...materialPresets.shinyMetal, roughness: 0.2, clearCoat: 0.8, clearCoatRoughness: 0.1 }
             );
 
+            // Walkway with polished look
             this.createStaticBox(
                 { x: offset.x, y: offset.y, z: z },
                 floorQ,
                 { x: 2, y: 0.5, z: 2 },
                 [0.1, 0.1, 0.2],
-                'concrete'
+                { ...materialPresets.polishedMarble, roughness: 0.2, clearCoat: 0.6, clearCoatRoughness: 0.15 }
             );
         }
 
@@ -556,20 +581,22 @@ export class ZoneMethods {
         const cosA = Math.cos(angle / 2);
         const rampQ = { x: sinA, y: 0, z: 0, w: cosA };
 
+        // Neon ramp with cyber aesthetic
         this.createStaticBox(
             { x: offset.x, y: offset.y + 1.5, z: rampZ },
             rampQ,
             { x: 2, y: 0.2, z: 5 },
             [1.0, 0.0, 0.5],
-            'wood'
+            { ...materialPresets.shinyMetal, roughness: 0.15, clearCoat: 0.9, clearCoatRoughness: 0.05 }
         );
 
+        // Final platform with polished finish
         this.createStaticBox(
             { x: offset.x, y: offset.y + 2, z: rampZ + 12 },
             floorQ,
             { x: 3, y: 0.5, z: 5 },
             [0.2, 0.2, 0.4],
-            'concrete'
+            { ...materialPresets.polishedMarble, roughness: 0.25, clearCoat: 0.4, clearCoatRoughness: 0.2 }
         );
     }
 
@@ -956,6 +983,264 @@ export class ZoneMethods {
             color || [1.0, 0.84, 0.0],
             'glass'
         );
+        
+        // Create enhanced goal visual effects
+        this.createGoalEffects(offset, color || [1.0, 0.84, 0.0]);
+    }
+
+    createGoalEffects(goalPos, baseColor) {
+        if (!this.goalEffects) this.goalEffects = [];
+        
+        const F = this.Filament;
+        const goldColor = [1.0, 0.84, 0.0];
+        const amberColor = [1.0, 0.6, 0.0];
+        
+        // Create 3 concentric glowing rings floating above goal
+        const rings = [];
+        const ringConfigs = [
+            { radius: 1.2, height: 1.5, speed: 0.5, phase: 0 },
+            { radius: 0.9, height: 2.0, speed: 0.7, phase: Math.PI * 0.67 },
+            { radius: 0.6, height: 2.5, speed: 0.9, phase: Math.PI * 1.33 }
+        ];
+        
+        for (let i = 0; i < ringConfigs.length; i++) {
+            const config = ringConfigs[i];
+            const ringEntity = F.EntityManager.get().create();
+            const ringMat = this.material.createInstance();
+            
+            // Golden emissive color with slight variation per ring
+            const ringColor = i === 0 ? goldColor : (i === 1 ? [1.0, 0.75, 0.2] : [1.0, 0.9, 0.4]);
+            ringMat.setColor3Parameter('baseColor', F.RgbType.sRGB, ringColor);
+            ringMat.setFloatParameter('roughness', 0.1);
+            
+            // Create thin ring geometry using flattened box
+            F.RenderableManager.Builder(1)
+                .boundingBox({ center: [0, 0, 0], halfExtent: [config.radius, 0.02, config.radius] })
+                .material(0, ringMat)
+                .geometry(0, F.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+                .receiveShadows(false)
+                .castShadows(false)
+                .build(this.engine, ringEntity);
+            
+            this.scene.addEntity(ringEntity);
+            
+            rings.push({
+                entity: ringEntity,
+                matInstance: ringMat,
+                baseY: goalPos.y + config.height,
+                radius: config.radius,
+                rotationSpeed: config.speed,
+                bobPhase: config.phase,
+                bobSpeed: 1.5 + i * 0.3,
+                bobHeight: 0.15,
+                index: i
+            });
+        }
+        
+        // Create pulsing point light at goal center
+        const lightEntity = F.EntityManager.get().create();
+        F.LightManager.Builder(F['LightManager$Type'].POINT)
+            .color(amberColor)
+            .intensity(50000.0)
+            .position([goalPos.x, goalPos.y + 2, goalPos.z])
+            .falloffRadius(15.0)
+            .build(this.engine, lightEntity);
+        this.scene.addEntity(lightEntity);
+        
+        // Create particle fountain spawners
+        const particleSpawner = {
+            nextSpawnTime: 0,
+            spawnInterval: 50, // ms between spawns
+            particles: []
+        };
+        
+        const goalEffect = {
+            pos: { ...goalPos },
+            rings: rings,
+            light: lightEntity,
+            baseColor: baseColor,
+            particleSpawner: particleSpawner,
+            state: 'idle', // 'idle', 'near', 'completed'
+            baseIntensity: 50000.0,
+            nearIntensity: 150000.0,
+            time: 0,
+            id: this.goalEffects.length
+        };
+        
+        this.goalEffects.push(goalEffect);
+        return goalEffect;
+    }
+
+    updateGoalEffects(deltaTime, playerPos) {
+        if (!this.goalEffects || this.goalEffects.length === 0) return;
+        
+        const now = Date.now();
+        const F = this.Filament;
+        const tcm = this.engine.getTransformManager();
+        
+        for (const effect of this.goalEffects) {
+            effect.time += deltaTime;
+            
+            // Calculate distance to player for intensity changes
+            let playerDist = Infinity;
+            if (playerPos) {
+                const dx = playerPos.x - effect.pos.x;
+                const dy = playerPos.y - effect.pos.y;
+                const dz = playerPos.z - effect.pos.z;
+                playerDist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            }
+            
+            // Determine state based on distance
+            const wasNear = effect.state === 'near';
+            if (playerDist < 10) {
+                effect.state = 'near';
+            } else {
+                effect.state = 'idle';
+            }
+            
+            // Update pulsing light intensity
+            const pulseSpeed = effect.state === 'near' ? 8 : 4;
+            const baseInt = effect.state === 'near' ? effect.nearIntensity : effect.baseIntensity;
+            const pulseIntensity = baseInt * (0.8 + 0.2 * Math.sin(effect.time * pulseSpeed));
+            
+            // Update light - rebuild with new intensity
+            if (effect.light) {
+                F.LightManager.Builder(F['LightManager$Type'].POINT)
+                    .color([1.0, 0.6, 0.0])
+                    .intensity(pulseIntensity)
+                    .position([effect.pos.x, effect.pos.y + 2, effect.pos.z])
+                    .falloffRadius(effect.state === 'near' ? 20 : 15)
+                    .build(this.engine, effect.light);
+            }
+            
+            // Update rings - rotation and bobbing
+            for (const ring of effect.rings) {
+                // Rotation
+                ring.rotation += ring.rotationSpeed * deltaTime * (effect.state === 'near' ? 2 : 1);
+                
+                // Vertical bobbing (sine wave)
+                const bobOffset = Math.sin(effect.time * ring.bobSpeed + ring.bobPhase) * ring.bobHeight;
+                const y = ring.baseY + bobOffset;
+                
+                // Create transform matrix with rotation around Y axis
+                const cosR = Math.cos(ring.rotation);
+                const sinR = Math.sin(ring.rotation);
+                
+                // Build rotation matrix for Y-axis rotation
+                const mat = new Float32Array([
+                    cosR * ring.radius, 0, sinR * ring.radius, 0,
+                    0, 0.02, 0, 0,
+                    -sinR * ring.radius, 0, cosR * ring.radius, 0,
+                    effect.pos.x, y, effect.pos.z, 1
+                ]);
+                
+                const inst = tcm.getInstance(ring.entity);
+                tcm.setTransform(inst, mat);
+                
+                // Fade rings in sequence
+                if (effect.state === 'near') {
+                    // All rings bright when near
+                    ring.matInstance.setColor3Parameter('baseColor', F.RgbType.sRGB, [1.0, 0.95, 0.5]);
+                } else {
+                    // Sequential fade based on time
+                    const fadePhase = (effect.time * 0.5 + ring.index * 0.3) % 3;
+                    const brightness = fadePhase < 1 ? fadePhase : (fadePhase < 2 ? 1 : 3 - fadePhase);
+                    const r = 1.0;
+                    const g = 0.84 * brightness;
+                    const b = 0.0;
+                    ring.matInstance.setColor3Parameter('baseColor', F.RgbType.sRGB, [r, g, b]);
+                }
+            }
+            
+            // Spawn particle fountain particles
+            if (now > effect.particleSpawner.nextSpawnTime) {
+                effect.particleSpawner.nextSpawnTime = now + effect.particleSpawner.spawnInterval;
+                this.spawnGoalParticle(effect);
+            }
+        }
+    }
+
+    spawnGoalParticle(effect) {
+        const F = this.Filament;
+        const particleEntity = F.EntityManager.get().create();
+        const particleMat = this.material.createInstance();
+        
+        // Golden sparkle color with slight variation
+        const hue = Math.random() * 0.1; // Slight gold variation
+        const brightness = 0.8 + Math.random() * 0.2;
+        particleMat.setColor3Parameter('baseColor', F.RgbType.sRGB, 
+            [brightness, brightness * 0.9, brightness * 0.3]);
+        particleMat.setFloatParameter('roughness', 0.0);
+        
+        F.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [0.05, 0.05, 0.05] })
+            .material(0, particleMat)
+            .geometry(0, F.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .receiveShadows(false)
+            .castShadows(false)
+            .build(this.engine, particleEntity);
+        
+        this.scene.addEntity(particleEntity);
+        
+        // Random position in center area with outward velocity
+        const angle = Math.random() * Math.PI * 2;
+        const radius = Math.random() * 0.3;
+        const x = effect.pos.x + Math.cos(angle) * radius;
+        const z = effect.pos.z + Math.sin(angle) * radius;
+        const y = effect.pos.y + 0.5;
+        
+        // Upward velocity with slight spread
+        const spread = 0.5;
+        const vel = {
+            x: (Math.random() - 0.5) * spread,
+            y: 1.5 + Math.random() * 1.0, // Upward
+            z: (Math.random() - 0.5) * spread
+        };
+        
+        this.visualParticles.push({
+            entity: particleEntity,
+            matInstance: particleMat,
+            pos: { x, y, z },
+            vel: vel,
+            spawnTime: Date.now(),
+            duration: 1500 + Math.random() * 500,
+            scale: 1.0,
+            isGoalParticle: true
+        });
+    }
+
+    triggerGoalCompletionEffect(goalId) {
+        if (!this.goalEffects) return;
+        
+        const effect = this.goalEffects[goalId];
+        if (!effect) return;
+        
+        effect.state = 'completed';
+        
+        // Burst effect - spawn many particles
+        for (let i = 0; i < 30; i++) {
+            setTimeout(() => this.spawnGoalParticle(effect), i * 20);
+        }
+        
+        // Flash all rings bright
+        for (const ring of effect.rings) {
+            ring.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 1.0, 0.8]);
+        }
+        
+        // Temporarily boost light
+        if (effect.light) {
+            this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].POINT)
+                .color([1.0, 1.0, 0.5])
+                .intensity(300000.0)
+                .position([effect.pos.x, effect.pos.y + 2, effect.pos.z])
+                .falloffRadius(30.0)
+                .build(this.engine, effect.light);
+        }
+        
+        // Return to normal after 1 second
+        setTimeout(() => {
+            effect.state = 'idle';
+        }, 1000);
     }
 
     setNightMode(enabled, bgColor) {

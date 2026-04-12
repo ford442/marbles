@@ -3,6 +3,432 @@ import { quatFromEuler } from './math.js';
 import { LEVELS } from './levels.js';
 
 export class GameLogicMethods {
+    /**
+     * Trigger collection burst effect when a collectible is collected
+     * @param {Object} pos - Position {x, y, z} of the collectible
+     * @param {number} value - Score value of the collectible
+     * @param {string} type - Type of collectible ('coin', 'gem', 'star')
+     */
+    triggerCollectionEffect(pos, value, type = 'coin') {
+        const now = Date.now()
+        
+        // Define colors based on collectible type
+        const colors = {
+            coin: { r: 1.0, g: 0.84, b: 0.0 },     // Gold
+            gem: { r: 0.0, g: 0.8, b: 1.0 },       // Cyan/Blue
+            star: { r: 1.0, g: 0.9, b: 0.2 }       // Bright yellow
+        }
+        const color = colors[type] || colors.coin
+        
+        // 1. Create particle burst (25 particles)
+        const particleCount = 25
+        for (let i = 0; i < particleCount; i++) {
+            const particle = this.createCollectionParticle(pos, color, i, particleCount)
+            this.visualParticles.push(particle)
+        }
+        
+        // 2. Create flash ring effect
+        const ringEntity = this.Filament.EntityManager.get().create()
+        const ringMatInstance = this.material.createInstance()
+        ringMatInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [color.r, color.g, color.b])
+        ringMatInstance.setFloatParameter('roughness', 0.3)
+        
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.05, 0.5] })
+            .material(0, ringMatInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .receiveShadows(false)
+            .castShadows(false)
+            .build(this.engine, ringEntity)
+        
+        this.scene.addEntity(ringEntity)
+        
+        this.visualParticles.push({
+            entity: ringEntity,
+            matInstance: ringMatInstance,
+            spawnTime: now,
+            pos: { x: pos.x, y: pos.y, z: pos.z },
+            duration: 600,
+            isCollectionRing: true,
+            startRadius: 0.5,
+            maxRadius: 3.0,
+            color: color
+        })
+        
+        // 3. Create sparkle rays (8 rays emanating outward)
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2
+            const rayEntity = this.Filament.EntityManager.get().create()
+            const rayMatInstance = this.material.createInstance()
+            rayMatInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 1.0, 0.8])
+            rayMatInstance.setFloatParameter('roughness', 0.1)
+            
+            this.Filament.RenderableManager.Builder(1)
+                .boundingBox({ center: [0, 0, 0], halfExtent: [0.05, 0.05, 0.3] })
+                .material(0, rayMatInstance)
+                .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+                .receiveShadows(false)
+                .castShadows(false)
+                .build(this.engine, rayEntity)
+            
+            this.scene.addEntity(rayEntity)
+            
+            const speed = 3.0 + Math.random() * 2.0
+            this.visualParticles.push({
+                entity: rayEntity,
+                matInstance: rayMatInstance,
+                spawnTime: now,
+                pos: { x: pos.x, y: pos.y, z: pos.z },
+                vel: {
+                    x: Math.cos(angle) * speed,
+                    y: 1.0 + Math.random() * 2.0,
+                    z: Math.sin(angle) * speed
+                },
+                duration: 400 + Math.random() * 200,
+                isCollectionRay: true,
+                angle: angle
+            })
+        }
+        
+        // 4. Show floating score popup
+        this.showCollectionScorePopup(pos, value)
+        
+        // 5. Screen flash effect (subtle, localized to position)
+        this.triggerCollectionFlash(pos, color)
+    }
+    
+    /**
+     * Create a single collection particle
+     */
+    createCollectionParticle(pos, color, index, total) {
+        const entity = this.Filament.EntityManager.get().create()
+        const matInstance = this.material.createInstance()
+        
+        // Vary color slightly for visual interest
+        const variation = 0.2
+        const r = Math.min(1.0, color.r + (Math.random() - 0.5) * variation)
+        const g = Math.min(1.0, color.g + (Math.random() - 0.5) * variation)
+        const b = Math.min(1.0, color.b + (Math.random() - 0.5) * variation)
+        
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [r, g, b])
+        matInstance.setFloatParameter('roughness', 0.2)
+        
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [0.08, 0.08, 0.08] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .receiveShadows(false)
+            .castShadows(false)
+            .build(this.engine, entity)
+        
+        this.scene.addEntity(entity)
+        
+        // Calculate burst direction (upward cone)
+        const angle = (index / total) * Math.PI * 2
+        const spread = 0.5 + Math.random() * 0.5
+        const upwardBias = 2.0 + Math.random() * 2.0
+        
+        return {
+            entity: entity,
+            matInstance: matInstance,
+            spawnTime: Date.now(),
+            pos: { 
+                x: pos.x + (Math.random() - 0.5) * 0.3, 
+                y: pos.y + (Math.random() - 0.5) * 0.3, 
+                z: pos.z + (Math.random() - 0.5) * 0.3 
+            },
+            vel: {
+                x: Math.cos(angle) * spread,
+                y: upwardBias + Math.random() * 1.5,
+                z: Math.sin(angle) * spread
+            },
+            duration: 500 + Math.random() * 400,
+            isCollectionParticle: true,
+            rotationSpeed: (Math.random() - 0.5) * 0.3
+        }
+    }
+    
+    /**
+     * Show floating score popup
+     */
+    showCollectionScorePopup(pos, value) {
+        const uiContainer = document.getElementById('ui')
+        if (!uiContainer) return
+        
+        const popup = document.createElement('div')
+        const scoreText = value * this.combo
+        popup.textContent = `+${scoreText}`
+        popup.className = 'collection-score-popup'
+        popup.style.cssText = `
+            position: absolute;
+            color: #ffd700;
+            font-weight: bold;
+            font-size: 24px;
+            text-shadow: 2px 2px 0 #000, 0 0 10px #ffd700;
+            pointer-events: none;
+            z-index: 100;
+            transform: translate(-50%, -50%) scale(0.5);
+            transition: all 0.8s ease-out;
+            opacity: 0;
+        `
+        
+        // Project 3D position to screen space
+        const screenPos = this.worldToScreen(pos)
+        if (screenPos) {
+            popup.style.left = screenPos.x + 'px'
+            popup.style.top = screenPos.y + 'px'
+        } else {
+            // Fallback to center
+            popup.style.left = '50%'
+            popup.style.top = '40%'
+        }
+        
+        uiContainer.appendChild(popup)
+        
+        // Animate with scale pulse and upward float
+        requestAnimationFrame(() => {
+            popup.style.transform = 'translate(-50%, -50%) scale(1.2)'
+            popup.style.opacity = '1'
+            
+            setTimeout(() => {
+                popup.style.transform = 'translate(-50%, -150%) scale(1.0)'
+                popup.style.opacity = '0'
+            }, 100)
+        })
+        
+        // Remove after animation
+        setTimeout(() => {
+            if (popup.parentNode) {
+                popup.parentNode.removeChild(popup)
+            }
+        }, 900)
+    }
+    
+    /**
+     * Convert world position to screen coordinates
+     */
+    worldToScreen(worldPos) {
+        if (!this.camera || !this.view) return null
+        
+        try {
+            // Get camera matrices
+            const viewMatrix = this.camera.getViewMatrix()
+            const projectionMatrix = this.camera.getProjectionMatrix()
+            
+            // Transform world to view space
+            const viewX = viewMatrix[0] * worldPos.x + viewMatrix[4] * worldPos.y + viewMatrix[8] * worldPos.z + viewMatrix[12]
+            const viewY = viewMatrix[1] * worldPos.x + viewMatrix[5] * worldPos.y + viewMatrix[9] * worldPos.z + viewMatrix[13]
+            const viewZ = viewMatrix[2] * worldPos.x + viewMatrix[6] * worldPos.y + viewMatrix[10] * worldPos.z + viewMatrix[14]
+            
+            // Transform view to clip space
+            const clipX = projectionMatrix[0] * viewX + projectionMatrix[8] * viewZ
+            const clipY = projectionMatrix[5] * viewY + projectionMatrix[9] * viewZ
+            const clipW = -viewZ
+            
+            if (clipW <= 0) return null // Behind camera
+            
+            // Normalize device coordinates
+            const ndcX = clipX / clipW
+            const ndcY = clipY / clipW
+            
+            // Convert to screen coordinates
+            const viewport = this.view.getViewport()
+            const screenX = (ndcX * 0.5 + 0.5) * viewport[2]
+            const screenY = (1.0 - (ndcY * 0.5 + 0.5)) * viewport[3]
+            
+            return { x: screenX, y: screenY }
+        } catch (e) {
+            return null
+        }
+    }
+    
+    /**
+     * Trigger subtle screen flash at collectible position
+     */
+    triggerCollectionFlash(pos, color) {
+        // Create a brief point light at the collection position
+        const lightEntity = this.Filament.EntityManager.get().create()
+        
+        // Create a small emissive sphere for the flash
+        const flashEntity = this.Filament.EntityManager.get().create()
+        const flashMatInstance = this.material.createInstance()
+        flashMatInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [color.r, color.g, color.b])
+        flashMatInstance.setFloatParameter('roughness', 0.0)
+        
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [0.3, 0.3, 0.3] })
+            .material(0, flashMatInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .receiveShadows(false)
+            .castShadows(false)
+            .build(this.engine, flashEntity)
+        
+        this.scene.addEntity(flashEntity)
+        
+        this.visualParticles.push({
+            entity: flashEntity,
+            matInstance: flashMatInstance,
+            spawnTime: Date.now(),
+            pos: { x: pos.x, y: pos.y, z: pos.z },
+            duration: 150,
+            isCollectionFlash: true,
+            maxScale: 1.5
+        })
+    }
+
+    /**
+     * Activates a checkpoint with visual effects:
+     * - Screen flash (200-300ms white fade)
+     * - Particle burst (30-50 particles, cyan/blue, upward burst)
+     * - Ring pulse (expanding cyan ring)
+     * - Enhanced glow on checkpoint material and point light
+     */
+    activateCheckpoint(checkpoint, marble) {
+        if (checkpoint.activated) return
+        
+        checkpoint.activated = true
+        
+        // Change material to bright green/yellow activated color
+        if (checkpoint.matInstance) {
+            checkpoint.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 0.9, 0.0])
+            checkpoint.matInstance.setFloatParameter('roughness', 0.2)
+        }
+        
+        // Enhance point light if present
+        if (checkpoint.lightEntity) {
+            const lightManager = this.engine.getLightManager()
+            const lightInst = lightManager.getInstance(checkpoint.lightEntity)
+            lightManager.setIntensity(lightInst, 50000.0) // Boost intensity
+            lightManager.setColor(lightInst, [0.0, 1.0, 0.5]) // Shift to green
+        }
+        
+        // Trigger screen flash
+        this.triggerCheckpointFlash()
+        
+        // Create particle burst
+        this.createCheckpointParticles(checkpoint.pos)
+        
+        // Create ring pulse
+        this.createCheckpointRing(checkpoint.pos)
+        
+        // Play sound
+        audio.playGoal()
+        
+        // Update respawn position
+        marble.respawnPos = { x: checkpoint.pos.x, y: checkpoint.pos.y + 1.0, z: checkpoint.pos.z }
+        
+        console.log(`[GAME] Checkpoint activated by ${marble.name || 'marble'}! New respawn set.`)
+    }
+    
+    /**
+     * Triggers a brief white screen flash overlay
+     */
+    triggerCheckpointFlash() {
+        const flashOverlay = document.getElementById('checkpoint-flash-overlay')
+        if (!flashOverlay) return
+        
+        // Reset and trigger flash
+        flashOverlay.style.opacity = '0.8'
+        flashOverlay.style.transition = 'none'
+        
+        // Force reflow
+        flashOverlay.getBoundingClientRect()
+        
+        // Fade out over 250ms
+        flashOverlay.style.transition = 'opacity 250ms ease-out'
+        flashOverlay.style.opacity = '0'
+    }
+    
+    /**
+     * Creates a burst of 30-50 cyan/blue particles from checkpoint position
+     */
+    createCheckpointParticles(pos) {
+        const particleCount = 35 + Math.floor(Math.random() * 15) // 35-50 particles
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particleEntity = this.Filament.EntityManager.get().create()
+            const particleMat = this.material.createInstance()
+            
+            // Cyan/blue color variations
+            const hue = Math.random()
+            const r = 0.0
+            const g = 0.6 + hue * 0.4  // 0.6 to 1.0
+            const b = 0.8 + hue * 0.2  // 0.8 to 1.0
+            
+            particleMat.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [r, g, b])
+            particleMat.setFloatParameter('roughness', 0.3)
+            
+            this.Filament.RenderableManager.Builder(1)
+                .boundingBox({ center: [0, 0, 0], halfExtent: [0.1, 0.1, 0.1] })
+                .material(0, particleMat)
+                .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+                .receiveShadows(false)
+                .castShadows(false)
+                .build(this.engine, particleEntity)
+            
+            this.scene.addEntity(particleEntity)
+            
+            // Random upward velocity with spread
+            const angle = Math.random() * Math.PI * 2
+            const spread = Math.random() * 0.5
+            const upwardSpeed = 3.0 + Math.random() * 4.0
+            
+            this.visualParticles.push({
+                entity: particleEntity,
+                matInstance: particleMat,
+                spawnTime: Date.now(),
+                pos: { 
+                    x: pos.x + (Math.random() - 0.5) * 2, 
+                    y: pos.y + (Math.random() - 0.5), 
+                    z: pos.z + (Math.random() - 0.5) * 2 
+                },
+                vel: {
+                    x: Math.cos(angle) * spread,
+                    y: upwardSpeed,
+                    z: Math.sin(angle) * spread
+                },
+                duration: 1000 + Math.random() * 1000, // 1-2 seconds
+                scale: 1.0,
+                isCheckpointParticle: true
+            })
+        }
+    }
+    
+    /**
+     * Creates an expanding ring pulse from checkpoint center
+     */
+    createCheckpointRing(pos) {
+        const ringEntity = this.Filament.EntityManager.get().create()
+        const ringMat = this.material.createInstance()
+        
+        // Cyan ring color
+        ringMat.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.0, 0.9, 1.0])
+        ringMat.setFloatParameter('roughness', 0.2)
+        
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.05, 0.5] })
+            .material(0, ringMat)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .receiveShadows(false)
+            .castShadows(false)
+            .build(this.engine, ringEntity)
+        
+        this.scene.addEntity(ringEntity)
+        
+        this.visualParticles.push({
+            entity: ringEntity,
+            matInstance: ringMat,
+            spawnTime: Date.now(),
+            pos: { x: pos.x, y: pos.y, z: pos.z },
+            vel: { x: 0, y: 0, z: 0 },
+            duration: 1000, // 1 second
+            scale: 1.0,
+            isCheckpointRing: true,
+            startRadius: 1.0,
+            maxRadius: 8.0 // 3x typical checkpoint size
+        })
+    }
+
     performStompImpact(multiplier = 1.0) {
         if (!this.playerMarble) return
 
@@ -60,6 +486,8 @@ export class GameLogicMethods {
             .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
             .material(0, ringMatInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, ringEntity)
 
         this.scene.addEntity(ringEntity)
@@ -371,13 +799,7 @@ export class GameLogicMethods {
                 if (t.x + radius > minX && t.x - radius < maxX &&
                     t.z + radius > minZ && t.z - radius < maxZ &&
                     t.y + radius > minY && t.y - radius < maxY) {
-                    cp.activated = true
-                    if (cp.matInstance) {
-                        cp.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.0, 1.0, 0.0])
-                    }
-                    audio.playGoal()
-                    m.respawnPos = { x: cp.pos.x, y: cp.pos.y + 1.0, z: cp.pos.z }
-                    console.log(`[GAME] Checkpoint activated by ${m.name}! New respawn set.`)
+                    this.activateCheckpoint(cp, m)
                 }
             }
 
@@ -407,6 +829,11 @@ export class GameLogicMethods {
 
                     if (this.score <= 5) {
                         audio.playGoal()
+                    }
+                    
+                    // Trigger goal completion visual effect
+                    if (this.goalEffects && this.goalEffects[goal.id]) {
+                        this.triggerGoalCompletionEffect(goal.id)
                     }
                 }
             }
@@ -504,17 +931,230 @@ export class GameLogicMethods {
 
         if (allGoalsScored && !this.levelComplete) {
             this.levelComplete = true
-            const time = ((Date.now() - this.levelStartTime) / 1000).toFixed(1)
+            const completionTime = (Date.now() - this.levelStartTime) / 1000
 
-            let newRecordStr = ""
+            let newRecord = false
             if (!this.bestGhosts[this.currentLevel] || this.ghostRecording.length < this.bestGhosts[this.currentLevel].length) {
                 this.bestGhosts[this.currentLevel] = [...this.ghostRecording]
-                newRecordStr = "\nNEW GHOST RECORD!"
+                newRecord = true
             }
 
             setTimeout(() => {
-                alert(`Level Complete!\nTime: ${time}s${newRecordStr}\nPress M to return to menu`)
+                this.showLevelCompleteModal(completionTime, newRecord)
             }, 100)
+        }
+    }
+
+    showLevelCompleteModal(completionTime, newRecord) {
+        const modal = document.getElementById('level-complete-modal')
+        if (!modal) return
+
+        const level = LEVELS[this.currentLevel]
+        const levelName = level?.name || this.currentLevel
+
+        // Format time as MM:SS.ms
+        const minutes = Math.floor(completionTime / 60)
+        const seconds = Math.floor(completionTime % 60)
+        const milliseconds = Math.floor((completionTime % 1) * 10)
+        const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds}`
+
+        // Determine medal based on time
+        let medal = ''
+        let medalEmoji = ''
+        if (completionTime < 30) {
+            medal = 'gold'
+            medalEmoji = '🥇'
+        } else if (completionTime < 60) {
+            medal = 'silver'
+            medalEmoji = '🥈'
+        } else if (completionTime < 120) {
+            medal = 'bronze'
+            medalEmoji = '🥉'
+        } else {
+            medalEmoji = '⭐'
+        }
+
+        // Calculate score breakdown
+        const baseScore = this.score || 0
+        const timeBonus = Math.max(0, Math.floor((180 - completionTime) * 10))
+        const maxCombo = this.combo || 1
+        const comboBonus = (maxCombo - 1) * 50
+        const totalScore = baseScore + timeBonus + comboBonus
+
+        // Update modal content
+        document.getElementById('modal-level-name').textContent = levelName
+        document.getElementById('modal-completion-time').textContent = formattedTime
+        document.getElementById('modal-medal').textContent = medalEmoji
+        document.getElementById('modal-base-score').textContent = baseScore.toLocaleString()
+        document.getElementById('modal-time-bonus').textContent = `+${timeBonus.toLocaleString()}`
+        document.getElementById('modal-combo-bonus').textContent = `+${comboBonus.toLocaleString()}`
+        document.getElementById('modal-total-score').textContent = totalScore.toLocaleString()
+
+        const newRecordBadge = document.getElementById('modal-new-record')
+        if (newRecordBadge) {
+            newRecordBadge.style.display = newRecord ? 'inline-block' : 'none'
+        }
+
+        // Setup button handlers with smooth transitions
+        const btnNext = document.getElementById('btn-next-level')
+        const btnRetry = document.getElementById('btn-retry')
+        const btnMenu = document.getElementById('btn-main-menu')
+
+        // Get ordered list of level IDs
+        const levelIds = Object.keys(LEVELS)
+        const currentIndex = levelIds.indexOf(this.currentLevel)
+        const nextLevelId = levelIds[currentIndex + 1]
+
+        if (btnNext) {
+            btnNext.onclick = () => {
+                this.hideLevelCompleteModal(() => {
+                    if (nextLevelId && typeof this.loadLevel === 'function') {
+                        this.loadLevel(nextLevelId)
+                    } else if (typeof this.returnToMenu === 'function') {
+                        this.returnToMenu()
+                    }
+                })
+            }
+            btnNext.style.display = nextLevelId ? 'block' : 'none'
+        }
+
+        if (btnRetry) {
+            btnRetry.onclick = () => {
+                this.hideLevelCompleteModal(() => {
+                    if (typeof this.loadLevel === 'function') {
+                        this.loadLevel(this.currentLevel)
+                    }
+                })
+            }
+        }
+
+        if (btnMenu) {
+            btnMenu.onclick = () => {
+                this.hideLevelCompleteModal(() => {
+                    if (typeof this.returnToMenu === 'function') {
+                        this.returnToMenu()
+                    }
+                })
+            }
+        }
+
+        // Blur game view and show modal with animation
+        modal.classList.remove('exiting')
+        modal.classList.add('active')
+
+        // Trigger confetti after modal appears
+        setTimeout(() => {
+            this.startConfetti()
+        }, 300)
+    }
+
+    hideLevelCompleteModal(callback) {
+        const modal = document.getElementById('level-complete-modal')
+        if (modal) {
+            // Add exit animation class
+            modal.classList.add('exiting')
+            
+            // Stop confetti immediately
+            this.stopConfetti()
+            
+            // Wait for exit animation to complete before hiding
+            setTimeout(() => {
+                modal.classList.remove('active', 'exiting')
+                if (callback) callback()
+            }, 400)
+        } else if (callback) {
+            callback()
+        }
+    }
+
+    startConfetti() {
+        const canvas = document.getElementById('confetti-canvas')
+        if (!canvas) return
+
+        canvas.width = window.innerWidth
+        canvas.height = window.innerHeight
+
+        const ctx = canvas.getContext('2d')
+        const particles = []
+        const colors = ['#e94560', '#ffd700', '#00ffff', '#ff00ff', '#00ff88', '#ff8800', '#ffffff']
+
+        // Create particles
+        for (let i = 0; i < 150; i++) {
+            particles.push({
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                vx: (Math.random() - 0.5) * 20,
+                vy: (Math.random() - 1) * 15 - 5,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                size: Math.random() * 8 + 4,
+                rotation: Math.random() * Math.PI * 2,
+                rotationSpeed: (Math.random() - 0.5) * 0.2,
+                gravity: 0.3,
+                drag: 0.99
+            })
+        }
+
+        let animationId = null
+        let frameCount = 0
+
+        const animate = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+            frameCount++
+
+            let activeParticles = 0
+
+            for (const p of particles) {
+                // Update physics
+                p.vy += p.gravity
+                p.vx *= p.drag
+                p.vy *= p.drag
+                p.x += p.vx
+                p.y += p.vy
+                p.rotation += p.rotationSpeed
+
+                // Draw particle
+                ctx.save()
+                ctx.translate(p.x, p.y)
+                ctx.rotate(p.rotation)
+                ctx.fillStyle = p.color
+                ctx.globalAlpha = Math.max(0, 1 - frameCount / 300) // Fade out over time
+                ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size)
+                ctx.restore()
+
+                if (p.y < canvas.height + 50 && ctx.globalAlpha > 0) {
+                    activeParticles++
+                }
+            }
+
+            // Stop animation after 5 seconds or when all particles are gone
+            if (frameCount < 300 && activeParticles > 0) {
+                animationId = requestAnimationFrame(animate)
+            } else {
+                ctx.clearRect(0, 0, canvas.width, canvas.height)
+            }
+        }
+
+        // Store animation ID for cleanup
+        this.confettiAnimationId = animationId
+        animate()
+
+        // Auto-stop after 5 seconds
+        this.confettiTimeout = setTimeout(() => this.stopConfetti(), 5000)
+    }
+
+    stopConfetti() {
+        if (this.confettiAnimationId) {
+            cancelAnimationFrame(this.confettiAnimationId)
+            this.confettiAnimationId = null
+        }
+        if (this.confettiTimeout) {
+            clearTimeout(this.confettiTimeout)
+            this.confettiTimeout = null
+        }
+        const canvas = document.getElementById('confetti-canvas')
+        if (canvas) {
+            const ctx = canvas.getContext('2d')
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
         }
     }
 

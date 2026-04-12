@@ -11,6 +11,11 @@ export class MarbleAudio {
         this.masterGain = null;
         this.muted = false;
         this._volume = 0.4; // Default volume
+        
+        // Volume controls for different audio categories
+        this._masterVolume = 0.8;
+        this._sfxVolume = 0.7;
+        this._musicVolume = 0.5;
 
         // Material type mappings for different surface sounds
         this.materialTypes = new Map();
@@ -50,7 +55,7 @@ export class MarbleAudio {
 
         this.ctx = new AudioContext();
         this.masterGain = this.ctx.createGain();
-        this.masterGain.gain.value = this._volume; // Master volume
+        this.masterGain.gain.value = this._volume * this._masterVolume; // Master volume
 
         // Master filter for focus effect
         this.masterFilter = this.ctx.createBiquadFilter();
@@ -421,7 +426,47 @@ export class MarbleAudio {
     setVolume(vol) {
         this._volume = Math.max(0, Math.min(1, vol));
         if (this.masterGain && !this.muted) {
-            this.masterGain.gain.value = this._volume;
+            this.masterGain.gain.value = this._volume * this._masterVolume;
+        }
+    }
+
+    /**
+     * Set master volume (0.0 to 1.0)
+     * @param {number} vol 
+     */
+    setMasterVolume(vol) {
+        this._masterVolume = Math.max(0, Math.min(1, vol));
+        this.updateGain();
+    }
+
+    /**
+     * Set SFX volume (0.0 to 1.0)
+     * @param {number} vol 
+     */
+    setSFXVolume(vol) {
+        this._sfxVolume = Math.max(0, Math.min(1, vol));
+        // SFX volume is applied per-sound in the future
+        // For now, it's combined with master
+        this.updateGain();
+    }
+
+    /**
+     * Set music volume (0.0 to 1.0)
+     * @param {number} vol 
+     */
+    setMusicVolume(vol) {
+        this._musicVolume = Math.max(0, Math.min(1, vol));
+        // Music volume would be applied to music tracks
+        // For now, it's combined with master
+        this.updateGain();
+    }
+
+    /**
+     * Update master gain based on current volumes
+     */
+    updateGain() {
+        if (this.masterGain && !this.muted) {
+            this.masterGain.gain.value = this._volume * this._masterVolume;
         }
     }
 
@@ -432,7 +477,7 @@ export class MarbleAudio {
     toggleMute() {
         this.muted = !this.muted;
         if (this.masterGain) {
-            this.masterGain.gain.value = this.muted ? 0 : (this._volume || 0.4);
+            this.masterGain.gain.value = this.muted ? 0 : (this._volume || 0.4) * this._masterVolume;
         }
         return this.muted;
     }

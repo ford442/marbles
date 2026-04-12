@@ -62,6 +62,8 @@ export class AbilityMethods {
         }
 
         console.log(`[GAME] Blinked ${blinkDist.toFixed(2)} units to ${newPos.x.toFixed(2)}, ${newPos.y.toFixed(2)}, ${newPos.z.toFixed(2)}`)
+        
+        if (this.hudManager) this.hudManager.markAbilityUsed('blink')
     }
 
     spawnBlinkParticle(pos, color) {
@@ -76,6 +78,8 @@ export class AbilityMethods {
             .boundingBox({ center: [0, 0, 0], halfExtent: [radius, radius, radius] })
             .material(0, matInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
+            .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, entity)
 
         const tcm = this.engine.getTransformManager()
@@ -149,7 +153,157 @@ export class AbilityMethods {
             audio.playBomb()
         }
 
+        // Spawn EMP visual effect
+        this.spawnEMPEffect(pos)
+
         console.log(`[GAME] EMP Shockwave fired! Hit ${hits} objects.`)
+        
+        if (this.hudManager) this.hudManager.markAbilityUsed('emp')
+    }
+
+    spawnEMPEffect(pos) {
+        const now = Date.now()
+        const duration = 1500 // 1.5 seconds
+
+        // Create main shockwave ring
+        const entity = this.Filament.EntityManager.get().create()
+        const matInstance = this.material.createInstance()
+        
+        // Electric cyan color for EMP
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.0, 1.0, 1.0])
+        matInstance.setFloatParameter('roughness', 0.1)
+
+        // Use a flattened sphere for the ring (disk shape)
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [25, 0.5, 25] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
+            .receiveShadows(false)
+            .castShadows(false)
+            .build(this.engine, entity)
+
+        const tcm = this.engine.getTransformManager()
+        const inst = tcm.getInstance(entity)
+        const mat = quaternionToMat4(pos, { x: 0, y: 0, z: 0, w: 1 })
+
+        // Start small - marble radius scale
+        const startRadius = this.playerMarble ? (this.playerMarble.scale * 0.5 || 0.5) : 0.5
+        mat[0] *= startRadius; mat[1] *= startRadius; mat[2] *= startRadius
+        mat[4] *= 0.05; mat[5] *= 0.05; mat[6] *= 0.05  // Very thin vertically
+        mat[8] *= startRadius; mat[9] *= startRadius; mat[10] *= startRadius
+
+        tcm.setTransform(inst, mat)
+        this.scene.addEntity(entity)
+
+        // Add to visual particles with EMP-specific properties
+        this.visualParticles.push({
+            entity: entity,
+            matInstance: matInstance,
+            spawnTime: now,
+            pos: { x: pos.x, y: pos.y, z: pos.z },
+            duration: duration,
+            scale: 1.0,
+            isEMPRing: true,  // Special flag for EMP effect
+            startRadius: startRadius,
+            maxRadius: 50.0   // Expand to 50 units
+        })
+
+        // Spawn electric spark particles around the ring
+        const sparkCount = 12
+        for (let i = 0; i < sparkCount; i++) {
+            const angle = (i / sparkCount) * Math.PI * 2
+            const sparkPos = {
+                x: pos.x + Math.cos(angle) * 1.0,
+                y: pos.y + (Math.random() - 0.5) * 0.5,
+                z: pos.z + Math.sin(angle) * 1.0
+            }
+            this.spawnEMPSpark(sparkPos, angle, duration)
+        }
+
+        // Trigger screen flash
+        this.triggerEMPFlash()
+    }
+
+    spawnEMPSpark(pos, angle, parentDuration) {
+        const entity = this.Filament.EntityManager.get().create()
+        const matInstance = this.material.createInstance()
+        
+        // Bright electric blue/cyan
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.2, 0.9, 1.0])
+        matInstance.setFloatParameter('roughness', 0.0)
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [0.3, 0.3, 0.3] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
+            .receiveShadows(false)
+            .castShadows(false)
+            .build(this.engine, entity)
+
+        const tcm = this.engine.getTransformManager()
+        const inst = tcm.getInstance(entity)
+        const mat = quaternionToMat4(pos, { x: 0, y: 0, z: 0, w: 1 })
+
+        const s = 0.2
+        mat[0] *= s; mat[1] *= s; mat[2] *= s
+        mat[4] *= s; mat[5] *= s; mat[6] *= s
+        mat[8] *= s; mat[9] *= s; mat[10] *= s
+
+        tcm.setTransform(inst, mat)
+        this.scene.addEntity(entity)
+
+        // Spark velocity - radial outward from center
+        const speed = 20.0
+        this.visualParticles.push({
+            entity: entity,
+            matInstance: matInstance,
+            spawnTime: Date.now(),
+            pos: { x: pos.x, y: pos.y, z: pos.z },
+            vel: {
+                x: Math.cos(angle) * speed,
+                y: (Math.random() - 0.5) * 5,
+                z: Math.sin(angle) * speed
+            },
+            duration: parentDuration * 0.8, // Slightly shorter than main ring
+            scale: 1.0,
+            isEMPSpark: true
+        })
+    }
+
+    triggerEMPFlash() {
+        // Create or get the flash overlay element
+        let flashOverlay = document.getElementById('emp-flash-overlay')
+        if (!flashOverlay) {
+            flashOverlay = document.createElement('div')
+            flashOverlay.id = 'emp-flash-overlay'
+            flashOverlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: radial-gradient(circle, rgba(200, 255, 255, 0.8) 0%, rgba(0, 255, 255, 0.3) 40%, transparent 70%);
+                pointer-events: none;
+                z-index: 50;
+                opacity: 0;
+                transition: opacity 0.1s ease-out;
+            `
+            document.body.appendChild(flashOverlay)
+        }
+
+        // Trigger the flash
+        flashOverlay.style.opacity = '1'
+        
+        // Fade out quickly
+        setTimeout(() => {
+            flashOverlay.style.transition = 'opacity 0.4s ease-out'
+            flashOverlay.style.opacity = '0'
+        }, 100)
+
+        // Reset transition after animation completes
+        setTimeout(() => {
+            flashOverlay.style.transition = 'opacity 0.1s ease-out'
+        }, 500)
     }
 
     triggerTeleport() {
@@ -176,6 +330,8 @@ export class AbilityMethods {
         }
 
         console.log(`[GAME] Teleported to ${newPos.x.toFixed(2)}, ${newPos.y.toFixed(2)}, ${newPos.z.toFixed(2)}`)
+        
+        if (this.hudManager) this.hudManager.markAbilityUsed('teleport')
     }
 
     shootMissile() {
@@ -212,6 +368,8 @@ export class AbilityMethods {
             .boundingBox({ center: [0, 0, 0], halfExtent: [0.2, 0.2, 0.2] })
             .material(0, matInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
+            .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, entity)
 
         this.scene.addEntity(entity)
@@ -277,6 +435,8 @@ export class AbilityMethods {
             .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
             .material(0, matInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
+            .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, entity)
 
         this.scene.addEntity(entity)
@@ -299,6 +459,8 @@ export class AbilityMethods {
         })
 
         if (typeof audio !== 'undefined' && audio.playTrick) audio.playTrick()
+        
+        if (this.hudManager) this.hudManager.markAbilityUsed('blackhole')
     }
 
     explodeMissileObject(missile) {
@@ -370,6 +532,8 @@ export class AbilityMethods {
             .boundingBox({ center: [0, 0, 0], halfExtent: [0.4, 0.4, 0.4] })
             .material(0, matInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
+            .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, entity)
 
         this.scene.addEntity(entity)
@@ -435,6 +599,8 @@ export class AbilityMethods {
             .boundingBox({ center: [0, 0, 0], halfExtent: [0.2, 0.2, 0.2] })
             .material(0, matInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
+            .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, entity)
 
         this.scene.addEntity(entity)
@@ -554,6 +720,8 @@ export class AbilityMethods {
             .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
             .material(0, matInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, entity)
 
         const tcm = this.engine.getTransformManager()
@@ -627,6 +795,8 @@ export class AbilityMethods {
             .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
             .material(0, matInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, entity)
 
         const tcm = this.engine.getTransformManager()
@@ -653,6 +823,8 @@ export class AbilityMethods {
         })
 
         if (audio && audio.playJump) audio.playJump()
+        
+        if (this.hudManager) this.hudManager.markAbilityUsed('build')
     }
 
     destroyPortal(portal) {
@@ -731,6 +903,8 @@ export class AbilityMethods {
                 .boundingBox({ center: [0, 0, 0], halfExtent: [radius, thickness, radius] })
                 .material(0, matInstance)
                 .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb) // flattened sphere
+                .receiveShadows(true)
+                .castShadows(true)
                 .build(this.engine, entity)
 
             const lightEntity = this.Filament.EntityManager.get().create()
@@ -803,6 +977,8 @@ export class AbilityMethods {
             .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
             .material(0, matInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, entity)
 
         const tcm = this.engine.getTransformManager()
@@ -908,6 +1084,8 @@ export class AbilityMethods {
             .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
             .material(0, matInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, entity)
 
         const tcm = this.engine.getTransformManager()

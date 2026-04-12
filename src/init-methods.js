@@ -3,6 +3,30 @@ import { audio } from './audio.js';
 import { LEVELS } from './levels.js';
 import { quatFromEuler, quaternionToMat4 } from './math.js';
 
+// Default settings configuration
+const DEFAULT_SETTINGS = {
+    graphics: {
+        quality: 'high',
+        shadows: true,
+        bloom: 50,
+        ssao: true
+    },
+    audio: {
+        master: 80,
+        sfx: 70,
+        music: 50
+    },
+    controls: {
+        sensitivity: 50,
+        invertY: false
+    },
+    accessibility: {
+        uiScale: 100,
+        highContrast: false,
+        screenShake: 100
+    }
+};
+
 export async function loadFilament() {
     let attempts = 0
     while (typeof Filament === 'undefined' && attempts < 100) {
@@ -29,6 +53,9 @@ export async function loadFilament() {
 export class InitMethods {
     async init() {
         console.log('[INIT] Starting game initialization...')
+        if (typeof window.updateLoadingProgress === 'function') {
+            window.updateLoadingProgress(0, 'Starting initialization...')
+        }
 
         window.addEventListener('gamepadconnected', (e) => {
             console.log(`[GAMEPAD] Connected: ${e.gamepad.id} at index ${e.gamepad.index}`)
@@ -49,6 +76,28 @@ export class InitMethods {
         })
 
         window.addEventListener('keydown', (e) => {
+            // Handle ESC key for pause menu
+            if (e.code === 'Escape') {
+                // Don't pause if in level selection menu
+                const levelMenu = document.getElementById('level-menu')
+                if (levelMenu && levelMenu.style.display === 'flex') {
+                    return // Don't pause in menu
+                }
+                // Don't pause if level complete modal is showing
+                const levelCompleteModal = document.getElementById('level-complete-modal')
+                if (levelCompleteModal && levelCompleteModal.classList.contains('active')) {
+                    return // Don't pause when level complete
+                }
+                // Toggle pause if in game
+                if (this.currentLevel) {
+                    this.togglePause()
+                }
+                return
+            }
+
+            // Don't process game inputs when paused
+            if (this.isPaused) return
+
             if (e.code === 'Space' && !this.keys['Space']) {
                 if (this.playerMarble) {
                     if (this.isGrounded(this.playerMarble)) {
@@ -111,16 +160,19 @@ export class InitMethods {
             if (e.code === 'KeyE') {
                 this.magnetMode = 'attract'
                 this.magnetActive = true
+                if (this.hudManager) this.hudManager.markAbilityUsed('magnet')
             }
             if (e.code === 'KeyQ') {
                 this.magnetMode = 'repel'
                 this.magnetActive = true
+                if (this.hudManager) this.hudManager.markAbilityUsed('magnet')
             }
             if (e.code === 'KeyB' && this.playerMarble) {
                 this.triggerBlink()
             }
             if (e.code === 'KeyH' && this.playerMarble) {
                 this.hoverActive = true
+                if (this.hudManager) this.hudManager.markAbilityUsed('hover')
             }
             if (e.code === 'KeyG' && this.playerMarble) {
                 if (typeof this.fireGravityPulse === 'function') {
@@ -134,6 +186,7 @@ export class InitMethods {
                 } else {
                     this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
                 }
+                if (this.hudManager) this.hudManager.markAbilityUsed('flip')
             }
             if (e.code === 'KeyV' && this.playerMarble) {
                 const now = Date.now()
@@ -155,6 +208,8 @@ export class InitMethods {
 
                     this.lastDashTime = now
                     if (typeof audio !== 'undefined' && audio.playBoost) audio.playBoost()
+                    
+                    if (this.hudManager) this.hudManager.markAbilityUsed('dash')
                 }
             }
             if (e.code === 'KeyZ' && this.playerMarble && !this.isGrounded(this.playerMarble)) {
@@ -186,15 +241,18 @@ export class InitMethods {
             }
             if (e.code === 'Digit6' && this.playerMarble) {
                 this.phaseActive = true
+                if (this.hudManager) this.hudManager.markAbilityUsed('phase')
             }
             if (e.code === 'Digit7' && this.playerMarble) {
                 this.gliderActive = true
+                if (this.hudManager) this.hudManager.markAbilityUsed('glider')
             }
             if (e.code === 'Digit8' && this.playerMarble) {
                 this.timeStopActive = !this.timeStopActive
                 if (this.timeStopActive) {
                     if (audio && audio.playTrick) audio.playTrick()
                     this.showTrickMessage('TIME STOP!', '#ffffff')
+                    if (this.hudManager) this.hudManager.markAbilityUsed('timestop')
                 } else {
                     // Restore velocities immediately
                     this.world.bodies.forEach(body => {
@@ -219,12 +277,14 @@ export class InitMethods {
             }
             if (e.code === 'KeyO' && this.playerMarble) {
                 this.violetActive = true
+                if (this.hudManager) this.hudManager.markAbilityUsed('violet')
             }
             if (e.code === 'KeyL' && this.playerMarble) {
                 this.spawnMissile()
             }
             if (e.code === 'KeyT') {
                 this.isRewinding = true
+                if (this.hudManager) this.hudManager.markAbilityUsed('rewind')
             }
             if (e.code === 'KeyP' && this.playerMarble) {
                 const now = Date.now()
@@ -234,9 +294,11 @@ export class InitMethods {
             }
             if (e.code === 'KeyJ' && this.playerMarble) {
                 this.jetpackActive = true
+                if (this.hudManager) this.hudManager.markAbilityUsed('jetpack')
             }
             if (e.code === 'KeyY' && this.playerMarble) {
                 this.vortexActive = true
+                if (this.hudManager) this.hudManager.markAbilityUsed('vortex')
             }
             if (e.code === 'KeyN' && this.playerMarble && this.blinkCooldown <= 0) {
                 const maxDist = 20.0
@@ -318,6 +380,7 @@ export class InitMethods {
                 if (typeof this.fireEMP === 'function') {
                     this.fireEMP()
                 }
+                if (this.hudManager) this.hudManager.markAbilityUsed('emp')
             }
             if (e.code === 'KeyN' && this.playerMarble) {
                 const now = Date.now()
@@ -340,6 +403,7 @@ export class InitMethods {
                     this.lastChameleonTime = now
                     this.showTrickMessage(`Chameleon: ${profile.name}`, `rgb(${profile.color[0]*255}, ${profile.color[1]*255}, ${profile.color[2]*255})`)
                     if (audio && audio.playCollect) audio.playCollect()
+                    if (this.hudManager) this.hudManager.markAbilityUsed('chameleon')
                 }
             }
         })
@@ -420,14 +484,32 @@ export class InitMethods {
         this.initMouseControls()
 
         console.log('[INIT] Initializing Rapier physics...')
+        if (typeof window.updateLoadingProgress === 'function') {
+            window.updateLoadingProgress(5, 'Initializing physics engine...')
+        }
         await RAPIER.init()
+        if (typeof window.updateLoadingProgress === 'function') {
+            window.updateLoadingProgress(15, 'Physics engine ready')
+        }
         const gravity = { x: 0.0, y: -9.81, z: 0.0 }
         this.world = new RAPIER.World(gravity)
         console.log('[INIT] Physics initialized')
+        if (typeof window.updateLoadingProgress === 'function') {
+            window.updateLoadingProgress(20, 'Physics initialized')
+        }
 
         console.log('[INIT] Initializing Filament rendering...')
+        if (typeof window.updateLoadingProgress === 'function') {
+            window.updateLoadingProgress(25, 'Loading Filament rendering engine...')
+        }
         this.Filament = await loadFilament()
+        if (typeof window.updateLoadingProgress === 'function') {
+            window.updateLoadingProgress(45, 'Filament rendering ready')
+        }
         console.log('[INIT] Filament loaded')
+        if (typeof window.updateLoadingProgress === 'function') {
+            window.updateLoadingProgress(50, 'Creating rendering engine...')
+        }
 
         const width = window.innerWidth
         const height = window.innerHeight
@@ -457,49 +539,694 @@ export class InitMethods {
         console.log('[INIT] Camera and view configured')
 
         console.log('[INIT] Loading assets...')
+        if (typeof window.updateLoadingProgress === 'function') {
+            window.updateLoadingProgress(55, 'Loading materials and assets...')
+        }
         await this.setupAssets()
         console.log('[INIT] Assets loaded')
+        if (typeof window.updateLoadingProgress === 'function') {
+            window.updateLoadingProgress(70, 'Assets loaded')
+        }
 
+        if (typeof window.updateLoadingProgress === 'function') {
+            window.updateLoadingProgress(75, 'Creating lights...')
+        }
         this.createLight()
         console.log('[INIT] Lights created')
 
+        if (typeof window.updateLoadingProgress === 'function') {
+            window.updateLoadingProgress(85, 'Setting up post-processing...')
+        }
         this.setupPostProcessing()
         console.log('[INIT] Post-processing enabled')
 
+        if (typeof window.updateLoadingProgress === 'function') {
+            window.updateLoadingProgress(95, 'Preparing level menu...')
+        }
+        
+        // Initialize pause menu handlers
+        this.initPauseMenu()
+        console.log('[INIT] Pause menu initialized')
+        
         this.showLevelSelection()
         console.log('[INIT] Level menu displayed')
 
-        const loading = document.getElementById('loading')
-        if (loading) loading.style.display = 'none'
+        if (typeof window.updateLoadingProgress === 'function') {
+            window.updateLoadingProgress(100, 'Ready!')
+        }
+        
+        // Hide loading screen with fade transition
+        if (typeof window.hideLoadingScreen === 'function') {
+            window.hideLoadingScreen()
+        } else {
+            const loading = document.getElementById('loading')
+            if (loading) {
+                loading.classList.add('hidden')
+                setTimeout(() => { loading.style.display = 'none' }, 500)
+            }
+        }
         console.log('[INIT] Loading screen hidden')
 
         this.resize()
         window.addEventListener('resize', () => this.resize())
-        console.log('[INIT] Starting game loop')
 
+        // Initialize pause menu and settings
+        this.initPauseMenu()
+        this.loadSettings()
+        console.log('[INIT] Pause menu and settings initialized')
+
+        // Initialize speed lines effect
+        this.initSpeedLines()
+        console.log('[INIT] Speed lines initialized')
+
+        console.log('[INIT] Starting game loop')
         this.loop()
         console.log('[INIT] Initialization complete!')
+    }
+
+    // ==================== PAUSE MENU & SETTINGS METHODS ====================
+
+    initPauseMenu() {
+        // Initialize pause state
+        this.isPaused = false
+        this.settings = null
+
+        // Get DOM elements
+        this.pauseOverlay = document.getElementById('pause-overlay')
+        this.settingsPanel = document.getElementById('settings-panel')
+        this.pauseBtn = document.getElementById('pause-btn')
+
+        // Bind button events
+        if (this.pauseBtn) {
+            this.pauseBtn.addEventListener('click', () => this.togglePause())
+        }
+
+        // Resume button
+        const btnResume = document.getElementById('btn-resume')
+        if (btnResume) {
+            btnResume.addEventListener('click', () => this.togglePause())
+        }
+
+        // Restart button (in pause menu)
+        const btnRestartPause = document.getElementById('btn-restart-pause')
+        if (btnRestartPause) {
+            btnRestartPause.addEventListener('click', () => this.restartCurrentLevel())
+        }
+
+        // Settings button
+        const btnSettings = document.getElementById('btn-settings')
+        if (btnSettings) {
+            btnSettings.addEventListener('click', () => this.openSettings())
+        }
+
+        // Quit to menu button
+        const btnQuitMenu = document.getElementById('btn-quit-menu')
+        if (btnQuitMenu) {
+            btnQuitMenu.addEventListener('click', () => this.quitToMenu())
+        }
+
+        // Settings close button (X)
+        const settingsClose = document.getElementById('settings-close')
+        if (settingsClose) {
+            settingsClose.addEventListener('click', () => this.closeSettings())
+        }
+
+        // Settings back button
+        const btnSettingsBack = document.getElementById('btn-settings-back')
+        if (btnSettingsBack) {
+            btnSettingsBack.addEventListener('click', () => this.closeSettings())
+        }
+
+        // Settings save button
+        const btnSettingsSave = document.getElementById('btn-settings-save')
+        if (btnSettingsSave) {
+            btnSettingsSave.addEventListener('click', () => this.saveSettings())
+        }
+
+        // Settings reset defaults button
+        const btnSettingsDefaults = document.getElementById('btn-settings-defaults')
+        if (btnSettingsDefaults) {
+            btnSettingsDefaults.addEventListener('click', () => this.resetSettingsToDefaults())
+        }
+
+        // Initialize settings tabs
+        this.initSettingsTabs()
+
+        // Initialize settings input listeners
+        this.initSettingsInputs()
+
+        // Close pause menu on ESC when already paused
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Escape') {
+                if (this.settingsPanel && this.settingsPanel.classList.contains('active')) {
+                    this.closeSettings()
+                } else if (this.isPaused) {
+                    this.togglePause()
+                }
+            }
+        })
+    }
+
+    togglePause() {
+        if (this.isPaused) {
+            this.unpauseGame()
+        } else {
+            this.pauseGame()
+        }
+    }
+
+    pauseGame() {
+        if (this.isPaused) return
+        
+        this.isPaused = true
+        
+        // Show pause overlay
+        if (this.pauseOverlay) {
+            this.pauseOverlay.classList.add('active')
+        }
+
+        // Dim/blur canvas
+        const canvas = document.getElementById('canvas')
+        if (canvas) {
+            canvas.classList.add('paused')
+        }
+
+        // Release pointer lock
+        if (document.pointerLockElement === this.canvas) {
+            document.exitPointerLock()
+        }
+
+        // Mute/lower audio
+        if (audio && audio.setMasterVolume) {
+            const currentVolume = this.settings?.audio?.master ?? 80
+            audio.setMasterVolume(currentVolume * 0.3 / 100) // Lower to 30% while paused
+        }
+
+        console.log('[PAUSE] Game paused')
+    }
+
+    unpauseGame() {
+        if (!this.isPaused) return
+        
+        this.isPaused = false
+        
+        // Hide pause overlay
+        if (this.pauseOverlay) {
+            this.pauseOverlay.classList.remove('active')
+        }
+
+        // Remove canvas effects
+        const canvas = document.getElementById('canvas')
+        if (canvas) {
+            canvas.classList.remove('paused')
+        }
+
+        // Restore audio volume
+        if (audio && audio.setMasterVolume && this.settings) {
+            audio.setMasterVolume(this.settings.audio.master / 100)
+        }
+
+        // Re-acquire pointer lock if in game
+        if (this.currentLevel && document.pointerLockElement !== this.canvas) {
+            this.canvas.requestPointerLock().catch(() => {})
+        }
+
+        console.log('[PAUSE] Game unpaused')
+    }
+
+    restartCurrentLevel() {
+        this.unpauseGame()
+        if (this.currentLevel) {
+            this.loadLevel(this.currentLevel)
+        }
+    }
+
+    quitToMenu() {
+        this.unpauseGame()
+        this.clearLevel()
+        this.showLevelSelection()
+    }
+
+    openSettings() {
+        if (this.settingsPanel) {
+            this.settingsPanel.classList.add('active')
+            this.populateSettingsValues()
+        }
+    }
+
+    closeSettings() {
+        if (this.settingsPanel) {
+            this.settingsPanel.classList.remove('active')
+            // If we were in pause menu, stay paused
+            if (!this.isPaused && this.pauseOverlay && this.pauseOverlay.classList.contains('active')) {
+                // This shouldn't happen, but just in case
+            }
+        }
+    }
+
+    initSettingsTabs() {
+        const tabs = document.querySelectorAll('.settings-tab')
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active class from all tabs
+                tabs.forEach(t => t.classList.remove('active'))
+                // Add active class to clicked tab
+                tab.classList.add('active')
+                
+                // Show corresponding section
+                const tabId = tab.dataset.tab
+                document.querySelectorAll('.settings-section').forEach(section => {
+                    section.classList.remove('active')
+                })
+                const targetSection = document.getElementById(`tab-${tabId}`)
+                if (targetSection) {
+                    targetSection.classList.add('active')
+                }
+            })
+        })
+    }
+
+    initSettingsInputs() {
+        // Graphics settings
+        const qualitySelect = document.getElementById('setting-quality')
+        if (qualitySelect) {
+            qualitySelect.addEventListener('change', (e) => {
+                if (this.settings) this.settings.graphics.quality = e.target.value
+            })
+        }
+
+        const shadowToggle = document.getElementById('setting-shadows')
+        if (shadowToggle) {
+            shadowToggle.addEventListener('change', (e) => {
+                if (this.settings) this.settings.graphics.shadows = e.target.checked
+            })
+        }
+
+        const bloomSlider = document.getElementById('setting-bloom')
+        const bloomValue = document.getElementById('value-bloom')
+        if (bloomSlider && bloomValue) {
+            bloomSlider.addEventListener('input', (e) => {
+                bloomValue.textContent = `${e.target.value}%`
+                if (this.settings) this.settings.graphics.bloom = parseInt(e.target.value)
+            })
+        }
+
+        const ssaoToggle = document.getElementById('setting-ssao')
+        if (ssaoToggle) {
+            ssaoToggle.addEventListener('change', (e) => {
+                if (this.settings) this.settings.graphics.ssao = e.target.checked
+            })
+        }
+
+        // Audio settings
+        const masterSlider = document.getElementById('setting-master')
+        const masterValue = document.getElementById('value-master')
+        if (masterSlider && masterValue) {
+            masterSlider.addEventListener('input', (e) => {
+                masterValue.textContent = `${e.target.value}%`
+                if (this.settings) this.settings.audio.master = parseInt(e.target.value)
+            })
+        }
+
+        const sfxSlider = document.getElementById('setting-sfx')
+        const sfxValue = document.getElementById('value-sfx')
+        if (sfxSlider && sfxValue) {
+            sfxSlider.addEventListener('input', (e) => {
+                sfxValue.textContent = `${e.target.value}%`
+                if (this.settings) this.settings.audio.sfx = parseInt(e.target.value)
+            })
+        }
+
+        const musicSlider = document.getElementById('setting-music')
+        const musicValue = document.getElementById('value-music')
+        if (musicSlider && musicValue) {
+            musicSlider.addEventListener('input', (e) => {
+                musicValue.textContent = `${e.target.value}%`
+                if (this.settings) this.settings.audio.music = parseInt(e.target.value)
+            })
+        }
+
+        // Controls settings
+        const sensitivitySlider = document.getElementById('setting-sensitivity')
+        const sensitivityValue = document.getElementById('value-sensitivity')
+        if (sensitivitySlider && sensitivityValue) {
+            sensitivitySlider.addEventListener('input', (e) => {
+                sensitivityValue.textContent = `${e.target.value}%`
+                if (this.settings) this.settings.controls.sensitivity = parseInt(e.target.value)
+            })
+        }
+
+        const invertYToggle = document.getElementById('setting-invert-y')
+        if (invertYToggle) {
+            invertYToggle.addEventListener('change', (e) => {
+                if (this.settings) this.settings.controls.invertY = e.target.checked
+            })
+        }
+
+        // Accessibility settings
+        const uiScaleSlider = document.getElementById('setting-ui-scale')
+        const uiScaleValue = document.getElementById('value-ui-scale')
+        if (uiScaleSlider && uiScaleValue) {
+            uiScaleSlider.addEventListener('input', (e) => {
+                uiScaleValue.textContent = `${e.target.value}%`
+                if (this.settings) this.settings.accessibility.uiScale = parseInt(e.target.value)
+                this.applyUIScale(parseInt(e.target.value))
+            })
+        }
+
+        const highContrastToggle = document.getElementById('setting-high-contrast')
+        if (highContrastToggle) {
+            highContrastToggle.addEventListener('change', (e) => {
+                if (this.settings) this.settings.accessibility.highContrast = e.target.checked
+                this.applyHighContrast(e.target.checked)
+            })
+        }
+
+        const shakeSlider = document.getElementById('setting-shake')
+        const shakeValue = document.getElementById('value-shake')
+        if (shakeSlider && shakeValue) {
+            shakeSlider.addEventListener('input', (e) => {
+                shakeValue.textContent = `${e.target.value}%`
+                if (this.settings) this.settings.accessibility.screenShake = parseInt(e.target.value)
+            })
+        }
+    }
+
+    populateSettingsValues() {
+        if (!this.settings) return
+
+        const s = this.settings
+
+        // Graphics
+        const qualitySelect = document.getElementById('setting-quality')
+        if (qualitySelect) qualitySelect.value = s.graphics.quality
+
+        const shadowToggle = document.getElementById('setting-shadows')
+        if (shadowToggle) shadowToggle.checked = s.graphics.shadows
+
+        const bloomSlider = document.getElementById('setting-bloom')
+        const bloomValue = document.getElementById('value-bloom')
+        if (bloomSlider) bloomSlider.value = s.graphics.bloom
+        if (bloomValue) bloomValue.textContent = `${s.graphics.bloom}%`
+
+        const ssaoToggle = document.getElementById('setting-ssao')
+        if (ssaoToggle) ssaoToggle.checked = s.graphics.ssao
+
+        // Audio
+        const masterSlider = document.getElementById('setting-master')
+        const masterValue = document.getElementById('value-master')
+        if (masterSlider) masterSlider.value = s.audio.master
+        if (masterValue) masterValue.textContent = `${s.audio.master}%`
+
+        const sfxSlider = document.getElementById('setting-sfx')
+        const sfxValue = document.getElementById('value-sfx')
+        if (sfxSlider) sfxSlider.value = s.audio.sfx
+        if (sfxValue) sfxValue.textContent = `${s.audio.sfx}%`
+
+        const musicSlider = document.getElementById('setting-music')
+        const musicValue = document.getElementById('value-music')
+        if (musicSlider) musicSlider.value = s.audio.music
+        if (musicValue) musicValue.textContent = `${s.audio.music}%`
+
+        // Controls
+        const sensitivitySlider = document.getElementById('setting-sensitivity')
+        const sensitivityValue = document.getElementById('value-sensitivity')
+        if (sensitivitySlider) sensitivitySlider.value = s.controls.sensitivity
+        if (sensitivityValue) sensitivityValue.textContent = `${s.controls.sensitivity}%`
+
+        const invertYToggle = document.getElementById('setting-invert-y')
+        if (invertYToggle) invertYToggle.checked = s.controls.invertY
+
+        // Accessibility
+        const uiScaleSlider = document.getElementById('setting-ui-scale')
+        const uiScaleValue = document.getElementById('value-ui-scale')
+        if (uiScaleSlider) uiScaleSlider.value = s.accessibility.uiScale
+        if (uiScaleValue) uiScaleValue.textContent = `${s.accessibility.uiScale}%`
+
+        const highContrastToggle = document.getElementById('setting-high-contrast')
+        if (highContrastToggle) highContrastToggle.checked = s.accessibility.highContrast
+
+        const shakeSlider = document.getElementById('setting-shake')
+        const shakeValue = document.getElementById('value-shake')
+        if (shakeSlider) shakeSlider.value = s.accessibility.screenShake
+        if (shakeValue) shakeValue.textContent = `${s.accessibility.screenShake}%`
+    }
+
+    loadSettings() {
+        try {
+            const savedSettings = localStorage.getItem('marbles3d_settings')
+            if (savedSettings) {
+                this.settings = JSON.parse(savedSettings)
+                // Merge with defaults to ensure all fields exist
+                this.settings = this.mergeWithDefaults(this.settings)
+                console.log('[SETTINGS] Loaded from localStorage')
+            } else {
+                this.settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
+                console.log('[SETTINGS] Using default settings')
+            }
+        } catch (e) {
+            console.warn('[SETTINGS] Failed to load settings:', e)
+            this.settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
+        }
+
+        // Apply loaded settings
+        this.applySettings()
+    }
+
+    saveSettings() {
+        try {
+            localStorage.setItem('marbles3d_settings', JSON.stringify(this.settings))
+            console.log('[SETTINGS] Saved to localStorage')
+        } catch (e) {
+            console.warn('[SETTINGS] Failed to save settings:', e)
+        }
+
+        this.applySettings()
+        this.closeSettings()
+    }
+
+    resetSettingsToDefaults() {
+        this.settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
+        this.populateSettingsValues()
+        this.applySettings()
+        console.log('[SETTINGS] Reset to defaults')
+    }
+
+    mergeWithDefaults(saved) {
+        const merged = JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
+        
+        if (saved.graphics) {
+            Object.assign(merged.graphics, saved.graphics)
+        }
+        if (saved.audio) {
+            Object.assign(merged.audio, saved.audio)
+        }
+        if (saved.controls) {
+            Object.assign(merged.controls, saved.controls)
+        }
+        if (saved.accessibility) {
+            Object.assign(merged.accessibility, saved.accessibility)
+        }
+        
+        return merged
+    }
+
+    applySettings() {
+        if (!this.settings) return
+
+        const s = this.settings
+
+        // Apply audio settings
+        if (audio) {
+            if (audio.setMasterVolume) {
+                audio.setMasterVolume(s.audio.master / 100)
+            }
+            if (audio.setSFXVolume) {
+                audio.setSFXVolume(s.audio.sfx / 100)
+            }
+            if (audio.setMusicVolume) {
+                audio.setMusicVolume(s.audio.music / 100)
+            }
+        }
+
+        // Apply UI scale
+        this.applyUIScale(s.accessibility.uiScale)
+
+        // Apply high contrast
+        this.applyHighContrast(s.accessibility.highContrast)
+
+        // Apply graphics settings
+        this.applyGraphicsSettings()
+
+        console.log('[SETTINGS] Applied settings')
+    }
+
+    applyUIScale(scale) {
+        const ui = document.getElementById('ui')
+        if (ui) {
+            ui.style.transform = `scale(${scale / 100})`
+            ui.style.transformOrigin = 'bottom left'
+        }
+    }
+
+    applyHighContrast(enabled) {
+        if (enabled) {
+            document.body.classList.add('high-contrast')
+        } else {
+            document.body.classList.remove('high-contrast')
+        }
+    }
+
+    applyGraphicsSettings() {
+        // Graphics settings would be applied here
+        // These would affect Filament renderer settings
+        const s = this.settings.graphics
+
+        // Example: Adjust shadow quality
+        if (this.renderer && s.shadows !== undefined) {
+            // Filament-specific shadow configuration would go here
+        }
+
+        // Example: Adjust bloom
+        if (this.view && s.bloom !== undefined) {
+            // Post-processing bloom adjustment would go here
+        }
+    }
+
+    getMouseSensitivity() {
+        if (!this.settings) return 0.002
+        // Convert 10-200 range to 0.001-0.01
+        return this.settings.controls.sensitivity * 0.00004
+    }
+
+    isYAxisInverted() {
+        return this.settings?.controls?.invertY ?? false
+    }
+
+    getScreenShakeIntensity() {
+        if (!this.settings) return 1.0
+        return this.settings.accessibility.screenShake / 100
     }
 
     showLevelSelection() {
         const menu = document.getElementById('level-menu')
         const levelGrid = document.getElementById('level-grid')
         const gameUI = document.getElementById('ui')
+        const pauseMenu = document.getElementById('pause-menu')
 
-        menu.style.display = 'flex'
+        // Hide pause menu if open
+        if (pauseMenu) pauseMenu.classList.remove('active')
+
+        // Reset menu state
+        menu.classList.remove('menu-hidden', 'menu-exiting')
+        menu.classList.add('menu-entering')
+        
+        // Hide game UI
         gameUI.style.display = 'none'
+        gameUI.classList.remove('hud-slide-left', 'hud-slide-right', 'hud-slide-up')
+        
         levelGrid.innerHTML = ''
 
-        Object.entries(LEVELS).forEach(([id, level]) => {
+        // Create level cards with stagger animation
+        Object.entries(LEVELS).forEach(([id, level], index) => {
             const card = document.createElement('div')
-            card.className = 'level-card'
+            card.className = 'level-card card-stagger'
             card.innerHTML = `
                 <h3>${level.name}</h3>
                 <p>${level.description}</p>
                 <span class="goals">${level.goals.length} Goal${level.goals.length !== 1 ? 's' : ''}</span>
             `
-            card.addEventListener('click', () => this.loadLevel(id))
+            card.addEventListener('click', () => this.hideLevelSelection(() => this.loadLevel(id)))
             levelGrid.appendChild(card)
+
+            // Trigger stagger animation with delay
+            setTimeout(() => {
+                card.classList.add('animate')
+            }, 50 + (index * 50)) // 50ms base delay + 50ms stagger per card
+        })
+
+        // Set up menu camera position (distant overview)
+        this.setMenuCamera()
+    }
+
+    hideLevelSelection(callback) {
+        const menu = document.getElementById('level-menu')
+        const cards = menu.querySelectorAll('.level-card')
+
+        // Animate cards out
+        cards.forEach((card, index) => {
+            card.classList.remove('animate')
+            card.classList.add('card-exit')
+            card.style.animationDelay = `${index * 30}ms`
+        })
+
+        // Animate menu out after cards start exiting
+        setTimeout(() => {
+            menu.classList.remove('menu-entering')
+            menu.classList.add('menu-exiting')
+        }, 100)
+
+        // Hide menu after animation completes
+        setTimeout(() => {
+            menu.classList.remove('menu-entering', 'menu-exiting')
+            menu.classList.add('menu-hidden')
+            if (callback) callback()
+        }, 400)
+    }
+
+    returnToMenu() {
+        const gameUI = document.getElementById('ui')
+        
+        // Clear current level
+        this.clearLevel()
+        this.currentLevel = null
+        this.levelComplete = false
+        this.isPaused = false
+
+        // Reset camera mode
+        this.cameraMode = 'orbit'
+
+        // Show level selection with animation
+        this.showLevelSelection()
+    }
+
+    showLevelMenu() {
+        // Alias for showLevelSelection for consistency
+        this.showLevelSelection()
+    }
+
+    setMenuCamera() {
+        // Position camera for menu overview
+        if (this.camera) {
+            this.camera.lookAt([0, 15, 40], [0, 0, 0], [0, 1, 0])
+        }
+    }
+
+    transitionCameraToGameplay(duration = 1000) {
+        if (!this.camera || !this.playerMarble) return Promise.resolve()
+
+        const startPos = [0, 15, 40] // Menu camera position
+        const startTarget = [0, 0, 0]
+        
+        const startTime = Date.now()
+        
+        return new Promise((resolve) => {
+            const animate = () => {
+                const elapsed = Date.now() - startTime
+                const progress = Math.min(elapsed / duration, 1)
+                
+                // Easing function (ease-out-cubic)
+                const ease = 1 - Math.pow(1 - progress, 3)
+                
+                // We'll let the regular camera update take over smoothly
+                // by just resolving when transition is done
+                if (progress >= 1) {
+                    resolve()
+                } else {
+                    requestAnimationFrame(animate)
+                }
+            }
+            requestAnimationFrame(animate)
         })
     }
 
@@ -510,9 +1237,6 @@ export class InitMethods {
             console.error(`[LEVEL] Level ${levelId} not found!`)
             return
         }
-
-        document.getElementById('level-menu').style.display = 'none'
-        document.getElementById('ui').style.display = 'block'
 
         this.clearLevel()
         console.log('[LEVEL] Cleared previous level')
@@ -536,7 +1260,6 @@ export class InitMethods {
         if (this.combobarEl) this.combobarEl.style.width = '0%'
 
         if (this.timerEl) this.timerEl.textContent = 'Time: 0.00s'
-        this.levelStartTime = Date.now()
         this.levelComplete = false
 
         if (level.nightMode) {
@@ -567,6 +1290,94 @@ export class InitMethods {
         }
 
         console.log('[LEVEL] Level loading complete!')
+
+        // Start the level entry sequence
+        await this.startLevelSequence()
+    }
+
+    async startLevelSequence() {
+        const gameUI = document.getElementById('ui')
+        const fadeOverlay = document.getElementById('fade-overlay')
+        const countdownOverlay = document.getElementById('countdown-overlay')
+        const countdownDisplay = document.getElementById('countdown-display')
+
+        // Show game UI but keep it hidden until countdown finishes
+        gameUI.style.display = 'block'
+        gameUI.style.opacity = '0'
+
+        // Start fade from black
+        fadeOverlay.classList.remove('fade-out')
+        
+        // Wait a moment at black screen
+        await this.delay(200)
+
+        // Fade out from black
+        fadeOverlay.classList.add('fade-out')
+
+        // Show countdown
+        countdownOverlay.classList.add('active')
+
+        // 3-2-1 countdown
+        const numbers = ['3', '2', '1']
+        for (const num of numbers) {
+            countdownDisplay.className = 'countdown-number'
+            countdownDisplay.textContent = num
+            // Force reflow to restart animation
+            void countdownDisplay.offsetWidth
+            countdownDisplay.className = 'countdown-number'
+            await this.delay(800)
+        }
+
+        // GO!
+        countdownDisplay.className = 'countdown-go'
+        countdownDisplay.textContent = 'GO!'
+        
+        // Start the level timer
+        this.levelStartTime = Date.now()
+        this.isPaused = false
+
+        // Animate HUD elements in
+        gameUI.style.opacity = '1'
+        this.animateHUDIn()
+
+        // Hide countdown after GO
+        await this.delay(600)
+        countdownOverlay.classList.remove('active')
+
+        // Transition camera smoothly
+        await this.transitionCameraToGameplay(1000)
+    }
+
+    animateHUDIn() {
+        const gameUI = document.getElementById('ui')
+        const hudAbilities = document.getElementById('hud-abilities')
+        
+        // Add slide animations to HUD sections
+        if (hudAbilities) {
+            hudAbilities.classList.add('hud-slide-left')
+        }
+
+        // Animate score/timer elements
+        const scoreEl = document.getElementById('score')
+        const timerEl = document.getElementById('timer')
+        const levelNameEl = document.getElementById('level-name')
+
+        if (scoreEl) {
+            scoreEl.style.animation = 'hudSlideLeft 0.5s ease-out forwards'
+            scoreEl.style.animationDelay = '0.1s'
+        }
+        if (timerEl) {
+            timerEl.style.animation = 'hudSlideLeft 0.5s ease-out forwards'
+            timerEl.style.animationDelay = '0.2s'
+        }
+        if (levelNameEl) {
+            levelNameEl.style.animation = 'hudSlideLeft 0.5s ease-out forwards'
+            levelNameEl.style.animationDelay = '0.3s'
+        }
+    }
+
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms))
     }
 
     createGhostMarble() {
@@ -581,6 +1392,8 @@ export class InitMethods {
             .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
             .material(0, this.ghostMaterialInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
+            .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, this.ghostEntity)
 
         this.scene.addEntity(this.ghostEntity)

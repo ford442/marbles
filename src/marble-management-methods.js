@@ -41,11 +41,42 @@ export class MarbleManagementMethods {
             // Apply base color
             matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, info.color)
             
-            // Apply PBR material properties - only roughness is defined in our material
+            // Apply PBR material properties from preset, with marble-specific overrides
             const preset = info.materialType ? materialPresets[info.materialType] : null
-            const roughness = info.roughness !== undefined ? info.roughness : (preset ? preset.roughness : 0.4)
             
+            // Roughness: marble override > preset > default (0.4)
+            const roughness = info.roughness !== undefined ? info.roughness : (preset ? preset.roughness : 0.4)
             matInstance.setFloatParameter('roughness', roughness)
+            
+            // Apply additional PBR properties from preset if available
+            if (preset) {
+                // Metallic: marble override > preset > default (0.0)
+                const metallic = info.metallic !== undefined ? info.metallic : preset.metallic
+                matInstance.setFloatParameter('metallic', metallic)
+                
+                // Reflectance: marble override > preset > default (0.5)
+                const reflectance = info.reflectance !== undefined ? info.reflectance : preset.reflectance
+                matInstance.setFloatParameter('reflectance', reflectance)
+                
+                // Clear coat: apply if preset has it (> 0)
+                if (preset.clearCoat > 0) {
+                    const clearCoat = info.clearCoat !== undefined ? info.clearCoat : preset.clearCoat
+                    matInstance.setFloatParameter('clearCoat', clearCoat)
+                    
+                    const clearCoatRoughness = info.clearCoatRoughness !== undefined ? info.clearCoatRoughness : preset.clearCoatRoughness
+                    matInstance.setFloatParameter('clearCoatRoughness', clearCoatRoughness)
+                }
+                
+                // Procedural bump mapping parameters
+                const bumpScale = info.bumpScale !== undefined ? info.bumpScale : (preset.bumpScale !== undefined ? preset.bumpScale : 0.02)
+                const bumpFrequency = info.bumpFrequency !== undefined ? info.bumpFrequency : (preset.bumpFrequency !== undefined ? preset.bumpFrequency : 50.0)
+                matInstance.setFloatParameter('bumpScale', bumpScale)
+                matInstance.setFloatParameter('bumpFrequency', bumpFrequency)
+            } else {
+                // Apply default bump parameters when no preset is defined
+                matInstance.setFloatParameter('bumpScale', info.bumpScale !== undefined ? info.bumpScale : 0.02)
+                matInstance.setFloatParameter('bumpFrequency', info.bumpFrequency !== undefined ? info.bumpFrequency : 50.0)
+            }
 
             const vb = info.geometry === 'cube' ? this.vb : this.sphereVb
             const ib = info.geometry === 'cube' ? this.ib : this.sphereIb
@@ -54,6 +85,8 @@ export class MarbleManagementMethods {
                 .boundingBox({ center: [0, 0, 0], halfExtent: [radius, radius, radius] })
                 .material(0, matInstance)
                 .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, vb, ib)
+                .receiveShadows(true)
+                .castShadows(true)
                 .build(this.engine, entity)
 
             this.scene.addEntity(entity)

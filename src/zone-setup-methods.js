@@ -188,10 +188,10 @@ export class ZoneSetupMethods {
     }
 
     async setupAssets() {
-        console.log('[ASSETS] Loading baked_color.filmat...')
+        console.log('[ASSETS] Loading baked_procedural.filament...')
         let response
         try {
-            response = await fetch('./baked_color.filmat')
+            response = await fetch('./baked_procedural.filament')
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`)
             }
@@ -252,6 +252,8 @@ export class ZoneSetupMethods {
             .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
             .material(0, matInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, this.grappleEntity)
 
         this.scene.addEntity(this.grappleEntity)
@@ -276,6 +278,8 @@ export class ZoneSetupMethods {
             .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
             .material(0, matInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, this.cueEntity)
 
         this.scene.addEntity(this.cueEntity)
@@ -425,6 +429,13 @@ export class ZoneSetupMethods {
             .intensity(120000.0)
             .direction([0.5, -1.0, -0.7])
             .castShadows(true)
+            .shadowOptions({
+                mapSize: 2048,
+                shadowCascades: 2,
+                constantBias: 0.001,
+                normalBias: 1.0,
+                stable: true
+            })
             .sunAngularRadius(1.9)
             .sunHaloSize(10.0)
             .sunHaloFalloff(80.0)

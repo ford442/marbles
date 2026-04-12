@@ -10,6 +10,7 @@ import { applyAbilityMethods } from './ability-methods.js';
 import { applyGameLoopMethods } from './game-loop-methods.js';
 import { applyGameLoopRenderMethods } from './game-loop-render-methods.js';
 import { applyGameLoopSyncMethods } from './game-loop-sync-methods.js';
+import { HUDManager } from './hud-manager.js';
 
 class MarblesGame {
     constructor() {
@@ -282,6 +283,7 @@ class MarblesGame {
         this.levelComplete = false
         this.goalDefinitions = []
         this.checkpointDefinitions = []
+        this.goalEffects = []
 
         // Gravity Pulse Mechanic
         this.gravityPulseCooldown = 5000
@@ -291,6 +293,9 @@ class MarblesGame {
 
         // Gamepad State
         this.gamepadState = {}
+
+        // Initialize HUD Manager
+        this.hudManager = new HUDManager(this)
     }
 }
 

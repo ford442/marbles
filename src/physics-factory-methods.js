@@ -1,6 +1,7 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { quatFromEuler, quaternionToMat4 } from './math.js';
 import { audio } from './audio.js';
+import { materialPresets } from './material-system.js';
 
 export class PhysicsFactoryMethods {
     createPhaseBox(pos, rotation, halfExtents, color, material = 'glass') {
@@ -44,7 +45,7 @@ export class PhysicsFactoryMethods {
         this.staticEntities.push(entity)
     }
 
-    createStaticBox(pos, rotation, halfExtents, color, material = 'wood') {
+    createStaticBox(pos, rotation, halfExtents, color, materialPreset = null) {
         const bodyDesc = RAPIER.RigidBodyDesc.fixed()
             .setTranslation(pos.x, pos.y, pos.z)
             .setRotation(rotation)
@@ -53,17 +54,36 @@ export class PhysicsFactoryMethods {
         this.world.createCollider(colliderDesc, body)
         this.staticBodies.push(body)
 
-        audio.registerBodyMaterial(body, material)
+        // Use preset name for audio if provided, otherwise default
+        const audioMaterial = typeof materialPreset === 'string' ? materialPreset : 'wood';
+        audio.registerBodyMaterial(body, audioMaterial)
 
         const entity = this.Filament.EntityManager.get().create()
         const matInstance = this.material.createInstance()
         matInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, color)
-        matInstance.setFloatParameter('roughness', 0.4)
+
+        // Apply PBR properties from preset if provided
+        if (materialPreset && typeof materialPreset === 'object') {
+            matInstance.setFloatParameter('roughness', materialPreset.roughness ?? 0.4)
+            if (materialPreset.metallic !== undefined) {
+                matInstance.setFloatParameter('metallic', materialPreset.metallic)
+            }
+            if (materialPreset.reflectance !== undefined) {
+                matInstance.setFloatParameter('reflectance', materialPreset.reflectance)
+            }
+            if (materialPreset.clearCoat !== undefined && materialPreset.clearCoat > 0) {
+                matInstance.setFloatParameter('clearCoat', materialPreset.clearCoat)
+                matInstance.setFloatParameter('clearCoatRoughness', materialPreset.clearCoatRoughness ?? 0.0)
+            }
+        } else {
+            matInstance.setFloatParameter('roughness', 0.4)
+        }
 
         this.Filament.RenderableManager.Builder(1)
             .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
             .material(0, matInstance)
             .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.vb, this.ib)
+            .receiveShadows(true)
             .build(this.engine, entity)
 
         const tcm = this.engine.getTransformManager()
@@ -105,6 +125,7 @@ export class PhysicsFactoryMethods {
             .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
             .material(0, matInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .receiveShadows(true)
             .build(this.engine, entity)
 
         this.scene.addEntity(entity)
@@ -140,6 +161,7 @@ export class PhysicsFactoryMethods {
             .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
             .material(0, matInstance)
             .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .receiveShadows(true)
             .build(this.engine, entity)
 
         this.scene.addEntity(entity)
@@ -154,7 +176,6 @@ export class PhysicsFactoryMethods {
             pos: pos
         })
     }
-
 }
 
 export function applyPhysicsFactoryMethods(targetClass) {

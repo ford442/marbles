@@ -3,12 +3,28 @@ import { quaternionToMat4 } from './math.js';
 
 export class GameLoopMethods {
     loop() {
+        // Always update gamepads for pause toggle detection
+        this.pollGamepads()
+
+        // When paused, skip game logic but keep rendering
+        if (this.isPaused) {
+            this.renderAndSync()
+            requestAnimationFrame(() => this.loop())
+            return
+        }
+
         this.updateGameState()
         this.renderAndSync()
         requestAnimationFrame(() => this.loop())
     }
 
     updateGameState() {
+        // Skip game updates when paused (but keep polling for pause toggle)
+        if (this.isPaused) {
+            // Still render the scene, just don't update game state
+            return
+        }
+
         this.pollGamepads()
 
         if (!this.frameCount) this.frameCount = 0
@@ -85,9 +101,10 @@ export class GameLoopMethods {
             const targetFov = this.baseFov + (this.adrenaline / this.maxAdrenaline) * 20.0
             this.currentFov = this.currentFov * 0.9 + targetFov * 0.1
 
-            // Generate Camera Shake
-            if (this.adrenaline > 20) {
-                const shakeIntensity = (this.adrenaline - 20) / 80.0 * 0.5
+            // Generate Camera Shake (respect accessibility setting)
+            const shakeMultiplier = this.getScreenShakeIntensity ? this.getScreenShakeIntensity() : 1.0
+            if (this.adrenaline > 20 && shakeMultiplier > 0) {
+                const shakeIntensity = (this.adrenaline - 20) / 80.0 * 0.5 * shakeMultiplier
                 this.cameraShake = {
                     x: (Math.random() - 0.5) * shakeIntensity,
                     y: (Math.random() - 0.5) * shakeIntensity,
@@ -102,6 +119,9 @@ export class GameLoopMethods {
                 const aspect = this.canvas.width / this.canvas.height
                 this.camera.setProjectionFov(this.currentFov, aspect, 0.1, 1000.0, this.Filament.Camera$Fov.VERTICAL)
             }
+
+            // Update speed lines effect based on marble velocity
+            this.updateSpeedLines(speed)
         }
 
         if (this.adrenalineBarEl && this.adrenalineBarContainerEl) {
@@ -135,6 +155,9 @@ export class GameLoopMethods {
 
         // Focus Mechanic Logic
         if (this.keys['KeyF'] && this.focusEnergy > 0) {
+            if (!this.focusActive && this.hudManager) {
+                this.hudManager.markAbilityUsed('focus')
+            }
             this.focusActive = true
             const targetScale = 0.2
             this.timeScale = this.timeScale * 0.9 + targetScale * 0.1
