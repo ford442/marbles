@@ -148,6 +148,7 @@ export class InitMethods {
                     this.playerMarble = this.marbles[this.currentMarbleIndex]
                     this.selectedEl.textContent = `Selected: ${this.playerMarble.name}`
                     console.log(`[GAME] Switched to marble ${this.currentMarbleIndex}: ${this.playerMarble.name}`)
+                    this.updateActiveMarbleLight()
                 }
             }
             this.keys[e.code] = true
@@ -1418,10 +1419,12 @@ export class InitMethods {
             this.world.removeRigidBody(m.rigidBody)
             this.scene.remove(m.entity)
             this.engine.destroyEntity(m.entity)
-            if (m.lightEntity) {
-                this.scene.remove(m.lightEntity)
-                this.engine.destroyEntity(m.lightEntity)
-            }
+        }
+        if (this.activeMarbleLightEntity) {
+            this.scene.remove(this.activeMarbleLightEntity)
+            this.engine.destroyEntity(this.activeMarbleLightEntity)
+            this.Filament.EntityManager.get().destroy(this.activeMarbleLightEntity)
+            this.activeMarbleLightEntity = null
         }
         this.marbles = []
         this.playerMarble = null

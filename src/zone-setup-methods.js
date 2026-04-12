@@ -481,7 +481,7 @@ export class ZoneSetupMethods {
         
         // Primary sun light - warm daylight
         this.light = F.EntityManager.get().create()
-        let sunBuilder = F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
+        F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
             .color([1.0, 0.96, 0.88])
             .intensity(150000.0)
             .direction([0.4, -1.0, -0.65])
@@ -489,21 +489,7 @@ export class ZoneSetupMethods {
             .sunAngularRadius(1.9)
             .sunHaloSize(10.0)
             .sunHaloFalloff(80.0)
-        // Apply shadow options only when the API is available to avoid passing undefined
-        if (typeof F.shadowOptions === 'function') {
-            sunBuilder = sunBuilder.shadowOptions(F.shadowOptions({
-                mapSize: 2048,
-                shadowCascades: 2,
-                constantBias: 0.002,
-                normalBias: 1.5,
-                stable: true,
-                polygonOffsetConstant: 0.3,
-                polygonOffsetSlope: 1.0,
-                screenSpaceContactShadows: true,
-                stepCount: 16,
-            }))
-        }
-        sunBuilder.build(this.engine, this.light)
+            .build(this.engine, this.light)
         this.scene.addEntity(this.light)
 
         // Blue-sky fill light from opposite direction

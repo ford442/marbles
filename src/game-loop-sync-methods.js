@@ -393,8 +393,8 @@ export class GameLoopSyncMethods {
                 rcm.getMaterialInstanceAt(renderInst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [r, g, b])
             }
 
-            if (m.lightEntity) {
-                const lightInst = tcm.getInstance(m.lightEntity)
+            if (m === this.playerMarble && this.activeMarbleLightEntity) {
+                const lightInst = tcm.getInstance(this.activeMarbleLightEntity)
                 const lightMat = quaternionToMat4(t, { x: 0, y: 0, z: 0, w: 1 })
                 tcm.setTransform(lightInst, lightMat)
             }
