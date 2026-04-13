@@ -6,7 +6,7 @@ export const marblesInfo = [
     { name: "Blue Standard", color: [0.0, 0.0, 1.0], offset: { x: 1.0, y: 0, z: 0 }, roughness: 0.4 },
     { name: "Green Bouncy", color: [0.2, 1.0, 0.2], offset: { x: -2.5, y: 4, z: 0 }, radius: 0.4, friction: 0.1, restitution: 0.8, roughness: 0.2 },
     { name: "Purple Heavy", color: [0.6, 0.1, 0.8], offset: { x: 0.0, y: 2, z: 2 }, radius: 0.75, restitution: 1.2, roughness: 0.3 },
-    { name: "Gold Heavy", color: [1.0, 0.84, 0.0], offset: { x: 2.5, y: 2, z: 2 }, radius: 0.6, restitution: 0.2, density: 3.0, roughness: 0.15, emissive: true, lightIntensity: 8000.0, lightColor: [1.0, 0.8, 0.3], materialType: "polishedMarble" },
+    { name: "Gold Heavy", color: [1.0, 0.84, 0.0], offset: { x: 2.5, y: 2, z: 2 }, radius: 0.6, restitution: 0.2, density: 3.0, roughness: 0.15, clearCoat: 1.0, clearCoatRoughness: 0.0, emissive: true, lightIntensity: 8000.0, lightColor: [1.0, 0.8, 0.3], materialType: "polishedMarble" },
     { name: "Cyan Slick", color: [0.0, 0.8, 1.0], offset: { x: -2.0, y: 2, z: 2 }, radius: 0.5, friction: 0.05, restitution: 0.5, roughness: 0.05, emissive: true, lightIntensity: 12000.0, lightColor: [0.0, 0.7, 1.0] },
     { name: "Volcanic Magma", color: [1.0, 0.25, 0.0], offset: { x: 3.5, y: 3, z: 0 }, radius: 0.55, friction: 0.15, restitution: 1.5, density: 0.8, roughness: 0.6, emissive: true, lightIntensity: 25000.0, lightColor: [1.0, 0.3, 0.0] },
     { name: "Shadow Ninja", color: [0.15, 0.05, 0.25], offset: { x: -3.5, y: 3, z: 0 }, radius: 0.45, friction: 0.02, restitution: 0.3, density: 1.2, roughness: 0.05 },

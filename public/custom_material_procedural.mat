@@ -37,7 +37,9 @@ material {
     requires : [ uv0, tangents ],
     shadingModel : lit,
     blending : opaque,
-    specularAntiAliasing : true
+    specularAntiAliasing : true,
+    specularAntiAliasingVariance : 0.15,
+    specularAntiAliasingThreshold : 0.2
 }
 
 fragment {
@@ -73,6 +75,18 @@ fragment {
         g.yz = a0.yz * x12.xz + h.yz * x12.yw;
         return 130.0 * dot(m, g);
     }
+
+    // Fractal Brownian Motion for more organic details
+    float fbm(vec2 uv, float freq) {
+        float f = 0.0;
+        float w = 0.5;
+        for (int i = 0; i < 4; i++) {
+            f += w * snoise(uv * freq);
+            freq *= 2.0;
+            w *= 0.5;
+        }
+        return f;
+    }
     
     void material(inout MaterialInputs material) {
         vec2 uv = getUV0();
@@ -80,9 +94,10 @@ fragment {
         float scale = materialParams.bumpScale;
         
         // Calculate procedural normal perturbation using noise
-        float noise = snoise(uv * freq);
-        float noiseX = snoise((uv + vec2(0.01, 0.0)) * freq);
-        float noiseY = snoise((uv + vec2(0.0, 0.01)) * freq);
+        // Enhance with FBM to create more organic and detailed surfaces
+        float noise = fbm(uv, freq);
+        float noiseX = fbm(uv + vec2(0.01, 0.0), freq);
+        float noiseY = fbm(uv + vec2(0.0, 0.01), freq);
         
         vec3 normalTangent;
         normalTangent.x = (noiseX - noise) * scale * 100.0;
@@ -98,13 +113,19 @@ fragment {
         // Base PBR properties
         material.baseColor.rgb = materialParams.baseColor;
         material.baseColor.a = 1.0;
-        material.roughness = materialParams.roughness;
+
+        // Slightly vary roughness based on bump noise for more realism
+        material.roughness = clamp(materialParams.roughness + noise * 0.1, 0.0, 1.0);
+
         material.metallic = materialParams.metallic;
         material.reflectance = materialParams.reflectance;
         material.clearCoat = materialParams.clearCoat;
         material.clearCoatRoughness = materialParams.clearCoatRoughness;
         
+        // Fake a tiny bit of subsurface scattering by tweaking ambient occlusion based on bump heights
+        material.ambientOcclusion = clamp(1.0 - (abs(noise) * scale * 10.0), 0.5, 1.0);
+
         // Add subtle anisotropic sheen for marble-like materials
-        material.anisotropy = 0.0;
+        material.anisotropy = 0.2 * noise;
     }
 }
