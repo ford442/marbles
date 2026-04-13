@@ -40,5 +40,19 @@ export const marbleDraft = [
         emissive: true,
         lightIntensity: 60000.0,
         lightColor: [0.3, 0.0, 0.8]
+    },
+    {
+        name: "Void Walker",
+        color: [0.1, 0.1, 0.1],
+        offset: { x: 0.0, y: 5, z: 5 },
+        radius: 0.5,
+        density: 0.5,
+        restitution: 0.8,
+        gravityScale: 0.3,
+        friction: 0.1,
+        roughness: 0.9,
+        emissive: true,
+        lightIntensity: 20000.0,
+        lightColor: [0.5, 0.0, 1.0]
     }
 ];
