@@ -659,6 +659,23 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
+    galaxy_spiral_run: {
+        name: 'Galaxy Spiral Run',
+        description: 'Ascend the galaxy spiral!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'galaxy_spiral', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: -4.8, y: 29.25, z: 40.8 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-15, 5], z: [35, 45], y: [25, 40] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.02, 0.02, 0.05, 1.0]
+    },
     toxic_swamp_run: {
         name: 'Toxic Swamp Run',
         description: 'Navigate the toxic swamp!',
