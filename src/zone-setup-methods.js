@@ -31,6 +31,7 @@ import { createStarlightAscentZone } from './zones/starlight-ascent.js';
 import { createZenGardenZone } from './zones/zen-garden.js';
 import { createToxicSwampZone } from './zones/toxic-swamp.js';
 import { createGalaxySpiralZone } from './zones/galaxy-spiral.js';
+import { createQuantumLeapZone } from './zones/quantum-leap.js';
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import { audio } from './audio.js';
 
@@ -186,6 +187,9 @@ export class ZoneSetupMethods {
                 break
             case 'lava_tubes':
                 createLavaTubesZone(this, offset)
+                break
+            case 'quantum_leap':
+                createQuantumLeapZone(this, offset)
                 break
             case 'starlight_ascent':
                 createStarlightAscentZone(this, offset)

@@ -25,3 +25,4 @@ export { createJungleRunZone } from './jungle-run.js';
 export { createZenGardenZone } from './zen-garden.js';
 export { createToxicSwampZone } from './toxic-swamp.js';
 export { createGalaxySpiralZone } from './galaxy-spiral.js';
+export { createQuantumLeapZone } from './quantum-leap.js';

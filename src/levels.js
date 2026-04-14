@@ -692,6 +692,22 @@ export const LEVELS = {
         nightMode: true,
         backgroundColor: [0.01, 0.05, 0.01, 1.0]
     },
+    quantum_leap_run: {
+        name: 'Quantum Leap Run',
+        description: 'Leap across the volatile quantum platforms!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'quantum_leap', pos: { x: 0, y: 0, z: 25 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [110, 130], y: [18, 25] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.05, 0.01, 0.05, 1.0]
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
