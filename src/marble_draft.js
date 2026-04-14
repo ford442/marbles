@@ -54,5 +54,19 @@ export const marbleDraft = [
         emissive: true,
         lightIntensity: 20000.0,
         lightColor: [0.5, 0.0, 1.0]
+    },
+    {
+        name: "Astral Jumper",
+        color: [0.0, 0.5, 1.0],
+        offset: { x: 0.0, y: 5, z: 10 },
+        radius: 0.5,
+        density: 1.0,
+        restitution: 1.5,
+        gravityScale: 0.4,
+        friction: 0.1,
+        roughness: 0.0,
+        emissive: true,
+        lightIntensity: 35000.0,
+        lightColor: [0.0, 0.5, 1.0]
     }
 ];
