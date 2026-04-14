@@ -61,7 +61,7 @@ export const visualMethods = {
             .color(amberColor)
             .intensity(50000.0)
             .position([goalPos.x, goalPos.y + 2, goalPos.z])
-            .falloffRadius(15.0)
+            .falloff(15.0)
             .build(this.engine, lightEntity);
         this.scene.addEntity(lightEntity);
         
@@ -127,7 +127,7 @@ export const visualMethods = {
                     .color([1.0, 0.6, 0.0])
                     .intensity(pulseIntensity)
                     .position([effect.pos.x, effect.pos.y + 2, effect.pos.z])
-                    .falloffRadius(effect.state === 'near' ? 20 : 15)
+                    .falloff(effect.state === 'near' ? 20 : 15)
                     .build(this.engine, effect.light);
             }
             
@@ -251,7 +251,7 @@ export const visualMethods = {
                 .color([1.0, 1.0, 0.5])
                 .intensity(300000.0)
                 .position([effect.pos.x, effect.pos.y + 2, effect.pos.z])
-                .falloffRadius(30.0)
+                .falloff(30.0)
                 .build(this.engine, effect.light);
         }
         
