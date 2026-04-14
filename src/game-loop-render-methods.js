@@ -215,7 +215,7 @@ export class GameLoopRenderMethods {
             if (this.keys['ArrowRight'] || this.keys['KeyD']) this.camAngle += rotSpeed
             if (this.keys['ArrowUp'] || this.keys['KeyW']) this.camRadius = Math.max(5, this.camRadius - zoomSpeed)
             if (this.keys['ArrowDown'] || this.keys['KeyS']) this.camRadius = Math.min(100, this.camRadius + zoomSpeed)
-        } else if (this.cameraMode === 'follow' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown' || this.cameraMode === 'cinematic') {
+        } else if (this.cameraMode === 'follow' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown' || this.cameraMode === 'cinematic' || this.cameraMode === 'side-scroller') {
             let impulseStrength = 0.5
             if (this.activeEffects.speed && Date.now() < this.activeEffects.speed) {
                 impulseStrength *= 2.0
@@ -224,10 +224,16 @@ export class GameLoopRenderMethods {
             if (this.playerMarble) {
                 const rigidBody = this.playerMarble.rigidBody
 
-                const forwardX = Math.sin(this.aimYaw)
-                const forwardZ = Math.cos(this.aimYaw)
-                const rightX = Math.sin(this.aimYaw - Math.PI / 2)
-                const rightZ = Math.cos(this.aimYaw - Math.PI / 2)
+                let forwardX = Math.sin(this.aimYaw)
+                let forwardZ = Math.cos(this.aimYaw)
+                let rightX = Math.sin(this.aimYaw - Math.PI / 2)
+                let rightZ = Math.cos(this.aimYaw - Math.PI / 2)
+
+                if (this.cameraMode === 'side-scroller') {
+                    // Lock movement to the Z axis for left/right and X axis for up/down in side-scroller view
+                    forwardX = -1; forwardZ = 0;
+                    rightX = 0; rightZ = -1;
+                }
 
                 if (this.keys['ArrowUp'] || this.keys['KeyW']) rigidBody.applyImpulse({ x: forwardX * impulseStrength, y: 0, z: forwardZ * impulseStrength }, true)
                 if (this.keys['ArrowDown'] || this.keys['KeyS']) rigidBody.applyImpulse({ x: -forwardX * impulseStrength, y: 0, z: -forwardZ * impulseStrength }, true)
@@ -362,7 +368,7 @@ export class GameLoopRenderMethods {
         this.aimEl.textContent = `Yaw: ${yawDeg}° Pitch: ${pitchDeg}°`
         this.powerbarEl.style.width = `${this.chargePower * 100}%`
 
-        if ((this.cameraMode === 'follow' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown' || this.cameraMode === 'cinematic') && this.currentLevel) {
+        if ((this.cameraMode === 'follow' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown' || this.cameraMode === 'cinematic' || this.cameraMode === 'side-scroller') && this.currentLevel) {
             const level = LEVELS[this.currentLevel]
             const target = this.playerMarble || this.getLeader()
             if (target) {
@@ -400,6 +406,13 @@ export class GameLoopRenderMethods {
                     const eyeX = t.x + Math.sin(cinematicAngle) * dist + this.cameraShake.x
                     const eyeY = t.y + height + this.cameraShake.y
                     const eyeZ = t.z + Math.cos(cinematicAngle) * dist + this.cameraShake.z
+                    this.camera.lookAt([eyeX, eyeY, eyeZ], [t.x, t.y, t.z], [0, 1, 0])
+                } else if (this.cameraMode === 'side-scroller') {
+                    const dist = 30
+                    const height = 5
+                    const eyeX = t.x + dist + this.cameraShake.x
+                    const eyeY = t.y + height + this.cameraShake.y
+                    const eyeZ = t.z + this.cameraShake.z
                     this.camera.lookAt([eyeX, eyeY, eyeZ], [t.x, t.y, t.z], [0, 1, 0])
                 }
             }
