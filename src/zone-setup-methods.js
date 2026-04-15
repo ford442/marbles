@@ -31,6 +31,7 @@ import { createStarlightAscentZone } from './zones/starlight-ascent.js';
 import { createZenGardenZone } from './zones/zen-garden.js';
 import { createToxicSwampZone } from './zones/toxic-swamp.js';
 import { createGalaxySpiralZone } from './zones/galaxy-spiral.js';
+import { createGlacialChasmZone } from './zones/glacial-chasm.js';
 import { createQuantumLeapZone } from './zones/quantum-leap.js';
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import { audio } from './audio.js';
@@ -202,6 +203,9 @@ export class ZoneSetupMethods {
                 break
             case 'galaxy_spiral':
                 createGalaxySpiralZone(this, offset)
+                break
+            case 'glacial_chasm':
+                createGlacialChasmZone(this, offset)
                 break
         }
     }
