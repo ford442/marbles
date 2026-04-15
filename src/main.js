@@ -261,6 +261,9 @@ class MarblesGame {
         this.baseFov = 45
         this.currentFov = 45
         this.cameraShake = { x: 0, y: 0, z: 0 }
+        this.cameraFollowPos = null
+        this.cameraFollowLookAt = null
+        this.followDist = 20.0
         this.nearMisses = new Map()
         this.adrenalineBarEl = document.getElementById('adrenalinebar')
         this.adrenalineBarContainerEl = document.getElementById('adrenalinebar-container')

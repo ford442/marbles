@@ -375,13 +375,37 @@ export class GameLoopRenderMethods {
                 const t = target.rigidBody.translation()
                 if (this.cameraMode === 'follow') {
                     const height = level?.camera?.height || 10
-                    const dist = 20
+                    const dist = this.followDist || 20
 
-                    const eyeX = t.x - Math.sin(this.aimYaw) * dist + this.cameraShake.x
-                    const eyeY = t.y + height + this.cameraShake.y
-                    const eyeZ = t.z - Math.cos(this.aimYaw) * dist + this.cameraShake.z
+                    const idealEyeX = t.x - Math.sin(this.aimYaw) * dist
+                    const idealEyeY = t.y + height
+                    const idealEyeZ = t.z - Math.cos(this.aimYaw) * dist
 
-                    this.camera.lookAt([eyeX, eyeY, eyeZ], [t.x, t.y, t.z], [0, 1, 0])
+                    const idealLookAtX = t.x
+                    const idealLookAtY = t.y
+                    const idealLookAtZ = t.z
+
+                    if (!this.cameraFollowPos) {
+                        this.cameraFollowPos = { x: idealEyeX, y: idealEyeY, z: idealEyeZ }
+                        this.cameraFollowLookAt = { x: idealLookAtX, y: idealLookAtY, z: idealLookAtZ }
+                    } else {
+                        // Smoothly interpolate (Lerp) towards ideal positions
+                        const lerpFactorPos = 0.1
+                        const lerpFactorLook = 0.2
+                        this.cameraFollowPos.x += (idealEyeX - this.cameraFollowPos.x) * lerpFactorPos
+                        this.cameraFollowPos.y += (idealEyeY - this.cameraFollowPos.y) * lerpFactorPos
+                        this.cameraFollowPos.z += (idealEyeZ - this.cameraFollowPos.z) * lerpFactorPos
+
+                        this.cameraFollowLookAt.x += (idealLookAtX - this.cameraFollowLookAt.x) * lerpFactorLook
+                        this.cameraFollowLookAt.y += (idealLookAtY - this.cameraFollowLookAt.y) * lerpFactorLook
+                        this.cameraFollowLookAt.z += (idealLookAtZ - this.cameraFollowLookAt.z) * lerpFactorLook
+                    }
+
+                    const eyeX = this.cameraFollowPos.x + this.cameraShake.x
+                    const eyeY = this.cameraFollowPos.y + this.cameraShake.y
+                    const eyeZ = this.cameraFollowPos.z + this.cameraShake.z
+
+                    this.camera.lookAt([eyeX, eyeY, eyeZ], [this.cameraFollowLookAt.x, this.cameraFollowLookAt.y, this.cameraFollowLookAt.z], [0, 1, 0])
                 } else if (this.cameraMode === 'fpv') {
                     const r = target.scale * 0.5 || 0.5
                     const eyeX = t.x + this.cameraShake.x
