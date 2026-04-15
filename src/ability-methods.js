@@ -161,6 +161,91 @@ export class AbilityMethods {
         if (this.hudManager) this.hudManager.markAbilityUsed('emp')
     }
 
+    fireTremor() {
+        if (!this.playerMarble) return
+        const now = Date.now()
+        if (now - this.lastTremorTime < this.tremorCooldown) return
+        this.lastTremorTime = now
+
+        const pos = this.playerMarble.rigidBody.translation()
+        const tremorRadius = 25.0
+        const tremorForce = 80.0
+
+        let hits = 0
+        const bodiesToCheck = [...(this.marbles || []), ...(this.dynamicObjects || []), ...(this.movingPlatforms || [])]
+
+        for (const obj of bodiesToCheck) {
+            if (obj === this.playerMarble) continue
+            if (!obj.rigidBody) continue
+
+            const objPos = obj.rigidBody.translation()
+            const dx = objPos.x - pos.x
+            const dy = objPos.y - pos.y
+            const dz = objPos.z - pos.z
+            const distSq = dx * dx + dy * dy + dz * dz
+
+            if (distSq < tremorRadius * tremorRadius && distSq > 0.1) {
+                const dist = Math.sqrt(distSq)
+                const forceScale = 1.0 - (dist / tremorRadius)
+                const nx = dx / dist
+                const ny = dy / dist
+                const nz = dz / dist
+
+                hits++
+                // Apply a disruptive upward and outward impulse
+                obj.rigidBody.applyImpulse({
+                    x: nx * tremorForce * forceScale,
+                    y: (Math.abs(ny) + 1.0) * tremorForce * forceScale, // Give it a good vertical pop
+                    z: nz * tremorForce * forceScale
+                }, true)
+            }
+        }
+
+        if (hits > 0 && typeof this.awardTrickPoints === 'function') {
+            this.awardTrickPoints(`Ground Slam! (${hits} hit)`, 30 * hits, '#cd853f')
+        }
+
+        if (this.hudManager) this.hudManager.markAbilityUsed('groundslam')
+
+        // Add a visual particle ring at the impact point
+        if (this.Filament && this.engine && this.material) {
+            const ringEntity = this.Filament.EntityManager.get().create()
+            const ringMatInstance = this.material.createInstance()
+            ringMatInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.8, 0.4, 0.1])
+            ringMatInstance.setFloatParameter('roughness', 0.9)
+
+            this.Filament.RenderableManager.Builder(1)
+                .boundingBox({ center: [0, 0, 0], halfExtent: [15, 0.5, 15] })
+                .material(0, ringMatInstance)
+                .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
+                .receiveShadows(false)
+                .castShadows(false)
+                .build(this.engine, ringEntity)
+
+            this.scene.addEntity(ringEntity)
+
+            this.visualParticles.push({
+                entity: ringEntity,
+                matInstance: ringMatInstance,
+                spawnTime: Date.now(),
+                pos: { x: pos.x, y: pos.y, z: pos.z },
+                vel: { x: 0, y: 0, z: 0 },
+                duration: 1200,
+                scale: 1.0,
+                isCheckpointRing: true,
+                startRadius: 1.0,
+                maxRadius: 15.0
+            })
+        }
+
+        // Trigger camera shake
+        this.tremorShakeTimer = 30
+
+        if (typeof audio !== 'undefined' && audio.playStomp) {
+            audio.playStomp()
+        }
+    }
+
     spawnEMPEffect(pos) {
         const now = Date.now()
         const duration = 1500 // 1.5 seconds

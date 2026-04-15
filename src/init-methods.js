@@ -225,6 +225,11 @@ export class InitMethods {
 
                 audio.playBoost()
             }
+            if (e.code === 'Digit0' && this.playerMarble) {
+                if (typeof this.fireTremor === 'function') {
+                    this.fireTremor()
+                }
+            }
             if (e.code === 'Digit1') {
                 this.spawnBuildPiece('ramp')
             }

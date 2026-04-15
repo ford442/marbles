@@ -124,6 +124,7 @@ export class InputMethods {
                 7: 'ShiftLeft',   // RT -> Boost
                 8: 'KeyR',        // Select -> Reset
                 9: 'KeyM',        // Start -> Menu
+                11: 'Digit0',     // Right Stick Click -> Ground Slam
                 12: 'KeyL',       // D-pad Up -> Missile
                 13: 'KeyU',       // D-pad Down -> Gravity Flip
                 14: 'Digit6',     // D-pad Left -> Phase Shift

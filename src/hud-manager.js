@@ -15,7 +15,7 @@ export const ABILITY_CATEGORIES = {
         name: 'Combat',
         icon: '⚔️',
         color: '#ff4444',
-        abilities: ['bomb', 'missile', 'emp', 'blackhole', 'vortex', 'timestop']
+        abilities: ['bomb', 'missile', 'emp', 'groundslam', 'blackhole', 'vortex', 'timestop']
     },
     utility: {
         name: 'Utility',
@@ -38,6 +38,7 @@ export const ABILITY_METADATA = {
     bomb: { icon: '💣', key: 'X', name: 'Bomb', color: '#ff4500' },
     missile: { icon: '🚀', key: 'L', name: 'Missile', color: '#ff8800' },
     emp: { icon: '⚡', key: 'K', name: 'EMP', color: '#00ccff' },
+    groundslam: { icon: '💥', key: 'Digit0', name: 'Ground Slam', color: '#cd853f' },
     blackhole: { icon: '⚫', key: 'N/A', name: 'Black Hole', color: '#aa00ff' },
     vortex: { icon: '🌀', key: 'Y', name: 'Vortex', color: '#ff00ff' },
     timestop: { icon: '⏱', key: 'N/A', name: 'Time Stop', color: '#ffffff' },
@@ -308,6 +309,11 @@ export class HUDManager {
         if (g.lastEmpTime !== undefined && g.empCooldown) {
             const progress = Math.min(1, (now - g.lastEmpTime) / g.empCooldown);
             this.updateAbilityCooldown('emp', progress);
+        }
+
+        if (g.lastTremorTime !== undefined && g.tremorCooldown) {
+            const progress = Math.min(1, (now - g.lastTremorTime) / g.tremorCooldown);
+            this.updateAbilityCooldown('groundslam', progress);
         }
 
         if (g.lastBlackHoleTime !== undefined && g.blackHoleCooldown) {
