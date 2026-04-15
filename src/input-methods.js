@@ -52,23 +52,34 @@ export class InputMethods {
 
         document.addEventListener('wheel', (e) => {
             if (document.pointerLockElement === this.canvas && !this.isPaused) {
-                // Adjust field of view based on wheel scroll direction
-                const zoomSensitivity = 2.0;
+                if (this.cameraMode === 'follow') {
+                    // Adjust follow distance based on wheel scroll
+                    const distSensitivity = 1.5;
+                    this.followDist = this.followDist || 20.0;
+                    if (e.deltaY > 0) {
+                        this.followDist = Math.min(this.followDist + distSensitivity, 50.0); // Zoom out
+                    } else if (e.deltaY < 0) {
+                        this.followDist = Math.max(this.followDist - distSensitivity, 5.0); // Zoom in
+                    }
+                } else {
+                    // Adjust field of view based on wheel scroll direction
+                    const zoomSensitivity = 2.0;
                     this.currentFov = this.currentFov || 45;
-                if (e.deltaY > 0) {
-                    this.currentFov = Math.min(this.currentFov + zoomSensitivity, 120); // Zoom out
-                } else if (e.deltaY < 0) {
-                    this.currentFov = Math.max(this.currentFov - zoomSensitivity, 20); // Zoom in
-                }
+                    if (e.deltaY > 0) {
+                        this.currentFov = Math.min(this.currentFov + zoomSensitivity, 120); // Zoom out
+                    } else if (e.deltaY < 0) {
+                        this.currentFov = Math.max(this.currentFov - zoomSensitivity, 20); // Zoom in
+                    }
 
-                // Immediately update camera projection if view and camera are available
-                if (this.view && this.camera && this.Filament) {
-                    const width = this.canvas.width;
-                    const height = this.canvas.height;
-                    const aspect = width / height;
-                    const CameraFov = this.Filament?.['Camera$Fov'];
-                    const fovMode = CameraFov ? CameraFov.VERTICAL : 0;
-                    this.camera.setProjectionFov(this.currentFov, aspect, 0.1, 1000.0, fovMode);
+                    // Immediately update camera projection if view and camera are available
+                    if (this.view && this.camera && this.Filament) {
+                        const width = this.canvas.width;
+                        const height = this.canvas.height;
+                        const aspect = width / height;
+                        const CameraFov = this.Filament?.['Camera$Fov'];
+                        const fovMode = CameraFov ? CameraFov.VERTICAL : 0;
+                        this.camera.setProjectionFov(this.currentFov, aspect, 0.1, 1000.0, fovMode);
+                    }
                 }
             }
         })
