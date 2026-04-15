@@ -114,6 +114,15 @@ export class GameLoopMethods {
                 this.cameraShake = { x: 0, y: 0, z: 0 }
             }
 
+            // Add Tremor Camera Shake
+            if (this.tremorShakeTimer && this.tremorShakeTimer > 0) {
+                const tremorIntensity = (this.tremorShakeTimer / 30.0) * 1.5 * shakeMultiplier
+                this.cameraShake.x += (Math.random() - 0.5) * tremorIntensity
+                this.cameraShake.y += (Math.random() - 0.5) * tremorIntensity
+                this.cameraShake.z += (Math.random() - 0.5) * tremorIntensity
+                this.tremorShakeTimer--
+            }
+
             // Update Projection FOV each frame
             if (this.camera && this.view && this.Filament && this.Filament.Camera$Fov) {
                 const aspect = this.canvas.width / this.canvas.height

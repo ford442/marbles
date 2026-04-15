@@ -222,6 +222,13 @@ class MarblesGame {
         this.empBarEl = document.getElementById('empbar')
         this.empBarContainerEl = document.getElementById('empbar-container')
 
+        // Ground Slam / Tremor Mechanic
+        this.lastTremorTime = 0
+        this.tremorCooldown = 5000
+        this.tremorShakeTimer = 0
+        this.groundslambarEl = document.getElementById('groundslambar')
+        this.groundslambarContainerEl = document.getElementById('groundslambar-container')
+
         // Violet Light Mechanic
         this.violetEnergy = 100
         this.maxVioletEnergy = 100

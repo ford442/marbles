@@ -855,6 +855,35 @@
             transition: width 0.1s;
         }
 
+        #groundslambar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            overflow: visible;
+            display: none;
+            position: relative;
+        }
+
+        #groundslambar-container::after {
+            content: "Ground Slam (Digit0)";
+            position: absolute;
+            left: 5px;
+            top: -15px;
+            font-size: 10px;
+            color: #fff;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        #groundslambar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #8b4513 0%, #cd853f 100%);
+            transition: width 0.1s;
+        }
+
         #bombbar-container {
             width: 200px;
             height: 10px;
@@ -2384,6 +2413,7 @@
         <div id="gravitybar-container" class="legacy-bar-container"><div id="gravitybar"></div></div>
         <div id="holobar-container" class="legacy-bar-container"><div id="holobar"></div></div>
         <div id="empbar-container" class="legacy-bar-container"><div id="empbar"></div></div>
+        <div id="groundslambar-container" class="legacy-bar-container"><div id="groundslambar"></div></div>
         <div id="bombbar-container" class="legacy-bar-container"><div id="bombbar"></div></div>
         <div id="missilebar-container" class="legacy-bar-container"><div id="missilebar"></div></div>
         <div id="chameleonbar-container" class="legacy-bar-container"><div id="chameleonbar"></div></div>
