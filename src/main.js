@@ -136,6 +136,9 @@ class MarblesGame {
         this.playerMarble = null
         this.lastDashTime = 0
         this.dashCooldown = 2000
+        this.isChargingDash = false
+        this.dashCharge = 0
+        this.maxDashCharge = 1.0
         this.cueInst = null
         this.jumpCount = 0
         this.maxJumps = 2

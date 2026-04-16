@@ -278,14 +278,27 @@ export class GameLoopRenderMethods {
 
         if (this.dashBarEl) {
             const now = Date.now()
-            const timeSince = now - this.lastDashTime
-            const progress = Math.min(1.0, timeSince / this.dashCooldown)
-            this.dashBarEl.style.width = `${progress * 100}%`
-
-            if (progress >= 1.0) {
-               this.dashBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ff8c00)'
+            if (this.isChargingDash) {
+                // Increment charge - roughly 1.5 seconds to fully charge
+                this.dashCharge = Math.min(this.maxDashCharge, this.dashCharge + (delta * 0.66))
+                this.dashBarEl.style.width = `${this.dashCharge * 100}%`
+                if (this.dashCharge >= this.maxDashCharge) {
+                    this.dashBarEl.style.filter = 'brightness(1.5) drop-shadow(0 0 10px #ff0000)'
+                    this.dashBarEl.style.backgroundColor = '#ff0000'
+                } else {
+                    this.dashBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ff8c00)'
+                    this.dashBarEl.style.backgroundColor = '#ff8c00'
+                }
             } else {
-               this.dashBarEl.style.filter = 'brightness(0.7)'
+                const timeSince = now - this.lastDashTime
+                const progress = Math.min(1.0, timeSince / this.dashCooldown)
+                this.dashBarEl.style.width = `${progress * 100}%`
+                this.dashBarEl.style.backgroundColor = '#ff8c00'
+                if (progress >= 1.0) {
+                   this.dashBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ff8c00)'
+                } else {
+                   this.dashBarEl.style.filter = 'brightness(0.7)'
+                }
             }
         }
 
