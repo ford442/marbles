@@ -725,6 +725,23 @@ export const LEVELS = {
         nightMode: true,
         backgroundColor: [0.05, 0.1, 0.2, 1.0]
     },
+    frostbite_cavern_run: {
+        name: 'Frostbite Cavern Run',
+        description: 'Slide down the icy slopes and navigate moving floes!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'frostbite_cavern', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 0, y: -4, z: 80 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [75, 85], y: [-6, 0] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.05, 0.1, 0.2, 1.0]
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
