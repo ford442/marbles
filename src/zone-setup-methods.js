@@ -33,6 +33,7 @@ import { createToxicSwampZone } from './zones/toxic-swamp.js';
 import { createGalaxySpiralZone } from './zones/galaxy-spiral.js';
 import { createGlacialChasmZone } from './zones/glacial-chasm.js';
 import { createQuantumLeapZone } from './zones/quantum-leap.js';
+import { createFrostbiteCavernZone } from './zones/frostbite-cavern.js';
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import { audio } from './audio.js';
 
@@ -191,6 +192,9 @@ export class ZoneSetupMethods {
                 break
             case 'quantum_leap':
                 createQuantumLeapZone(this, offset)
+                break
+            case 'frostbite_cavern':
+                createFrostbiteCavernZone(this, offset)
                 break
             case 'starlight_ascent':
                 createStarlightAscentZone(this, offset)
