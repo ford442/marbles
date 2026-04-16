@@ -49,5 +49,6 @@ export const marblesInfo = [
     { name: "Galactic Core", color: [0.2, 0.4, 1.0], offset: { x: 0.0, y: 5, z: 12 }, radius: 0.6, density: 4.0, friction: 0.1, restitution: 1.2, roughness: 0.1, emissive: true, lightIntensity: 55000.0, lightColor: [0.2, 0.5, 1.0] },
     { name: "Pulsar Crystal", color: [0.1, 1.0, 0.8], offset: { x: 10.0, y: 5, z: 0 }, radius: 0.6, density: 0.3, friction: 0.02, restitution: 1.6, roughness: 0.05, emissive: true, lightIntensity: 28000.0, lightColor: [0.1, 1.0, 0.8] },
     { name: "Thunderbolt", color: [1.0, 1.0, 0.0], offset: { x: 5.0, y: 5.0, z: -5.0 }, radius: 0.4, density: 0.5, gravityScale: 0.8, restitution: 1.5, friction: 0.0, roughness: 0.1, emissive: true, lightIntensity: 30000.0, lightColor: [1.0, 1.0, 0.5] },
-    { name: "Echo Prism", color: [0.3, 1.0, 0.8], offset: { x: 12.0, y: 5, z: 0 }, radius: 0.55, density: 1.5, friction: 0.1, restitution: 1.2, roughness: 0.1, emissive: true, lightIntensity: 40000.0, lightColor: [0.3, 1.0, 0.8] }
+    { name: "Echo Prism", color: [0.3, 1.0, 0.8], offset: { x: 12.0, y: 5, z: 0 }, radius: 0.55, density: 1.5, friction: 0.1, restitution: 1.2, roughness: 0.1, emissive: true, lightIntensity: 40000.0, lightColor: [0.3, 1.0, 0.8] },
+    { name: "Sapphire Bullet", color: [0.0, 0.4, 1.0], offset: { x: 14.0, y: 5, z: 0 }, radius: 0.6, density: 15.0, friction: 0.0, restitution: 1.2, emissive: true, lightIntensity: 50000.0, lightColor: [0.0, 0.4, 1.0], materialType: "glass" }
 ];
