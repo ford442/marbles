@@ -8,38 +8,87 @@ This document provides essential information for AI coding agents working on the
 - **Physics Simulation**: Rapier3D-Compat for realistic physics (gravity: -9.81 m/s²)
 - **3D Rendering**: Google Filament (WASM) for high-performance WebGL2 rendering
 - **Build System**: Vite for development and production builds
+- **UI Layer**: React/TSX components for the sequencer and importer modals
+- **Backend**: Python FastAPI with Google Cloud Storage integration
 
-The game features multiple levels with obstacles, scoring zones, and different marble types with unique physics properties.
+The game features approximately 40 levels with diverse zones, obstacles, scoring goals, checkpoints, collectibles, power-ups, and multiple marble types with unique physics properties.
 
 ## Technology Stack
 
-| Component | Technology | Version |
-|-----------|------------|---------|
+| Component | Technology | Version / Notes |
+|-----------|------------|-----------------|
 | Build Tool | Vite | ^7.3.1 |
-| 3D Engine | Filament (Google) | ^1.51.5 |
-| Physics Engine | Rapier3D-Compat | ^0.13.0 |
-| Language | JavaScript (ES Modules) | - |
-| Deployment | Python + Paramiko (SFTP) | - |
+| 3D Engine | Filament (Google) | ^1.51.5, loaded via global `filament.js` script tag |
+| Physics Engine | Rapier3D-Compat | ^0.13.0 (`@dimforge/rapier3d-compat`) |
+| Language | JavaScript (ES Modules) + TypeScript/TSX | Mixed codebase |
+| UI Framework | React | Used in sequencer/importer modals |
+| Backend | Python + FastAPI | Storage API for songs/samples/shaders |
+| Cloud Storage | Google Cloud Storage (GCS) | Via `google-cloud-storage` |
+| Caching | `aiocache` (memory) | In Python backend |
+| Deployment | Paramiko (SFTP) | `deploy.py` uploads `dist/` to remote server |
+| CI/CD | GitHub Actions | Node 20, pnpm 9, Emscripten 3.1.50 |
 
 ## Project Structure
 
 ```
 marbles/
-├── index.html              # Main HTML entry point with UI overlay
+├── index.html              # Main HTML entry point with UI overlay (~2750 lines)
 ├── package.json            # Dependencies and npm scripts
 ├── vite.config.js          # Vite configuration with COOP/COEP headers
+├── tsconfig.json           # TypeScript configuration (strict, noEmit)
 ├── deploy.py               # Python deployment script (SFTP to remote server)
-├── git.sh                  # Simple git commit/push helper
+├── .eslintrc.js            # ESLint configuration
+├── .prettierrc             # Prettier configuration
 ├── public/                 # Static assets
 │   ├── baked_color.filmat  # Pre-compiled Filament material
 │   ├── custom_material.mat # Source material definition
+│   ├── filament.js         # Filament JS loader
 │   └── filament.wasm       # Filament WASM binary
-└── src/
-    ├── main.js             # Main game logic (~770 lines)
-    └── sphere.js           # Sphere geometry generator with TBN frames
+├── src/                    # Source code
+│   ├── main.js             # Core MarblesGame class constructor
+│   ├── init-methods.js     # Initialization mixin (Filament, physics, UI)
+│   ├── input-methods.js    # Input handling mixin
+│   ├── zone-setup-methods.js    # Zone dispatcher mixin
+│   ├── physics-factory-methods.js # Physics body creation utilities
+│   ├── marble-management-methods.js # Marble spawning & management
+│   ├── game-logic-methods.js      # Scoring, goals, collectibles
+│   ├── ability-methods.js         # Abilities (dash, EMP, black hole, etc.)
+│   ├── game-loop-methods.js       # Main loop dispatcher
+│   ├── game-loop-render-methods.js # Rendering pipeline
+│   ├── game-loop-sync-methods.js  # Physics-visual sync
+│   ├── levels.js           # ~40 declarative level definitions
+│   ├── math.js             # quaternionToMat4 helper
+│   ├── sphere.js           # UV sphere generator with TBN frames
+│   ├── cube-geometry.js    # Cube vertex/index buffers
+│   ├── zones/              # 35+ zone implementations
+│   ├── components/         # React/TSX UI components
+│   ├── sequencer/          # React sequencer UI
+│   ├── importers/          # AI song and .rbs importers
+│   ├── rendering/          # Rendering manager, shaders, effects
+│   ├── visuals/            # Marble visuals overhaul system
+│   ├── services/           # Service modules (e.g., shaderApi.ts)
+│   ├── assets/             # Asset registry
+│   ├── shaders/            # WGSL shaders
+│   ├── audio.js            # Audio system
+│   ├── material-system.js  # Material management
+│   └── __tests__/          # React component tests
+├── storage/                # Python FastAPI backend
+│   ├── main.py             # FastAPI app entry point
+│   ├── config.py           # GCS storage map config
+│   ├── models.py           # Pydantic models
+│   ├── cache.py            # Caching setup
+│   ├── client.py           # GCS client initialization
+│   ├── io.py               # I/O utilities
+│   ├── routes/             # API routers (admin, songs, samples, etc.)
+│   └── services/           # Business logic (index, sync)
+├── universal/              # Standalone utilities
+│   └── app_storage_manager.py # Monolithic FastAPI duplicate
+└── .github/workflows/      # CI/CD workflows
+    ├── debug_build.yml     # Build workflow (Node 20, Emscripten)
+    └── codespaces-prebuild.yml # Devcontainer validation
 ```
 
-## Build Commands
+## Build and Development Commands
 
 ```bash
 # Development server (serves on localhost with hot reload)
@@ -52,112 +101,131 @@ npm run build
 npm run preview
 ```
 
-## Code Organization
+## Code Organization & Architecture
 
-### Main Game Class (`src/main.js`)
+### Mixin-Based Game Architecture
 
-The `MarblesGame` class is the core of the application:
+The `MarblesGame` class in `src/main.js` is the core of the application. Instead of deep inheritance, functionality is composed via **mixins**:
 
-**Initialization Flow:**
-1. `init()` - Sets up input listeners, initializes physics world
-2. `loadFilament()` - Dynamically imports Filament WASM module
-3. `setupAssets()` - Loads baked material and creates vertex/index buffers
-4. `createLight()` - Sets up directional sun, fill, and back lights
-5. `create*Zone()` methods - Build the level geometry (floor, track, obstacles)
-6. `createMarbles()` - Spawns marbles with different physics properties
+```javascript
+class MarblesGame { constructor() { /* massive state initialization */ } }
+applyZoneMethods(MarblesGame);
+applyInputMethods(MarblesGame);
+applyInitMethods(MarblesGame);
+applyZoneSetupMethods(MarblesGame);
+applyPhysicsFactoryMethods(MarblesGame);
+applyMarbleManagementMethods(MarblesGame);
+applyGameLogicMethods(MarblesGame);
+applyAbilityMethods(MarblesGame);
+applyGameLoopMethods(MarblesGame);
+applyGameLoopRenderMethods(MarblesGame);
+applyGameLoopSyncMethods(MarblesGame);
+```
 
-**Key Methods:**
-- `createStaticBox(pos, rotation, halfExtents, color)` - Creates static physics body + visual cube
-- `createMarbles()` - Spawns dynamic spheres with configurable radius, friction, restitution, density
-- `loop()` - Main game loop: input handling → physics step → transform sync → render
-- `checkGameLogic()` - Respawn logic and scoring detection
+Each mixin file exports:
+- A class (e.g., `InitMethods`, `ZoneSetupMethods`)
+- An `apply*Methods(targetClass)` function that copies all prototype methods onto the target class
 
-### Sphere Geometry (`src/sphere.js`)
+### State Management
 
-- `createSphere(radius, widthSegments, heightSegments)` - Generates UV sphere with TBN frame quaternions
-- `tbnToQuaternion(t, b, n)` - Converts tangent/bitangent/normal to quaternion
-- Returns `{ vertices: Float32Array, indices: Uint16Array }`
+The `MarblesGame` constructor initializes a monolithic state object with ~300 lines of property assignments, tracking:
+- `this.marbles` — active marble objects
+- `this.staticBodies` / `this.staticEntities` — level geometry
+- `this.dynamicObjects` — moving/rotating platforms
+- `this.checkpoints`, `this.collectibles`, `this.powerUps`
+- `this.activeEffects`, ability cooldowns, energy bars
+- Camera state, input keys, gamepad state, HUD references
 
-### Math Helper
+### Level & Zone System
 
-- `quaternionToMat4(position, quaternion)` - Converts Rapier physics transform to column-major 4x4 matrix for Filament
+- **Levels** are defined declaratively in `src/levels.js` as objects with `name`, `description`, `zones[]`, `spawn`, `goals[]`, `checkpoints[]`, and `camera` settings.
+- **Zones** are created via `ZoneSetupMethods.createZone(zone)`, which dispatches through a large `switch` statement to either:
+  - Methods on `this` (e.g., `this.createFloorZone()`)
+  - Standalone factory functions imported from `src/zones/*.js` or legacy zone files
+- There are 35+ zone implementations covering themes like frostbite caverns, toxic swamps, volcano, laser grids, and more.
 
-## Level Structure
+### Physics + Rendering Sync
 
-The game consists of multiple connected zones:
+- **Rapier** handles all physics simulation.
+- **Filament** handles all rendering.
+- Every frame, physics transforms are extracted from rigid bodies, converted via `quaternionToMat4()`, and applied to Filament renderable entities via `TransformManager`.
+- Scale is applied separately by multiplying the upper 3x3 matrix columns.
 
-1. **Starting Platform** (Z: -12) - Marble spawn points
-2. **Ramp** (Z: 0 to 15) - Angled ramp with side walls
-3. **Landing Zone** (Z: 15-35) - Flat area with pillars
-4. **Goal 1** (Z: 32.5) - Gold platform, first scoring zone
-5. **Jump Zone** (Z: 35-65) - Ramp up, gap, landing platform
-6. **Slalom Zone** (Z: 65-105) - Oscillating pillars, Goal 2 at end
-7. **Staircase Zone** (Z: 110-156) - 10 steps ascending to Goal 3
+### React / TSX UI Layer
 
-## Marble Types
+A subset of the project uses React/TypeScript:
+- `src/components/MainLayout.tsx`, `AISwarmModal.tsx`, `ImportRbsModal.tsx`
+- `src/sequencer/EffectsChain.tsx`, `src/sequencer/SequencerGrid.tsx`
+- `src/importers/ai-song/` and `src/importers/rbs/` — importer logic and modals
 
-| Type | Color | Radius | Properties |
-|------|-------|--------|------------|
-| Standard Red | [1,0,0] | 0.5 | Default |
-| Standard Blue | [0,0,1] | 0.5 | Default |
-| Speedster | [0.2,1,0.2] | 0.4 | friction: 0.1, restitution: 0.8 |
-| Bouncy Giant | [0.6,0.1,0.8] | 0.75 | restitution: 1.2 |
-| Golden Heavy | [1,0.84,0] | 0.6 | density: 3.0, restitution: 0.2 |
-| Ice | [0,0.8,1] | 0.5 | friction: 0.05, roughness: 0.1 |
+### Math & Geometry Helpers
 
-## Input Controls
-
-| Key | Action (Orbit Mode) | Action (Follow Mode) |
-|-----|---------------------|----------------------|
-| W / Arrow Up | Zoom in | Move forward (+Z impulse) |
-| S / Arrow Down | Zoom out | Move backward (-Z impulse) |
-| A / Arrow Left | Rotate camera left | Move left (-X impulse) |
-| D / Arrow Right | Rotate camera right | Move right (+X impulse) |
-| Space | - | Jump (+Y impulse) |
-| R | Reset all marbles | Reset all marbles |
-| C | Toggle camera mode | Toggle camera mode |
-
-## Camera Modes
-
-- **Orbit Mode** (`cameraMode = 'orbit'`): Camera rotates around origin at fixed radius
-- **Follow Mode** (`cameraMode = 'follow'`): Camera tracks player marble from behind
+- `src/math.js` — `quaternionToMat4()`, `quatFromEuler()`
+- `src/sphere.js` — `createSphere()` generates UV spheres with TBN frame quaternions
+- `src/cube-geometry.js` — Cube vertex and index buffer generation
 
 ## Development Conventions
 
-### Code Style
-- ES Modules with `.js` extension in imports
-- Class-based architecture with clear separation of concerns
-- Physics body and visual entity created together, stored in arrays
+### Code Style (from `.eslintrc.js`)
+- Extends: `eslint:recommended`, `@typescript-eslint/recommended`
+- Target: ES2021+, modules
+- `prefer-const: error`, `no-var: error`
+- `max-len: warn` (100 characters)
+- `complexity: warn` (max 10)
+- `max-params: warn` (max 4)
+- `no-bitwise: off` (allowed for performance work)
+- `no-console: off` (debugging allowed)
+
+### Formatting (from `.prettierrc`)
+- Semi: true
+- Single quotes
+- Trailing commas: `es5`
+- Print width: 100
+- Tab width: 2 spaces
+- End of line: `lf`
+
+### TypeScript (from `tsconfig.json`)
+- `target: ES2022`, `module: ESNext`, `moduleResolution: node`
+- `strict: true` (all strict flags enabled)
+- `allowJs: true`, `checkJs: false` — JS files can import TS, but JS is not type-checked
+- `noEmit: true` — TypeScript is used for type-checking only; Vite handles compilation
+- `isolatedModules: true`
+
+### General Conventions
+- Use **ES Modules** with `.js` extension in imports
 - Use `this.Filament.*` and `RAPIER.*` namespaces explicitly
-
-### Naming Conventions
-- Private methods/properties: standard naming (no `_` prefix)
-- Physics-related: `rigidBody`, `world`, `collider`
-- Visual-related: `entity`, `material`, `mesh`
-- Combined objects stored in arrays like `this.marbles`
-
-### Transform System
-Filament uses column-major matrices. The `quaternionToMat4()` helper handles conversion from Rapier's quaternion + position format. Scale is applied by multiplying the upper 3x3 matrix columns.
+- Physics-related names: `rigidBody`, `world`, `collider`
+- Visual-related names: `entity`, `material`, `mesh`
+- No `_` prefix convention for private members
 
 ## Testing Strategy
 
-There are no automated tests. Testing is manual:
+### Automated Tests
+- **No test runner script** is defined in `package.json`.
+- **5 React component tests** exist in `src/__tests__/` using `@testing-library/react` patterns:
+  - `AISwarmModal.test.tsx`
+  - `EffectsChain.test.tsx`
+  - `MainLayout.test.tsx`
+  - `RbsParser.test.ts`
+  - `SequencerGrid.test.tsx`
+- These tests are shallow UI tests for the sequencer/importer components and are **not wired to run automatically**.
+- **There are no automated tests for the core 3D game logic.**
 
-1. Run `npm run dev` and open browser
+### Manual Testing
+1. Run `npm run dev` and open the browser
 2. Verify marbles fall and collide with level geometry
 3. Test all camera modes and controls
-4. Check that scoring works in all three goal zones
-5. Verify respawn when marbles fall below Y=-20
+4. Check that scoring works in goal zones
+5. Verify respawn when marbles fall below the level
 
 ### Browser Requirements
 - WebGL2 support
 - WASM support
-- SharedArrayBuffer (requires COOP/COEP headers - configured in Vite)
+- SharedArrayBuffer (requires COOP/COEP headers — configured in Vite)
 
-## Deployment Process
+## Deployment & CI/CD
 
-The `deploy.py` script handles deployment:
-
+### Local Deployment (`deploy.py`)
 ```bash
 # 1. Build first
 npm run build
@@ -166,13 +234,21 @@ npm run build
 python deploy.py
 ```
 
-**Configuration in deploy.py:**
-- Host: `1ink.us`
-- User: `ford442`
-- Local source: `dist/`
-- Remote target: `test.1ink.us/marbles`
+- Uses **Paramiko** to recursively SFTP upload the `dist/` directory.
+- Target server: `1ink.us:22` (user: `ford442`)
+- Remote path: `test.1ink.us/marbles`
 
-The script uses SFTP to recursively upload the `dist/` directory.
+### GitHub Actions
+**`.github/workflows/debug_build.yml`**:
+- Triggers on push to `main`/`debug-ci` and pull requests to `main`
+- Sets up Node 20, pnpm 9, Emscripten 3.1.50
+- Runs `npm install` → `npm run build`
+- Uploads `dist/`, `public/*.wasm`, `public/*.js` as artifacts (7-day retention)
+
+## Security Considerations
+
+- **`deploy.py` contains a hardcoded password.** If modifying this file, do not expose the credential in outputs. Consider refactoring to use environment variables or `getpass.getpass()` instead.
+- The Python backend (`storage/`) has hardcoded CORS origins allowing `localhost` and `*.1ink.us` domains.
 
 ## Important Configuration
 
@@ -192,32 +268,31 @@ Dependencies excluded from optimization (WASM modules):
 - `filament`
 - `@dimforge/rapier3d-compat`
 
-WASM files handled as static assets:
+Static asset handling:
 ```javascript
-assetsInclude: ['**/*.wasm']
+assetsInclude: ['**/*.wasm', '**/*.filmat']
 ```
 
 ### Material System
 
-The game uses a custom Filament material (`custom_material.mat`):
+The game uses custom Filament materials (`public/custom_material.mat` and variants):
 - Parameters: `baseColor` (float3), `roughness` (float)
 - Shading model: lit, opaque
-- Pre-compiled to `baked_color.filmat` for runtime
+- Pre-compiled to `public/baked_color.filmat` for runtime
 
-## Common Issues
+## Common Issues & Troubleshooting
 
-1. **Filament WASM loading**: The module uses a UMD pattern with dynamic import. The loading code captures the module via `loadClassExtensions` hook.
-
+1. **Filament WASM loading**: The module uses a UMD pattern with dynamic import. The loading code captures the module via a `loadClassExtensions` hook.
 2. **SharedArrayBuffer errors**: Ensure Vite dev server headers are configured correctly (COOP/COEP).
-
 3. **Physics-Visual sync**: Always use `quaternionToMat4()` for transform conversion. Remember to apply scale separately.
-
-4. **Marble scaling**: Physics radius and visual scale are separate. The `scale` property in marble objects is `radius / 0.5`.
+4. **Marble scaling**: Physics radius and visual scale are separate. The `scale` property in marble objects is typically `radius / 0.5`.
 
 ## File Modification Guidelines
 
-- **Adding new level zones**: Create a `create*Zone()` method following existing patterns, call from `init()`
-- **Adding marble types**: Extend `marblesInfo` array in `createMarbles()`
+- **Adding new level zones**: Add a level definition to `src/levels.js`, and either add a method to `ZoneSetupMethods` or create a standalone factory in `src/zones/`
+- **Adding marble types**: Extend the marble data in `src/marbles_data.js` or `marble-management-methods.js`
 - **Modifying physics**: Use Rapier APIs via `RAPIER.*` namespace after `RAPIER.init()`
 - **Modifying rendering**: Use Filament APIs via `this.Filament.*` after initialization
-- **Material changes**: Edit `custom_material.mat`, recompile with Filament `matc` tool to `baked_color.filmat`
+- **Modifying UI**: Edit React/TSX files in `src/components/` or `src/sequencer/`
+- **Material changes**: Edit `public/custom_material.mat`, recompile with Filament `matc` tool to `public/baked_color.filmat`
+- **Python backend changes**: Prefer editing files under `storage/routes/` and `storage/services/` rather than the monolithic `universal/app_storage_manager.py`
