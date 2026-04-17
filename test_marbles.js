@@ -88,6 +88,7 @@ try {
     checkMarble("Abyssal Eye", ['color', 'radius', 'density', 'restitution', 'gravityScale', 'friction', 'roughness', 'emissive: true', 'lightIntensity', 'lightColor'], true);
     checkMarble("Void Walker", ['color', 'radius', 'density', 'restitution', 'gravityScale', 'friction', 'roughness', 'emissive: true', 'lightIntensity', 'lightColor'], true);
     checkMarble("Astral Jumper", ['color', 'radius', 'density', 'restitution', 'gravityScale', 'friction', 'roughness', 'emissive: true', 'lightIntensity', 'lightColor'], true);
+    checkMarble("Phantom Glass", ['color', 'radius', 'density', 'friction', 'restitution', 'roughness', 'gravityScale', 'emissive: true', 'lightIntensity', 'lightColor', 'materialType: "glass"']);
 
     if (!success) {
         console.error("Some marble checks failed.");
