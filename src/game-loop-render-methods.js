@@ -388,15 +388,62 @@ export class GameLoopRenderMethods {
                 const t = target.rigidBody.translation()
                 if (this.cameraMode === 'follow') {
                     const height = level?.camera?.height || 10
-                    const dist = this.followDist || 20
 
-                    const idealEyeX = t.x - Math.sin(this.aimYaw) * dist
-                    const idealEyeY = t.y + height
-                    const idealEyeZ = t.z - Math.cos(this.aimYaw) * dist
+                    const linvel = target.rigidBody.linvel()
+                    const speed = Math.hypot(linvel.x, linvel.z)
 
-                    const idealLookAtX = t.x
+                    // Dynamic Distance Scaling
+                    const baseDist = this.followDist || 20
+                    const dist = baseDist + Math.min(speed * 0.5, 15.0)
+
+                    // Predictive Look-Ahead
+                    const lookAheadFactor = Math.min(speed * 0.15, 8.0)
+                    const normVx = speed > 0.1 ? linvel.x / speed : 0
+                    const normVz = speed > 0.1 ? linvel.z / speed : 0
+                    const idealLookAtX = t.x + normVx * lookAheadFactor
                     const idealLookAtY = t.y
-                    const idealLookAtZ = t.z
+                    const idealLookAtZ = t.z + normVz * lookAheadFactor
+
+                    // Calculate ideal eye position
+                    let idealEyeX = t.x - Math.sin(this.aimYaw) * dist
+                    let idealEyeY = t.y + height
+                    let idealEyeZ = t.z - Math.cos(this.aimYaw) * dist
+
+                    // Camera Collision Avoidance
+                    if (this.world && typeof RAPIER !== 'undefined') {
+                        const dx = idealEyeX - t.x
+                        const dy = idealEyeY - t.y
+                        const dz = idealEyeZ - t.z
+                        const distToEye = Math.hypot(dx, dy, dz)
+                        const rayDir = { x: dx / distToEye, y: dy / distToEye, z: dz / distToEye }
+
+                        const r = target.scale * 0.5 || 0.5
+                        const startDist = r + 0.1
+                        const rayOrigin = {
+                            x: t.x + rayDir.x * startDist,
+                            y: t.y + rayDir.y * startDist,
+                            z: t.z + rayDir.z * startDist
+                        }
+
+                        const ray = new RAPIER.Ray(rayOrigin, rayDir)
+
+                        const hit = this.world.castRay(ray, distToEye - startDist, false)
+                        if (hit) {
+                            const otherBody = hit.collider.parent()
+                            if (!otherBody || (otherBody.handle !== target.rigidBody.handle && !hit.collider.isSensor())) {
+                                const safeDist = hit.toi - 0.2
+                                if (safeDist > 0) {
+                                    idealEyeX = rayOrigin.x + rayDir.x * safeDist
+                                    idealEyeY = rayOrigin.y + rayDir.y * safeDist
+                                    idealEyeZ = rayOrigin.z + rayDir.z * safeDist
+                                } else {
+                                    idealEyeX = rayOrigin.x
+                                    idealEyeY = rayOrigin.y
+                                    idealEyeZ = rayOrigin.z
+                                }
+                            }
+                        }
+                    }
 
                     if (!this.cameraFollowPos) {
                         this.cameraFollowPos = { x: idealEyeX, y: idealEyeY, z: idealEyeZ }
@@ -419,6 +466,21 @@ export class GameLoopRenderMethods {
                     const eyeZ = this.cameraFollowPos.z + this.cameraShake.z
 
                     this.camera.lookAt([eyeX, eyeY, eyeZ], [this.cameraFollowLookAt.x, this.cameraFollowLookAt.y, this.cameraFollowLookAt.z], [0, 1, 0])
+
+                    // Dynamic FOV scaling based on speed
+                    const baseFov = this.currentFov || 45
+                    const targetFov = baseFov + Math.min(speed * 0.5, 20.0)
+                    this.activeFov = this.activeFov || baseFov
+                    this.activeFov += (targetFov - this.activeFov) * 0.1
+
+                    if (this.view && this.camera && this.Filament) {
+                        const width = this.canvas.width;
+                        const height = this.canvas.height;
+                        const aspect = width / height;
+                        const CameraFov = this.Filament?.['Camera$Fov'];
+                        const fovMode = CameraFov ? CameraFov.VERTICAL : 0;
+                        this.camera.setProjectionFov(this.activeFov, aspect, 0.1, 1000.0, fovMode);
+                    }
                 } else if (this.cameraMode === 'fpv') {
                     const r = target.scale * 0.5 || 0.5
                     const eyeX = t.x + this.cameraShake.x
