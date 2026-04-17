@@ -34,6 +34,7 @@ import { createGalaxySpiralZone } from './zones/galaxy-spiral.js';
 import { createGlacialChasmZone } from './zones/glacial-chasm.js';
 import { createQuantumLeapZone } from './zones/quantum-leap.js';
 import { createFrostbiteCavernZone } from './zones/frostbite-cavern.js';
+import { createMagneticCanyonZone } from './zones/magnetic-canyon.js';
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import { audio } from './audio.js';
 
@@ -195,6 +196,9 @@ export class ZoneSetupMethods {
                 break
             case 'frostbite_cavern':
                 createFrostbiteCavernZone(this, offset)
+                break
+            case 'magnetic_canyon':
+                createMagneticCanyonZone(this, offset)
                 break
             case 'starlight_ascent':
                 createStarlightAscentZone(this, offset)

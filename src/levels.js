@@ -742,6 +742,19 @@ export const LEVELS = {
         nightMode: true,
         backgroundColor: [0.05, 0.1, 0.2, 1.0]
     },
+    magnetic_canyon_run: {
+        name: 'Magnetic Canyon Run',
+        description: 'Navigate the icy paths and magnetic floating platforms!',
+        zones: [
+            { type: 'magnetic_canyon', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: -1, z: 80 } }
+        ],
+        spawn: { x: 0, y: 5, z: -5 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [75, 85], y: [-3, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
