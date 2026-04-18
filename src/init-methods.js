@@ -128,11 +128,14 @@ export class InitMethods {
                             const gravityDir = rb.gravityScale() < 0 ? -1 : 1
                             rb.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true)
                             rb.applyImpulse({ x: 0, y: 10.0 * gravityDir, z: 0 }, true)
-                            this.jumpCount++
                             audio.playJump()
 
-                            // Award points for double jump
-                            this.awardTrickPoints('Double Jump!', 20, '#00bfff')
+                            if (this.jumpCount === 1) {
+                                this.awardTrickPoints('Double Jump!', 20, '#00bfff')
+                            } else if (this.jumpCount === 2) {
+                                this.awardTrickPoints('Triple Jump!', 50, '#ff00ff')
+                            }
+                            this.jumpCount++
                         }
                     }
                 }
