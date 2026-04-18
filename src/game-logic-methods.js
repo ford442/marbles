@@ -688,7 +688,10 @@ export class GameLogicMethods {
                     points += Math.floor(this.trickState.spin * 10)
                 }
 
-                if (this.trickState.airTime > 60) {
+                if (this.trickState.airTime > 90) {
+                    points += 50
+                    messages.push('Hang Time')
+                } else if (this.trickState.airTime > 60) {
                     messages.push('Big Air')
                 } else if (messages.length === 0) {
                     messages.push('Air Time')

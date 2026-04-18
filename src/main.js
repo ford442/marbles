@@ -141,7 +141,7 @@ class MarblesGame {
         this.maxDashCharge = 1.0
         this.cueInst = null
         this.jumpCount = 0
-        this.maxJumps = 2
+        this.maxJumps = 3
         this.powerUpRotation = 0
         this.isStomping = false
         this.stompStartTime = 0
