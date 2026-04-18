@@ -755,6 +755,21 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
+    magnetic_cavern_run: {
+        name: 'Magnetic Cavern Run',
+        description: 'Navigate the icy paths and magnetic floating platforms in the cavern!',
+        zones: [
+            { type: 'magnetic_cavern', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: -1, z: 80 } }
+        ],
+        spawn: { x: 0, y: 5, z: -5 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [75, 85], y: [-3, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.05, 0.05, 0.15, 1.0]
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
