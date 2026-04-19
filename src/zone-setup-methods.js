@@ -399,6 +399,7 @@ export class ZoneSetupMethods {
                 y: rayOrigin.y + rayDir.y * hit.toi,
                 z: rayOrigin.z + rayDir.z * hit.toi
             }
+            this.grappleRestLength = hit.toi * 0.8 // slightly pull them in initially
             this.isGrappling = true
             console.log("[GAME] Grapple attached at", this.grappleTarget)
             if (audio && audio.playCollect) audio.playCollect()
@@ -436,16 +437,33 @@ export class ZoneSetupMethods {
         const dirY = dy / dist
         const dirZ = dz / dist
 
-        // Apply pulling force
-        rb.applyImpulse({
-            x: dirX * this.grappleForce,
-            y: dirY * this.grappleForce,
-            z: dirZ * this.grappleForce
-        }, true)
+        // Apply Spring/Pendulum force instead of constant pull
+        const restLength = this.grappleRestLength || 10.0
 
-        // Counter-gravity
-        if (dirY > 0) {
-            rb.applyImpulse({ x: 0, y: 1.0, z: 0 }, true)
+        if (dist > restLength) {
+            const stiffness = 15.0
+            const damping = 2.0
+
+            const springForce = (dist - restLength) * stiffness
+
+            const vel = rb.linvel()
+            const velAlongString = vel.x * dirX + vel.y * dirY + vel.z * dirZ
+            const dampingForce = -velAlongString * damping
+
+            const totalForce = springForce + dampingForce
+
+            if (totalForce > 0) {
+                rb.applyImpulse({
+                    x: dirX * totalForce * 0.016, // scale by rough dt
+                    y: dirY * totalForce * 0.016,
+                    z: dirZ * totalForce * 0.016
+                }, true)
+            }
+        }
+
+        // Counter-gravity when swinging
+        if (dirY > 0 && dist > restLength) {
+            rb.applyImpulse({ x: 0, y: 0.5, z: 0 }, true)
         }
 
         // Visuals
