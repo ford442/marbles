@@ -770,6 +770,21 @@ export const LEVELS = {
         nightMode: true,
         backgroundColor: [0.05, 0.05, 0.15, 1.0]
     },
+    gravity_well_run: {
+        name: 'Gravity Well',
+        description: 'Navigate the icy funnel without falling into the core!',
+        zones: [
+            { type: 'gravity_well', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: -1, z: 50 } }
+        ],
+        spawn: { x: 0, y: 5, z: -5 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [45, 55], y: [-3, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.02, 0.05, 0.08, 1.0]
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
