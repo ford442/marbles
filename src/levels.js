@@ -785,6 +785,21 @@ export const LEVELS = {
         nightMode: true,
         backgroundColor: [0.02, 0.05, 0.08, 1.0]
     },
+    cyber_ice_track_run: {
+        name: 'Cyber Ice Track',
+        description: 'Navigate low friction ice and dodging platforms!',
+        zones: [
+            { type: 'cyber_ice_track', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: -1, z: 120 } }
+        ],
+        spawn: { x: 0, y: 5, z: -5 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [115, 125], y: [-3, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.0, 0.05, 0.1, 1.0]
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,

@@ -29,3 +29,4 @@ export { createQuantumLeapZone } from './quantum-leap.js';
 export { createMagneticCanyonZone } from './magnetic-canyon.js';
 export { createMagneticCavernZone } from './magnetic-cavern.js';
 export { createGravityWellZone } from './gravity-well.js';
+export { createCyberIceTrackZone } from './cyber-ice-track.js';
