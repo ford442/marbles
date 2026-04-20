@@ -184,7 +184,8 @@ export class GameLoopRenderMethods {
     renderAndSync() {
 
         if (this.keys['KeyR']) {
-            this.resetMarbles()
+            this.respawnToLastCheckpoint()
+            this.keys['KeyR'] = false // Debounce key press
         }
         if (this.keys['KeyM'] && this.currentLevel) {
             this.returnToMenu()

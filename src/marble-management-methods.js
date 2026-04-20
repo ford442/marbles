@@ -156,6 +156,46 @@ export class MarbleManagementMethods {
         return leader
     }
 
+    respawnToLastCheckpoint() {
+        if (!this.playerMarble) return
+
+        const m = this.playerMarble
+        const respawn = m.respawnPos || m.initialPos
+        m.rigidBody.setTranslation(respawn, true)
+        m.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true)
+        m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true)
+        m.scoredGoals.clear()
+
+        this.rewindHistory = []
+
+        // Penalize score for manual respawn
+        if (this.score > 0) {
+            this.score = Math.max(0, this.score - 50)
+            if (this.scoreEl) this.scoreEl.textContent = 'Score: ' + this.score
+            if (typeof this.showTrickMessage === 'function') {
+                this.showTrickMessage('-50 Respawn Penalty', '#ff0000')
+            }
+        }
+
+        this.combo = 1
+        if (this.comboEl) {
+            this.comboEl.style.display = 'none'
+            this.comboEl.textContent = 'Combo: x1'
+        }
+        if (this.combobarContainerEl) {
+            this.combobarContainerEl.style.display = 'none'
+        }
+
+        if (typeof this.triggerCheckpointFlash === 'function') {
+            this.triggerCheckpointFlash()
+        }
+
+        if (typeof audio !== 'undefined' && audio.playJump) {
+            // Play a sound to indicate respawn
+            audio.playJump()
+        }
+    }
+
     resetMarbles() {
         audio.stopAllRolling()
 
