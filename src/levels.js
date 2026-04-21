@@ -800,6 +800,23 @@ export const LEVELS = {
         nightMode: true,
         backgroundColor: [0.0, 0.05, 0.1, 1.0]
     },
+    chrono_canyon_run: {
+        name: 'Chrono Canyon Run',
+        description: 'Navigate the high friction sands and erratic time-distorted platforms!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'chrono_canyon', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 0, y: -1, z: 140 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [135, 145], y: [-3, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.08, 0.03, 0.05, 1.0]
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
