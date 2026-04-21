@@ -317,6 +317,12 @@ export class GameLogicMethods {
         // Update respawn position
         marble.respawnPos = { x: checkpoint.pos.x, y: checkpoint.pos.y + 1.0, z: checkpoint.pos.z }
         
+        if (this.levelStartTime) {
+            const splitTimeMs = Date.now() - this.levelStartTime;
+            const splitTimeSec = (splitTimeMs / 1000).toFixed(2);
+            this.showTrickMessage(`Checkpoint! Split: ${splitTimeSec}s`, '#00ff00');
+        }
+
         console.log(`[GAME] Checkpoint activated by ${marble.name || 'marble'}! New respawn set.`)
     }
     

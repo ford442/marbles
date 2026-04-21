@@ -52,7 +52,15 @@ export class InputMethods {
 
         document.addEventListener('wheel', (e) => {
             if (document.pointerLockElement === this.canvas && !this.isPaused) {
-                if (this.cameraMode === 'follow') {
+                if (this.isGrappling) {
+                    // Grapple hook update: Reel in / Reel out
+                    const reelSpeed = 1.5;
+                    if (e.deltaY > 0) {
+                        this.grappleRestLength = Math.min(this.grappleMaxDist, (this.grappleRestLength || 10) + reelSpeed);
+                    } else if (e.deltaY < 0) {
+                        this.grappleRestLength = Math.max(1.0, (this.grappleRestLength || 10) - reelSpeed);
+                    }
+                } else if (this.cameraMode === 'follow' || this.cameraMode === 'action') {
                     // Adjust follow distance based on wheel scroll
                     const distSensitivity = 1.5;
                     this.followDist = this.followDist || 20.0;

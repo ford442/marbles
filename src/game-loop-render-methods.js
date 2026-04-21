@@ -216,7 +216,7 @@ export class GameLoopRenderMethods {
             if (this.keys['ArrowRight'] || this.keys['KeyD']) this.camAngle += rotSpeed
             if (this.keys['ArrowUp'] || this.keys['KeyW']) this.camRadius = Math.max(5, this.camRadius - zoomSpeed)
             if (this.keys['ArrowDown'] || this.keys['KeyS']) this.camRadius = Math.min(100, this.camRadius + zoomSpeed)
-        } else if (this.cameraMode === 'follow' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown' || this.cameraMode === 'cinematic' || this.cameraMode === 'side-scroller') {
+        } else if (this.cameraMode === 'follow' || this.cameraMode === 'action' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown' || this.cameraMode === 'cinematic' || this.cameraMode === 'side-scroller') {
             let impulseStrength = 0.5
             if (this.activeEffects.speed && Date.now() < this.activeEffects.speed) {
                 impulseStrength *= 2.0
@@ -382,12 +382,12 @@ export class GameLoopRenderMethods {
         this.aimEl.textContent = `Yaw: ${yawDeg}° Pitch: ${pitchDeg}°`
         this.powerbarEl.style.width = `${this.chargePower * 100}%`
 
-        if ((this.cameraMode === 'follow' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown' || this.cameraMode === 'cinematic' || this.cameraMode === 'side-scroller') && this.currentLevel) {
+        if ((this.cameraMode === 'follow' || this.cameraMode === 'action' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown' || this.cameraMode === 'cinematic' || this.cameraMode === 'side-scroller') && this.currentLevel) {
             const level = LEVELS[this.currentLevel]
             const target = this.playerMarble || this.getLeader()
             if (target) {
                 const t = target.rigidBody.translation()
-                if (this.cameraMode === 'follow') {
+                if (this.cameraMode === 'follow' || this.cameraMode === 'action') {
                     const height = level?.camera?.height || 10
 
                     const linvel = target.rigidBody.linvel()
@@ -395,10 +395,21 @@ export class GameLoopRenderMethods {
 
                     // Dynamic Distance Scaling
                     const baseDist = this.followDist || 20
-                    const dist = baseDist + Math.min(speed * 0.5, 15.0)
+                    let dist = baseDist + Math.min(speed * 0.5, 15.0)
+
+                    let currentHeight = height;
+                    if (this.cameraMode === 'action') {
+                        // Action camera gets lower and closer when fast
+                        const speedFactor = Math.min(speed / 30.0, 1.0)
+                        currentHeight = height * (1.0 - speedFactor * 0.6)
+                        dist = baseDist * (1.0 - speedFactor * 0.3)
+                    }
 
                     // Predictive Look-Ahead
-                    const lookAheadFactor = Math.min(speed * 0.15, 8.0)
+                    let lookAheadFactor = Math.min(speed * 0.15, 8.0)
+                    if (this.cameraMode === 'action') {
+                        lookAheadFactor = Math.min(speed * 0.3, 15.0) // Look further ahead in action mode
+                    }
                     const normVx = speed > 0.1 ? linvel.x / speed : 0
                     const normVz = speed > 0.1 ? linvel.z / speed : 0
                     const idealLookAtX = t.x + normVx * lookAheadFactor
@@ -407,7 +418,7 @@ export class GameLoopRenderMethods {
 
                     // Calculate ideal eye position
                     let idealEyeX = t.x - Math.sin(this.aimYaw) * dist
-                    let idealEyeY = t.y + height
+                    let idealEyeY = t.y + currentHeight
                     let idealEyeZ = t.z - Math.cos(this.aimYaw) * dist
 
                     // Camera Collision Avoidance
