@@ -93,6 +93,7 @@ try {
     checkMarble("Aegis Diamond", ['color', 'radius', 'density', 'friction', 'restitution', 'clearCoat', 'clearCoatRoughness', 'emissive: true', 'lightIntensity', 'lightColor', 'materialType: "glass"']);
     checkMarble("Omega Titan", ['color', 'radius', 'density', 'friction', 'restitution', 'clearCoat', 'clearCoatRoughness', 'emissive: true', 'lightIntensity', 'lightColor', 'materialType: "glass"']);
     checkMarble("Infinity Glass", ['color', 'radius', 'density', 'friction', 'restitution', 'clearCoat', 'clearCoatRoughness', 'emissive: true', 'lightIntensity', 'lightColor', 'materialType: "glass"']);
+    checkMarble("Quantum Phoenix", ['color', 'radius', 'density', 'friction', 'restitution', 'gravityScale', 'clearCoat', 'clearCoatRoughness', 'emissive: true', 'lightIntensity', 'lightColor', 'materialType: "glass"']);
 
     if (!success) {
         console.error("Some marble checks failed.");
