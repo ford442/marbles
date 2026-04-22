@@ -800,6 +800,21 @@ export const LEVELS = {
         nightMode: true,
         backgroundColor: [0.0, 0.05, 0.1, 1.0]
     },
+    neon_alley_run: {
+        name: 'Neon Alley Run',
+        description: 'Navigate the high speed neon icy slide and dodging laser sweepers!',
+        zones: [
+            { type: 'neon_alley', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: -4, z: 50 } }
+        ],
+        spawn: { x: 0, y: 5, z: -5 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [45, 55], y: [-5, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.01, 0.0, 0.05, 1.0]
+    },
     chrono_canyon_run: {
         name: 'Chrono Canyon Run',
         description: 'Navigate the high friction sands and erratic time-distorted platforms!',
