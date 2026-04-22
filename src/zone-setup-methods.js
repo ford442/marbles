@@ -39,6 +39,7 @@ import { createMagneticCavernZone } from './zones/magnetic-cavern.js';
 import { createGravityWellZone } from './zones/gravity-well.js';
 import { createCyberIceTrackZone } from './zones/cyber-ice-track.js';
 import { createChronoCanyonZone } from './zones/chrono-canyon.js';
+import { createNeonAlleyZone } from './zones/neon-alley.js';
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import { audio } from './audio.js';
 
@@ -212,6 +213,9 @@ export class ZoneSetupMethods {
                 break
             case 'cyber_ice_track':
                 createCyberIceTrackZone(this, offset)
+                break
+            case 'neon_alley':
+                createNeonAlleyZone(this, offset)
                 break
             case 'chrono_canyon':
                 createChronoCanyonZone(this, offset)
