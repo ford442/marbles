@@ -32,3 +32,4 @@ export { createGravityWellZone } from './gravity-well.js';
 export { createCyberIceTrackZone } from './cyber-ice-track.js';
 export { createChronoCanyonZone } from './chrono-canyon.js';
 export { createNeonAlleyZone } from './neon-alley.js';
+export { createSynthwaveSurgeZone } from './synthwave-surge.js';
