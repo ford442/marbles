@@ -419,6 +419,32 @@ export class ZoneSetupMethods {
     }
 
     stopGrapple() {
+        // Slingshot Boost logic before releasing the grapple
+        if (this.isGrappling && this.playerMarble && this.grappleTarget) {
+            const rb = this.playerMarble.rigidBody
+            const vel = rb.linvel()
+            const speed = Math.hypot(vel.x, vel.y, vel.z)
+
+            if (speed > 15.0) {
+                // Apply forward and upward physics impulse
+                const boostForce = 15.0
+                const dirX = vel.x / speed
+                const dirY = Math.max(0.2, vel.y / speed) + 0.5 // Add some vertical kick
+                const dirZ = vel.z / speed
+
+                rb.applyImpulse({
+                    x: dirX * boostForce,
+                    y: dirY * boostForce,
+                    z: dirZ * boostForce
+                }, true)
+
+                // Call awardTrickPoints if available
+                if (typeof this.awardTrickPoints === 'function') {
+                    this.awardTrickPoints('Slingshot Boost!', 150, '#ff00ff')
+                }
+            }
+        }
+
         this.isGrappling = false
         this.grappleTarget = null
 
