@@ -42,6 +42,7 @@ import { createChronoCanyonZone } from './zones/chrono-canyon.js';
 import { createNeonAlleyZone } from './zones/neon-alley.js';
 import { createSynthwaveSurgeZone } from './zones/synthwave-surge.js';
 import { createMeteoriteHollowZone } from './zones/meteorite-hollow.js';
+import { createRadiantReactorZone } from "./zones/radiant-reactor.js";
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import { audio } from './audio.js';
 
@@ -227,6 +228,9 @@ export class ZoneSetupMethods {
                 break
             case 'meteorite_hollow':
                 createMeteoriteHollowZone(this, offset)
+                break
+            case 'radiant_reactor':
+                createRadiantReactorZone(this, offset)
                 break
             case 'starlight_ascent':
                 createStarlightAscentZone(this, offset)
