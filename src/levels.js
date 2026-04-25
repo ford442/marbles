@@ -862,6 +862,21 @@ export const LEVELS = {
         nightMode: true,
         backgroundColor: [0.02, 0.01, 0.03, 1.0]
     },
+    radiant_reactor_run: {
+        name: 'Radiant Reactor',
+        description: 'Navigate the hazardous coolant pool and dodge the active reactor rods!',
+        zones: [
+            { type: 'radiant_reactor', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: -2, z: 80 } }
+        ],
+        spawn: { x: 0, y: 5, z: -5 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [75, 85], y: [-5, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.01, 0.05, 0.02, 1.0]
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
