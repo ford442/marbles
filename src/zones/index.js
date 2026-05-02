@@ -35,3 +35,4 @@ export { createNeonAlleyZone } from './neon-alley.js';
 export { createSynthwaveSurgeZone } from './synthwave-surge.js';
 export { createMeteoriteHollowZone } from './meteorite-hollow.js';
 export { createRadiantReactorZone } from './radiant-reactor.js';
+export { createPlasmaPipelineZone } from './plasma-pipeline.js';
