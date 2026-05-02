@@ -23,6 +23,12 @@ export class InputMethods {
                 this.pitchAngle -= e.movementY * sensitivity * yMultiplier
                 const maxPitch = 1.4
                 this.pitchAngle = Math.max(-maxPitch, Math.min(maxPitch, this.pitchAngle))
+
+                if (this.cameraMode === 'orbit') {
+                    this.targetCamAngle -= e.movementX * sensitivity * 2.0
+                    this.targetCamHeight += e.movementY * sensitivity * 10.0 * yMultiplier
+                    this.targetCamHeight = Math.max(1.0, Math.min(50.0, this.targetCamHeight))
+                }
             }
         })
 
@@ -68,6 +74,13 @@ export class InputMethods {
                         this.followDist = Math.min(this.followDist + distSensitivity, 50.0); // Zoom out
                     } else if (e.deltaY < 0) {
                         this.followDist = Math.max(this.followDist - distSensitivity, 5.0); // Zoom in
+                    }
+                } else if (this.cameraMode === 'orbit') {
+                    const zoomSensitivity = 2.0;
+                    if (e.deltaY > 0) {
+                        this.targetCamRadius = Math.min(100, this.targetCamRadius + zoomSensitivity);
+                    } else if (e.deltaY < 0) {
+                        this.targetCamRadius = Math.max(5, this.targetCamRadius - zoomSensitivity);
                     }
                 } else {
                     // Adjust field of view based on wheel scroll direction
@@ -192,13 +205,13 @@ export class InputMethods {
 
             // Right Stick -> Camera Controls (Aim / Pitch)
             // Axes 2 (X) and 3 (Y)
+            const camDeadzone = 0.1
+            const camSensitivity = 0.05
+
+            const rx = gp.axes[2]
+            const ry = gp.axes[3]
+
             if (this.cameraMode !== 'orbit') {
-                const camDeadzone = 0.1
-                const camSensitivity = 0.05
-
-                const rx = gp.axes[2]
-                const ry = gp.axes[3]
-
                 if (Math.abs(rx) > camDeadzone) {
                     this.aimYaw -= rx * camSensitivity
                 }
@@ -207,6 +220,15 @@ export class InputMethods {
                     this.pitchAngle -= ry * camSensitivity
                     const maxPitch = 1.4
                     this.pitchAngle = Math.max(-maxPitch, Math.min(maxPitch, this.pitchAngle))
+                }
+            } else {
+                if (Math.abs(rx) > camDeadzone) {
+                    this.targetCamAngle -= rx * camSensitivity
+                }
+
+                if (Math.abs(ry) > camDeadzone) {
+                    this.targetCamHeight += ry * camSensitivity * 5.0
+                    this.targetCamHeight = Math.max(1.0, Math.min(50.0, this.targetCamHeight))
                 }
             }
 
