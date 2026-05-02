@@ -2,7 +2,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from './audio.js';
 import { marblesInfo } from './marbles_data.js';
 import { quaternionToMat4 } from './math.js';
-import { materialPresets } from './material-system.js';
+import { materialPresets, createThemedMaterialInstance } from './material-system.js';
 
 export class MarbleManagementMethods {
     createMarbles(spawnPos) {
@@ -36,47 +36,26 @@ export class MarbleManagementMethods {
             const collider = this.world.createCollider(colliderDesc, rigidBody)
 
             const entity = this.Filament.EntityManager.get().create()
-            const matInstance = this.material.createInstance()
-            
-            // Apply base color using bracket notation for sRGB (consistent with other methods)
-            matInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, info.color)
-            
-            // Apply PBR material properties from preset, with marble-specific overrides
-            const preset = info.materialType ? materialPresets[info.materialType] : null
-            
-            // Roughness: marble override > preset > default (0.4)
-            const roughness = info.roughness !== undefined ? info.roughness : (preset ? preset.roughness : 0.4)
-            matInstance.setFloatParameter('roughness', roughness)
-            
-            // Extended PBR parameters are only available in the procedural material
-            if (this.hasProceduralMaterial) {
-                if (preset) {
-                    // Metallic: marble override > preset > 0.0
-                    const metallic = info.metallic !== undefined ? info.metallic : preset.metallic
-                    matInstance.setFloatParameter('metallic', metallic)
-                    
-                    // Reflectance: marble override > preset > 0.5
-                    const reflectance = info.reflectance !== undefined ? info.reflectance : preset.reflectance
-                    matInstance.setFloatParameter('reflectance', reflectance)
-                    
-                    // Clear coat: apply if preset has it (> 0)
-                    if (preset.clearCoat > 0) {
-                        const clearCoat = info.clearCoat !== undefined ? info.clearCoat : preset.clearCoat
-                        matInstance.setFloatParameter('clearCoat', clearCoat)
-                        const clearCoatRoughness = info.clearCoatRoughness !== undefined ? info.clearCoatRoughness : preset.clearCoatRoughness
-                        matInstance.setFloatParameter('clearCoatRoughness', clearCoatRoughness)
-                    }
-                    
-                    const bumpScale = info.bumpScale !== undefined ? info.bumpScale : (preset.bumpScale !== undefined ? preset.bumpScale : 0.02)
-                    const bumpFrequency = info.bumpFrequency !== undefined ? info.bumpFrequency : (preset.bumpFrequency !== undefined ? preset.bumpFrequency : 50.0)
-                    matInstance.setFloatParameter('bumpScale', bumpScale)
-                    matInstance.setFloatParameter('bumpFrequency', bumpFrequency)
-                } else {
-                    // Default procedural bump for marbles without a preset
-                    matInstance.setFloatParameter('bumpScale', info.bumpScale !== undefined ? info.bumpScale : 0.02)
-                    matInstance.setFloatParameter('bumpFrequency', info.bumpFrequency !== undefined ? info.bumpFrequency : 50.0)
-                }
-            }
+
+            // Use the themed material helper which applies all preset parameters
+            // supported by the current procedural material, plus stores extra
+            // metadata for future GPU upgrades.
+            const { instance: matInstance, preset } = createThemedMaterialInstance(
+                this.material,
+                this.Filament,
+                info.materialType,
+                info.color,
+                this.hasProceduralMaterial
+            )
+
+            // Allow per-marble overrides of any parameter
+            if (info.roughness !== undefined) matInstance.setFloatParameter('roughness', info.roughness)
+            if (info.metallic !== undefined) matInstance.setFloatParameter('metallic', info.metallic)
+            if (info.reflectance !== undefined) matInstance.setFloatParameter('reflectance', info.reflectance)
+            if (info.clearCoat !== undefined) matInstance.setFloatParameter('clearCoat', info.clearCoat)
+            if (info.clearCoatRoughness !== undefined) matInstance.setFloatParameter('clearCoatRoughness', info.clearCoatRoughness)
+            if (info.bumpScale !== undefined) matInstance.setFloatParameter('bumpScale', info.bumpScale)
+            if (info.bumpFrequency !== undefined) matInstance.setFloatParameter('bumpFrequency', info.bumpFrequency)
 
             const vb = info.geometry === 'cube' ? this.vb : this.sphereVb
             const ib = info.geometry === 'cube' ? this.ib : this.sphereIb
@@ -109,7 +88,11 @@ export class MarbleManagementMethods {
                 scoredGoals: new Set(),
                 rainbow: info.rainbow,
                 baseGravityScale: info.gravityScale !== undefined ? info.gravityScale : 1.0,
-                originalGravityScale: info.gravityScale !== undefined ? info.gravityScale : 1.0
+                originalGravityScale: info.gravityScale !== undefined ? info.gravityScale : 1.0,
+                // Store full preset metadata for future GPU upgrades
+                materialPreset: preset || null,
+                materialPresetName: info.materialType || null,
+                matInstance,
             }
 
             this.marbles.push(marbleObj)

@@ -1436,6 +1436,7 @@ export class InitMethods {
         for (const m of this.marbles) {
             this.world.removeRigidBody(m.rigidBody)
             this.scene.remove(m.entity)
+            if (m.matInstance) this.engine.destroyMaterialInstance(m.matInstance)
             this.engine.destroyEntity(m.entity)
         }
         if (this.activeMarbleLightEntity) {

@@ -111,7 +111,13 @@ export function generateProceduralTexture(type, size = 256) {
     return canvas
 }
 
-// Material presets with PBR properties
+import {
+    marbleMaterialPresets,
+    trackSurfacePresets,
+    zoneSurfaceMapping
+} from './material-presets.js'
+
+// Legacy material presets with PBR properties
 export const materialPresets = {
     polishedMarble: {
         roughness: 0.04,
@@ -157,7 +163,25 @@ export const materialPresets = {
         clearCoatRoughness: 0.0,
         bumpScale: 0.0,
         bumpFrequency: 0.0
-    }
+    },
+    // Salvaged experimental presets
+    classicGlass: marbleMaterialPresets.classicGlass,
+    obsidianMetal: marbleMaterialPresets.obsidianMetal,
+    neonGlow: marbleMaterialPresets.neonGlow,
+    stoneVein: marbleMaterialPresets.stoneVein,
+    quantumCrystal: marbleMaterialPresets.quantumCrystal,
+    volcanicMagma: marbleMaterialPresets.volcanicMagma,
+    shadowNinja: marbleMaterialPresets.shadowNinja,
+    galacticCore: marbleMaterialPresets.galacticCore,
+}
+
+export { marbleMaterialPresets, trackSurfacePresets, zoneSurfaceMapping }
+
+// Helper: resolve a track surface preset by zone type
+export function getTrackSurfacePreset(zoneType) {
+    const key = zoneSurfaceMapping[zoneType]
+    if (!key) return null
+    return trackSurfacePresets[key] || null
 }
 
 // Create a texture from canvas for Filament
@@ -193,6 +217,32 @@ export function createEnhancedMaterialInstance(material, Filament, type = 'polis
         instance.setFloatParameter('clearCoatRoughness', preset.clearCoatRoughness)
     }
     
+    return { instance, preset }
+}
+
+// Advanced material creation using experimental preset data.
+// Applies all parameters supported by the current procedural material,
+// and stores extra preset metadata on the returned object for future use.
+export function createThemedMaterialInstance(material, Filament, presetName, baseColor = [1, 1, 1], hasProcedural = false) {
+    const preset = materialPresets[presetName] || materialPresets.polishedMarble
+    const instance = material.createInstance()
+
+    // Base color — allow preset override if available
+    const color = preset.color || baseColor
+    instance.setColor3Parameter('baseColor', Filament.RgbType.sRGB, color)
+
+    // Core PBR
+    instance.setFloatParameter('roughness', preset.roughness !== undefined ? preset.roughness : 0.4)
+    instance.setFloatParameter('metallic', preset.metallic !== undefined ? preset.metallic : 0.0)
+    instance.setFloatParameter('reflectance', preset.reflectance !== undefined ? preset.reflectance : 0.5)
+
+    if (hasProcedural) {
+        instance.setFloatParameter('clearCoat', preset.clearCoat !== undefined ? preset.clearCoat : 0.0)
+        instance.setFloatParameter('clearCoatRoughness', preset.clearCoatRoughness !== undefined ? preset.clearCoatRoughness : 0.0)
+        instance.setFloatParameter('bumpScale', preset.bumpScale !== undefined ? preset.bumpScale : 0.02)
+        instance.setFloatParameter('bumpFrequency', preset.bumpFrequency !== undefined ? preset.bumpFrequency : 50.0)
+    }
+
     return { instance, preset }
 }
 
