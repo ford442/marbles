@@ -96,6 +96,7 @@ try {
     checkMarble("Quantum Phoenix", ['color', 'radius', 'density', 'friction', 'restitution', 'gravityScale', 'clearCoat', 'clearCoatRoughness', 'emissive: true', 'lightIntensity', 'lightColor', 'materialType: "glass"']);
     checkMarble("Nebula Smasher", ['color', 'radius', 'density', 'friction', 'restitution', 'clearCoat', 'clearCoatRoughness', 'emissive: true', 'lightIntensity', 'lightColor', 'materialType: "glass"']);
     checkMarble("Cosmic Prism", ['color', 'radius', 'density', 'friction', 'restitution', 'clearCoat', 'clearCoatRoughness', 'emissive: true', 'lightIntensity', 'lightColor', 'materialType: "glass"']);
+    checkMarble("Hypernova Glass", ['color', 'radius', 'density', 'restitution', 'friction', 'clearCoat', 'clearCoatRoughness', 'materialType: "glass"', 'emissive: true', 'lightIntensity', 'lightColor'], true);
 
     if (!success) {
         console.error("Some marble checks failed.");

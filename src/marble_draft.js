@@ -68,5 +68,22 @@ export const marbleDraft = [
         emissive: true,
         lightIntensity: 35000.0,
         lightColor: [0.0, 0.5, 1.0]
+    },
+    {
+        name: "Hypernova Glass",
+        color: [1.0, 0.2, 0.6],
+        offset: { x: 0.0, y: 5, z: 15 },
+        radius: 0.75,
+        density: 15.0,
+        restitution: 1.8,
+        gravityScale: 1.0,
+        friction: 0.0,
+        roughness: 0.0,
+        clearCoat: 1.0,
+        clearCoatRoughness: 0.0,
+        materialType: "glass",
+        emissive: true,
+        lightIntensity: 80000.0,
+        lightColor: [1.0, 0.3, 0.8]
     }
 ];
