@@ -212,10 +212,15 @@ export class GameLoopRenderMethods {
         }
 
         if (this.cameraMode === 'orbit') {
-            if (this.keys['ArrowLeft'] || this.keys['KeyA']) this.camAngle -= rotSpeed
-            if (this.keys['ArrowRight'] || this.keys['KeyD']) this.camAngle += rotSpeed
-            if (this.keys['ArrowUp'] || this.keys['KeyW']) this.camRadius = Math.max(5, this.camRadius - zoomSpeed)
-            if (this.keys['ArrowDown'] || this.keys['KeyS']) this.camRadius = Math.min(100, this.camRadius + zoomSpeed)
+            if (this.keys['ArrowLeft'] || this.keys['KeyA']) this.targetCamAngle -= rotSpeed
+            if (this.keys['ArrowRight'] || this.keys['KeyD']) this.targetCamAngle += rotSpeed
+            if (this.keys['ArrowUp'] || this.keys['KeyW']) this.targetCamRadius = Math.max(5, this.targetCamRadius - zoomSpeed)
+            if (this.keys['ArrowDown'] || this.keys['KeyS']) this.targetCamRadius = Math.min(100, this.targetCamRadius + zoomSpeed)
+
+            // Lerp actual values to targets for smooth movement
+            this.camAngle += (this.targetCamAngle - this.camAngle) * 0.1
+            this.camRadius += (this.targetCamRadius - this.camRadius) * 0.1
+            this.camHeight += (this.targetCamHeight - this.camHeight) * 0.1
         } else if (this.cameraMode === 'follow' || this.cameraMode === 'action' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown' || this.cameraMode === 'cinematic' || this.cameraMode === 'side-scroller') {
             let impulseStrength = 0.5
             if (this.activeEffects.speed && Date.now() < this.activeEffects.speed) {

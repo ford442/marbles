@@ -52,6 +52,9 @@ class MarblesGame {
         this.cubeMesh = null
 
         this.camAngle = 0
+        this.targetCamAngle = 0
+        this.targetCamRadius = 25
+        this.targetCamHeight = 10
         this.camHeight = 10
         this.camRadius = 25
 
