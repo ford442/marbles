@@ -43,6 +43,7 @@ import { createNeonAlleyZone } from './zones/neon-alley.js';
 import { createSynthwaveSurgeZone } from './zones/synthwave-surge.js';
 import { createMeteoriteHollowZone } from './zones/meteorite-hollow.js';
 import { createRadiantReactorZone } from "./zones/radiant-reactor.js";
+import { createPlasmaPipelineZone } from "./zones/plasma-pipeline.js";
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import { audio } from './audio.js';
 
@@ -231,6 +232,9 @@ export class ZoneSetupMethods {
                 break
             case 'radiant_reactor':
                 createRadiantReactorZone(this, offset)
+                break
+            case 'plasma_pipeline':
+                createPlasmaPipelineZone(this, offset)
                 break
             case 'starlight_ascent':
                 createStarlightAscentZone(this, offset)
