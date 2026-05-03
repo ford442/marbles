@@ -10,8 +10,9 @@ This document provides essential information for AI coding agents working on the
 - **Build System**: Vite for development and production builds
 - **UI Layer**: React/TSX components for the sequencer and importer modals
 - **Backend**: Python FastAPI with Google Cloud Storage integration
+- **WASM Renderer**: Optional C++ WebGPU renderer (`wasm_renderer/`) built with Emscripten
 
-The game features approximately 40 levels with diverse zones, obstacles, scoring goals, checkpoints, collectibles, power-ups, and multiple marble types with unique physics properties.
+The game features approximately 40 levels with diverse zones, obstacles, scoring goals, checkpoints, collectibles, power-ups, and 50+ marble types with unique physics properties.
 
 ## Technology Stack
 
@@ -27,6 +28,7 @@ The game features approximately 40 levels with diverse zones, obstacles, scoring
 | Caching | `aiocache` (memory) | In Python backend |
 | Deployment | Paramiko (SFTP) | `deploy.py` uploads `dist/` to remote server |
 | CI/CD | GitHub Actions | Node 20, pnpm 9, Emscripten 3.1.50 |
+| Devcontainer | Ubuntu base | Node LTS, Python 3.11, Emscripten 3.1.50, VNC |
 
 ## Project Structure
 
@@ -39,6 +41,7 @@ marbles/
 ├── deploy.py               # Python deployment script (SFTP to remote server)
 ├── .eslintrc.js            # ESLint configuration
 ├── .prettierrc             # Prettier configuration
+├── .devcontainer/          # Devcontainer config (Dockerfile + devcontainer.json)
 ├── public/                 # Static assets
 │   ├── baked_color.filmat  # Pre-compiled Filament material
 │   ├── custom_material.mat # Source material definition
@@ -56,33 +59,53 @@ marbles/
 │   ├── game-loop-methods.js       # Main loop dispatcher
 │   ├── game-loop-render-methods.js # Rendering pipeline
 │   ├── game-loop-sync-methods.js  # Physics-visual sync
+│   ├── hud-manager.js             # HUD rendering and state display
+│   ├── audio.js                   # Audio system with spatial sounds
+│   ├── material-system.js         # Material management
+│   ├── material-presets.js        # Material preset definitions
+│   ├── gpu-instancing.js          # GPU instancing utilities
+│   ├── gpu-particles.js           # GPU particle system
 │   ├── levels.js           # ~40 declarative level definitions
 │   ├── math.js             # quaternionToMat4 helper
 │   ├── sphere.js           # UV sphere generator with TBN frames
 │   ├── cube-geometry.js    # Cube vertex/index buffers
-│   ├── zones/              # 35+ zone implementations
-│   ├── components/         # React/TSX UI components
-│   ├── sequencer/          # React sequencer UI
+│   ├── zones/              # 50+ zone implementations
+│   │   ├── methods/        # Zone utilities (creation, physics, types, visuals)
+│   │   └── *.js            # Individual zone factories
+│   ├── components/         # React/TSX UI components (AISwarmModal, MainLayout, etc.)
+│   ├── sequencer/          # React sequencer UI (EffectsChain, SequencerGrid)
 │   ├── importers/          # AI song and .rbs importers
-│   ├── rendering/          # Rendering manager, shaders, effects
-│   ├── visuals/            # Marble visuals overhaul system
-│   ├── services/           # Service modules (e.g., shaderApi.ts)
+│   │   ├── ai-song/        # AI song importer logic
+│   │   └── rbs/            # .rbs file importer logic
+│   ├── services/           # Service modules (shaderApi.ts)
+│   ├── shaders/            # WGSL shaders (breath.wgsl, breath-swarm-merged.wgsl)
 │   ├── assets/             # Asset registry
-│   ├── shaders/            # WGSL shaders
-│   ├── audio.js            # Audio system
-│   ├── material-system.js  # Material management
-│   └── __tests__/          # React component tests
-├── storage/                # Python FastAPI backend
+│   └── __tests__/          # React component tests (5 files)
+├── storage/                # Python FastAPI backend (modular)
 │   ├── main.py             # FastAPI app entry point
 │   ├── config.py           # GCS storage map config
 │   ├── models.py           # Pydantic models
 │   ├── cache.py            # Caching setup
 │   ├── client.py           # GCS client initialization
 │   ├── io.py               # I/O utilities
-│   ├── routes/             # API routers (admin, songs, samples, etc.)
+│   ├── routes/             # API routers (admin, songs, samples, music, shaders, storage, health)
 │   └── services/           # Business logic (index, sync)
 ├── universal/              # Standalone utilities
-│   └── app_storage_manager.py # Monolithic FastAPI duplicate
+│   └── app_storage_manager.py # Monolithic FastAPI duplicate (legacy)
+├── wasm_renderer/          # C++ WebGPU renderer (Emscripten + CMake)
+│   ├── CMakeLists.txt
+│   ├── build.sh
+│   ├── main.cpp
+│   └── README.md
+├── assets/                 # Game assets
+│   ├── maps/               # Level definitions
+│   ├── marbles/            # Marble definitions
+│   ├── schemas/            # JSON schemas for validation
+│   ├── sounds/             # Sound definitions
+│   └── manifest.json       # Asset registry
+├── scripts/                # Build/validation scripts
+│   ├── validate-assets.cjs # JSON asset validation against schemas
+│   └── verify_syntax.js    # Syntax verification
 └── .github/workflows/      # CI/CD workflows
     ├── debug_build.yml     # Build workflow (Node 20, Emscripten)
     └── codespaces-prebuild.yml # Devcontainer validation
@@ -142,7 +165,7 @@ The `MarblesGame` constructor initializes a monolithic state object with ~300 li
 - **Zones** are created via `ZoneSetupMethods.createZone(zone)`, which dispatches through a large `switch` statement to either:
   - Methods on `this` (e.g., `this.createFloorZone()`)
   - Standalone factory functions imported from `src/zones/*.js` or legacy zone files
-- There are 35+ zone implementations covering themes like frostbite caverns, toxic swamps, volcano, laser grids, and more.
+- There are 50+ zone implementations covering themes like frostbite caverns, toxic swamps, volcano, laser grids, cyber ice tracks, neon alleys, gravity wells, and more.
 
 ### Physics + Rendering Sync
 
@@ -280,12 +303,32 @@ The game uses custom Filament materials (`public/custom_material.mat` and varian
 - Shading model: lit, opaque
 - Pre-compiled to `public/baked_color.filmat` for runtime
 
+### Devcontainer
+
+The project includes a `.devcontainer/` configuration for GitHub Codespaces:
+- **Base image**: `mcr.microsoft.com/devcontainers/base:ubuntu`
+- **Node**: LTS with node-gyp dependencies
+- **Python**: 3.11 with tools
+- **Emscripten**: 3.1.50 (installed at `/opt/emsdk`)
+- **Desktop**: VNC access via port 6080
+- **Forwarded ports**: 3000, 5173, 6080, 8080
+
+### WASM Renderer (`wasm_renderer/`)
+
+An optional C++ WebGPU rendering backend:
+- Built with **CMake** and **Emscripten**
+- Supports WGSL compute shaders, ping-pong textures, uniform buffer management
+- Output: `wasm_renderer_test.js` + `wasm_renderer_test.wasm`
+- Toggle between JS and WASM renderers at runtime
+- Requires Chrome/Edge 113+ for WebGPU support
+
 ## Common Issues & Troubleshooting
 
 1. **Filament WASM loading**: The module uses a UMD pattern with dynamic import. The loading code captures the module via a `loadClassExtensions` hook.
 2. **SharedArrayBuffer errors**: Ensure Vite dev server headers are configured correctly (COOP/COEP).
 3. **Physics-Visual sync**: Always use `quaternionToMat4()` for transform conversion. Remember to apply scale separately.
 4. **Marble scaling**: Physics radius and visual scale are separate. The `scale` property in marble objects is typically `radius / 0.5`.
+5. **Python backend dependencies**: There is no `requirements.txt` or `pyproject.toml`. Required packages (fastapi, uvicorn, pydantic, google-cloud-storage, aiocache, paramiko) must be installed manually.
 
 ## File Modification Guidelines
 
@@ -296,3 +339,4 @@ The game uses custom Filament materials (`public/custom_material.mat` and varian
 - **Modifying UI**: Edit React/TSX files in `src/components/` or `src/sequencer/`
 - **Material changes**: Edit `public/custom_material.mat`, recompile with Filament `matc` tool to `public/baked_color.filmat`
 - **Python backend changes**: Prefer editing files under `storage/routes/` and `storage/services/` rather than the monolithic `universal/app_storage_manager.py`
+- **Asset validation**: Run `node scripts/validate-assets.cjs` to validate JSON assets against schemas
