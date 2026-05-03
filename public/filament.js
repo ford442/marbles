@@ -452,6 +452,10 @@ Filament.loadClassExtensions = function() {
         // Create the WebGL 2.0 context.
         const ctx = canvas.getContext("webgl2", options);
 
+        if (!ctx) {
+            throw new Error("WebGL 2.0 is not supported or failed to initialize in this browser.");
+        }
+
         // Enable all desired extensions by calling getExtension on each one.
         ctx.getExtension('WEBGL_compressed_texture_s3tc');
         ctx.getExtension('WEBGL_compressed_texture_s3tc_srgb');
