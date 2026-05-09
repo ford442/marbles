@@ -538,31 +538,9 @@ export class InitMethods {
 
         try {
             this.engine = this.Filament.Engine.create(this.canvas)
-        } catch (engineError) {
-            const message = engineError?.message || 'Unknown rendering error'
-            console.error('[INIT] Failed to create Filament engine:', engineError)
-
-            const errorText = message.includes('WebGL 2.0')
-                ? 'WebGL 2.0 is not supported or failed to initialize in this browser.'
-                : `Failed to initialize 3D renderer: ${message}`
-
-            if (typeof window.updateLoadingProgress === 'function') {
-                window.updateLoadingProgress(0, errorText)
-            }
-
-            const loadingEl = document.getElementById('loading')
-            if (loadingEl) {
-                loadingEl.classList.add('error')
-                const textEl = loadingEl.querySelector('.loading-text') || loadingEl.querySelector('p') || loadingEl
-                if (textEl) textEl.textContent = errorText
-            }
-
-            return
-        }
-
-        this.scene = this.engine.createScene()
-        this.swapChain = this.engine.createSwapChain()
-        this.renderer = this.engine.createRenderer()
+            this.scene = this.engine.createScene()
+            this.swapChain = this.engine.createSwapChain()
+            this.renderer = this.engine.createRenderer()
         } catch (engineError) {
             const message = engineError?.message || 'Unknown rendering error'
             console.error('[INIT] Failed to create Filament engine:', engineError)
