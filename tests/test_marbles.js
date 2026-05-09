@@ -5,8 +5,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const mainJsPath = path.join(__dirname, 'src', 'marbles_data.js');
-const marbleDraftPath = path.join(__dirname, 'src', 'marble_draft.js');
+const mainJsPath = path.join(__dirname, '../src', 'marbles_data.js');
+const marbleDraftPath = path.join(__dirname, '../src', 'marble_draft.js');
 
 try {
     const dataContent = fs.readFileSync(mainJsPath, 'utf8');
