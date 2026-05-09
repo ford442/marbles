@@ -538,6 +538,9 @@ export class InitMethods {
 
         try {
             this.engine = this.Filament.Engine.create(this.canvas)
+            this.scene = this.engine.createScene()
+            this.swapChain = this.engine.createSwapChain()
+            this.renderer = this.engine.createRenderer()
         } catch (engineError) {
             const message = engineError?.message || 'Unknown rendering error'
             console.error('[INIT] Failed to create Filament engine:', engineError)

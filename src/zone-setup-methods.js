@@ -44,6 +44,7 @@ import { createSynthwaveSurgeZone } from './zones/synthwave-surge.js';
 import { createMeteoriteHollowZone } from './zones/meteorite-hollow.js';
 import { createRadiantReactorZone } from "./zones/radiant-reactor.js";
 import { createPlasmaPipelineZone } from "./zones/plasma-pipeline.js";
+import { createNeonPulseGridZone } from "./zones/neon-pulse-grid.js";
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import { audio } from './audio.js';
 
@@ -250,6 +251,9 @@ export class ZoneSetupMethods {
                 break
             case 'glacial_chasm':
                 createGlacialChasmZone(this, offset)
+                break
+            case 'neon_pulse_grid':
+                createNeonPulseGridZone(this, offset)
                 break
         }
     }
