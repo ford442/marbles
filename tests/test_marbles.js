@@ -5,8 +5,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const mainJsPath = path.join(__dirname, 'src', 'marbles_data.js');
-const marbleDraftPath = path.join(__dirname, 'src', 'marble_draft.js');
+const mainJsPath = path.join(__dirname, '..', 'src', 'marbles_data.js');
+const marbleDraftPath = path.join(__dirname, '..', 'src', 'marble_draft.js');
 
 try {
     const dataContent = fs.readFileSync(mainJsPath, 'utf8');
@@ -97,6 +97,7 @@ try {
     checkMarble("Nebula Smasher", ['color', 'radius', 'density', 'friction', 'restitution', 'clearCoat', 'clearCoatRoughness', 'emissive: true', 'lightIntensity', 'lightColor', 'materialType: "glass"']);
     checkMarble("Cosmic Prism", ['color', 'radius', 'density', 'friction', 'restitution', 'clearCoat', 'clearCoatRoughness', 'emissive: true', 'lightIntensity', 'lightColor', 'materialType: "glass"']);
     checkMarble("Hypernova Glass", ['color', 'radius', 'density', 'restitution', 'friction', 'clearCoat', 'clearCoatRoughness', 'materialType: "glass"', 'emissive: true', 'lightIntensity', 'lightColor'], true);
+    checkMarble("Chronos Jewel", ['color', 'radius', 'density', 'friction', 'restitution', 'clearCoat', 'clearCoatRoughness', 'emissive: true', 'lightIntensity', 'lightColor', 'materialType: "glass"']);
 
     if (!success) {
         console.error("Some marble checks failed.");
