@@ -580,43 +580,6 @@ export class ZoneSetupMethods {
         this.powerbarEl.style.width = '0%'
     }
 
-    createLight() {
-        const F = this.Filament
-        
-        // Primary sun light - warm daylight
-        this.light = F.EntityManager.get().create()
-        F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
-            .color([1.0, 0.96, 0.88])
-            .intensity(150000.0)
-            .direction([0.4, -1.0, -0.65])
-            .castShadows(true)
-            .sunAngularRadius(1.9)
-            .sunHaloSize(10.0)
-            .sunHaloFalloff(80.0)
-            .build(this.engine, this.light)
-        this.scene.addEntity(this.light)
-
-        // Blue-sky fill light from opposite direction
-        this.fillLight = F.EntityManager.get().create()
-        F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
-            .color([0.65, 0.78, 1.0])
-            .intensity(45000.0)
-            .direction([-0.4, -0.2, 0.7])
-            .castShadows(false)
-            .build(this.engine, this.fillLight)
-        this.scene.addEntity(this.fillLight)
-
-        // Warm ambient back light (simulates ground-reflected light)
-        this.backLight = F.EntityManager.get().create()
-        F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
-            .color([0.72, 0.62, 0.52])
-            .intensity(30000.0)
-            .direction([0.0, -0.3, 1.0])
-            .castShadows(false)
-            .build(this.engine, this.backLight)
-        this.scene.addEntity(this.backLight)
-    }
-
     setupPostProcessing() {
         // Bloom - makes bright marbles and lights glow
         try {

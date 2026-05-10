@@ -1131,14 +1131,94 @@ export class InitMethods {
         // These would affect Filament renderer settings
         const s = this.settings.graphics
 
-        // Example: Adjust shadow quality
-        if (this.renderer && s.shadows !== undefined) {
-            // Filament-specific shadow configuration would go here
+        // Control shadows on the Filament sun light
+        if (this.sunLight && this.engine && this.scene) {
+            const shadowsEnabled = s.shadows !== false
+
+            // Destroy and recreate the sun light since Filament LightManager
+            // doesn't have a runtime setCastShadows() method
+            this.scene.remove(this.sunLight)
+            this.engine.destroyEntity(this.sunLight)
+            this.Filament.EntityManager.get().destroy(this.sunLight)
+
+            this.sunLight = this.Filament.EntityManager.get().create()
+            const builder = this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].DIRECTIONAL)
+                .color([1.0, 0.96, 0.88])
+                .intensity(150000.0)
+                .direction([0.4, -1.0, -0.65])
+
+            if (shadowsEnabled) {
+                builder.castShadows(true)
+                builder.shadowOptions({
+                    mapSize: 2048,
+                    shadowCascades: 4,
+                    constantBias: 0.001,
+                    normalBias: 0.005,
+                    stable: true,
+                    screenSpaceContactShadows: false,
+                    maxShadowDistance: 50.0
+                })
+            } else {
+                builder.castShadows(false)
+            }
+
+            builder.build(this.engine, this.sunLight)
+            this.scene.addEntity(this.sunLight)
         }
 
         // Example: Adjust bloom
         if (this.view && s.bloom !== undefined) {
             // Post-processing bloom adjustment would go here
+        }
+    }
+
+    createLight() {
+        const F = this.Filament
+
+        // Primary sun light with shadows
+        this.sunLight = F.EntityManager.get().create()
+        const shadowsEnabled = this.settings?.graphics?.shadows !== false
+        const builder = F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
+            .color([1.0, 0.96, 0.88])
+            .intensity(150000.0)
+            .direction([0.4, -1.0, -0.65])
+
+        if (shadowsEnabled) {
+            builder.castShadows(true)
+            builder.shadowOptions({
+                mapSize: 2048,
+                shadowCascades: 4,
+                constantBias: 0.001,
+                normalBias: 0.005,
+                stable: true,
+                screenSpaceContactShadows: false,
+                maxShadowDistance: 50.0
+            })
+        } else {
+            builder.castShadows(false)
+        }
+
+        builder.build(this.engine, this.sunLight)
+        this.scene.addEntity(this.sunLight)
+
+        // Blue-sky fill light from opposite direction
+        this.fillLight = F.EntityManager.get().create()
+        F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
+            .color([0.65, 0.78, 1.0])
+            .intensity(45000.0)
+            .direction([-0.4, -0.2, 0.7])
+            .castShadows(false)
+            .build(this.engine, this.fillLight)
+        this.scene.addEntity(this.fillLight)
+    }
+
+    enableShadowsOnEntity(entity) {
+        if (!this.engine || !entity) return
+        const rcm = this.engine.getRenderableManager()
+        const inst = rcm.getInstance(entity)
+        if (inst) {
+            rcm.setCastShadows(inst, true)
+            rcm.setReceiveShadows(inst, true)
         }
     }
 

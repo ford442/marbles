@@ -33,6 +33,8 @@ export class PhysicsFactoryMethods {
             .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
             .material(0, matInstance)
             .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.vb, this.ib)
+            .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, entity)
 
         const tcm = this.engine.getTransformManager()
@@ -100,6 +102,7 @@ export class PhysicsFactoryMethods {
             .material(0, matInstance)
             .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.vb, this.ib)
             .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, entity)
 
         const tcm = this.engine.getTransformManager()
@@ -146,6 +149,7 @@ export class PhysicsFactoryMethods {
             .material(0, matInstance)
             .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.vb, this.ib)
             .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, entity)
 
         this.scene.addEntity(entity)
@@ -188,6 +192,7 @@ export class PhysicsFactoryMethods {
             .material(0, matInstance)
             .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.vb, this.ib)
             .receiveShadows(true)
+            .castShadows(true)
             .build(this.engine, entity)
 
         this.scene.addEntity(entity)
