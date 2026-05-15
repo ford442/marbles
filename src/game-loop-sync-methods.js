@@ -454,8 +454,18 @@ export class GameLoopSyncMethods {
             if (this.renderer.beginFrame(this.swapChain)) {
                 this.renderer.renderView(this.view)
                 this.renderer.endFrame()
+                if (!this._firstFrameLogged) {
+                    this._firstFrameLogged = true
+                    console.log('[RENDER] First frame rendered successfully')
+                }
+            } else if (!this._beginFrameFailLogged) {
+                this._beginFrameFailLogged = true
+                console.error('[RENDER] beginFrame() returned false — swapChain or WebGL context may be invalid')
             }
             this.engine.execute()
+        } else if (!this._renderGuardLogged) {
+            this._renderGuardLogged = true
+            console.error('[RENDER] Render guard failed — renderer:', !!this.renderer, 'swapChain:', !!this.swapChain, 'view:', !!this.view)
         }
     }
 }
