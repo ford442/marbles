@@ -1,0 +1,16 @@
+- generic [active]:
+  - generic [ref=e2]:
+    - generic [ref=e4]: Loading Marbles 3D...
+    - generic [ref=e5]: Loading Filament rendering engine...
+    - generic [ref=e8]: 25%
+  - generic:
+    - generic: "3"
+  - generic:
+    - generic:
+      - generic: ⏸️ Paused
+      - generic:
+        - button "Resume"
+        - button "Restart Level"
+        - button "Settings"
+        - button "Quit to Menu"
+  - text: EMP Shockwave (K) Ground Slam (Digit0)

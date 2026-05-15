@@ -1,0 +1,272 @@
+- generic [active]:
+  - generic:
+    - generic: "3"
+  - generic:
+    - generic:
+      - generic: ⏸️ Paused
+      - generic:
+        - button "Resume"
+        - button "Restart Level"
+        - button "Settings"
+        - button "Quit to Menu"
+  - generic [ref=e10]:
+    - heading "🎱 MARBLES 3D" [level=1] [ref=e11]
+    - generic [ref=e12]: Choose your challenge
+    - generic [ref=e13]:
+      - generic [ref=e14] [cursor=pointer]:
+        - heading "Mushroom Hop" [level=3] [ref=e15]
+        - paragraph [ref=e16]: Bounce across the giant mushrooms!
+        - generic [ref=e17]: 1 Goal
+      - generic [ref=e18] [cursor=pointer]:
+        - heading "Wind Tunnel" [level=3] [ref=e19]
+        - paragraph [ref=e20]: Navigate through the giant fans!
+        - generic [ref=e21]: 1 Goal
+      - generic [ref=e22] [cursor=pointer]:
+        - heading "Plinko Obstacle Course" [level=3] [ref=e23]
+        - paragraph [ref=e24]: Navigate the slanted board full of pegs!
+        - generic [ref=e25]: 1 Goal
+      - generic [ref=e26] [cursor=pointer]:
+        - heading "Tutorial Ramp" [level=3] [ref=e27]
+        - paragraph [ref=e28]: Learn the basics on a simple ramp
+        - generic [ref=e29]: 1 Goal
+      - generic [ref=e30] [cursor=pointer]:
+        - heading "Landing Zone" [level=3] [ref=e31]
+        - paragraph [ref=e32]: Navigate around pillars
+        - generic [ref=e33]: 1 Goal
+      - generic [ref=e34] [cursor=pointer]:
+        - heading "The Jump" [level=3] [ref=e35]
+        - paragraph [ref=e36]: Make the big leap!
+        - generic [ref=e37]: 1 Goal
+      - generic [ref=e38] [cursor=pointer]:
+        - heading "Slalom Challenge" [level=3] [ref=e39]
+        - paragraph [ref=e40]: Weave through the pillars
+        - generic [ref=e41]: 1 Goal
+      - generic [ref=e42] [cursor=pointer]:
+        - heading "Stairway to Heaven" [level=3] [ref=e43]
+        - paragraph [ref=e44]: Climb the steps to victory
+        - generic [ref=e45]: 1 Goal
+      - generic [ref=e46] [cursor=pointer]:
+        - heading "Full Course" [level=3] [ref=e47]
+        - paragraph [ref=e48]: The complete challenge - all zones!
+        - generic [ref=e49]: 3 Goals
+      - generic [ref=e50] [cursor=pointer]:
+        - heading "Sandbox" [level=3] [ref=e51]
+        - paragraph [ref=e52]: Open area to test all marbles
+        - generic [ref=e53]: 0 Goals
+      - generic [ref=e54] [cursor=pointer]:
+        - heading "Crystal Orchard" [level=3] [ref=e55]
+        - paragraph [ref=e56]: Night falls on the glowing fruit trees
+        - generic [ref=e57]: 1 Goal
+      - generic [ref=e58] [cursor=pointer]:
+        - heading "Spiral Madness" [level=3] [ref=e59]
+        - paragraph [ref=e60]: Dizzying heights!
+        - generic [ref=e61]: 1 Goal
+      - generic [ref=e62] [cursor=pointer]:
+        - heading "ZigZag Challenge" [level=3] [ref=e63]
+        - paragraph [ref=e64]: Sharp turns ahead!
+        - generic [ref=e65]: 1 Goal
+      - generic [ref=e66] [cursor=pointer]:
+        - heading "Neon Dash" [level=3] [ref=e67]
+        - paragraph [ref=e68]: Race through the glowing city!
+        - generic [ref=e69]: 1 Goal
+      - generic [ref=e70] [cursor=pointer]:
+        - heading "Loop-the-Loop" [level=3] [ref=e71]
+        - paragraph [ref=e72]: Defy gravity!
+        - generic [ref=e73]: 1 Goal
+      - generic [ref=e74] [cursor=pointer]:
+        - heading "Block Challenge" [level=3] [ref=e75]
+        - paragraph [ref=e76]: Navigate through the obstacle course
+        - generic [ref=e77]: 1 Goal
+      - generic [ref=e78] [cursor=pointer]:
+        - heading "Bowling Alley" [level=3] [ref=e79]
+        - paragraph [ref=e80]: Knock down the pins!
+        - generic [ref=e81]: 1 Goal
+      - generic [ref=e82] [cursor=pointer]:
+        - heading "Castle Siege" [level=3] [ref=e83]
+        - paragraph [ref=e84]: Storm the castle!
+        - generic [ref=e85]: 1 Goal
+      - generic [ref=e86] [cursor=pointer]:
+        - heading "Domino Effect" [level=3] [ref=e87]
+        - paragraph [ref=e88]: Set off the chain reaction!
+        - generic [ref=e89]: 1 Goal
+      - generic [ref=e90] [cursor=pointer]:
+        - heading "Pyramid Climb" [level=3] [ref=e91]
+        - paragraph [ref=e92]: Ascend the ancient structure
+        - generic [ref=e93]: 1 Goal
+      - generic [ref=e94] [cursor=pointer]:
+        - heading "Power-Up Park" [level=3] [ref=e95]
+        - paragraph [ref=e96]: Test your abilities with power-ups!
+        - generic [ref=e97]: 1 Goal
+      - generic [ref=e98] [cursor=pointer]:
+        - heading "Moving Madness" [level=3] [ref=e99]
+        - paragraph [ref=e100]: Watch your step on these moving platforms!
+        - generic [ref=e101]: 1 Goal
+      - generic [ref=e102] [cursor=pointer]:
+        - heading "Helix Havoc" [level=3] [ref=e103]
+        - paragraph [ref=e104]: Spiral down the double helix!
+        - generic [ref=e105]: 1 Goal
+      - generic [ref=e106] [cursor=pointer]:
+        - heading "Clockwork Chaos" [level=3] [ref=e107]
+        - paragraph [ref=e108]: Jump across the rotating gears!
+        - generic [ref=e109]: 1 Goal
+      - generic [ref=e110] [cursor=pointer]:
+        - heading "Plinko Challenge" [level=3] [ref=e111]
+        - paragraph [ref=e112]: Drop the marble and hope for the best!
+        - generic [ref=e113]: 1 Goal
+      - generic [ref=e114] [cursor=pointer]:
+        - heading "Bumper Arena" [level=3] [ref=e115]
+        - paragraph [ref=e116]: Navigate through the bouncy obstacles!
+        - generic [ref=e117]: 1 Goal
+      - generic [ref=e118] [cursor=pointer]:
+        - heading "Pinwheel Alley" [level=3] [ref=e119]
+        - paragraph [ref=e120]: Dodge the sweeping arms and cross the spinning pinwheels!
+        - generic [ref=e121]: 1 Goal
+      - generic [ref=e122] [cursor=pointer]:
+        - heading "Volcano Run" [level=3] [ref=e123]
+        - paragraph [ref=e124]: Cross the glowing lava pit!
+        - generic [ref=e125]: 1 Goal
+      - generic [ref=e126] [cursor=pointer]:
+        - heading "Cyber Run" [level=3] [ref=e127]
+        - paragraph [ref=e128]: Race across the neon tracks and dodge the lasers!
+        - generic [ref=e129]: 1 Goal
+      - generic [ref=e130] [cursor=pointer]:
+        - heading "Water Slide" [level=3] [ref=e131]
+        - paragraph [ref=e132]: Slide down the curvy water slide!
+        - generic [ref=e133]: 1 Goal
+      - generic [ref=e134] [cursor=pointer]:
+        - heading "Grapple Course Run" [level=3] [ref=e135]
+        - paragraph [ref=e136]: Use the grapple hook (Right Click) and wall-ride to cross the void!
+        - generic [ref=e137]: 1 Goal
+      - generic [ref=e138] [cursor=pointer]:
+        - heading "Ice Cave" [level=3] [ref=e139]
+        - paragraph [ref=e140]: Navigate the slippery slopes and rotating ice platforms!
+        - generic [ref=e141]: 1 Goal
+      - generic [ref=e142] [cursor=pointer]:
+        - heading "Trampoline Park" [level=3] [ref=e143]
+        - paragraph [ref=e144]: Bounce your way to the exit!
+        - generic [ref=e145]: 1 Goal
+      - generic [ref=e146] [cursor=pointer]:
+        - heading "Space Elevator" [level=3] [ref=e147]
+        - paragraph [ref=e148]: Take the elevator to the top!
+        - generic [ref=e149]: 1 Goal
+      - generic [ref=e150] [cursor=pointer]:
+        - heading "Mystic Forest Run" [level=3] [ref=e151]
+        - paragraph [ref=e152]: Navigate the glowing forest!
+        - generic [ref=e153]: 1 Goal
+      - generic [ref=e154] [cursor=pointer]:
+        - heading "Cloud City Run" [level=3] [ref=e155]
+        - paragraph [ref=e156]: Bounce across the clouds!
+        - generic [ref=e157]: 1 Goal
+      - generic [ref=e158] [cursor=pointer]:
+        - heading "Desert Ruins Run" [level=3] [ref=e159]
+        - paragraph [ref=e160]: Navigate through ancient ruins and dodging falling blocks!
+        - generic [ref=e161]: 1 Goal
+      - generic [ref=e162] [cursor=pointer]:
+        - heading "Neon Grid Run" [level=3] [ref=e163]
+        - paragraph [ref=e164]: Navigate the glowing neon grid and avoid moving walls!
+        - generic [ref=e165]: 1 Goal
+      - generic [ref=e166] [cursor=pointer]:
+        - heading "Ice Bridges Run" [level=3] [ref=e167]
+        - paragraph [ref=e168]: Cross the slippery, spinning ice bridges!
+        - generic [ref=e169]: 1 Goal
+      - generic [ref=e170] [cursor=pointer]:
+        - heading "Jungle Run" [level=3] [ref=e171]
+        - paragraph [ref=e172]: Navigate the jungle logs!
+        - generic [ref=e173]: 1 Goal
+      - generic [ref=e174] [cursor=pointer]:
+        - heading "Lava Tubes Run" [level=3] [ref=e175]
+        - paragraph [ref=e176]: Navigate the treacherous lava tubes!
+        - generic [ref=e177]: 1 Goal
+      - generic [ref=e178] [cursor=pointer]:
+        - heading "Starlight Ascent Run" [level=3] [ref=e179]
+        - paragraph [ref=e180]: Ascend the glowing platforms to the starry exit!
+        - generic [ref=e181]: 1 Goal
+      - generic [ref=e182] [cursor=pointer]:
+        - heading "Zen Garden" [level=3] [ref=e183]
+        - paragraph [ref=e184]: Find inner peace among the sand and stones
+        - generic [ref=e185]: 1 Goal
+      - generic [ref=e186] [cursor=pointer]:
+        - heading "Galaxy Spiral Run" [level=3] [ref=e187]
+        - paragraph [ref=e188]: Ascend the galaxy spiral!
+        - generic [ref=e189]: 1 Goal
+      - generic [ref=e190] [cursor=pointer]:
+        - heading "Toxic Swamp Run" [level=3] [ref=e191]
+        - paragraph [ref=e192]: Navigate the toxic swamp!
+        - generic [ref=e193]: 1 Goal
+      - generic [ref=e194] [cursor=pointer]:
+        - heading "Quantum Leap Run" [level=3] [ref=e195]
+        - paragraph [ref=e196]: Leap across the volatile quantum platforms!
+        - generic [ref=e197]: 1 Goal
+      - generic [ref=e198] [cursor=pointer]:
+        - heading "Glacial Chasm Run" [level=3] [ref=e199]
+        - paragraph [ref=e200]: Navigate the treacherous ice bridges!
+        - generic [ref=e201]: 1 Goal
+      - generic [ref=e202] [cursor=pointer]:
+        - heading "Frostbite Cavern Run" [level=3] [ref=e203]
+        - paragraph [ref=e204]: Slide down the icy slopes and navigate moving floes!
+        - generic [ref=e205]: 1 Goal
+      - generic [ref=e206] [cursor=pointer]:
+        - heading "Magnetic Canyon Run" [level=3] [ref=e207]
+        - paragraph [ref=e208]: Navigate the icy paths and magnetic floating platforms!
+        - generic [ref=e209]: 1 Goal
+      - generic [ref=e210] [cursor=pointer]:
+        - heading "Magnetic Cavern Run" [level=3] [ref=e211]
+        - paragraph [ref=e212]: Navigate the icy paths and magnetic floating platforms in the cavern!
+        - generic [ref=e213]: 1 Goal
+      - generic [ref=e214] [cursor=pointer]:
+        - heading "Gravity Well" [level=3] [ref=e215]
+        - paragraph [ref=e216]: Navigate the icy funnel without falling into the core!
+        - generic [ref=e217]: 1 Goal
+      - generic [ref=e218] [cursor=pointer]:
+        - heading "Cyber Ice Track" [level=3] [ref=e219]
+        - paragraph [ref=e220]: Navigate low friction ice and dodging platforms!
+        - generic [ref=e221]: 1 Goal
+      - generic [ref=e222] [cursor=pointer]:
+        - heading "Neon Alley Run" [level=3] [ref=e223]
+        - paragraph [ref=e224]: Navigate the high speed neon icy slide and dodging laser sweepers!
+        - generic [ref=e225]: 1 Goal
+      - generic [ref=e226] [cursor=pointer]:
+        - heading "Chrono Canyon Run" [level=3] [ref=e227]
+        - paragraph [ref=e228]: Navigate the high friction sands and erratic time-distorted platforms!
+        - generic [ref=e229]: 1 Goal
+      - generic [ref=e230] [cursor=pointer]:
+        - heading "Synthwave Surge" [level=3] [ref=e231]
+        - paragraph [ref=e232]: Ride the neon ice and dodge the moving platforms!
+        - generic [ref=e233]: 1 Goal
+      - generic [ref=e234] [cursor=pointer]:
+        - heading "Meteorite Hollow" [level=3] [ref=e235]
+        - paragraph [ref=e236]: Navigate the frozen underground lake and dodge the glowing hot meteorites!
+        - generic [ref=e237]: 1 Goal
+      - generic [ref=e238] [cursor=pointer]:
+        - heading "Radiant Reactor" [level=3] [ref=e239]
+        - paragraph [ref=e240]: Navigate the hazardous coolant pool and dodge the active reactor rods!
+        - generic [ref=e241]: 1 Goal
+      - generic [ref=e242] [cursor=pointer]:
+        - heading "Plasma Pipeline" [level=3] [ref=e243]
+        - paragraph [ref=e244]: Navigate the cyan ice track and alternating moving platforms!
+        - generic [ref=e245]: 1 Goal
+      - generic [ref=e246] [cursor=pointer]:
+        - heading "Neon Pulse Grid" [level=3] [ref=e247]
+        - paragraph [ref=e248]: Slide through the dark grid and avoid the glowing pulse walls!
+        - generic [ref=e249]: 1 Goal
+      - generic [ref=e250] [cursor=pointer]:
+        - heading "Space Station" [level=3] [ref=e251]
+        - paragraph [ref=e252]: Zero-G environment with artificial gravity
+        - generic [ref=e253]: 1 Goal
+      - generic [ref=e254] [cursor=pointer]:
+        - heading "Skate Park" [level=3] [ref=e255]
+        - paragraph [ref=e256]: Shred the gnar!
+        - generic [ref=e257]: 1 Goal
+      - generic [ref=e258] [cursor=pointer]:
+        - heading "Pinball Wizard" [level=3] [ref=e259]
+        - paragraph [ref=e260]: Use the flippers and hit the targets!
+        - generic [ref=e261]: 1 Goal
+      - generic [ref=e262] [cursor=pointer]:
+        - heading "Canyon Run" [level=3] [ref=e263]
+        - paragraph [ref=e264]: Navigate the treacherous canyon path!
+        - generic [ref=e265]: 1 Goal
+      - generic [ref=e266] [cursor=pointer]:
+        - heading "Anti-Gravity Chamber" [level=3] [ref=e267]
+        - paragraph [ref=e268]: Use gravity power-ups to float through the rings!
+        - generic [ref=e269]: 1 Goal
+  - text: EMP Shockwave (K) Ground Slam (Digit0)
