@@ -563,10 +563,6 @@ export class InitMethods {
             return
         }
 
-        this.scene = this.engine.createScene()
-        this.swapChain = this.engine.createSwapChain()
-        this.renderer = this.engine.createRenderer()
-
         console.log('[INIT] Filament engine created')
 
         const cameraEntity = this.Filament.EntityManager.get().create()
