@@ -304,7 +304,7 @@ export class InitMethods {
                 const pos = rb.translation()
                 const pRadius = this.playerMarble.scale * 0.5 || 0.5
 
-                const ray = new this.RAPIER.Ray(pos, { x: dirX, y: dirY, z: dirZ })
+                const ray = new RAPIER.Ray(pos, { x: dirX, y: dirY, z: dirZ })
                 const hit = this.world.castRay(ray, maxDist, true, 0xffffffff, undefined, undefined, undefined, rb)
 
                 let newPos
@@ -1145,15 +1145,6 @@ export class InitMethods {
 
             if (shadowsEnabled) {
                 builder.castShadows(true)
-                builder.shadowOptions({
-                    mapSize: 2048,
-                    shadowCascades: 4,
-                    constantBias: 0.001,
-                    normalBias: 0.005,
-                    stable: true,
-                    screenSpaceContactShadows: false,
-                    maxShadowDistance: 50.0
-                })
             } else {
                 builder.castShadows(false)
             }
@@ -1181,15 +1172,6 @@ export class InitMethods {
 
         if (shadowsEnabled) {
             builder.castShadows(true)
-            builder.shadowOptions({
-                mapSize: 2048,
-                shadowCascades: 4,
-                constantBias: 0.001,
-                normalBias: 0.005,
-                stable: true,
-                screenSpaceContactShadows: false,
-                maxShadowDistance: 50.0
-            })
         } else {
             builder.castShadows(false)
         }
