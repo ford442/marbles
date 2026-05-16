@@ -332,8 +332,12 @@ window.game = new MarblesGame();
 window.game.init().catch(err => {
     console.error('[FATAL] Game initialization failed:', err)
     const loading = document.getElementById('loading')
-    const status = loading && loading.querySelector('.loading-status')
-    if (status) status.textContent = 'Error: ' + err.message
-    const spinner = loading && loading.querySelector('.loading-spinner')
-    if (spinner) spinner.style.borderTopColor = '#ff4444'
+    if (loading) {
+        loading.classList.add('error')
+        const textEl = loading.querySelector('.loading-text')
+        if (textEl) textEl.textContent = '⚠️ Failed to Start'
+    }
+    if (typeof window.updateLoadingProgress === 'function') {
+        window.updateLoadingProgress(0, 'Error: ' + (err?.message || 'Unknown error'))
+    }
 });
