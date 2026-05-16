@@ -182,6 +182,8 @@ export class GameLoopRenderMethods {
         ctx.globalCompositeOperation = 'source-over'
     }
     renderAndSync() {
+        const rotSpeed = 0.02
+        const zoomSpeed = 0.5
 
         if (this.keys['KeyR']) {
             this.respawnToLastCheckpoint()

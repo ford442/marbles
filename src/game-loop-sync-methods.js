@@ -454,6 +454,19 @@ export class GameLoopSyncMethods {
             if (this.renderer.beginFrame(this.swapChain)) {
                 this.renderer.renderView(this.view)
                 this.renderer.endFrame()
+
+                if (!this._firstFrameRendered) {
+                    this._firstFrameRendered = true
+                    if (typeof window.hideLoadingScreen === 'function') {
+                        window.hideLoadingScreen()
+                    } else {
+                        const loading = document.getElementById('loading')
+                        if (loading) {
+                            loading.classList.add('hidden')
+                            setTimeout(() => { loading.style.display = 'none' }, 500)
+                        }
+                    }
+                }
             }
             this.engine.execute()
         }
