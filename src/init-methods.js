@@ -27,7 +27,25 @@ const DEFAULT_SETTINGS = {
     }
 };
 
+// Detect WebGL2 support before attempting Filament init
+function detectWebGL2() {
+    try {
+        const testCanvas = document.createElement('canvas')
+        const gl = testCanvas.getContext('webgl2')
+        if (!gl) return false
+        // Confirm it's a real WebGL2 context
+        return typeof gl.createVertexArray === 'function'
+    } catch (e) {
+        return false
+    }
+}
+
 export async function loadFilament() {
+    // Fast-fail if WebGL2 is unavailable — Filament requires it
+    if (!detectWebGL2()) {
+        throw new Error('WebGL 2.0 is not supported or failed to initialize in this browser.')
+    }
+
     let attempts = 0
     while (typeof Filament === 'undefined' && attempts < 100) {
         await new Promise(resolve => setTimeout(resolve, 10))
@@ -40,7 +58,13 @@ export async function loadFilament() {
     }
 
     if (typeof Filament.init === 'function' && !Filament.isReady) {
-        await new Promise(resolve => Filament.init([], resolve))
+        // Guard against indefinite hang: apply a 20-second timeout
+        await Promise.race([
+            new Promise(resolve => Filament.init([], resolve)),
+            new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Filament WASM initialization timed out (20 s). WebGL may not be available.')), 20000)
+            )
+        ])
     }
 
     if (Filament.loadGeneratedExtensions) Filament.loadGeneratedExtensions()
@@ -521,7 +545,16 @@ export class InitMethods {
         if (typeof window.updateLoadingProgress === 'function') {
             window.updateLoadingProgress(25, 'Loading Filament rendering engine...')
         }
-        this.Filament = await loadFilament()
+
+        try {
+            this.Filament = await loadFilament()
+        } catch (filamentError) {
+            const message = filamentError?.message || 'Unknown error'
+            console.error('[INIT] Filament failed to load:', filamentError)
+            this._showInitError(message)
+            return
+        }
+
         if (typeof window.updateLoadingProgress === 'function') {
             window.updateLoadingProgress(45, 'Filament rendering ready')
         }
@@ -544,22 +577,10 @@ export class InitMethods {
         } catch (engineError) {
             const message = engineError?.message || 'Unknown rendering error'
             console.error('[INIT] Failed to create Filament engine:', engineError)
-
             const errorText = message.includes('WebGL 2.0')
                 ? 'WebGL 2.0 is not supported or failed to initialize in this browser.'
                 : `Failed to initialize 3D renderer: ${message}`
-
-            if (typeof window.updateLoadingProgress === 'function') {
-                window.updateLoadingProgress(0, errorText)
-            }
-
-            const loadingEl = document.getElementById('loading')
-            if (loadingEl) {
-                loadingEl.classList.add('error')
-                const textEl = loadingEl.querySelector('.loading-text') || loadingEl.querySelector('p') || loadingEl
-                if (textEl) textEl.textContent = errorText
-            }
-
+            this._showInitError(errorText)
             return
         }
 
@@ -638,6 +659,20 @@ export class InitMethods {
     }
 
     // ==================== PAUSE MENU & SETTINGS METHODS ====================
+
+    // Show a fatal initialization error on the loading screen.
+    _showInitError(message) {
+        console.error('[INIT] Fatal init error:', message)
+        const loadingEl = document.getElementById('loading')
+        if (loadingEl) {
+            loadingEl.classList.add('error')
+            const textEl = loadingEl.querySelector('.loading-text')
+            if (textEl) textEl.textContent = '⚠️ Failed to Start'
+        }
+        if (typeof window.updateLoadingProgress === 'function') {
+            window.updateLoadingProgress(0, message)
+        }
+    }
 
     initPauseMenu() {
         // Initialize pause state
