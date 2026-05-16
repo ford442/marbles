@@ -490,7 +490,7 @@ if (this.renderSpeedLines) {
     }
 }
 
-export function applyGameLoopSyncMethods(targetClass: any) {
+export function applyGameLoopSyncMethods(targetClass) {
     for (const name of Object.getOwnPropertyNames(GameLoopSyncMethods.prototype)) {
         if (name !== 'constructor') {
             targetClass.prototype[name] = GameLoopSyncMethods.prototype[name];
