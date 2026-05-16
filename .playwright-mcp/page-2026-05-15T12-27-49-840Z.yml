@@ -1,0 +1,43 @@
+- generic [active]:
+  - generic:
+    - generic: "2"
+  - generic:
+    - generic:
+      - generic: ⏸️ Paused
+      - generic:
+        - button "Resume"
+        - button "Restart Level"
+        - button "Settings"
+        - button "Quit to Menu"
+  - generic:
+    - generic: Mushroom Hop
+    - generic: "Score: 149"
+    - generic: "Combo: x10"
+    - generic: "Time: 0.00s"
+    - generic: "Selected: Celestial Pearl"
+    - generic: "Yaw: 0° Pitch: 0°"
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic: 🏃
+            - text: Movement
+          - generic: ▼
+      - generic:
+        - generic:
+          - generic:
+            - generic: ⚔️
+            - text: Combat
+          - generic: ▼
+      - generic:
+        - generic:
+          - generic:
+            - generic: 🛠️
+            - text: Utility
+          - generic: ▼
+    - text: EMP Shockwave (K) Ground Slam (Digit0)
+    - generic:
+      - text: 1 Ramp | 2 Floor | 3 Bouncer | 4 Portal A | 5 Portal B | WASD / Arrows Move | Shift Boost | Space Jump (Hold) | V Dash | F Focus | E / Q Magnet | R Reset | Tab All Abilities | C Camera | M Menu | N Mute | [ ] Vol | Z Stomp | T Rewind | B Blink | X Bomb | L Missile | H Hover | J Jetpack | G Frost Bridge | U Gravity Flip | K EMP Shockwave | P Teleport | Y Vortex | I Size Shift | 6 Phase Shift | O Violet Light
+      - generic: Portal A ⚫ | Portal B ⚫
+    - button "🔊"
+    - button "⏸️"
