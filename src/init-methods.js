@@ -62,7 +62,7 @@ export async function loadFilament() {
         await Promise.race([
             new Promise(resolve => Filament.init([], resolve)),
             new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Filament WASM initialisation timed out (20 s). WebGL may not be available.')), 20000)
+                setTimeout(() => reject(new Error('Filament WASM initialization timed out (20 s). WebGL may not be available.')), 20000)
             )
         ])
     }
@@ -660,7 +660,7 @@ export class InitMethods {
 
     // ==================== PAUSE MENU & SETTINGS METHODS ====================
 
-    // Show a fatal initialisation error on the loading screen.
+    // Show a fatal initialization error on the loading screen.
     _showInitError(message) {
         console.error('[INIT] Fatal init error:', message)
         const loadingEl = document.getElementById('loading')
