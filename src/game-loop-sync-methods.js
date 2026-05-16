@@ -454,7 +454,7 @@ if (this.renderSpeedLines) {
             try {
                 // === MODERN / RECOMMENDED FILAMENT PATTERN ===
                 if (this.renderer.beginFrame(this.swapChain)) {
-                    this.renderer.render(this.view);           // or renderView() depending on your Filament version
+                    this.renderer.render(this.swapChain, this.view);
                     this.renderer.endFrame();
 
                     // First-frame handling (loading screen)
