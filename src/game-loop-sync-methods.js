@@ -446,32 +446,51 @@ export class GameLoopSyncMethods {
         }
 
         // Render speed lines overlay
-        if (this.renderSpeedLines) {
-            this.renderSpeedLines()
+if (this.renderSpeedLines) {
+            this.renderSpeedLines();
         }
 
         if (this.renderer && this.swapChain && this.view) {
             try {
-                this.renderer.render(this.swapChain, this.view)
-                if (!this._firstFrameLogged) {
-                    this._firstFrameLogged = true
-                    console.log('[RENDER] First frame rendered successfully')
+                // === MODERN / RECOMMENDED FILAMENT PATTERN ===
+                if (this.renderer.beginFrame(this.swapChain)) {
+                    this.renderer.render(this.view);           // or renderView() depending on your Filament version
+                    this.renderer.endFrame();
+
+                    // First-frame handling (loading screen)
+                    if (!this._firstFrameRendered) {
+                        this._firstFrameRendered = true;
+                        console.log('[RENDER] First frame rendered successfully');
+
+                        if (typeof window.hideLoadingScreen === 'function') {
+                            window.hideLoadingScreen();
+                        } else {
+                            const loading = document.getElementById('loading');
+                            if (loading) {
+                                loading.classList.add('hidden');
+                                setTimeout(() => { loading.style.display = 'none'; }, 500);
+                            }
+                        }
+                    }
                 }
             } catch (renderErr) {
                 if (!this._renderFailLogged) {
-                    this._renderFailLogged = true
-                    console.error('[RENDER] renderer.render() failed:', renderErr)
+                    this._renderFailLogged = true;
+                    console.error('[RENDER] renderer.render() failed:', renderErr);
                 }
             }
-            this.engine.execute()
-        } else if (!this._renderGuardLogged) {
-            this._renderGuardLogged = true
-            console.error('[RENDER] Render guard failed — renderer:', !!this.renderer, 'swapChain:', !!this.swapChain, 'view:', !!this.view)
+
+            this.engine.execute();
+        } 
+        else if (!this._renderGuardLogged) {
+            this._renderGuardLogged = true;
+            console.error('[RENDER] Render guard failed — renderer:', !!this.renderer, 
+                         'swapChain:', !!this.swapChain, 'view:', !!this.view);
         }
     }
 }
 
-export function applyGameLoopSyncMethods(targetClass) {
+export function applyGameLoopSyncMethods(targetClass: any) {
     for (const name of Object.getOwnPropertyNames(GameLoopSyncMethods.prototype)) {
         if (name !== 'constructor') {
             targetClass.prototype[name] = GameLoopSyncMethods.prototype[name];

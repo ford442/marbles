@@ -621,18 +621,6 @@ export class InitMethods {
         if (typeof window.updateLoadingProgress === 'function') {
             window.updateLoadingProgress(100, 'Ready!')
         }
-        
-        // Hide loading screen with fade transition
-        if (typeof window.hideLoadingScreen === 'function') {
-            window.hideLoadingScreen()
-        } else {
-            const loading = document.getElementById('loading')
-            if (loading) {
-                loading.classList.add('hidden')
-                setTimeout(() => { loading.style.display = 'none' }, 500)
-            }
-        }
-        console.log('[INIT] Loading screen hidden')
 
         this.resize()
         window.addEventListener('resize', () => this.resize())
