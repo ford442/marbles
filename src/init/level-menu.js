@@ -6,9 +6,13 @@ export class InitLevelMenu {
         const levelGrid = document.getElementById('level-grid')
         const gameUI = document.getElementById('ui')
         const pauseMenu = document.getElementById('pause-menu')
+        const fadeOverlay = document.getElementById('fade-overlay')
 
         // Hide pause menu if open
         if (pauseMenu) pauseMenu.classList.remove('active')
+
+        // Clear the black overlay so the menu is visible
+        if (fadeOverlay) fadeOverlay.classList.add('fade-out')
 
         // Reset menu state
         menu.classList.remove('menu-hidden', 'menu-exiting')
