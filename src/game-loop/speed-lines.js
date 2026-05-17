@@ -83,15 +83,18 @@ export class GameLoopSpeedLines {
         ctx.globalCompositeOperation = 'screen'
         const maxRadius = Math.max(w, h) * 0.8
         
-        // Draw radial motion blur gradient
-        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, maxRadius)
-        gradient.addColorStop(0, `rgba(255, 255, 255, ${0.0 * intensity})`)
-        gradient.addColorStop(0.3, `rgba(255, 255, 255, ${0.05 * intensity})`)
-        gradient.addColorStop(0.7, `rgba(200, 220, 255, ${0.15 * intensity})`)
-        gradient.addColorStop(1, `rgba(180, 200, 255, ${0.25 * intensity})`)
-        
-        ctx.fillStyle = gradient
-        ctx.fillRect(0, 0, w, h)
+        // Simplified rendering for performance - skip gradient if intensity low
+        if (intensity > 0.3) {
+            // Draw radial motion blur gradient only when moving faster
+            const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, maxRadius)
+            gradient.addColorStop(0, `rgba(255, 255, 255, ${0.0 * intensity})`)
+            gradient.addColorStop(0.3, `rgba(255, 255, 255, ${0.05 * intensity})`)
+            gradient.addColorStop(0.7, `rgba(200, 220, 255, ${0.15 * intensity})`)
+            gradient.addColorStop(1, `rgba(180, 200, 255, ${0.25 * intensity})`)
+            
+            ctx.fillStyle = gradient
+            ctx.fillRect(0, 0, w, h)
+        }
         
         // Draw speed lines
         const numActiveLines = Math.floor(this.speedLinesLines.length * (0.3 + intensity * 0.7))
@@ -126,19 +129,14 @@ export class GameLoopSpeedLines {
             ctx.moveTo(x1, y1)
             ctx.lineTo(x2, y2)
             
-            // Create gradient for line
-            const lineGradient = ctx.createLinearGradient(x1, y1, x2, y2)
-            lineGradient.addColorStop(0, `rgba(255, 255, 255, 0)`)
-            lineGradient.addColorStop(0.5, `rgba(255, 255, 255, ${opacity * 0.8})`)
-            lineGradient.addColorStop(1, `rgba(200, 220, 255, ${opacity})`)
-            
-            ctx.strokeStyle = lineGradient
+            // Use simple color gradient instead of creating new gradient per line for performance
+            ctx.strokeStyle = `rgba(200, 220, 255, ${opacity})`
             ctx.lineWidth = line.width * (0.5 + intensity * 0.5)
             ctx.lineCap = 'round'
             ctx.stroke()
             
-            // Add glow effect for high intensity
-            if (intensity > 0.6) {
+            // Add glow effect for high intensity (only for some lines to reduce draws)
+            if (intensity > 0.6 && i % 3 === 0) {
                 ctx.beginPath()
                 ctx.moveTo(x1, y1)
                 ctx.lineTo(x2, y2)
@@ -149,29 +147,7 @@ export class GameLoopSpeedLines {
             }
         }
         
-        // Add chromatic aberration effect at edges for high speed
-        if (intensity > 0.7) {
-            const aberrationStrength = (intensity - 0.7) / 0.3
-            
-            // Draw subtle red/cyan edge tint
-            const edgeGradient = ctx.createRadialGradient(centerX, centerY, maxRadius * 0.5, centerX, centerY, maxRadius)
-            edgeGradient.addColorStop(0, 'rgba(255, 0, 0, 0)')
-            edgeGradient.addColorStop(0.7, `rgba(255, 100, 100, ${0.05 * aberrationStrength})`)
-            edgeGradient.addColorStop(1, `rgba(255, 150, 150, ${0.1 * aberrationStrength})`)
-            
-            ctx.fillStyle = edgeGradient
-            ctx.globalCompositeOperation = 'screen'
-            ctx.fillRect(0, 0, w, h)
-            
-            // Cyan offset
-            const cyanGradient = ctx.createRadialGradient(centerX + 5 * aberrationStrength, centerY, maxRadius * 0.5, centerX + 5, centerY, maxRadius)
-            cyanGradient.addColorStop(0, 'rgba(0, 255, 255, 0)')
-            cyanGradient.addColorStop(0.7, `rgba(100, 255, 255, ${0.05 * aberrationStrength})`)
-            cyanGradient.addColorStop(1, `rgba(150, 255, 255, ${0.1 * aberrationStrength})`)
-            
-            ctx.fillStyle = cyanGradient
-            ctx.fillRect(0, 0, w, h)
-        }
+        // Skip chromatic aberration for lower performance impact
         
         // Reset composite operation
         ctx.globalCompositeOperation = 'source-over'

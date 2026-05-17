@@ -27,22 +27,6 @@ export class GameLoopMethods {
 
         this.pollGamepads()
 
-        if (!this.frameCount) this.frameCount = 0
-        this.frameCount++
-        if (this.frameCount <= 3) {
-            console.log(`[RENDER] Frame ${this.frameCount}, Level: ${this.currentLevel || 'menu'}, Marbles: ${this.marbles.length}`)
-        }
-
-        if (this.frameCount % 10 === 0) {
-            const debugOverlay = document.getElementById('debug-overlay')
-            if (debugOverlay && this.currentLevel) {
-                debugOverlay.style.display = 'block'
-                document.getElementById('debug-level').textContent = this.currentLevel
-                document.getElementById('debug-marbles').textContent = this.marbles.length
-                document.getElementById('debug-camera').textContent = this.cameraMode
-            }
-        }
-
         // Record Ghost
         if (!this.levelComplete && this.levelStartTime && this.playerMarble && !this.timeStopActive) {
             const t = this.playerMarble.rigidBody.translation()

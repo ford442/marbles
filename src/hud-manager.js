@@ -59,6 +59,7 @@ export class HUDManager {
     constructor(game) {
         this.game = game;
         this.abilityElements = new Map();
+        this.allAbilityElements = new Map(); // Cache all-ability DOM elements
         this.abilityLastUsed = new Map();
         this.abilityVisible = new Map();
         this.showAllTimeout = null;
@@ -98,9 +99,10 @@ export class HUDManager {
                 this.abilityElements.set(abilityId, iconEl);
                 this.abilityVisible.set(abilityId, false);
 
-                // Create element for "all abilities" overlay
+                // Create element for "all abilities" overlay and cache it
                 const allEl = this.createAllAbilityItem(abilityId, meta);
                 allContainer.appendChild(allEl);
+                this.allAbilityElements.set(abilityId, allEl);
             }
         }
     }
@@ -229,8 +231,8 @@ export class HUDManager {
             this.abilityVisible.set(abilityId, false);
         }
 
-        // Update "all abilities" overlay
-        const allEl = document.getElementById(`all-ability-${abilityId}`);
+        // Update "all abilities" overlay using cached element
+        const allEl = this.allAbilityElements.get(abilityId);
         if (allEl) {
             const allOverlay = allEl.querySelector('.ability-cooldown-overlay');
             allOverlay.style.setProperty('--cooldown-angle', `${angle}deg`);
