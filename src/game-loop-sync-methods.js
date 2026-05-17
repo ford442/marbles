@@ -2,6 +2,9 @@ import { quaternionToMat4, quatFromEuler } from './math.js';
 
 export class GameLoopSyncMethods {
     syncTransformsAndRender(now) {
+        // Cache transform manager once per frame to avoid repeated WASM boundary crossings
+        const tcm = this.engine.getTransformManager()
+
         // Handle visual particles lifecycle
         for (let i = this.visualParticles.length - 1; i >= 0; i--) {
             const p = this.visualParticles[i]
@@ -32,7 +35,6 @@ export class GameLoopSyncMethods {
                         p.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [r, g, b])
                     }
 
-                    const tcm = this.engine.getTransformManager()
                     const inst = tcm.getInstance(p.entity)
                     const mat = quaternionToMat4(p.pos, { x: 0, y: 0, z: 0, w: 1 })
 
@@ -62,7 +64,6 @@ export class GameLoopSyncMethods {
                         p.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [r, g, b])
                     }
 
-                    const tcm = this.engine.getTransformManager()
                     const inst = tcm.getInstance(p.entity)
                     const mat = quaternionToMat4(p.pos, { x: 0, y: 0, z: 0, w: 1 })
 
@@ -83,7 +84,6 @@ export class GameLoopSyncMethods {
                         p.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [r, g, b])
                     }
 
-                    const tcm = this.engine.getTransformManager()
                     const inst = tcm.getInstance(p.entity)
                     const mat = quaternionToMat4(p.pos, { x: 0, y: 0, z: 0, w: 1 })
 
@@ -116,7 +116,6 @@ export class GameLoopSyncMethods {
                         p.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [r, g, b])
                     }
 
-                    const tcm = this.engine.getTransformManager()
                     const inst = tcm.getInstance(p.entity)
                     const mat = quaternionToMat4(p.pos, { x: 0, y: 0, z: 0, w: 1 })
 
@@ -151,7 +150,6 @@ export class GameLoopSyncMethods {
                         p.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [r, g, b])
                     }
 
-                    const tcm = this.engine.getTransformManager()
                     const inst = tcm.getInstance(p.entity)
                     const mat = quaternionToMat4(p.pos, { x: 0, y: 0, z: 0, w: 1 })
 
@@ -179,7 +177,6 @@ export class GameLoopSyncMethods {
                         p.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [r, g, b])
                     }
 
-                    const tcm = this.engine.getTransformManager()
                     const inst = tcm.getInstance(p.entity)
                     const mat = quaternionToMat4(p.pos, { x: 0, y: 0, z: 0, w: 1 })
 
@@ -210,7 +207,6 @@ export class GameLoopSyncMethods {
                         p.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [brightness, brightness * 0.9, brightness * 0.5])
                     }
                     
-                    const tcm = this.engine.getTransformManager()
                     const inst = tcm.getInstance(p.entity)
                     
                     // Add rotation
@@ -239,7 +235,6 @@ export class GameLoopSyncMethods {
                         p.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [r, g, b])
                     }
                     
-                    const tcm = this.engine.getTransformManager()
                     const inst = tcm.getInstance(p.entity)
                     const mat = quaternionToMat4(p.pos, { x: 0, y: 0, z: 0, w: 1 })
                     
@@ -267,7 +262,6 @@ export class GameLoopSyncMethods {
                         p.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 1.0, brightness])
                     }
                     
-                    const tcm = this.engine.getTransformManager()
                     const inst = tcm.getInstance(p.entity)
                     
                     // Orient ray along velocity direction
@@ -295,7 +289,6 @@ export class GameLoopSyncMethods {
                         p.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [brightness, brightness * 0.9, brightness * 0.5])
                     }
                     
-                    const tcm = this.engine.getTransformManager()
                     const inst = tcm.getInstance(p.entity)
                     const mat = quaternionToMat4(p.pos, { x: 0, y: 0, z: 0, w: 1 })
                     
@@ -319,7 +312,6 @@ export class GameLoopSyncMethods {
                         p.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [r, g, b])
                     }
 
-                    const tcm = this.engine.getTransformManager()
                     const inst = tcm.getInstance(p.entity)
                     const mat = quaternionToMat4(p.pos, { x: 0, y: 0, z: 0, w: 1 })
 
@@ -368,7 +360,6 @@ export class GameLoopSyncMethods {
             this.checkGameLogic()
         }
 
-        const tcm = this.engine.getTransformManager()
         for (const m of this.marbles) {
             const t = m.rigidBody.translation()
             const r = m.rigidBody.rotation()
@@ -438,11 +429,13 @@ export class GameLoopSyncMethods {
             mat[0] *= thin; mat[1] *= thin; mat[2] *= thin
             mat[4] *= thin; mat[5] *= thin; mat[6] *= thin
             mat[8] *= length; mat[9] *= length; mat[10] *= length
-            this.engine.getTransformManager().setTransform(this.cueInst, mat)
+            tcm.setTransform(this.cueInst, mat)
         } else if (this.cueInst) {
-            const zeroMat = new Float32Array(16)
-            zeroMat[15] = 1
-            this.engine.getTransformManager().setTransform(this.cueInst, zeroMat)
+            if (!this._cueZeroMat) {
+                this._cueZeroMat = new Float32Array(16)
+                this._cueZeroMat[15] = 1
+            }
+            tcm.setTransform(this.cueInst, this._cueZeroMat)
         }
 
         // Render speed lines overlay

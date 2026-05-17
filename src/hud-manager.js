@@ -250,11 +250,17 @@ export class HUDManager {
     }
 
     /**
-     * Update all ability displays - call this from the game loop
+     * Update all ability displays - call this from the game loop.
+     * Throttled to ~10Hz to reduce DOM layout pressure.
      */
     updateAllAbilities() {
-        const g = this.game;
         const now = Date.now();
+
+        // Throttle HUD updates to every 100ms to reduce layout/paint overhead
+        if (now - (this._lastHudUpdate || 0) < 100) return;
+        this._lastHudUpdate = now;
+
+        const g = this.game;
 
         // Movement abilities
         if (g.lastBoostTime !== undefined && g.boostCooldown) {
