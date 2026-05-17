@@ -307,6 +307,9 @@ class MarblesGame {
         this.gravityPulseBarEl = document.getElementById('gravitypulsebar')
         this.gravityPulseBarContainerEl = document.getElementById('gravitypulsebar-container')
 
+        // Cached DOM element for active effects display
+        this.activeEffectsEl = document.getElementById('active-effects')
+
         // Gamepad State
         this.gamepadState = {}
 

@@ -5,6 +5,11 @@ import { LEVELS } from '../levels.js';
 
 export class GameLoopRenderCore {
     renderAndSync() {
+        // Cache timestamp once per frame for reuse throughout renderAndSync
+        const now = Date.now()
+        // Throttle HUD CSS style updates to ~10Hz to reduce layout/paint overhead
+        const shouldUpdateHUD = (now - (this._lastHudStyleUpdate || 0)) >= 100
+        if (shouldUpdateHUD) this._lastHudStyleUpdate = now
         const rotSpeed = 0.02
         const zoomSpeed = 0.5
 
@@ -74,7 +79,6 @@ export class GameLoopRenderCore {
         }
 
         if (this.keys['ShiftLeft'] || this.keys['ShiftRight']) {
-            const now = Date.now()
             if (this.playerMarble && now - this.lastBoostTime > this.boostCooldown) {
                 const force = 60.0
                 let boostYaw = this.aimYaw
@@ -94,8 +98,7 @@ export class GameLoopRenderCore {
             }
         }
 
-        if (this.boostBarEl) {
-            const now = Date.now()
+        if (shouldUpdateHUD && this.boostBarEl) {
             const timeSince = now - this.lastBoostTime
             const progress = Math.min(1.0, timeSince / this.boostCooldown)
             this.boostBarEl.style.width = `${progress * 100}%`
@@ -107,8 +110,7 @@ export class GameLoopRenderCore {
             }
         }
 
-        if (this.dashBarEl) {
-            const now = Date.now()
+        if (shouldUpdateHUD && this.dashBarEl) {
             if (this.isChargingDash) {
                 // Increment charge - roughly 1.5 seconds to fully charge
                 this.dashCharge = Math.min(this.maxDashCharge, this.dashCharge + (delta * 0.66))
@@ -142,8 +144,8 @@ export class GameLoopRenderCore {
             this.chargePower = Math.min(1.0, this.chargePower + 0.015)
         }
 
-        if (!this.levelComplete && this.levelStartTime) {
-            const time = ((Date.now() - this.levelStartTime) / 1000).toFixed(2)
+        if (!this.levelComplete && this.levelStartTime && shouldUpdateHUD) {
+            const time = ((now - this.levelStartTime) / 1000).toFixed(2)
             if (this.timerEl) this.timerEl.textContent = `Time: ${time}s`
         }
 
@@ -195,7 +197,7 @@ export class GameLoopRenderCore {
             this.magnetPower = Math.min(1.0, this.magnetPower + 0.002)
         }
 
-        if (this.magnetBarEl) {
+        if (shouldUpdateHUD && this.magnetBarEl) {
             this.magnetBarEl.style.width = `${this.magnetPower * 100}%`
             if (this.magnetActive) {
                 const color = this.magnetMode === 'attract' ? '#00ffff' : '#ff00ff'
@@ -207,10 +209,12 @@ export class GameLoopRenderCore {
             }
         }
 
-        const yawDeg = Math.round(this.aimYaw * 180 / Math.PI)
-        const pitchDeg = Math.round(this.pitchAngle * 180 / Math.PI)
-        this.aimEl.textContent = `Yaw: ${yawDeg}° Pitch: ${pitchDeg}°`
-        this.powerbarEl.style.width = `${this.chargePower * 100}%`
+        if (shouldUpdateHUD) {
+            const yawDeg = Math.round(this.aimYaw * 180 / Math.PI)
+            const pitchDeg = Math.round(this.pitchAngle * 180 / Math.PI)
+            this.aimEl.textContent = `Yaw: ${yawDeg}° Pitch: ${pitchDeg}°`
+            this.powerbarEl.style.width = `${this.chargePower * 100}%`
+        }
 
         if ((this.cameraMode === 'follow' || this.cameraMode === 'action' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown' || this.cameraMode === 'cinematic' || this.cameraMode === 'side-scroller' || this.cameraMode === 'drone') && this.currentLevel) {
             const level = LEVELS[this.currentLevel]
@@ -341,7 +345,6 @@ export class GameLoopRenderCore {
                     this.camera.lookAt([t.x + this.cameraShake.x, t.y + 40 + this.cameraShake.y, t.z + this.cameraShake.z], [t.x, t.y, t.z], [0, 0, -1])
                 } else if (this.cameraMode === 'cinematic') {
                     // Slowly orbit around the target
-                    const now = Date.now()
                     const cinematicAngle = now * 0.0005
                     const dist = 25
                     const height = 15
@@ -436,7 +439,6 @@ export class GameLoopRenderCore {
         }
 
         // Update Moving Platforms
-        const now = Date.now()
         // If time stop is active, we don't advance the timeSec for moving platforms
         if (this.timeStopActive) {
             if (!this.lastTimeStopSavedTime) {
@@ -452,6 +454,9 @@ export class GameLoopRenderCore {
         }
 
         const timeSec = (now - (this.timeStopOffset || 0)) / 1000
+
+        // Cache transform manager once for platform/object/collectible updates
+        const tcm = this.engine.getTransformManager()
 
         for (const p of this.movingPlatforms) {
             let x = p.initialPos.x
@@ -474,7 +479,6 @@ export class GameLoopRenderCore {
             mat[4] *= sy; mat[5] *= sy; mat[6] *= sy
             mat[8] *= sz; mat[9] *= sz; mat[10] *= sz
 
-            const tcm = this.engine.getTransformManager()
             const inst = tcm.getInstance(p.entity)
             tcm.setTransform(inst, mat)
         }
@@ -497,7 +501,6 @@ export class GameLoopRenderCore {
             mat[4] *= sy; mat[5] *= sy; mat[6] *= sy
             mat[8] *= sz; mat[9] *= sz; mat[10] *= sz
 
-            const tcm = this.engine.getTransformManager()
             const inst = tcm.getInstance(p.entity)
             tcm.setTransform(inst, mat)
         }
@@ -519,7 +522,6 @@ export class GameLoopRenderCore {
             mat[4] *= s; mat[5] *= s; mat[6] *= s
             mat[8] *= s; mat[9] *= s; mat[10] *= s
 
-            const tcm = this.engine.getTransformManager()
             const inst = tcm.getInstance(p.entity)
             tcm.setTransform(inst, mat)
         }
@@ -529,7 +531,6 @@ export class GameLoopRenderCore {
             this.collectibleRotation += 0.05
         }
         if (this.collectibles && this.collectibles.length > 0) {
-            const tcm = this.engine.getTransformManager()
             for (let i = this.collectibles.length - 1; i >= 0; i--) {
                 const c = this.collectibles[i]
                 const bobOffset = this.timeStopActive ? 0 : Math.sin(this.collectibleRotation * 2) * 0.2
@@ -556,7 +557,7 @@ export class GameLoopRenderCore {
 
                         // Combo Logic
                         this.combo = Math.min(10, this.combo + 1)
-                        this.comboTimer = Date.now()
+                        this.comboTimer = now
                         if (this.comboEl) {
                             this.comboEl.style.display = 'block'
                             this.comboEl.textContent = `Combo: x${this.combo}`
@@ -584,11 +585,11 @@ export class GameLoopRenderCore {
         }
 
         // Combo Timer Logic
-        let comboTimeElapsed = Date.now() - this.comboTimer
+        let comboTimeElapsed = now - this.comboTimer
 
         // Adrenaline pauses combo decay if high
         if (this.adrenaline && this.adrenaline > 80) {
-            this.comboTimer = Date.now() // Keep resetting it so it never expires
+            this.comboTimer = now // Keep resetting it so it never expires
             comboTimeElapsed = 0
         }
         if (comboTimeElapsed > this.maxComboTime && this.combo > 1) {
@@ -606,9 +607,7 @@ export class GameLoopRenderCore {
         }
 
         // Update Active Effects UI
-        const effectsContainer = document.getElementById('active-effects')
-        if (effectsContainer) {
-            const now = Date.now()
+        if (shouldUpdateHUD && this.activeEffectsEl) {
             const active = []
             for (const [type, endTime] of Object.entries(this.activeEffects)) {
                 if (now < endTime) {
@@ -618,10 +617,10 @@ export class GameLoopRenderCore {
                     delete this.activeEffects[type]
                 }
             }
-            effectsContainer.textContent = active.join(' | ')
+            this.activeEffectsEl.textContent = active.join(' | ')
         }
 
-        if (this.sizebarContainerEl && this.sizebarEl) {
+        if (shouldUpdateHUD && this.sizebarContainerEl && this.sizebarEl) {
             const timeSinceSizeShift = now - this.lastSizeShiftTime
             if (timeSinceSizeShift < this.sizeShiftCooldown) {
                 this.sizebarContainerEl.style.display = 'block'
@@ -633,7 +632,7 @@ export class GameLoopRenderCore {
             }
         }
 
-        if (this.holobarContainerEl && this.holobarEl) {
+        if (shouldUpdateHUD && this.holobarContainerEl && this.holobarEl) {
             const timeSinceHolo = now - this.lastHoloTime
             if (timeSinceHolo < this.holoCooldown) {
                 this.holobarContainerEl.style.display = 'block'
@@ -645,7 +644,7 @@ export class GameLoopRenderCore {
             }
         }
 
-        if (this.chameleonBarContainerEl && this.chameleonBarEl) {
+        if (shouldUpdateHUD && this.chameleonBarContainerEl && this.chameleonBarEl) {
             const timeSinceChameleon = now - this.lastChameleonTime
             const profile = this.chameleonProfiles[this.chameleonState]
             if (timeSinceChameleon < this.chameleonCooldown) {
@@ -661,7 +660,7 @@ export class GameLoopRenderCore {
         }
 
 
-        if (this.blinkBarEl) {
+        if (shouldUpdateHUD && this.blinkBarEl) {
             const timeSinceBlink = now - this.lastBlinkTime
             const progress = Math.min(1.0, timeSinceBlink / this.blinkCooldown)
             this.blinkBarEl.style.width = `${progress * 100}%`
@@ -677,7 +676,7 @@ export class GameLoopRenderCore {
             }
         }
 
-        if (this.teleportBarEl) {
+        if (shouldUpdateHUD && this.teleportBarEl) {
             const timeSinceTeleport = now - this.lastTeleportTime
             const progress = Math.min(1.0, timeSinceTeleport / this.teleportCooldown)
             this.teleportBarEl.style.width = `${progress * 100}%`
@@ -689,7 +688,7 @@ export class GameLoopRenderCore {
             }
         }
 
-        if (this.gravityPulseBarContainerEl && this.gravityPulseBarEl) {
+        if (shouldUpdateHUD && this.gravityPulseBarContainerEl && this.gravityPulseBarEl) {
             const timeSincePulse = now - this.lastGravityPulseTime
             if (timeSincePulse < this.gravityPulseCooldown) {
                 this.gravityPulseBarContainerEl.style.display = 'block'
@@ -701,7 +700,7 @@ export class GameLoopRenderCore {
             }
         }
 
-        if (this.blackHoleBarEl && this.blackHoleBarContainerEl) {
+        if (shouldUpdateHUD && this.blackHoleBarEl && this.blackHoleBarContainerEl) {
             const timeSinceBlackHole = now - this.lastBlackHoleTime
             const progress = Math.min(1.0, timeSinceBlackHole / this.blackHoleCooldown)
             this.blackHoleBarEl.style.width = `${progress * 100}%`
@@ -720,7 +719,7 @@ export class GameLoopRenderCore {
             }
         }
 
-        if (this.bombBarEl) {
+        if (shouldUpdateHUD && this.bombBarEl) {
             const timeSinceBomb = now - this.lastBombTime
             const progress = Math.min(1.0, timeSinceBomb / this.bombCooldown)
             this.bombBarEl.style.width = `${progress * 100}%`
@@ -732,7 +731,7 @@ export class GameLoopRenderCore {
             }
         }
 
-        if (this.missileBarEl) {
+        if (shouldUpdateHUD && this.missileBarEl) {
             const timeSinceMissile = now - this.lastMissileTime
             const progress = Math.min(1.0, timeSinceMissile / this.missileCooldown)
             this.missileBarEl.style.width = `${progress * 100}%`
@@ -745,7 +744,7 @@ export class GameLoopRenderCore {
         }
 
         // EMP Cooldown Bar
-        if (this.empBarEl) {
+        if (shouldUpdateHUD && this.empBarEl) {
             const timeSinceEMP = now - this.lastEmpTime
             const progress = Math.min(1.0, timeSinceEMP / this.empCooldown)
             this.empBarEl.style.width = `${progress * 100}%`
@@ -813,7 +812,6 @@ export class GameLoopRenderCore {
                 })
 
                 // Sync Filament transform to Rapier rigid body
-                const tcm = this.engine.getTransformManager()
                 const inst = tcm.getInstance(bh.entity)
                 const r = bh.rigidBody.rotation()
                 const mat = quaternionToMat4(pos, r)
@@ -890,7 +888,6 @@ export class GameLoopRenderCore {
                 this.activeMissiles.splice(i, 1)
             } else {
                 // Sync Filament transform
-                const tcm = this.engine.getTransformManager()
                 const inst = tcm.getInstance(m.entity)
                 const r = m.rigidBody.rotation()
                 const mat = quaternionToMat4(pos, r)
@@ -941,7 +938,6 @@ export class GameLoopRenderCore {
                 }
 
                 // Sync Filament transform to Rapier rigid body
-                const tcm = this.engine.getTransformManager()
                 const inst = tcm.getInstance(b.entity)
                 const t = b.rigidBody.translation()
                 const r = b.rigidBody.rotation()
