@@ -75,6 +75,14 @@ export class InputMethods {
                     } else if (e.deltaY < 0) {
                         this.followDist = Math.max(this.followDist - distSensitivity, 5.0); // Zoom in
                     }
+                } else if (this.cameraMode === 'drone') {
+                    const zoomSensitivity = 2.0;
+                    this.droneDist = this.droneDist || 25.0;
+                    if (e.deltaY > 0) {
+                        this.droneDist = Math.min(100.0, this.droneDist + zoomSensitivity);
+                    } else if (e.deltaY < 0) {
+                        this.droneDist = Math.max(5.0, this.droneDist - zoomSensitivity);
+                    }
                 } else if (this.cameraMode === 'orbit') {
                     const zoomSensitivity = 2.0;
                     if (e.deltaY > 0) {

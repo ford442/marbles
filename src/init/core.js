@@ -109,7 +109,7 @@ export class InitCore {
             }
             this.keys[e.code] = true
             if (e.code === 'KeyC') {
-                const modes = ['orbit', 'follow', 'action', 'fpv', 'topdown', 'cinematic', 'side-scroller']
+                const modes = ['orbit', 'follow', 'action', 'fpv', 'topdown', 'cinematic', 'side-scroller', 'drone']
                 const idx = modes.indexOf(this.cameraMode)
                 this.cameraMode = modes[(idx + 1) % modes.length]
                 console.log('Camera Mode:', this.cameraMode)
