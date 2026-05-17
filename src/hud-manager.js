@@ -254,11 +254,9 @@ export class HUDManager {
      * Throttled to ~10Hz to reduce DOM layout pressure.
      */
     updateAllAbilities() {
-        const now = Date.now();
-
         // Throttle HUD updates to every 100ms to reduce layout/paint overhead
-        if (now - (this._lastHudUpdate || 0) < 100) return;
-        this._lastHudUpdate = now;
+        if (Date.now() - (this._lastHudUpdate || 0) < 100) return;
+        const now = this._lastHudUpdate = Date.now();
 
         const g = this.game;
 

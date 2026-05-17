@@ -5,7 +5,7 @@ import { LEVELS } from '../levels.js';
 
 export class GameLoopRenderCore {
     renderAndSync() {
-        // Cache timestamp and transform manager once per frame for performance
+        // Cache timestamp once per frame for reuse throughout renderAndSync
         const now = Date.now()
         // Throttle HUD CSS style updates to ~10Hz to reduce layout/paint overhead
         const shouldUpdateHUD = (now - (this._lastHudStyleUpdate || 0)) >= 100
