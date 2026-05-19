@@ -42,14 +42,20 @@ export class InitSettingsTabs {
         if (bloomSlider && bloomValue) {
             bloomSlider.addEventListener('input', (e) => {
                 bloomValue.textContent = `${e.target.value}%`
-                if (this.settings) this.settings.graphics.bloom = parseInt(e.target.value)
+                if (this.settings) {
+                    this.settings.graphics.bloom = parseInt(e.target.value)
+                    this.applyGraphicsSettings()
+                }
             })
         }
 
         const ssaoToggle = document.getElementById('setting-ssao')
         if (ssaoToggle) {
             ssaoToggle.addEventListener('change', (e) => {
-                if (this.settings) this.settings.graphics.ssao = e.target.checked
+                if (this.settings) {
+                    this.settings.graphics.ssao = e.target.checked
+                    this.applyGraphicsSettings()
+                }
             })
         }
 

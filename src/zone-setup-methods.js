@@ -582,16 +582,17 @@ export class ZoneSetupMethods {
 
     setupPostProcessing() {
         // Bloom - makes bright marbles and lights glow
+        // Resolution reduced to 256 for better framerate on mid-range hardware
         try {
             this.view.setBloomOptions({
                 enabled: true,
                 strength: 0.4,
-                resolution: 384,
-                levels: 6,
+                resolution: 256,
+                levels: 5,
                 threshold: true,
                 highlight: 8.0,
                 blendMode: this.Filament['View$BloomOptions$BlendMode'].ADD,
-                quality: this.Filament['View$QualityLevel'].HIGH,
+                quality: this.Filament['View$QualityLevel'].MEDIUM,
                 lensFlare: false,
             })
         } catch (e) {
@@ -599,16 +600,15 @@ export class ZoneSetupMethods {
         }
 
         // SSAO - ambient occlusion for contact shadows under marbles
-        // Use the modern API (setAmbientOcclusionOptions with enabled:true) instead of
-        // the deprecated setAmbientOcclusion() which may not exist or have valid enum values.
+        // Quality set to LOW for better framerate; radius reduced slightly
         try {
             this.view.setAmbientOcclusionOptions({
-                radius: 0.4,
+                radius: 0.3,
                 power: 2.0,
                 bias: 0.005,
                 resolution: 0.5,
-                intensity: 1.8,
-                quality: this.Filament['View$QualityLevel'].MEDIUM,
+                intensity: 1.5,
+                quality: this.Filament['View$QualityLevel'].LOW,
                 enabled: true,
             })
         } catch (e) {
@@ -620,6 +620,44 @@ export class ZoneSetupMethods {
             this.view.setMultiSampleAntiAliasingOptions({ enabled: true, sampleCount: 4 })
         } catch (e) {
             console.warn('[POST] MSAA setup failed:', e)
+        }
+
+        // TAA - temporal anti-aliasing reduces edge shimmering during motion
+        // Pairs well with MSAA to eliminate temporal crawl on trails and particles
+        try {
+            this.view.setTemporalAntiAliasingOptions({
+                enabled: true,
+                // filterWidth: width of the temporal filter kernel; higher = softer but more stable
+                filterWidth: 2.0,
+                feedback: 0.85,
+                jitterSpread: 0.75,
+            })
+        } catch (e) {
+            console.warn('[POST] TAA setup failed:', e)
+        }
+
+        // Motion Blur - cinematic blur for fast-moving marbles and camera
+        try {
+            this.view.setMotionBlurOptions({
+                enabled: true,
+                intensity: 0.32,
+                maxDisplacement: 0.18,
+            })
+        } catch (e) {
+            console.warn('[POST] Motion Blur setup failed:', e)
+        }
+
+        // SSR - screen-space reflections for shiny floor and ice surfaces
+        try {
+            this.view.setScreenSpaceReflectionsOptions({
+                enabled: true,
+                thickness: 0.1,
+                bias: 0.01,
+                maxDistance: 3.0,
+                stride: 2.0,
+            })
+        } catch (e) {
+            console.warn('[POST] SSR setup failed:', e)
         }
 
         // ACES tone mapping for cinematic, physically-correct look
