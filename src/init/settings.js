@@ -138,9 +138,41 @@ export class InitSettings {
             this.scene.addEntity(this.sunLight)
         }
 
-        // Example: Adjust bloom
+        // Live bloom update — wired directly to the active Filament view
         if (this.view && s.bloom !== undefined) {
-            // Post-processing bloom adjustment would go here
+            try {
+                const bloomStrength = (s.bloom / 100) * 0.8
+                this.view.setBloomOptions({
+                    enabled: s.bloom > 0,
+                    strength: bloomStrength,
+                    resolution: 256,
+                    levels: 5,
+                    threshold: true,
+                    highlight: 8.0,
+                    blendMode: this.Filament['View$BloomOptions$BlendMode']?.ADD,
+                    quality: this.Filament['View$QualityLevel']?.MEDIUM,
+                    lensFlare: false,
+                })
+            } catch (e) {
+                console.warn('[SETTINGS] Bloom live update failed:', e)
+            }
+        }
+
+        // Live SSAO toggle — wired directly to the active Filament view
+        if (this.view && s.ssao !== undefined) {
+            try {
+                this.view.setAmbientOcclusionOptions({
+                    enabled: s.ssao !== false,
+                    radius: 0.3,
+                    power: 2.0,
+                    bias: 0.005,
+                    resolution: 0.5,
+                    intensity: 1.5,
+                    quality: this.Filament['View$QualityLevel']?.LOW,
+                })
+            } catch (e) {
+                console.warn('[SETTINGS] SSAO live update failed:', e)
+            }
         }
     }
 }

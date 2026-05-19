@@ -217,6 +217,10 @@ export class GameLoopRenderCore {
         }
 
         if ((this.cameraMode === 'follow' || this.cameraMode === 'action' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown' || this.cameraMode === 'cinematic' || this.cameraMode === 'side-scroller' || this.cameraMode === 'drone') && this.currentLevel) {
+            // Disable DoF for all non-cinematic camera modes
+            if (this.cameraMode !== 'cinematic' && this.view) {
+                try { this.view.setDepthOfFieldOptions({ enabled: false }) } catch (e) { /* not supported */ }
+            }
             const level = LEVELS[this.currentLevel]
             const target = this.playerMarble || this.getLeader()
             if (target) {
@@ -352,6 +356,21 @@ export class GameLoopRenderCore {
                     const eyeY = t.y + height + this.cameraShake.y
                     const eyeZ = t.z + Math.cos(cinematicAngle) * dist + this.cameraShake.z
                     this.camera.lookAt([eyeX, eyeY, eyeZ], [t.x, t.y, t.z], [0, 1, 0])
+
+                    // Depth of Field: focus on the marble for cinematic separation
+                    if (this.view) {
+                        try {
+                            this.view.setDepthOfFieldOptions({
+                                enabled: true,
+                                // Use the fixed orbit distance so focus distance matches exactly
+                                focusDistance: dist,
+                                blurScale: 1.0,
+                                cocScale: 1.0,
+                                // Small aperture (0.01) gives subtle bokeh without excessive blur
+                                maxApertureDiameter: 0.01,
+                            })
+                        } catch (e) { /* DoF not supported, skip */ }
+                    }
                 } else if (this.cameraMode === 'side-scroller') {
                     const dist = 30
                     const height = 5
