@@ -572,6 +572,8 @@ export class InitCore {
             window.updateLoadingProgress(100, 'Ready!')
         }
 
+        window.__FILAMENT_FULLY_READY__ = true;
+
         this.resize()
         window.addEventListener('resize', () => this.resize())
 

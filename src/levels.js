@@ -907,6 +907,21 @@ export const LEVELS = {
         nightMode: true,
         backgroundColor: [0.05, 0.0, 0.1, 1.0]
     },
+    nebula_nexus_run: {
+        name: 'Nebula Nexus',
+        description: 'Navigate the low friction ice track and vertical moving platforms!',
+        zones: [
+            { type: 'nebula_nexus', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: -2, z: 120 } }
+        ],
+        spawn: { x: 0, y: 5, z: -5 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [115, 125], y: [-5, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.05, 0.0, 0.1, 1.0]
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
