@@ -9,6 +9,8 @@ export class GameLoopRenderCore {
         const now = Date.now()
         const frameDeltaSec = this._lastRenderTick ? (now - this._lastRenderTick) / 1000 : (1 / 60)
         this._lastRenderTick = now
+        const FOV_CHANGE_THRESHOLD = 0.25
+        const ASPECT_CHANGE_THRESHOLD = 0.001
         // Throttle HUD CSS style updates to ~10Hz to reduce layout/paint overhead
         const shouldUpdateHUD = (now - (this._lastHudStyleUpdate || 0)) >= 100
         if (shouldUpdateHUD) this._lastHudStyleUpdate = now
@@ -334,8 +336,8 @@ export class GameLoopRenderCore {
                         const aspect = width / height;
                         const CameraFov = this.Filament?.['Camera$Fov'];
                         const fovMode = CameraFov ? CameraFov.VERTICAL : 0;
-                        const fovChanged = this._lastSetFov === undefined || Math.abs(this.activeFov - this._lastSetFov) > 0.25
-                        const aspectChanged = this._lastSetProjectionAspect === undefined || Math.abs(aspect - this._lastSetProjectionAspect) > 0.001
+                        const fovChanged = this._lastSetFov === undefined || Math.abs(this.activeFov - this._lastSetFov) > FOV_CHANGE_THRESHOLD
+                        const aspectChanged = this._lastSetProjectionAspect === undefined || Math.abs(aspect - this._lastSetProjectionAspect) > ASPECT_CHANGE_THRESHOLD
                         if (fovChanged || aspectChanged) {
                             this.camera.setProjectionFov(this.activeFov, aspect, 0.1, 1000.0, fovMode);
                             this._lastSetFov = this.activeFov

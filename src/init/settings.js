@@ -183,9 +183,10 @@ export class InitSettings {
             const quality = s.quality || 'medium'
             const taaEnabled = quality !== 'low'
             const heavyFxEnabled = quality === 'high' || quality === 'ultra'
+            const msaaSampleCount = 4
 
             try {
-                this.view.setMultiSampleAntiAliasingOptions({ enabled: !taaEnabled, sampleCount: 1 })
+                this.view.setMultiSampleAntiAliasingOptions({ enabled: !taaEnabled, sampleCount: msaaSampleCount })
             } catch (e) {
                 console.warn('[SETTINGS] MSAA live update failed:', e)
             }

@@ -590,6 +590,7 @@ export class ZoneSetupMethods {
         const heavyFxEnabled = quality === 'high' || quality === 'ultra'
         const motionBlurEnabled = heavyFxEnabled
         const ssrEnabled = heavyFxEnabled
+        const msaaSampleCount = 4
 
         // Bloom - makes bright marbles and lights glow
         // Resolution reduced to 256 for better framerate on mid-range hardware
@@ -627,7 +628,7 @@ export class ZoneSetupMethods {
 
         // MSAA is disabled when TAA is active to avoid stacking both techniques.
         try {
-            this.view.setMultiSampleAntiAliasingOptions({ enabled: !taaEnabled, sampleCount: 1 })
+            this.view.setMultiSampleAntiAliasingOptions({ enabled: !taaEnabled, sampleCount: msaaSampleCount })
         } catch (e) {
             console.warn('[POST] MSAA setup failed:', e)
         }
