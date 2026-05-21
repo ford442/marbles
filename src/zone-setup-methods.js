@@ -48,7 +48,7 @@ import { createNeonPulseGridZone } from "./zones/neon-pulse-grid.js";
 import { createNebulaNexusZone } from "./zones/nebula-nexus.js";
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import { audio } from './audio.js';
-import { DEFAULT_SSAO_INTENSITY } from './rendering-defaults.js';
+import { DEFAULT_MSAA_SAMPLE_COUNT, DEFAULT_SSAO_INTENSITY, getPostFxQualityFlags } from './rendering-defaults.js';
 
 export class ZoneSetupMethods {
     async createZone(zone) {
@@ -587,11 +587,7 @@ export class ZoneSetupMethods {
 
     setupPostProcessing() {
         const quality = this.settings?.graphics?.quality || 'medium'
-        const taaEnabled = quality !== 'low'
-        const heavyFxEnabled = quality === 'high' || quality === 'ultra'
-        const motionBlurEnabled = heavyFxEnabled
-        const ssrEnabled = heavyFxEnabled
-        const msaaSampleCount = 4
+        const { taaEnabled, motionBlurEnabled, ssrEnabled } = getPostFxQualityFlags(quality)
 
         // Bloom - makes bright marbles and lights glow
         // Resolution reduced to 256 for better framerate on mid-range hardware
@@ -630,7 +626,7 @@ export class ZoneSetupMethods {
 
         // MSAA is disabled when TAA is active to avoid stacking both techniques.
         try {
-            this.view.setMultiSampleAntiAliasingOptions({ enabled: !taaEnabled, sampleCount: msaaSampleCount })
+            this.view.setMultiSampleAntiAliasingOptions({ enabled: !taaEnabled, sampleCount: DEFAULT_MSAA_SAMPLE_COUNT })
         } catch (e) {
             console.warn('[POST] MSAA setup failed:', e)
         }

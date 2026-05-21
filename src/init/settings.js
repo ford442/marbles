@@ -1,6 +1,6 @@
 import { audio } from '../audio.js';
 import { DEFAULT_SETTINGS } from './filament-loader.js';
-import { DEFAULT_SSAO_INTENSITY } from '../rendering-defaults.js';
+import { DEFAULT_MSAA_SAMPLE_COUNT, DEFAULT_SSAO_INTENSITY, getPostFxQualityFlags } from '../rendering-defaults.js';
 
 export class InitSettings {
     loadSettings() {
@@ -182,12 +182,10 @@ export class InitSettings {
         // high/ultra: TAA on, motion blur/SSR on
         if (this.view) {
             const quality = s.quality || 'medium'
-            const taaEnabled = quality !== 'low'
-            const heavyFxEnabled = quality === 'high' || quality === 'ultra'
-            const msaaSampleCount = 4
+            const { taaEnabled, heavyFxEnabled } = getPostFxQualityFlags(quality)
 
             try {
-                this.view.setMultiSampleAntiAliasingOptions({ enabled: !taaEnabled, sampleCount: msaaSampleCount })
+                this.view.setMultiSampleAntiAliasingOptions({ enabled: !taaEnabled, sampleCount: DEFAULT_MSAA_SAMPLE_COUNT })
             } catch (e) {
                 console.warn('[SETTINGS] MSAA live update failed:', e)
             }
