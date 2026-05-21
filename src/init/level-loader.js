@@ -2,6 +2,11 @@ import { LEVELS } from '../levels.js';
 
 export class InitLevelLoader {
     async loadLevel(levelId) {
+        if (!window.__FILAMENT_FULLY_READY__ || !this.engine || !this.vb || !this.ib) {
+            console.error('loadLevel called too early');
+            return false;
+        }
+
         console.log(`[LEVEL] Loading level: ${levelId}`)
         const level = LEVELS[levelId]
         if (!level) {
@@ -162,7 +167,7 @@ export class InitLevelLoader {
         this.Filament.RenderableManager.Builder(1)
             .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
             .material(0, this.ghostMaterialInstance)
-            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
+            .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.sphereVb, this.sphereIb)
             .receiveShadows(true)
             .castShadows(true)
             .build(this.engine, this.ghostEntity)

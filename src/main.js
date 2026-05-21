@@ -332,7 +332,7 @@ applyGameLoopRenderMethods(MarblesGame);
 applyGameLoopSyncMethods(MarblesGame);
 
 window.game = new MarblesGame();
-window.game.init().catch(err => {
+window.game.init().then(() => { window.gameReady = true; }).catch(err => {
     console.error('[FATAL] Game initialization failed:', err)
     const loading = document.getElementById('loading')
     if (loading) {
