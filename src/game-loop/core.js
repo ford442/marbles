@@ -7,6 +7,11 @@ export class GameLoopRenderCore {
     renderAndSync() {
         // Cache timestamp once per frame for reuse throughout renderAndSync
         const now = Date.now()
+        const INITIAL_FRAME_DELTA_SEC = 1 / 60
+        const frameDeltaSec = this._lastRenderTick ? (now - this._lastRenderTick) / 1000 : INITIAL_FRAME_DELTA_SEC
+        this._lastRenderTick = now
+        const FOV_CHANGE_THRESHOLD = 0.25
+        const ASPECT_CHANGE_THRESHOLD = 0.001
         // Throttle HUD CSS style updates to ~10Hz to reduce layout/paint overhead
         const shouldUpdateHUD = (now - (this._lastHudStyleUpdate || 0)) >= 100
         if (shouldUpdateHUD) this._lastHudStyleUpdate = now
@@ -113,7 +118,7 @@ export class GameLoopRenderCore {
         if (shouldUpdateHUD && this.dashBarEl) {
             if (this.isChargingDash) {
                 // Increment charge - roughly 1.5 seconds to fully charge
-                this.dashCharge = Math.min(this.maxDashCharge, this.dashCharge + (delta * 0.66))
+                this.dashCharge = Math.min(this.maxDashCharge, this.dashCharge + (frameDeltaSec * 0.66))
                 this.dashBarEl.style.width = `${this.dashCharge * 100}%`
                 if (this.dashCharge >= this.maxDashCharge) {
                     this.dashBarEl.style.filter = 'brightness(1.5) drop-shadow(0 0 10px #ff0000)'
@@ -216,11 +221,13 @@ export class GameLoopRenderCore {
             this.powerbarEl.style.width = `${this.chargePower * 100}%`
         }
 
+        if (this.view && (this.cameraMode !== 'cinematic' || !this.currentLevel) && this._dofEnabled === true) {
+            try { this.view.setDepthOfFieldOptions({ enabled: false }) } catch (e) { /* not supported */ }
+            this._dofEnabled = false
+            this._dofFocusDistance = null
+        }
+
         if ((this.cameraMode === 'follow' || this.cameraMode === 'action' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown' || this.cameraMode === 'cinematic' || this.cameraMode === 'side-scroller' || this.cameraMode === 'drone') && this.currentLevel) {
-            // Disable DoF for all non-cinematic camera modes
-            if (this.cameraMode !== 'cinematic' && this.view) {
-                try { this.view.setDepthOfFieldOptions({ enabled: false }) } catch (e) { /* not supported */ }
-            }
             const level = LEVELS[this.currentLevel]
             const target = this.playerMarble || this.getLeader()
             if (target) {
@@ -330,7 +337,13 @@ export class GameLoopRenderCore {
                         const aspect = width / height;
                         const CameraFov = this.Filament?.['Camera$Fov'];
                         const fovMode = CameraFov ? CameraFov.VERTICAL : 0;
-                        this.camera.setProjectionFov(this.activeFov, aspect, 0.1, 1000.0, fovMode);
+                        const fovChanged = this._lastSetFov === undefined || Math.abs(this.activeFov - this._lastSetFov) > FOV_CHANGE_THRESHOLD;
+                        const aspectChanged = this._lastSetProjectionAspect === undefined || Math.abs(aspect - this._lastSetProjectionAspect) > ASPECT_CHANGE_THRESHOLD;
+                        if (fovChanged || aspectChanged) {
+                            this.camera.setProjectionFov(this.activeFov, aspect, 0.1, 1000.0, fovMode);
+                            this._lastSetFov = this.activeFov
+                            this._lastSetProjectionAspect = aspect
+                        }
                     }
                 } else if (this.cameraMode === 'fpv') {
                     const r = target.scale * 0.5 || 0.5
@@ -359,17 +372,22 @@ export class GameLoopRenderCore {
 
                     // Depth of Field: focus on the marble for cinematic separation
                     if (this.view) {
-                        try {
-                            this.view.setDepthOfFieldOptions({
-                                enabled: true,
-                                // Use the fixed orbit distance so focus distance matches exactly
-                                focusDistance: dist,
-                                blurScale: 1.0,
-                                cocScale: 1.0,
-                                // Small aperture (0.01) gives subtle bokeh without excessive blur
-                                maxApertureDiameter: 0.01,
-                            })
-                        } catch (e) { /* DoF not supported, skip */ }
+                        const shouldUpdateDof = this._dofEnabled !== true || this._dofFocusDistance !== dist
+                        if (shouldUpdateDof) {
+                            try {
+                                this.view.setDepthOfFieldOptions({
+                                    enabled: true,
+                                    // Use the fixed orbit distance so focus distance matches exactly
+                                    focusDistance: dist,
+                                    blurScale: 1.0,
+                                    cocScale: 1.0,
+                                    // Small aperture (0.01) gives subtle bokeh without excessive blur
+                                    maxApertureDiameter: 0.01,
+                                })
+                                this._dofEnabled = true
+                                this._dofFocusDistance = dist
+                            } catch (e) { /* DoF not supported, skip */ }
+                        }
                     }
                 } else if (this.cameraMode === 'side-scroller') {
                     const dist = 30

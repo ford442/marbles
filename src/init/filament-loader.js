@@ -3,7 +3,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 // Default settings configuration
 const DEFAULT_SETTINGS = {
     graphics: {
-        quality: 'high',
+        quality: 'medium',
         shadows: true,
         bloom: 50,
         ssao: true

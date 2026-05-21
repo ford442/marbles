@@ -26,7 +26,10 @@ export class InitSettingsTabs {
         const qualitySelect = document.getElementById('setting-quality')
         if (qualitySelect) {
             qualitySelect.addEventListener('change', (e) => {
-                if (this.settings) this.settings.graphics.quality = e.target.value
+                if (this.settings) {
+                    this.settings.graphics.quality = e.target.value
+                    this.applyGraphicsSettings()
+                }
             })
         }
 
