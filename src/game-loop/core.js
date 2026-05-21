@@ -337,8 +337,8 @@ export class GameLoopRenderCore {
                         const aspect = width / height;
                         const CameraFov = this.Filament?.['Camera$Fov'];
                         const fovMode = CameraFov ? CameraFov.VERTICAL : 0;
-                        const fovChanged = this._lastSetFov === undefined || Math.abs(this.activeFov - this._lastSetFov) > FOV_CHANGE_THRESHOLD
-                        const aspectChanged = this._lastSetProjectionAspect === undefined || Math.abs(aspect - this._lastSetProjectionAspect) > ASPECT_CHANGE_THRESHOLD
+                        const fovChanged = this._lastSetFov === undefined || Math.abs(this.activeFov - this._lastSetFov) > FOV_CHANGE_THRESHOLD;
+                        const aspectChanged = this._lastSetProjectionAspect === undefined || Math.abs(aspect - this._lastSetProjectionAspect) > ASPECT_CHANGE_THRESHOLD;
                         if (fovChanged || aspectChanged) {
                             this.camera.setProjectionFov(this.activeFov, aspect, 0.1, 1000.0, fovMode);
                             this._lastSetFov = this.activeFov

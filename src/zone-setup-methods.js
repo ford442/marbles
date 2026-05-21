@@ -586,7 +586,7 @@ export class ZoneSetupMethods {
     }
 
     setupPostProcessing() {
-        const quality = this.settings?.graphics?.quality || 'medium'
+        const quality = this.settings?.graphics?.quality || 'medium';
         const { taaEnabled, motionBlurEnabled, ssrEnabled } = getPostFxQualityFlags(quality)
 
         // Bloom - makes bright marbles and lights glow
