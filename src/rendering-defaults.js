@@ -1,0 +1,2 @@
+export const DEFAULT_SSAO_INTENSITY = 1.0
+

@@ -7,7 +7,8 @@ export class GameLoopRenderCore {
     renderAndSync() {
         // Cache timestamp once per frame for reuse throughout renderAndSync
         const now = Date.now()
-        const frameDeltaSec = this._lastRenderTick ? (now - this._lastRenderTick) / 1000 : (1 / 60)
+        const INITIAL_FRAME_DELTA_SEC = 1 / 60
+        const frameDeltaSec = this._lastRenderTick ? (now - this._lastRenderTick) / 1000 : INITIAL_FRAME_DELTA_SEC
         this._lastRenderTick = now
         const FOV_CHANGE_THRESHOLD = 0.25
         const ASPECT_CHANGE_THRESHOLD = 0.001
@@ -220,7 +221,7 @@ export class GameLoopRenderCore {
             this.powerbarEl.style.width = `${this.chargePower * 100}%`
         }
 
-        if (this.view && (this.cameraMode !== 'cinematic' || !this.currentLevel) && this._dofEnabled !== false) {
+        if (this.view && (this.cameraMode !== 'cinematic' || !this.currentLevel) && this._dofEnabled === true) {
             try { this.view.setDepthOfFieldOptions({ enabled: false }) } catch (e) { /* not supported */ }
             this._dofEnabled = false
             this._dofFocusDistance = null

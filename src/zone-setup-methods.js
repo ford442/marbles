@@ -48,6 +48,7 @@ import { createNeonPulseGridZone } from "./zones/neon-pulse-grid.js";
 import { createNebulaNexusZone } from "./zones/nebula-nexus.js";
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import { audio } from './audio.js';
+import { DEFAULT_SSAO_INTENSITY } from './rendering-defaults.js';
 
 export class ZoneSetupMethods {
     async createZone(zone) {
@@ -618,7 +619,8 @@ export class ZoneSetupMethods {
                 power: 2.0,
                 bias: 0.005,
                 resolution: 0.5,
-                intensity: 1.0,
+                // Reduced from 1.5 to improve mid-range GPU performance.
+                intensity: DEFAULT_SSAO_INTENSITY,
                 quality: this.Filament['View$QualityLevel'].LOW,
                 enabled: true,
             })

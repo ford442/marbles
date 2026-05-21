@@ -1,5 +1,6 @@
 import { audio } from '../audio.js';
 import { DEFAULT_SETTINGS } from './filament-loader.js';
+import { DEFAULT_SSAO_INTENSITY } from '../rendering-defaults.js';
 
 export class InitSettings {
     loadSettings() {
@@ -167,7 +168,7 @@ export class InitSettings {
                     power: 2.0,
                     bias: 0.005,
                     resolution: 0.5,
-                    intensity: 1.0,
+                    intensity: DEFAULT_SSAO_INTENSITY,
                     quality: this.Filament['View$QualityLevel']?.LOW,
                 })
             } catch (e) {
