@@ -585,6 +585,12 @@ export class ZoneSetupMethods {
     }
 
     setupPostProcessing() {
+        const quality = this.settings?.graphics?.quality || 'medium'
+        const taaEnabled = quality !== 'low'
+        const heavyFxEnabled = quality === 'high' || quality === 'ultra'
+        const motionBlurEnabled = heavyFxEnabled
+        const ssrEnabled = heavyFxEnabled
+
         // Bloom - makes bright marbles and lights glow
         // Resolution reduced to 256 for better framerate on mid-range hardware
         try {
@@ -611,7 +617,7 @@ export class ZoneSetupMethods {
                 power: 2.0,
                 bias: 0.005,
                 resolution: 0.5,
-                intensity: 1.5,
+                intensity: 1.0,
                 quality: this.Filament['View$QualityLevel'].LOW,
                 enabled: true,
             })
@@ -619,18 +625,17 @@ export class ZoneSetupMethods {
             console.warn('[POST] SSAO setup failed:', e)
         }
 
-        // MSAA 4x - smooth sphere edges
+        // MSAA is disabled when TAA is active to avoid stacking both techniques.
         try {
-            this.view.setMultiSampleAntiAliasingOptions({ enabled: true, sampleCount: 4 })
+            this.view.setMultiSampleAntiAliasingOptions({ enabled: !taaEnabled, sampleCount: 1 })
         } catch (e) {
             console.warn('[POST] MSAA setup failed:', e)
         }
 
         // TAA - temporal anti-aliasing reduces edge shimmering during motion
-        // Pairs well with MSAA to eliminate temporal crawl on trails and particles
         try {
             this.view.setTemporalAntiAliasingOptions({
-                enabled: true,
+                enabled: taaEnabled,
                 // filterWidth: width of the temporal filter kernel; higher = softer but more stable
                 filterWidth: 2.0,
                 feedback: 0.85,
@@ -643,7 +648,7 @@ export class ZoneSetupMethods {
         // Motion Blur - cinematic blur for fast-moving marbles and camera
         try {
             this.view.setMotionBlurOptions({
-                enabled: true,
+                enabled: motionBlurEnabled,
                 intensity: 0.32,
                 maxDisplacement: 0.18,
             })
@@ -654,7 +659,7 @@ export class ZoneSetupMethods {
         // SSR - screen-space reflections for shiny floor and ice surfaces
         try {
             this.view.setScreenSpaceReflectionsOptions({
-                enabled: true,
+                enabled: ssrEnabled,
                 thickness: 0.1,
                 bias: 0.01,
                 maxDistance: 3.0,

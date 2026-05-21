@@ -167,11 +167,60 @@ export class InitSettings {
                     power: 2.0,
                     bias: 0.005,
                     resolution: 0.5,
-                    intensity: 1.5,
+                    intensity: 1.0,
                     quality: this.Filament['View$QualityLevel']?.LOW,
                 })
             } catch (e) {
                 console.warn('[SETTINGS] SSAO live update failed:', e)
+            }
+        }
+
+        // Anti-aliasing and heavy post-FX depend on quality tier.
+        // low: no TAA, no motion blur, no SSR
+        // medium: TAA on, motion blur/SSR off
+        // high/ultra: TAA on, motion blur/SSR on
+        if (this.view) {
+            const quality = s.quality || 'medium'
+            const taaEnabled = quality !== 'low'
+            const heavyFxEnabled = quality === 'high' || quality === 'ultra'
+
+            try {
+                this.view.setMultiSampleAntiAliasingOptions({ enabled: !taaEnabled, sampleCount: 1 })
+            } catch (e) {
+                console.warn('[SETTINGS] MSAA live update failed:', e)
+            }
+
+            try {
+                this.view.setTemporalAntiAliasingOptions({
+                    enabled: taaEnabled,
+                    filterWidth: 2.0,
+                    feedback: 0.85,
+                    jitterSpread: 0.75,
+                })
+            } catch (e) {
+                console.warn('[SETTINGS] TAA live update failed:', e)
+            }
+
+            try {
+                this.view.setMotionBlurOptions({
+                    enabled: heavyFxEnabled,
+                    intensity: 0.32,
+                    maxDisplacement: 0.18,
+                })
+            } catch (e) {
+                console.warn('[SETTINGS] Motion blur live update failed:', e)
+            }
+
+            try {
+                this.view.setScreenSpaceReflectionsOptions({
+                    enabled: heavyFxEnabled,
+                    thickness: 0.1,
+                    bias: 0.01,
+                    maxDistance: 3.0,
+                    stride: 2.0,
+                })
+            } catch (e) {
+                console.warn('[SETTINGS] SSR live update failed:', e)
             }
         }
     }
