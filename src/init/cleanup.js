@@ -165,6 +165,7 @@ export class InitCleanup {
         this.adrenaline = 0
         if (this.nearMisses) this.nearMisses.clear()
 
+        this.dynamicBodies = new Set()
         this.setNightMode(false)
     }
 }

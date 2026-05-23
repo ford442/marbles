@@ -159,6 +159,7 @@ export class PhysicsFactoryMethods {
             entity: entity,
             halfExtents: halfExtents
         })
+        this.dynamicBodies.add(body)
     }
 
     createRotatingBox(pos, halfExtents, color, axis = 'y', speed = 0.01, initialAngle = 0, material = 'metal') {

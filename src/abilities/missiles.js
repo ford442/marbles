@@ -66,6 +66,7 @@ export class AbilityMissiles {
             spawnTime: now,
             duration: 3000
         })
+        this.dynamicBodies.add(body)
 
         if (typeof audio !== 'undefined' && audio.playBoost) audio.playBoost()
     }

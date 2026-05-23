@@ -172,9 +172,9 @@ export class GameLoopMethods {
             this.timeStopEnergy = Math.max(0, this.timeStopEnergy - 0.5)
 
             if (this.playerMarble) {
-                this.world.bodies.forEach(body => {
-                    if (body === this.playerMarble.rigidBody) return
-                    if (!body.isDynamic()) return
+                const playerRb = this.playerMarble.rigidBody
+                for (const body of this.dynamicBodies) {
+                    if (body === playerRb) continue
 
                     // Save state if not already saved
                     if (!this.timeStopSavedStates.has(body.handle)) {
@@ -190,14 +190,15 @@ export class GameLoopMethods {
                     body.setLinvel({ x: 0, y: 0, z: 0 }, true)
                     body.setAngvel({ x: 0, y: 0, z: 0 }, true)
                     body.setGravityScale(0, true)
-                })
+                }
             }
         } else {
             if (this.timeStopActive) {
                 // Out of energy, deactivate
                 this.timeStopActive = false
-                this.world.bodies.forEach(body => {
-                    if (body.isDynamic() && this.playerMarble && body !== this.playerMarble.rigidBody) {
+                const playerRb = this.playerMarble ? this.playerMarble.rigidBody : null
+                for (const body of this.dynamicBodies) {
+                    if (body !== playerRb) {
                         if (this.timeStopSavedStates.has(body.handle)) {
                             const state = this.timeStopSavedStates.get(body.handle)
                             body.setLinvel(state.linvel, true)
@@ -206,7 +207,7 @@ export class GameLoopMethods {
                         }
                         body.setGravityScale(1.0, true)
                     }
-                })
+                }
                 this.timeStopSavedStates.clear()
             }
             this.timeStopEnergy = Math.min(this.maxTimeStopEnergy, this.timeStopEnergy + 0.2)
@@ -328,12 +329,16 @@ export class GameLoopMethods {
         }
 
         if (this.isRewinding && this.playerMarble) {
-            if (this.rewindHistory.length > 0) {
-                const state = this.rewindHistory.pop()
-                this.playerMarble.rigidBody.setTranslation(state.pos, true)
-                this.playerMarble.rigidBody.setRotation(state.rot, true)
-                this.playerMarble.rigidBody.setLinvel(state.linvel, true)
-                this.playerMarble.rigidBody.setAngvel(state.angvel, true)
+            if (this._rewindCount > 0) {
+                // Pop last frame from ring buffer
+                this._rewindCount--
+                this._rewindHead = (this._rewindHead - 1 + this.maxRewindFrames) % this.maxRewindFrames
+                const base = this._rewindHead * 13
+                const buf = this._rewindBuffer
+                this.playerMarble.rigidBody.setTranslation({ x: buf[base],     y: buf[base + 1], z: buf[base + 2] }, true)
+                this.playerMarble.rigidBody.setRotation(   { x: buf[base + 3], y: buf[base + 4], z: buf[base + 5], w: buf[base + 6] }, true)
+                this.playerMarble.rigidBody.setLinvel(     { x: buf[base + 7], y: buf[base + 8], z: buf[base + 9] }, true)
+                this.playerMarble.rigidBody.setAngvel(     { x: buf[base + 10], y: buf[base + 11], z: buf[base + 12] }, true)
 
                 // Visual effect for rewind
                 const rcm = this.engine.getRenderableManager()
@@ -348,20 +353,19 @@ export class GameLoopMethods {
              const linvel = rb.linvel()
              const angvel = rb.angvel()
 
-             this.rewindHistory.push({
-                 pos: { x: pos.x, y: pos.y, z: pos.z },
-                 rot: { x: rot.x, y: rot.y, z: rot.z, w: rot.w },
-                 linvel: { x: linvel.x, y: linvel.y, z: linvel.z },
-                 angvel: { x: angvel.x, y: angvel.y, z: angvel.z }
-             })
-
-             if (this.rewindHistory.length > this.maxRewindFrames) {
-                 this.rewindHistory.shift()
-             }
+             // Push frame into ring buffer (overwrites oldest when full)
+             const base = this._rewindHead * 13
+             const buf = this._rewindBuffer
+             buf[base]      = pos.x;    buf[base + 1]  = pos.y;    buf[base + 2]  = pos.z
+             buf[base + 3]  = rot.x;    buf[base + 4]  = rot.y;    buf[base + 5]  = rot.z;   buf[base + 6]  = rot.w
+             buf[base + 7]  = linvel.x; buf[base + 8]  = linvel.y; buf[base + 9]  = linvel.z
+             buf[base + 10] = angvel.x; buf[base + 11] = angvel.y; buf[base + 12] = angvel.z
+             this._rewindHead = (this._rewindHead + 1) % this.maxRewindFrames
+             if (this._rewindCount < this.maxRewindFrames) this._rewindCount++
         }
 
         if (this.rewindBarEl) {
-            const pct = (this.rewindHistory.length / this.maxRewindFrames) * 100
+            const pct = (this._rewindCount / this.maxRewindFrames) * 100
             this.rewindBarEl.style.width = `${pct}%`
         }
 
@@ -394,9 +398,9 @@ export class GameLoopMethods {
                 const attractionForce = 2.0
                 const tangentialForce = 1.5
 
-                this.world.bodies.forEach(body => {
-                    if (body === this.playerMarble.rigidBody) return
-                    if (!body.isDynamic()) return
+                const playerRb = this.playerMarble.rigidBody
+                for (const body of this.dynamicBodies) {
+                    if (body === playerRb) continue
 
                     const bodyPos = body.translation()
                     const dx = bodyPos.x - playerPos.x
@@ -424,7 +428,7 @@ export class GameLoopMethods {
 
                         body.applyImpulse({ x: fx + tx, y: fy + ty + liftForce, z: fz + tz }, true)
                     }
-                })
+                }
 
                 // Visual feedback - tint magenta
                 const rcm = this.engine.getRenderableManager()
@@ -475,9 +479,9 @@ export class GameLoopMethods {
                 const force = 3.0
 
                 // Repel other dynamic bodies
-                this.world.bodies.forEach(body => {
-                    if (body === this.playerMarble.rigidBody) return
-                    if (!body.isDynamic()) return
+                const playerRb2 = this.playerMarble.rigidBody
+                for (const body of this.dynamicBodies) {
+                    if (body === playerRb2) continue
 
                     const bodyPos = body.translation()
                     const dx = bodyPos.x - playerPos.x
@@ -493,7 +497,7 @@ export class GameLoopMethods {
 
                         body.applyImpulse({ x: fx, y: fy, z: fz }, true)
                     }
-                })
+                }
 
                 // Visual feedback - tint cyan
                 const rcm = this.engine.getRenderableManager()
@@ -539,9 +543,9 @@ export class GameLoopMethods {
                 const force = 0.5
 
                 // Repel other dynamic bodies
-                this.world.bodies.forEach(body => {
-                    if (body === this.playerMarble.rigidBody) return
-                    if (!body.isDynamic()) return
+                const playerRb3 = this.playerMarble.rigidBody
+                for (const body of this.dynamicBodies) {
+                    if (body === playerRb3) continue
 
                     const bodyPos = body.translation()
                     const dx = bodyPos.x - playerPos.x
@@ -557,7 +561,7 @@ export class GameLoopMethods {
 
                         body.applyImpulse({ x: fx, y: fy, z: fz }, true)
                     }
-                })
+                }
 
                 // Create or update Violet Light Entity
                 if (!this.violetLightEntity) {

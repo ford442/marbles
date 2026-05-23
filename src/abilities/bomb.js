@@ -57,6 +57,7 @@ export class AbilityBomb {
             spawnTime: now,
             duration: 2500 // 2.5 seconds until boom
         })
+        this.dynamicBodies.add(body)
     }
 
     explodeBomb(bomb) {

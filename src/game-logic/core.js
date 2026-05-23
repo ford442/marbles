@@ -257,7 +257,7 @@ export class GameLogicCore {
                 m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true)
                 m.scoredGoals.clear()
                 if (m === this.playerMarble) {
-                    this.rewindHistory = []
+                    this._rewindHead = 0; this._rewindCount = 0
                 }
                 continue
             }

@@ -804,6 +804,7 @@ export class GameLoopRenderCore {
             const timeAlive = now - bh.spawnTime
 
             if (timeAlive > bh.duration) {
+                this.dynamicBodies.delete(bh.rigidBody)
                 this.world.removeRigidBody(bh.rigidBody)
                 this.scene.remove(bh.entity)
                 if (bh.matInstance) this.engine.destroyMaterialInstance(bh.matInstance)
@@ -823,11 +824,12 @@ export class GameLoopRenderCore {
                 const attractionForce = 20.0
 
                 // Attract dynamic bodies
-                this.world.bodies.forEach(body => {
+                const bhRb = bh.rigidBody
+                const playerRb = this.playerMarble ? this.playerMarble.rigidBody : null
+                for (const body of this.dynamicBodies) {
                     // Don't attract the black hole itself, or the player
-                    if (body === bh.rigidBody) return
-                    if (this.playerMarble && body === this.playerMarble.rigidBody) return
-                    if (!body.isDynamic()) return
+                    if (body === bhRb) continue
+                    if (body === playerRb) continue
 
                     const bodyPos = body.translation()
                     const dx = pos.x - bodyPos.x
@@ -846,7 +848,7 @@ export class GameLoopRenderCore {
 
                         body.applyImpulse({ x: fx, y: fy, z: fz }, true)
                     }
-                })
+                }
 
                 // Sync Filament transform to Rapier rigid body
                 const inst = tcm.getInstance(bh.entity)
@@ -910,6 +912,7 @@ export class GameLoopRenderCore {
                 if (hitTarget) {
                     this.explodeMissile(hitPos)
                 }
+                this.dynamicBodies.delete(m.rigidBody)
                 this.world.removeRigidBody(m.rigidBody)
                 this.scene.remove(m.entity)
                 if (m.matInstance) this.engine.destroyMaterialInstance(m.matInstance)
@@ -951,6 +954,7 @@ export class GameLoopRenderCore {
 
             if (timeAlive > b.duration) {
                 this.explodeBomb(b)
+                this.dynamicBodies.delete(b.rigidBody)
                 this.world.removeRigidBody(b.rigidBody)
                 this.scene.remove(b.entity)
                 if (b.matInstance) this.engine.destroyMaterialInstance(b.matInstance)
