@@ -46,6 +46,7 @@ import { createRadiantReactorZone } from "./zones/radiant-reactor.js";
 import { createPlasmaPipelineZone } from "./zones/plasma-pipeline.js";
 import { createNeonPulseGridZone } from "./zones/neon-pulse-grid.js";
 import { createNebulaNexusZone } from "./zones/nebula-nexus.js";
+import { createQuantumTunnelZone } from './zones/quantum-tunnel.js';
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import { audio } from './audio.js';
 import { DEFAULT_MSAA_SAMPLE_COUNT, DEFAULT_SSAO_INTENSITY, getPostFxQualityFlags } from './rendering-defaults.js';
@@ -259,6 +260,9 @@ export class ZoneSetupMethods {
                 break
             case 'nebula_nexus':
                 createNebulaNexusZone(this, offset)
+                break
+            case 'quantum_tunnel':
+                createQuantumTunnelZone(this, offset)
                 break
         }
     }
