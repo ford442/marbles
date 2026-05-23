@@ -64,6 +64,7 @@ export class AbilityBlackHole {
             spawnTime: now,
             duration: 8000 // Lasts for 8 seconds
         })
+        this.dynamicBodies.add(body)
 
         if (typeof audio !== 'undefined' && audio.playTrick) audio.playTrick()
         

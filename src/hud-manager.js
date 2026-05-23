@@ -338,8 +338,8 @@ export class HUDManager {
         }
 
         // Utility abilities
-        if (g.rewindHistory) {
-            const progress = g.rewindHistory.length / (g.maxRewindFrames || 300);
+        if (g._rewindBuffer !== undefined) {
+            const progress = (g._rewindCount || 0) / (g.maxRewindFrames || 300);
             this.updateAbilityCooldown('rewind', progress, g.isRewinding);
         }
 

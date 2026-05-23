@@ -200,8 +200,9 @@ export class InitCore {
                     if (this.hudManager) this.hudManager.markAbilityUsed('timestop')
                 } else {
                     // Restore velocities immediately
-                    this.world.bodies.forEach(body => {
-                        if (body.isDynamic() && body !== this.playerMarble.rigidBody) {
+                    const playerRb = this.playerMarble.rigidBody
+                    for (const body of this.dynamicBodies) {
+                        if (body !== playerRb) {
                             if (this.timeStopSavedStates.has(body.handle)) {
                                 const state = this.timeStopSavedStates.get(body.handle)
                                 body.setLinvel(state.linvel, true)
@@ -210,7 +211,7 @@ export class InitCore {
                             }
                             body.setGravityScale(1.0, true)
                         }
-                    })
+                    }
                     this.timeStopSavedStates.clear()
                 }
             }

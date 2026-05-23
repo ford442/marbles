@@ -19,6 +19,7 @@ class MarblesGame {
         this.staticBodies = []
         this.staticEntities = []
         this.dynamicObjects = []
+        this.dynamicBodies = new Set() // tracks all dynamic rigid bodies for fast per-frame iteration
         this.checkpoints = []
         this.collectibles = []
         this.collectibleRotation = 0
@@ -281,10 +282,12 @@ class MarblesGame {
         this.adrenalineBarEl = document.getElementById('adrenalinebar')
         this.adrenalineBarContainerEl = document.getElementById('adrenalinebar-container')
 
-        // Rewind Mechanic
-        this.rewindHistory = []
+        // Rewind Mechanic — ring buffer (13 floats/frame: pos.xyz, rot.xyzw, linvel.xyz, angvel.xyz)
         this.isRewinding = false
         this.maxRewindFrames = 300 // 5 seconds at 60fps
+        this._rewindBuffer = new Float32Array(300 * 13)
+        this._rewindHead = 0  // next write slot
+        this._rewindCount = 0 // frames currently stored
 
         // Ghost Mechanic
         this.ghostRecording = []

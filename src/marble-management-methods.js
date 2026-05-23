@@ -96,6 +96,7 @@ export class MarbleManagementMethods {
             }
 
             this.marbles.push(marbleObj)
+            this.dynamicBodies.add(rigidBody)
         }
 
         this.currentMarbleIndex = 0
@@ -149,9 +150,7 @@ export class MarbleManagementMethods {
         m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true)
         m.scoredGoals.clear()
 
-        this.rewindHistory = []
-
-        // Penalize score for manual respawn
+        this._rewindHead = 0; this._rewindCount = 0
         if (this.score > 0) {
             this.score = Math.max(0, this.score - 50)
             if (this.scoreEl) this.scoreEl.textContent = 'Score: ' + this.score
@@ -253,7 +252,7 @@ export class MarbleManagementMethods {
         this.charging = false
         this.powerbarEl.style.width = '0%'
         this.levelComplete = false
-        this.rewindHistory = []
+        this._rewindHead = 0; this._rewindCount = 0
         this.ghostRecording = []
         this.ghostPlaybackIndex = 0
         this.levelStartTime = Date.now()
@@ -332,6 +331,11 @@ export class MarbleManagementMethods {
             }
             this.activeBlackHoles = []
         }
+
+        // Rebuild dynamicBodies Set from the surviving tracked arrays
+        this.dynamicBodies = new Set()
+        for (const m of this.marbles) this.dynamicBodies.add(m.rigidBody)
+        for (const obj of this.dynamicObjects) this.dynamicBodies.add(obj.rigidBody)
     }
 
     returnToMenu() {
