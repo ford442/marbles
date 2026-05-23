@@ -157,11 +157,12 @@ export class GameLogicCore {
             this.trickState.rolls += angvel.z * dt
 
             const wallContact = this.getWallContact(this.playerMarble)
+            this.currentWallNormal = wallContact ? wallContact.normal : null
             const rb = this.playerMarble.rigidBody
             const linvel = rb.linvel()
             const horizSpeed = Math.hypot(linvel.x, linvel.z)
 
-            if (wallContact && horizSpeed > 15.0 && this.wallRideTime < 90) {
+            if (wallContact && horizSpeed > 15.0 && this.wallRideTime < 180 && (this.keys['ShiftLeft'] || this.keys['ShiftRight'])) {
                 if (!this.isWallRiding) {
                     this.isWallRiding = true
                     this.trickState.wallRides += 1
@@ -169,8 +170,12 @@ export class GameLogicCore {
 
                 const mass = rb.mass()
                 const gravityDir = rb.gravityScale() < 0 ? -1 : 1
-                rb.applyImpulse({ x: 0, y: 9.81 * mass * (1.0/60.0) * gravityDir, z: 0 }, true)
+                rb.applyImpulse({ x: 0, y: 9.81 * mass * (1.0/60.0) * gravityDir + (0.5 * gravityDir), z: 0 }, true)
                 rb.applyImpulse({ x: -wallContact.normal.x * 2.0, y: 0, z: -wallContact.normal.z * 2.0 }, true)
+
+                const forwardX = Math.sin(this.aimYaw)
+                const forwardZ = Math.cos(this.aimYaw)
+                rb.applyImpulse({ x: forwardX * 2.0, y: 0, z: forwardZ * 2.0 }, true)
 
                 this.wallRideTime += 1
 
