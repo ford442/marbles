@@ -479,9 +479,9 @@ export class GameLoopMethods {
                 const force = 3.0
 
                 // Repel other dynamic bodies
-                const playerRb2 = this.playerMarble.rigidBody
+                const playerRb = this.playerMarble.rigidBody
                 for (const body of this.dynamicBodies) {
-                    if (body === playerRb2) continue
+                    if (body === playerRb) continue
 
                     const bodyPos = body.translation()
                     const dx = bodyPos.x - playerPos.x
@@ -543,9 +543,9 @@ export class GameLoopMethods {
                 const force = 0.5
 
                 // Repel other dynamic bodies
-                const playerRb3 = this.playerMarble.rigidBody
+                const playerRb = this.playerMarble.rigidBody
                 for (const body of this.dynamicBodies) {
-                    if (body === playerRb3) continue
+                    if (body === playerRb) continue
 
                     const bodyPos = body.translation()
                     const dx = bodyPos.x - playerPos.x
