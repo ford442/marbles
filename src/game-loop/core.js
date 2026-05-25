@@ -323,7 +323,12 @@ export class GameLoopRenderCore {
                     const eyeY = this.cameraFollowPos.y + this.cameraShake.y
                     const eyeZ = this.cameraFollowPos.z + this.cameraShake.z
 
-                    this.camera.lookAt([eyeX, eyeY, eyeZ], [this.cameraFollowLookAt.x, this.cameraFollowLookAt.y, this.cameraFollowLookAt.z], [0, 1, 0])
+                    let upVector = [0, 1, 0]
+                    if (this.isWallRiding && this.currentWallNormal) {
+                        upVector = [this.currentWallNormal.x * 0.5, 1, this.currentWallNormal.z * 0.5]
+                    }
+
+                    this.camera.lookAt([eyeX, eyeY, eyeZ], [this.cameraFollowLookAt.x, this.cameraFollowLookAt.y, this.cameraFollowLookAt.z], upVector)
 
                     // Dynamic FOV scaling based on speed
                     const baseFov = this.currentFov || 45
@@ -357,7 +362,12 @@ export class GameLoopRenderCore {
                     const dirY = sinP
                     const dirZ = Math.cos(this.aimYaw) * cosP
 
-                    this.camera.lookAt([eyeX, eyeY, eyeZ], [eyeX + dirX, eyeY + dirY, eyeZ + dirZ], [0, 1, 0])
+                    let upVector = [0, 1, 0]
+                    if (this.isWallRiding && this.currentWallNormal) {
+                        upVector = [this.currentWallNormal.x * 0.5, 1, this.currentWallNormal.z * 0.5]
+                    }
+
+                    this.camera.lookAt([eyeX, eyeY, eyeZ], [eyeX + dirX, eyeY + dirY, eyeZ + dirZ], upVector)
                 } else if (this.cameraMode === 'topdown') {
                     this.camera.lookAt([t.x + this.cameraShake.x, t.y + 40 + this.cameraShake.y, t.z + this.cameraShake.z], [t.x, t.y, t.z], [0, 0, -1])
                 } else if (this.cameraMode === 'cinematic') {
@@ -465,7 +475,12 @@ export class GameLoopRenderCore {
                     const eyeY = this.cameraFollowPos.y + this.cameraShake.y
                     const eyeZ = this.cameraFollowPos.z + this.cameraShake.z
 
-                    this.camera.lookAt([eyeX, eyeY, eyeZ], [this.cameraFollowLookAt.x, this.cameraFollowLookAt.y, this.cameraFollowLookAt.z], [0, 1, 0])
+                    let upVector = [0, 1, 0]
+                    if (this.isWallRiding && this.currentWallNormal) {
+                        upVector = [this.currentWallNormal.x * 0.5, 1, this.currentWallNormal.z * 0.5]
+                    }
+
+                    this.camera.lookAt([eyeX, eyeY, eyeZ], [this.cameraFollowLookAt.x, this.cameraFollowLookAt.y, this.cameraFollowLookAt.z], upVector)
                 }
             }
         } else {

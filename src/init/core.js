@@ -64,17 +64,21 @@ export class InitCore {
                             rb.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true)
 
                             const gravityDir = rb.gravityScale() < 0 ? -1 : 1
-                            const upForce = 15.0 * gravityDir
-                            const pushForce = 10.0
+                            const upForce = 20.0 * gravityDir
+                            const pushForce = 25.0
+                            const forwardX = Math.sin(this.aimYaw)
+                            const forwardZ = Math.cos(this.aimYaw)
+                            const forwardForce = 15.0
+
                             rb.applyImpulse({
-                                x: wallContact.normal.x * pushForce,
+                                x: wallContact.normal.x * pushForce + forwardX * forwardForce,
                                 y: upForce,
-                                z: wallContact.normal.z * pushForce
+                                z: wallContact.normal.z * pushForce + forwardZ * forwardForce
                             }, true)
 
                             this.jumpCount = 1
                             audio.playJump()
-                            console.log('[GAME] Wall Jump!')
+                            if (typeof this.awardTrickPoints === 'function') this.awardTrickPoints('Wall Launch!', 75, '#ff00ff')
                         } else if (this.jumpCount < this.maxJumps) {
                             const rb = this.playerMarble.rigidBody
                             const linvel = rb.linvel()
