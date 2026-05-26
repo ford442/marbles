@@ -10,5 +10,10 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['@dimforge/rapier3d-compat', 'filament']
   },
-  assetsInclude: ['**/*.wasm', '**/*.filmat']
+  assetsInclude: ['**/*.wasm', '**/*.filmat'],
+  build: {
+    rollupOptions: {
+      external: ['/wasm/marble_physics.js']
+    }
+  }
 });
