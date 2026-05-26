@@ -14,6 +14,7 @@ npm install              # Install dependencies
 npm run dev              # Start Vite dev server (http://localhost:5173)
 npm run build            # Build for production
 npm run preview          # Preview production build
+npm run build:wasm       # (optional) Compile the C++ WASM physics module
 ```
 
 The dev server runs on port 5173 with CORS headers pre-configured for WebGL and SharedArrayBuffer.
@@ -97,6 +98,47 @@ Methods are organized into separate mixins applied via `apply*Methods` functions
 **Collision Detection**
 - Contact detection for collectibles, goal zones
 - Physics callbacks for gameplay events (bounce sounds, collectible pickup)
+
+### Custom C++ WASM Physics Module
+
+A native-speed physics helper module lives in `wasm/` and is compiled with
+Emscripten to WebAssembly.  The JS façade in `src/wasm-bridge.js` wraps it and
+provides transparent pure-JS fallbacks so the game always runs, even before the
+WASM binary is built.
+
+**Key functions exposed via Embind:**
+
+| Function | Description |
+|---|---|
+| `vec3Distance` / `vec3DistanceSq` | 3-D distance helpers |
+| `vec3Dot` / `vec3Length` / `vec3Normalize` | Vector math |
+| `applyVelocityDamping` | Frame-rate–independent damping + speed cap |
+| `computeForceField` | Inverse-power-law attraction / repulsion |
+| `computeSpringForce` | Hooke's-law spring with damping |
+| `reflectVelocity` | Specular velocity reflection off a surface |
+| `closestPointOnSegment` | Nearest point on a segment (grapple / rails) |
+
+**Usage:**
+```javascript
+import { initMarblePhysicsWasm, getMarblePhysics } from './wasm-bridge.js';
+
+// init once (non-blocking; fallback to JS if WASM absent)
+await initMarblePhysicsWasm();
+
+// then anywhere in the game loop:
+const force = getMarblePhysics().computeForceField(
+    bh.x, bh.y, bh.z,       // field origin
+    marble.x, marble.y, marble.z, // target
+    20.0, 1.0, 0.5, 25.0    // strength, falloff, minDist, maxDist
+);
+body.applyImpulse(force, true);
+```
+
+**Building the WASM binary** (requires [Emscripten SDK](https://emscripten.org)):
+```bash
+npm run build:wasm
+```
+Output: `public/wasm/marble_physics.{js,wasm}`
 
 ## Development Patterns
 

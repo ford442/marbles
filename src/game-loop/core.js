@@ -2,6 +2,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
 import { quaternionToMat4, quatFromEuler } from '../math.js';
 import { LEVELS } from '../levels.js';
+import { getMarblePhysics } from '../wasm-bridge.js';
 
 export class GameLoopRenderCore {
     renderAndSync() {
@@ -838,7 +839,10 @@ export class GameLoopRenderCore {
                 const radius = 25.0
                 const attractionForce = 20.0
 
-                // Attract dynamic bodies
+                // Attract dynamic bodies using the MarblePhysics WASM module
+                // (automatically falls back to a pure-JS implementation when
+                // the WASM binary has not been built yet).
+                const physics = getMarblePhysics()
                 const bhRb = bh.rigidBody
                 const playerRb = this.playerMarble ? this.playerMarble.rigidBody : null
                 for (const body of this.dynamicBodies) {
@@ -847,22 +851,25 @@ export class GameLoopRenderCore {
                     if (body === playerRb) continue
 
                     const bodyPos = body.translation()
-                    const dx = pos.x - bodyPos.x
-                    const dy = pos.y - bodyPos.y
-                    const dz = pos.z - bodyPos.z
-                    const distSq = dx * dx + dy * dy + dz * dz
 
-                    if (distSq < radius * radius && distSq > 0.01) {
-                        const dist = Math.sqrt(distSq)
-                        // Inverse square law-ish pull
-                        const forceStr = (attractionForce * body.mass()) / dist
+                    // Quick radius pre-check (squared distance, no sqrt)
+                    if (physics.vec3DistanceSq(
+                            pos.x, pos.y, pos.z,
+                            bodyPos.x, bodyPos.y, bodyPos.z) > radius * radius) continue
 
-                        const fx = (dx / dist) * forceStr
-                        const fy = (dy / dist) * forceStr + (body.mass() * 0.2) // Lift slightly
-                        const fz = (dz / dist) * forceStr
+                    // Force field: inverse-linear falloff (falloffExp = 1),
+                    // clamped to minDist 0.5 to avoid extreme values.
+                    const force = physics.computeForceField(
+                        pos.x, pos.y, pos.z,
+                        bodyPos.x, bodyPos.y, bodyPos.z,
+                        attractionForce * body.mass(), // scale by mass for equal acceleration
+                        1.0,   // falloff exponent
+                        0.5,   // minimum clamped distance
+                        radius // maximum effective radius
+                    )
 
-                        body.applyImpulse({ x: fx, y: fy, z: fz }, true)
-                    }
+                    // Add a slight upward lift so marbles spiral in
+                    body.applyImpulse({ x: force.x, y: force.y + body.mass() * 0.2, z: force.z }, true)
                 }
 
                 // Sync Filament transform to Rapier rigid body
