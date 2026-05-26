@@ -205,6 +205,8 @@ export async function initMarblePhysicsWasm() {
         try {
             // Dynamic import so Vite/bundlers can code-split if desired.
             // The factory function is exported by Emscripten's -sMODULARIZE=1.
+            // The path '/wasm/marble_physics.js' is a Vite-served static asset;
+            // see public/wasm/ (built by `npm run build:wasm`).
             const { default: MarblePhysicsModule } = await import('/wasm/marble_physics.js');
             const instance = await MarblePhysicsModule();
             _wasmApi     = instance;

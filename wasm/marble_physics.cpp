@@ -52,7 +52,7 @@ float vec3Length(float x, float y, float z) {
 emscripten::val vec3Normalize(float x, float y, float z) {
     emscripten::val result = emscripten::val::object();
     const float len = std::sqrt(x * x + y * y + z * z);
-    if (len < 1e-8f) {
+    if (len < 1e-6f) {
         result.set("x", 0.f);
         result.set("y", 0.f);
         result.set("z", 0.f);

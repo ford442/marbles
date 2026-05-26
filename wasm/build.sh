@@ -39,6 +39,7 @@ cd build
 
 emcmake cmake .. -DCMAKE_BUILD_TYPE=Release
 emmake make -j"$(nproc 2>/dev/null || echo 2)"
+# Note: the fallback of 2 is intentional — this project targets 2-core systems.
 
 # ── Copy artefacts to public/wasm/ ───────────────────────────────────────────
 OUT_DIR="$REPO_ROOT/public/wasm"

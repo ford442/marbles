@@ -837,6 +837,7 @@ export class GameLoopRenderCore {
             } else {
                 const pos = bh.rigidBody.translation()
                 const radius = 25.0
+                const radiusSq = radius * radius  // pre-computed to avoid repeated multiplication in the loop
                 const attractionForce = 20.0
 
                 // Attract dynamic bodies using the MarblePhysics WASM module
@@ -855,7 +856,7 @@ export class GameLoopRenderCore {
                     // Quick radius pre-check (squared distance, no sqrt)
                     if (physics.vec3DistanceSq(
                             pos.x, pos.y, pos.z,
-                            bodyPos.x, bodyPos.y, bodyPos.z) > radius * radius) continue
+                            bodyPos.x, bodyPos.y, bodyPos.z) > radiusSq) continue
 
                     // Force field: inverse-linear falloff (falloffExp = 1),
                     // clamped to minDist 0.5 to avoid extreme values.
