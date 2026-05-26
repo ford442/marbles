@@ -2,6 +2,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
 import { LEVELS } from '../levels.js';
 import { loadFilament } from './filament-loader.js';
+import { initMarblePhysicsWasm } from '../wasm-bridge.js';
 
 export class InitCore {
     async init() {
@@ -474,6 +475,12 @@ export class InitCore {
         if (typeof window.updateLoadingProgress === 'function') {
             window.updateLoadingProgress(20, 'Physics initialized')
         }
+
+        // Kick off WASM physics module load in the background (non-blocking).
+        // The bridge transparently falls back to JS if the binary is absent.
+        initMarblePhysicsWasm().then(ok => {
+            console.log(`[INIT] MarblePhysics WASM ${ok ? 'active' : 'using JS fallbacks'}`)
+        })
 
         console.log('[INIT] Initializing Filament rendering...')
         if (typeof window.updateLoadingProgress === 'function') {

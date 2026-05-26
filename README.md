@@ -6,6 +6,7 @@ A 3D marble roller game using Google Filament (WASM) and Rapier3D-Compat for phy
 
 - **Physics Engine**: Rapier3D-Compat with gravity set to -9.81
 - **3D Rendering**: Google Filament (WASM-based) for high-performance rendering
+- **Custom WASM Module**: Native-speed C++ physics helpers (force fields, velocity damping, spring forces, vector math) via Emscripten
 - **Static Floor**: Large floor plane for marbles to roll on
 - **Dynamic Marbles**: Multiple sphere objects with physics properties (restitution, friction)
 - **Transform System**: Helper function to convert quaternion rotations to 4x4 transformation matrices
@@ -18,8 +19,14 @@ marbles/
 ├── index.html          # Main HTML file
 ├── package.json        # Dependencies and scripts
 ├── vite.config.js      # Vite configuration with CORS headers
+├── wasm/               # C++ WebAssembly physics module (Emscripten)
+│   ├── marble_physics.cpp   # C++ source with Embind exports
+│   ├── CMakeLists.txt       # Emscripten build config
+│   ├── build.sh             # Build script → public/wasm/
+│   └── README.md            # Build instructions
 └── src/
-    └── main.js         # Main game logic
+    ├── main.js         # Main game logic
+    └── wasm-bridge.js  # JS façade for the WASM module (+ pure-JS fallbacks)
 ```
 
 ## Setup
@@ -39,7 +46,45 @@ npm run dev
 npm run build
 ```
 
+4. (Optional) Build the C++ WASM physics module:
+```bash
+npm run build:wasm    # requires Emscripten SDK — see wasm/README.md
+```
+
+The game runs fully without the WASM binary; `src/wasm-bridge.js` falls back to
+equivalent pure-JavaScript implementations automatically.
+
 ## Implementation Details
+
+### Custom C++ WASM Module
+
+The `wasm/` directory contains a focused C++ module built with Emscripten + Embind.
+It provides high-performance helpers that complement Rapier3D:
+
+| Function | Description |
+|---|---|
+| `vec3Distance` / `vec3DistanceSq` | 3-D distance helpers |
+| `vec3Dot` / `vec3Length` / `vec3Normalize` | Vector math |
+| `applyVelocityDamping` | Frame-rate–independent damping + speed cap |
+| `computeForceField` | Inverse-power-law attraction / repulsion |
+| `computeSpringForce` | Hooke's-law spring with damping |
+| `reflectVelocity` | Specular velocity reflection off a surface |
+| `closestPointOnSegment` | Nearest point on a segment (grapple / rails) |
+
+The JS bridge (`src/wasm-bridge.js`) exposes a unified API:
+
+```javascript
+import { initMarblePhysicsWasm, getMarblePhysics } from './wasm-bridge.js';
+
+await initMarblePhysicsWasm();          // called once during init (non-blocking)
+const physics = getMarblePhysics();     // returns WASM or JS impl transparently
+
+const force = physics.computeForceField(
+    blackHole.x, blackHole.y, blackHole.z,
+    marble.x, marble.y, marble.z,
+    20.0, 1.0, 0.5, 25.0
+);
+```
 
 ### Physics Setup
 - Rapier3D-Compat physics world with gravity (-9.81 m/s²)
@@ -75,6 +120,7 @@ function quaternionToMat4(position, quaternion) {
 - **vite**: ^7.3.1 - Build tool and dev server
 - **filament**: ^1.51.5 - Google's physically based rendering engine
 - **@dimforge/rapier3d-compat**: ^0.13.0 - Physics engine
+- **Emscripten** (dev, optional) - Compiles `wasm/marble_physics.cpp` to WASM
 
 ## Browser Requirements
 
@@ -87,4 +133,5 @@ function quaternionToMat4(position, quaternion) {
 - Filament uses a UMD/WASM loading pattern which may require additional configuration in some environments
 - The physics simulation runs independently and can be tested even if Filament rendering is unavailable
 - Console logs show marble positions updating as physics simulation runs
+- Build the WASM module with `npm run build:wasm` (requires Emscripten); see `wasm/README.md`
 
