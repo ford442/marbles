@@ -6,6 +6,36 @@ import { ENVIRONMENT_PRESETS } from '../../rendering/environment.js';
  * These methods handle visual effects, lighting, and particle systems
  */
 
+/**
+ * Create a themed point or spot light and register it as a static scene entity.
+ *
+ * @param {object} game         - The game instance (engine, scene, Filament, staticEntities)
+ * @param {'POINT'|'SPOT'} type - Filament light type
+ * @param {{x:number,y:number,z:number}} pos   - World-space position
+ * @param {[number,number,number]} color        - Linear RGB color
+ * @param {number} intensity    - Luminous intensity (lux or lm depending on type)
+ * @param {number} falloff      - Light radius / falloff distance
+ * @returns {object} The Filament entity for the created light
+ */
+export function createZoneLight(game, type, pos, color, intensity, falloff) {
+    const F = game.Filament;
+    const lightType = type === 'SPOT'
+        ? F['LightManager$Type'].SPOT
+        : F['LightManager$Type'].POINT;
+
+    const lightEntity = F.EntityManager.get().create();
+    F.LightManager.Builder(lightType)
+        .color(color)
+        .intensity(intensity)
+        .position([pos.x, pos.y, pos.z])
+        .falloff(falloff)
+        .castShadows(false)
+        .build(game.engine, lightEntity);
+    game.scene.addEntity(lightEntity);
+    game.staticEntities.push(lightEntity);
+    return lightEntity;
+}
+
 export const visualMethods = {
     createGoalEffects(goalPos, baseColor) {
         if (!this.goalEffects) this.goalEffects = [];

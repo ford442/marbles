@@ -1,4 +1,5 @@
 import { quatFromEuler } from '../math.js';
+import { createZoneLight } from './methods/visuals.js';
 
 export function createCrystalCavernZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
@@ -76,4 +77,20 @@ export function createCrystalCavernZone(game, offset) {
         { x: offset.x, y: offset.y + 1.0, z: exitZ },
         [0.5, 0.0, 1.0] // Purple goal
     );
+
+    // --- Dynamic Crystal Caustic Lights ---
+    // Deep violet emanating from the cavern floor
+    createZoneLight(game, 'POINT',
+        { x: offset.x, y: offset.y - 1, z: cavernStartZ + 15 },
+        [0.55, 0.0, 1.0], 65000.0, 18.0);
+
+    // Cyan glow from the crystal pillar cluster
+    createZoneLight(game, 'POINT',
+        { x: offset.x - 4, y: offset.y + 5, z: cavernStartZ + 25 },
+        [0.0, 1.0, 0.95], 55000.0, 16.0);
+
+    // Soft pink backlight from moving platforms area
+    createZoneLight(game, 'POINT',
+        { x: offset.x + 4, y: offset.y + 3, z: cavernStartZ + 45 },
+        [1.0, 0.1, 0.75], 50000.0, 15.0);
 }

@@ -1,4 +1,5 @@
 import { quatFromEuler } from '../math.js';
+import { createZoneLight } from './methods/visuals.js';
 
 export function createLavaTubesZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
@@ -62,4 +63,18 @@ export function createLavaTubesZone(game, offset) {
         { x: offset.x, y: offset.y + 1.0, z: exitZ },
         [1.0, 0.0, 0.0] // Red goal
     );
+
+    // --- Dynamic Lava Glow Lights ---
+    // Deep orange-red lava glow rising from the lava floor beneath the tubes
+    createZoneLight(game, 'POINT',
+        { x: offset.x - 3, y: offset.y - 3, z: tubeStartZ + 10 },
+        [1.0, 0.25, 0.0], 80000.0, 18.0);
+
+    createZoneLight(game, 'POINT',
+        { x: offset.x + 3, y: offset.y - 3, z: tubeStartZ + 30 },
+        [1.0, 0.15, 0.0], 90000.0, 20.0);
+
+    createZoneLight(game, 'POINT',
+        { x: offset.x, y: offset.y - 3, z: tubeStartZ + 50 },
+        [1.0, 0.3, 0.0], 70000.0, 16.0);
 }
