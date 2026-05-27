@@ -118,45 +118,55 @@ background instead of a flat colour.
 
 ## 1. Enhanced Shadow System
 
-### Changes in `src/zone-setup-methods.js`
+Shadow quality is now gated behind the graphics quality preset via `getShadowQualityConfig(quality)` in `src/rendering-defaults.js`. Settings are applied in both `setupPostProcessing()` (initial load) and `applyGraphicsSettings()` (live changes from the settings panel).
 
-#### Improved Shadow Mapping Configuration
-- **Shadow Map Resolution**: Increased from default 1024 to 2048 for sharper shadows
-- **Cascaded Shadow Maps**: Now using 2 cascades for better shadow quality at varying distances
-- **Bias Settings**: 
-  - Constant bias: 0.0005 (reduces shadow acne)
-  - Normal bias: 1.5 (reduces peter-panning)
-- **Shadow Hints**: Configured near (0.1) and far (200.0) hints for optimized shadow frustum
-- **Stable Shadows**: Enabled for temporal consistency
-- **Polygon Offset**: Set to 0.2 constant, 1.0 slope for depth fighting prevention
-- **Screen Space Contact Shadows**: Enabled for enhanced contact detail
-- **Step Count**: Increased to 16 for smoother PCF filtering
+### Quality Tiers
 
-#### VSM (Variance Shadow Mapping) Support
+| Preset | Map Size | Cascades | VSM | Soft Shadows | Contact Shadows |
+|--------|----------|----------|-----|--------------|-----------------|
+| `low` | 512 | 1 | No | No | No |
+| `medium` | 1024 | 1 | No | No | No |
+| `high` | 2048 | 2 | Yes (standard) | No | Yes |
+| `ultra` | 4096 | 2 | Yes (high precision) | Yes (PCSS) | Yes |
+
+### Changes in `src/rendering-defaults.js`
+
+New export `getShadowQualityConfig(quality)` returns:
+- `shadowOptions` – passed to `view.setShadowOptions()`
+- `vsmOptions` – passed to `view.setVsmShadowOptions()` when non-null (high/ultra only)
+- `softOptions` – passed to `view.setSoftShadowOptions()` when non-null (ultra only)
+
+#### VSM (Variance Shadow Mapping) — high/ultra
 ```javascript
-// Softer shadows with VSM
+// high preset
 this.view.setVsmShadowOptions({
     anisotropy: 1,
     mipmapping: true,
-    msaaSamples: 4,
-    highPrecision: true,
+    msaaSamples: 2,
+    highPrecision: false,
     minVarianceScale: 0.5,
-    lightBleedReduction: 0.2
+    lightBleedReduction: 0.2,
 })
+
+// ultra preset adds highPrecision: true, msaaSamples: 4
 ```
 
-#### Soft Shadow Penumbra
+#### Soft Shadow Penumbra — ultra only
 ```javascript
 // PCSS-like soft shadows
 this.view.setSoftShadowOptions({
     penumbraScale: 2.0,
-    penumbraRatioScale: 0.5
+    penumbraRatioScale: 0.5,
 })
 ```
 
-### Changes in `src/zone-methods.js`
+### Changes in `src/zone-setup-methods.js`
 
-- Updated `setNightMode()` to use enhanced shadow settings for night lighting
+`setupPostProcessing()` now calls `getShadowQualityConfig(quality)` and applies all three shadow option objects in guarded try/catch blocks.
+
+### Changes in `src/init/settings.js`
+
+`applyGraphicsSettings()` applies the same shadow configuration whenever quality or shadow toggle changes, enabling instant reflection without restart.
 
 ## 2. Enhanced Material System
 
@@ -247,12 +257,44 @@ const reflectance = info.reflectance !== undefined ? info.reflectance : (preset 
 const clearCoat = info.clearCoat !== undefined ? info.clearCoat : (preset ? preset.clearCoat : 0.0)
 ```
 
-## 5. Future Enhancements
+## 5. Dynamic / Themed Zone Lights
+
+### `createZoneLight()` factory — `src/zones/methods/visuals.js`
+
+A reusable helper that creates a coloured `POINT` or `SPOT` Filament light and registers
+it as a static scene entity:
+
+```javascript
+import { createZoneLight } from './methods/visuals.js';
+
+createZoneLight(game, 'POINT', pos, color, intensity, falloff);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `game` | object | Game instance (engine, scene, Filament, staticEntities) |
+| `type` | `'POINT'`\|`'SPOT'` | Filament light type |
+| `pos` | `{x,y,z}` | World-space position |
+| `color` | `[r,g,b]` | Linear RGB colour |
+| `intensity` | number | Luminous intensity (lm) |
+| `falloff` | number | Light radius / falloff distance |
+
+### Zones with Themed Dynamic Lights
+
+| Zone | Lights Added | Theme |
+|------|-------------|-------|
+| `lava-tubes.js` | 3 × POINT | Deep orange-red lava glow beneath tubes |
+| `ice-bridges.js` | 2 × POINT | Cold pale-blue arctic ambiance |
+| `neon-grid.js` | 3 × POINT | Magenta / cyan / green neon underlighting |
+| `crystal-cavern.js` | 3 × POINT | Violet, cyan, and pink crystal caustics |
+
+## 6. Future Enhancements
 
 ### Immediate Next Steps:
 1. **KTX Cubemap Reflections**: Load `.ktx2` cubemaps into `buildEnvironmentLighting()` for specular IBL
 2. **Subsurface Scattering**: For translucent marble materials
 3. **Dynamic Environment Probes**: Real-time reflection captures for key glossy zones
+4. **Animated Lights**: Hook `createZoneLight` entities into the game-loop update for flickering/pulsing lava, neon strobes, and crystal shimmer effects
 
 ### Advanced Features:
 1. **Volumetric Effects**: Light shafts, god rays in the course

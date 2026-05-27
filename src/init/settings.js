@@ -1,6 +1,6 @@
 import { audio } from '../audio.js';
 import { DEFAULT_SETTINGS } from './filament-loader.js';
-import { DEFAULT_MSAA_SAMPLE_COUNT, DEFAULT_SSAO_INTENSITY, getPostFxQualityFlags } from '../rendering-defaults.js';
+import { DEFAULT_MSAA_SAMPLE_COUNT, DEFAULT_SSAO_INTENSITY, getPostFxQualityFlags, getShadowQualityConfig } from '../rendering-defaults.js';
 
 export class InitSettings {
     loadSettings() {
@@ -221,6 +221,31 @@ export class InitSettings {
                 })
             } catch (e) {
                 console.warn('[SETTINGS] SSR live update failed:', e)
+            }
+
+            // Shadow quality — updated whenever the quality tier or shadow toggle changes.
+            // Only apply shadow options when shadows are enabled.
+            if (s.shadows !== false) {
+                const { shadowOptions, vsmOptions, softOptions } = getShadowQualityConfig(quality)
+                try {
+                    this.view.setShadowOptions(shadowOptions)
+                } catch (e) {
+                    console.warn('[SETTINGS] setShadowOptions live update failed:', e)
+                }
+                if (vsmOptions) {
+                    try {
+                        this.view.setVsmShadowOptions(vsmOptions)
+                    } catch (e) {
+                        console.warn('[SETTINGS] setVsmShadowOptions live update failed:', e)
+                    }
+                }
+                if (softOptions) {
+                    try {
+                        this.view.setSoftShadowOptions(softOptions)
+                    } catch (e) {
+                        console.warn('[SETTINGS] setSoftShadowOptions live update failed:', e)
+                    }
+                }
             }
         }
     }

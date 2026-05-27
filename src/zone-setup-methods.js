@@ -49,7 +49,7 @@ import { createNebulaNexusZone } from "./zones/nebula-nexus.js";
 import { createQuantumTunnelZone } from './zones/quantum-tunnel.js';
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import { audio } from './audio.js';
-import { DEFAULT_MSAA_SAMPLE_COUNT, DEFAULT_SSAO_INTENSITY, getPostFxQualityFlags } from './rendering-defaults.js';
+import { DEFAULT_MSAA_SAMPLE_COUNT, DEFAULT_SSAO_INTENSITY, getPostFxQualityFlags, getShadowQualityConfig } from './rendering-defaults.js';
 import {
     buildEnvironmentLighting,
     destroyEnvironmentLighting,
@@ -687,6 +687,33 @@ export class ZoneSetupMethods {
             this.view.setColorGrading(colorGrading)
         } catch (e) {
             console.warn('[POST] Color grading setup failed:', e)
+        }
+
+        // Production shadow quality — gated behind high/ultra presets.
+        // medium and below use basic PCF shadows (cheaper, still decent).
+        const { shadowOptions, vsmOptions, softOptions } = getShadowQualityConfig(quality);
+        if (this.view) {
+            try {
+                this.view.setShadowOptions(shadowOptions);
+            } catch (e) {
+                console.warn('[POST] setShadowOptions failed:', e);
+            }
+
+            if (vsmOptions) {
+                try {
+                    this.view.setVsmShadowOptions(vsmOptions);
+                } catch (e) {
+                    console.warn('[POST] setVsmShadowOptions failed:', e);
+                }
+            }
+
+            if (softOptions) {
+                try {
+                    this.view.setSoftShadowOptions(softOptions);
+                } catch (e) {
+                    console.warn('[POST] setSoftShadowOptions failed:', e);
+                }
+            }
         }
 
         // Indirect Light (IBL) + Skybox — themed per-environment

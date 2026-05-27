@@ -1,4 +1,5 @@
 import { quatFromEuler } from '../math.js';
+import { createZoneLight } from './methods/visuals.js';
 
 export function createIceBridgesZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
@@ -64,4 +65,14 @@ export function createIceBridgesZone(game, offset) {
         { x: offset.x, y: offset.y + 1.0, z: exitZ },
         [0.0, 1.0, 1.0] // Cyan goal
     );
+
+    // --- Dynamic Ice / Arctic Lights ---
+    // Cold pale-blue light casting an icy ambiance over the bridges
+    createZoneLight(game, 'POINT',
+        { x: offset.x - 5, y: offset.y + 6, z: bridgeStartZ + 10 },
+        [0.6, 0.85, 1.0], 50000.0, 22.0);
+
+    createZoneLight(game, 'POINT',
+        { x: offset.x + 5, y: offset.y + 6, z: bridgeStartZ + 35 },
+        [0.5, 0.8, 1.0], 55000.0, 24.0);
 }
