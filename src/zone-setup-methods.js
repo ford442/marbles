@@ -50,6 +50,11 @@ import { createQuantumTunnelZone } from './zones/quantum-tunnel.js';
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import { audio } from './audio.js';
 import { DEFAULT_MSAA_SAMPLE_COUNT, DEFAULT_SSAO_INTENSITY, getPostFxQualityFlags } from './rendering-defaults.js';
+import {
+    buildEnvironmentLighting,
+    destroyEnvironmentLighting,
+    ENVIRONMENT_PRESETS,
+} from './rendering/environment.js';
 
 export class ZoneSetupMethods {
     async createZone(zone) {
@@ -684,59 +689,61 @@ export class ZoneSetupMethods {
             console.warn('[POST] Color grading setup failed:', e)
         }
 
-        // Indirect Light (IBL) via 3-band Spherical Harmonics
-        // Simulates a vibrant blue sky above with warm amber ground bounce below.
-        // Coefficients represent a physically-plausible studio-like environment.
-        try {
-            const iblSh = new Float32Array([
-                // L00 - DC term: base ambient brightness (blue-white sky tone)
-                 1.10,  1.12,  1.28,
-                // L1-1 - Y-axis negative (warm floor/ground bounce, amber-orange)
-                 0.18,  0.14,  0.06,
-                // L10  - Y-axis positive (blue sky contribution above)
-                -0.22, -0.20, -0.35,
-                // L11  - X-axis side contribution
-                 0.06,  0.06,  0.07,
-                // L2-2 - horizontal diagonal
-                 0.02,  0.02,  0.02,
-                // L2-1 - front-bottom
-                 0.04,  0.03,  0.01,
-                // L20  - vertical axis
-                -0.02, -0.02, -0.03,
-                // L21  - front-top
-                 0.03,  0.03,  0.02,
-                // L22  - horizontal diagonal 2
-                 0.01,  0.01,  0.01,
-            ])
-            this.ibl = this.Filament.IndirectLight.Builder()
-                .irradianceSh(3, iblSh)
-                .intensity(40000.0)
-                .build(this.engine)
-            this.scene.setIndirectLight(this.ibl)
-        } catch (e) {
-            console.warn('[POST] IBL setup failed:', e)
-            // Fallback: minimal 1-band IBL
-            try {
-                const iblShFallback = new Float32Array([1.0, 1.0, 1.1])
-                this.ibl = this.Filament.IndirectLight.Builder()
-                    .irradianceSh(1, iblShFallback)
-                    .intensity(30000.0)
-                    .build(this.engine)
-                this.scene.setIndirectLight(this.ibl)
-            } catch (e2) {
-                console.warn('[POST] IBL fallback also failed:', e2)
-            }
+        // Indirect Light (IBL) + Skybox — themed per-environment
+        // Calls setupEnvironmentLighting() which builds from the named preset.
+        // The initial environment is 'default'; levels override it via
+        // applyEnvironment() called from loadLevel().
+        this.setupEnvironmentLighting('default');
+    }
+
+    /**
+     * Build and apply an IndirectLight + Skybox for the given environment.
+     * Destroys any previously created IBL/Skybox objects first.
+     *
+     * @param {string} envName - Key from ENVIRONMENT_PRESETS (e.g. 'ice', 'volcanic')
+     */
+    setupEnvironmentLighting(envName = 'default') {
+        const quality = this.settings?.graphics?.quality || 'medium';
+
+        // Tear down existing IBL / skybox before rebuilding
+        if (this._iblObject || this._skyboxObject) {
+            destroyEnvironmentLighting(this.engine, this.scene, this._iblObject, this._skyboxObject);
+            this._iblObject = null;
+            this._skyboxObject = null;
         }
 
-        // Skybox - deep space blue with subtle gradient
-        try {
-            this.skyboxEntity = this.Filament.Skybox.Builder()
-                .color([0.06, 0.08, 0.16, 1.0])
-                .build(this.engine)
-            this.scene.setSkybox(this.skyboxEntity)
-        } catch (e) {
-            console.warn('[POST] Skybox setup failed:', e)
+        const { ibl, skybox } = buildEnvironmentLighting(
+            this.engine,
+            this.scene,
+            this.Filament,
+            envName,
+            quality,
+        );
+
+        // Keep references so we can destroy them on the next switch or cleanup
+        this._iblObject = ibl;
+        this._skyboxObject = skybox;
+        this.currentEnvironment = envName;
+
+        // Back-compat: keep this.ibl pointing at the active IBL object
+        this.ibl = ibl;
+        this.skyboxEntity = skybox;
+    }
+
+    /**
+     * Switch to a different environment at runtime (e.g. when a level loads).
+     * Safe to call before Filament is fully initialised – does nothing in that case.
+     *
+     * @param {string} envName - Key from ENVIRONMENT_PRESETS
+     */
+    applyEnvironment(envName = 'default') {
+        if (!this.engine || !this.scene || !this.Filament) {
+            return;
         }
+        if (envName === this.currentEnvironment) {
+            return;
+        }
+        this.setupEnvironmentLighting(envName);
     }
 
 }

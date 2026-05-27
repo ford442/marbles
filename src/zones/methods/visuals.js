@@ -1,4 +1,5 @@
 import { materialPresets } from '../../material-system.js';
+import { ENVIRONMENT_PRESETS } from '../../rendering/environment.js';
 
 /**
  * Visual-related methods
@@ -287,10 +288,30 @@ export const visualMethods = {
                 .direction([0.0, 1.0, 0.0])
                 .castShadows(false)
                 .build(this.engine, this.backLight);
+
+            // Apply the default night IBL.  If the level specifies an explicit
+            // environment, loadLevel() calls setEnvironment() after this which
+            // will override this choice.
+            this.applyEnvironment('space_nebula');
         } else {
             this.currentClearColor = [0.1, 0.1, 0.1, 1.0];
             this.renderer.setClearOptions({ clearColor: this.currentClearColor, clear: true });
             this.createLight();
+            this.applyEnvironment('default');
         }
-    }
+    },
+
+    /**
+     * Explicitly switch to a named IBL environment.
+     * Call this *after* setNightMode() in loadLevel() so it takes precedence.
+     *
+     * @param {string} envName - Key from ENVIRONMENT_PRESETS
+     */
+    setEnvironment(envName) {
+        if (!envName || !ENVIRONMENT_PRESETS[envName]) {
+            console.warn(`[ENV] Unknown environment "${envName}", keeping current.`);
+            return;
+        }
+        this.applyEnvironment(envName);
+    },
 };

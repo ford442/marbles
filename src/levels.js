@@ -222,7 +222,8 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 12, offset: -20 },
         nightMode: true,
-        backgroundColor: [0.05, 0.05, 0.1, 1.0]
+        backgroundColor: [0.05, 0.05, 0.1, 1.0],
+        environment: 'neon_city'
     },
     loop_challenge: {
         name: 'Loop-the-Loop',
@@ -434,7 +435,8 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: true,
-        backgroundColor: [0.05, 0.0, 0.0, 1.0]
+        backgroundColor: [0.05, 0.0, 0.0, 1.0],
+        environment: 'volcanic'
     },
     cyber_run: {
         name: 'Cyber Run',
@@ -451,7 +453,8 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 12, offset: -20 },
         nightMode: true,
-        backgroundColor: [0.05, 0.05, 0.1, 1.0]
+        backgroundColor: [0.05, 0.05, 0.1, 1.0],
+        environment: 'neon_city'
     },
     water_slide: {
         name: 'Water Slide',
@@ -499,7 +502,8 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: true,
-        backgroundColor: [0.05, 0.1, 0.2, 1.0]
+        backgroundColor: [0.05, 0.1, 0.2, 1.0],
+        environment: 'ice'
     },
     trampoline_park: {
         name: 'Trampoline Park',
@@ -645,7 +649,8 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: true,
-        backgroundColor: [0.02, 0.02, 0.08, 1.0]
+        backgroundColor: [0.02, 0.02, 0.08, 1.0],
+        environment: 'space_nebula'
     },
     zen_garden_run: {
         name: 'Zen Garden',
@@ -674,7 +679,8 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: true,
-        backgroundColor: [0.02, 0.02, 0.05, 1.0]
+        backgroundColor: [0.02, 0.02, 0.05, 1.0],
+        environment: 'space_nebula'
     },
     toxic_swamp_run: {
         name: 'Toxic Swamp Run',
@@ -723,7 +729,8 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: true,
-        backgroundColor: [0.05, 0.1, 0.2, 1.0]
+        backgroundColor: [0.05, 0.1, 0.2, 1.0],
+        environment: 'ice'
     },
     frostbite_cavern_run: {
         name: 'Frostbite Cavern Run',
@@ -740,7 +747,8 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: true,
-        backgroundColor: [0.05, 0.1, 0.2, 1.0]
+        backgroundColor: [0.05, 0.1, 0.2, 1.0],
+        environment: 'ice'
     },
     magnetic_canyon_run: {
         name: 'Magnetic Canyon Run',
@@ -798,7 +806,8 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: true,
-        backgroundColor: [0.0, 0.05, 0.1, 1.0]
+        backgroundColor: [0.0, 0.05, 0.1, 1.0],
+        environment: 'ice'
     },
     neon_alley_run: {
         name: 'Neon Alley Run',
@@ -813,7 +822,8 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: true,
-        backgroundColor: [0.01, 0.0, 0.05, 1.0]
+        backgroundColor: [0.01, 0.0, 0.05, 1.0],
+        environment: 'neon_city'
     },
     chrono_canyon_run: {
         name: 'Chrono Canyon Run',
@@ -845,7 +855,8 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: true,
-        backgroundColor: [0.05, 0.01, 0.08, 1.0]
+        backgroundColor: [0.05, 0.01, 0.08, 1.0],
+        environment: 'neon_city'
     },
     meteorite_hollow_run: {
         name: 'Meteorite Hollow',
@@ -875,7 +886,8 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: true,
-        backgroundColor: [0.01, 0.05, 0.02, 1.0]
+        backgroundColor: [0.01, 0.05, 0.02, 1.0],
+        environment: 'volcanic'
     },
     plasma_pipeline_run: {
         name: 'Plasma Pipeline',
@@ -890,7 +902,8 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: true,
-        backgroundColor: [0.0, 0.05, 0.1, 1.0]
+        backgroundColor: [0.0, 0.05, 0.1, 1.0],
+        environment: 'neon_city'
     },
     neon_pulse_grid_run: {
         name: 'Neon Pulse Grid',
@@ -905,7 +918,8 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: true,
-        backgroundColor: [0.05, 0.0, 0.1, 1.0]
+        backgroundColor: [0.05, 0.0, 0.1, 1.0],
+        environment: 'neon_city'
     },
     nebula_nexus_run: {
         name: 'Nebula Nexus',
@@ -920,7 +934,8 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: true,
-        backgroundColor: [0.05, 0.0, 0.1, 1.0]
+        backgroundColor: [0.05, 0.0, 0.1, 1.0],
+        environment: 'space_nebula'
     },
     quantum_tunnel_run: {
         name: 'Quantum Tunnel',
@@ -935,7 +950,8 @@ export const LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: true,
-        backgroundColor: [0.05, 0.0, 0.1, 1.0]
+        backgroundColor: [0.05, 0.0, 0.1, 1.0],
+        environment: 'space_nebula'
     },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,

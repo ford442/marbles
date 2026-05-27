@@ -3,6 +3,9 @@
  * Provides advanced PBR configurations for marbles and zone surfaces.
  */
 
+// Re-export the authoritative zone → environment mapping from the rendering module.
+export { ZONE_ENVIRONMENT_MAP as zoneEnvironmentMapping } from './rendering/environment.js';
+
 // ---------------------------------------------------------------------------
 // Marble Theme Presets (from src/visuals/MarbleVisual.ts + agent1/materials/*.ts)
 // ---------------------------------------------------------------------------

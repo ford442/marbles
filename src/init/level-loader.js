@@ -44,6 +44,12 @@ export class InitLevelLoader {
             this.setNightMode(false)
         }
 
+        // Apply per-level environment (overrides the nightMode default).
+        // Must be called *after* setNightMode() so the explicit env wins.
+        if (level.environment) {
+            this.setEnvironment(level.environment)
+        }
+
         if (level.camera) {
             this.cameraMode = level.camera.mode || 'orbit'
             this.camAngle = level.camera.angle || 0
