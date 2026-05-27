@@ -308,21 +308,4 @@ export function destroyEnvironmentLighting(engine, scene, ibl, skybox) {
     }
 }
 
-/**
- * Resolve which environment preset to use for a given level config.
- * Priority: explicit level.environment > nightMode heuristic > 'default'
- *
- * @param {object} levelConfig  - Entry from LEVELS
- * @returns {string} Environment preset key
- */
-export function resolveEnvironmentForLevel(levelConfig) {
-    if (levelConfig.environment) {
-        return levelConfig.environment;
-    }
-    // Legacy nightMode levels without an explicit environment key map to
-    // space_nebula which matches the existing deep-space blue background.
-    if (levelConfig.nightMode) {
-        return 'space_nebula';
-    }
-    return 'default';
-}
+

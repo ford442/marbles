@@ -3,6 +3,9 @@
  * Provides advanced PBR configurations for marbles and zone surfaces.
  */
 
+// Re-export the authoritative zone → environment mapping from the rendering module.
+export { ZONE_ENVIRONMENT_MAP as zoneEnvironmentMapping } from './rendering/environment.js';
+
 // ---------------------------------------------------------------------------
 // Marble Theme Presets (from src/visuals/MarbleVisual.ts + agent1/materials/*.ts)
 // ---------------------------------------------------------------------------
@@ -305,45 +308,6 @@ export const zoneSurfaceMapping = {
     obsidian_bridge: 'obsidian',
     sand_trap: 'sand',
     wooden_ramp: 'wood',
-};
-
-// ---------------------------------------------------------------------------
-// Zone Type → IBL Environment Mapping
-// Maps zone types to environment preset keys defined in
-// src/rendering/environment.js.  Level configs can override this via an
-// explicit `environment` field.
-// ---------------------------------------------------------------------------
-
-export const zoneEnvironmentMapping = {
-    // Ice / frozen worlds
-    ice_cave:          'ice',
-    ice_bridges:       'ice',
-    glacial_chasm:     'ice',
-    frostbite_cavern:  'ice',
-    cyber_ice_track:   'ice',
-    magnetic_canyon:   'ice',
-    meteorite_hollow:  'ice',
-    // Volcanic / hot worlds
-    volcano:           'volcanic',
-    lava_tubes:        'volcanic',
-    radiant_reactor:   'volcanic',
-    // Deep space / nebula
-    space_station:     'space_nebula',
-    starlight_ascent:  'space_nebula',
-    galaxy_spiral:     'space_nebula',
-    nebula_nexus:      'space_nebula',
-    quantum_tunnel:    'space_nebula',
-    antigravity:       'space_nebula',
-    gravity_well:      'space_nebula',
-    // Neon / cyberpunk city
-    neon_city:         'neon_city',
-    neon_alley:        'neon_city',
-    neon_grid:         'neon_city',
-    neon_pulse_grid:   'neon_city',
-    synthwave_surge:   'neon_city',
-    plasma_pipeline:   'neon_city',
-    cyber_track:       'neon_city',
-    chrono_canyon:     'neon_city',
 };
 
 // ---------------------------------------------------------------------------
