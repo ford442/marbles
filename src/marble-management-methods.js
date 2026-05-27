@@ -50,12 +50,14 @@ export class MarbleManagementMethods {
 
             // Allow per-marble overrides of any parameter
             if (info.roughness !== undefined) matInstance.setFloatParameter('roughness', info.roughness)
-            if (info.metallic !== undefined) matInstance.setFloatParameter('metallic', info.metallic)
-            if (info.reflectance !== undefined) matInstance.setFloatParameter('reflectance', info.reflectance)
-            if (info.clearCoat !== undefined) matInstance.setFloatParameter('clearCoat', info.clearCoat)
-            if (info.clearCoatRoughness !== undefined) matInstance.setFloatParameter('clearCoatRoughness', info.clearCoatRoughness)
-            if (info.bumpScale !== undefined) matInstance.setFloatParameter('bumpScale', info.bumpScale)
-            if (info.bumpFrequency !== undefined) matInstance.setFloatParameter('bumpFrequency', info.bumpFrequency)
+            if (this.hasProceduralMaterial) {
+                if (info.metallic !== undefined) matInstance.setFloatParameter('metallic', info.metallic)
+                if (info.reflectance !== undefined) matInstance.setFloatParameter('reflectance', info.reflectance)
+                if (info.clearCoat !== undefined) matInstance.setFloatParameter('clearCoat', info.clearCoat)
+                if (info.clearCoatRoughness !== undefined) matInstance.setFloatParameter('clearCoatRoughness', info.clearCoatRoughness)
+                if (info.bumpScale !== undefined) matInstance.setFloatParameter('bumpScale', info.bumpScale)
+                if (info.bumpFrequency !== undefined) matInstance.setFloatParameter('bumpFrequency', info.bumpFrequency)
+            }
 
             const vb = info.geometry === 'cube' ? this.vb : this.sphereVb
             const ib = info.geometry === 'cube' ? this.ib : this.sphereIb
@@ -93,6 +95,20 @@ export class MarbleManagementMethods {
                 materialPreset: preset || null,
                 materialPresetName: info.materialType || null,
                 matInstance,
+            }
+
+            // Emissive proxy light — prefer explicit marbles_data flag, then fall
+            // back to the material preset's emissiveIntensity field.
+            if (info.emissive) {
+                marbleObj.emissive = true
+                marbleObj.lightColor = info.lightColor || info.color
+                marbleObj.lightIntensity = info.lightIntensity || 10000.0
+            } else if (preset && preset.emissiveIntensity > 0) {
+                marbleObj.emissive = true
+                // Use the preset's rimLightColor as the proxy light colour, falling back
+                // to the emissive color, then the marble base color, then white.
+                marbleObj.lightColor = preset.rimLightColor || preset.emissive || info.color || [1, 1, 1]
+                marbleObj.lightIntensity = preset.emissiveIntensity * 10000
             }
 
             this.marbles.push(marbleObj)

@@ -30,6 +30,10 @@ export const marbleMaterialPresets = {
         // Glass-specific extras
         refractionIndex: 1.52,
         causticIntensity: 0.55,
+        // Environment-aware fields (ready for IBL cubemaps — Issue #287)
+        environmentIntensity: 1.2,
+        reflectionStrength: 1.0,
+        clearCoatIor: 1.52,
     },
     obsidianMetal: {
         color: [0.08, 0.08, 0.1],
@@ -50,6 +54,10 @@ export const marbleMaterialPresets = {
         // Obsidian-specific extras
         grainScale: 10.0,
         scratchesIntensity: 0.35,
+        // Environment-aware fields
+        environmentIntensity: 1.3,
+        reflectionStrength: 0.95,
+        clearCoatIor: 1.5,
     },
     neonGlow: {
         color: [0.95, 0.0, 0.6],
@@ -71,6 +79,10 @@ export const marbleMaterialPresets = {
         glowIntensity: 2.5,
         hologramSpeed: 1.2,
         iridescenceScale: 0.75,
+        // Environment-aware fields
+        environmentIntensity: 0.8,
+        reflectionStrength: 0.4,
+        clearCoatIor: 1.5,
     },
     stoneVein: {
         color: [0.5, 0.42, 0.35],
@@ -91,6 +103,10 @@ export const marbleMaterialPresets = {
         // Stone-specific extras
         sssThickness: 3.5,
         sparkleDensity: 1.25,
+        // Environment-aware fields
+        environmentIntensity: 0.4,
+        reflectionStrength: 0.1,
+        clearCoatIor: 1.5,
     },
     quantumCrystal: {
         color: [0.45, 0.12, 0.85],
@@ -111,6 +127,10 @@ export const marbleMaterialPresets = {
         // Quantum-specific extras
         iridescenceScale: 0.95,
         phaseShift: 0.33,
+        // Environment-aware fields
+        environmentIntensity: 1.2,
+        reflectionStrength: 0.85,
+        clearCoatIor: 1.7,
     },
     volcanicMagma: {
         color: [0.15, 0.05, 0.02],
@@ -132,6 +152,10 @@ export const marbleMaterialPresets = {
         lavaFlowSpeed: 0.8,
         crackGlow: 0.9,
         heatIntensity: 1.2,
+        // Environment-aware fields
+        environmentIntensity: 0.5,
+        reflectionStrength: 0.1,
+        clearCoatIor: 1.5,
     },
     shadowNinja: {
         color: [0.02, 0.01, 0.03],
@@ -153,6 +177,10 @@ export const marbleMaterialPresets = {
         voidAbsorption: 0.8,
         smokeIntensity: 0.4,
         shadowSpeed: 0.3,
+        // Environment-aware fields
+        environmentIntensity: 1.1,
+        reflectionStrength: 0.8,
+        clearCoatIor: 1.5,
     },
     galacticCore: {
         color: [0.1, 0.4, 1.0],
@@ -174,6 +202,10 @@ export const marbleMaterialPresets = {
         coreEnergy: 1.2,
         starDensity: 50.0,
         accretionSpeed: 0.5,
+        // Environment-aware fields
+        environmentIntensity: 1.4,
+        reflectionStrength: 1.0,
+        clearCoatIor: 1.5,
     },
 };
 
@@ -189,10 +221,15 @@ export const trackSurfacePresets = {
         reflectance: 1.0,
         clearCoat: 0.4,
         clearCoatRoughness: 0.1,
+        bumpScale: 0.02,
+        bumpFrequency: 40.0,
         subsurfaceScattering: 0.05,
         ambientOcclusion: 0.7,
         emissiveIntensity: 0.0,
         anisotropy: 0.0,
+        environmentIntensity: 1.2,
+        reflectionStrength: 0.9,
+        clearCoatIor: 1.5,
     },
     ice: {
         baseColor: [0.85, 0.92, 1.0],
@@ -201,10 +238,15 @@ export const trackSurfacePresets = {
         reflectance: 0.8,
         clearCoat: 1.0,
         clearCoatRoughness: 0.02,
+        bumpScale: 0.005,
+        bumpFrequency: 80.0,
         subsurfaceScattering: 0.7,
         ambientOcclusion: 0.2,
         emissiveIntensity: 0.1,
         anisotropy: 0.0,
+        environmentIntensity: 1.4,
+        reflectionStrength: 1.0,
+        clearCoatIor: 1.31,
     },
     rubber: {
         baseColor: [0.15, 0.15, 0.15],
@@ -213,10 +255,15 @@ export const trackSurfacePresets = {
         reflectance: 0.2,
         clearCoat: 0.0,
         clearCoatRoughness: 1.0,
+        bumpScale: 0.08,
+        bumpFrequency: 20.0,
         subsurfaceScattering: 0.1,
         ambientOcclusion: 0.9,
         emissiveIntensity: 0.0,
         anisotropy: 0.0,
+        environmentIntensity: 0.3,
+        reflectionStrength: 0.1,
+        clearCoatIor: 1.4,
     },
     sand: {
         baseColor: [0.76, 0.70, 0.50],
@@ -225,10 +272,15 @@ export const trackSurfacePresets = {
         reflectance: 0.0,
         clearCoat: 0.0,
         clearCoatRoughness: 1.0,
+        bumpScale: 0.15,
+        bumpFrequency: 15.0,
         subsurfaceScattering: 0.0,
         ambientOcclusion: 1.0,
         emissiveIntensity: 0.0,
         anisotropy: 0.0,
+        environmentIntensity: 0.2,
+        reflectionStrength: 0.0,
+        clearCoatIor: 1.5,
     },
     volcanicRock: {
         baseColor: [0.12, 0.08, 0.06],
@@ -237,11 +289,16 @@ export const trackSurfacePresets = {
         reflectance: 0.1,
         clearCoat: 0.0,
         clearCoatRoughness: 1.0,
+        bumpScale: 0.2,
+        bumpFrequency: 12.0,
         subsurfaceScattering: 0.0,
         ambientOcclusion: 1.0,
         emissive: [0.3, 0.1, 0.0],
         emissiveIntensity: 0.15,
         anisotropy: 0.0,
+        environmentIntensity: 0.5,
+        reflectionStrength: 0.1,
+        clearCoatIor: 1.5,
     },
     crystal: {
         baseColor: [0.9, 0.95, 1.0],
@@ -250,10 +307,15 @@ export const trackSurfacePresets = {
         reflectance: 0.9,
         clearCoat: 0.8,
         clearCoatRoughness: 0.05,
+        bumpScale: 0.005,
+        bumpFrequency: 100.0,
         subsurfaceScattering: 0.8,
         ambientOcclusion: 0.3,
         emissiveIntensity: 0.3,
         anisotropy: 0.0,
+        environmentIntensity: 1.3,
+        reflectionStrength: 1.0,
+        clearCoatIor: 1.77,
     },
     wood: {
         baseColor: [0.4, 0.25, 0.15],
@@ -262,10 +324,15 @@ export const trackSurfacePresets = {
         reflectance: 0.15,
         clearCoat: 0.1,
         clearCoatRoughness: 0.4,
+        bumpScale: 0.06,
+        bumpFrequency: 18.0,
         subsurfaceScattering: 0.05,
         ambientOcclusion: 0.8,
         emissiveIntensity: 0.0,
         anisotropy: 0.0,
+        environmentIntensity: 0.4,
+        reflectionStrength: 0.15,
+        clearCoatIor: 1.5,
     },
     metal: {
         baseColor: [0.72, 0.73, 0.75],
@@ -274,10 +341,15 @@ export const trackSurfacePresets = {
         reflectance: 1.0,
         clearCoat: 0.0,
         clearCoatRoughness: 1.0,
+        bumpScale: 0.02,
+        bumpFrequency: 35.0,
         subsurfaceScattering: 0.0,
         ambientOcclusion: 0.5,
         emissiveIntensity: 0.0,
         anisotropy: 0.3,
+        environmentIntensity: 1.5,
+        reflectionStrength: 1.0,
+        clearCoatIor: 1.5,
     },
     concrete: {
         baseColor: [0.35, 0.35, 0.37],
@@ -286,10 +358,15 @@ export const trackSurfacePresets = {
         reflectance: 0.1,
         clearCoat: 0.0,
         clearCoatRoughness: 1.0,
+        bumpScale: 0.12,
+        bumpFrequency: 22.0,
         subsurfaceScattering: 0.0,
         ambientOcclusion: 1.0,
         emissiveIntensity: 0.0,
         anisotropy: 0.0,
+        environmentIntensity: 0.3,
+        reflectionStrength: 0.1,
+        clearCoatIor: 1.5,
     },
 };
 

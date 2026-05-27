@@ -1,7 +1,24 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { quatFromEuler, quaternionToMat4 } from './math.js';
 import { audio } from './audio.js';
-import { materialPresets } from './material-system.js';
+import { materialPresets, trackSurfacePresets, applyFullPreset } from './material-system.js';
+
+// Default roughness applied to surfaces that have no matching preset
+const DEFAULT_SURFACE_ROUGHNESS = 0.4
+
+// Aliases so callers can pass common English names that map to trackSurfacePresets keys
+const MATERIAL_SURFACE_ALIASES = {
+    glass:       'crystal',
+    stone:       'obsidian',
+    lava:        'volcanicRock',
+    volcanic:    'volcanicRock',
+    dirt:        'sand',
+    rock:        'obsidian',
+    steel:       'metal',
+    tile:        'metal',
+    carpet:      'rubber',
+    grass:       'sand',
+};
 
 export class PhysicsFactoryMethods {
     createPhaseBox(pos, rotation, halfExtents, color, material = 'glass') {
@@ -63,34 +80,32 @@ export class PhysicsFactoryMethods {
         this.world.createCollider(colliderDesc, body)
         this.staticBodies.push(body)
 
+        // Resolve surface preset: string key → trackSurfacePresets lookup (with alias)
+        let surfacePreset = null
+        if (typeof materialPreset === 'string') {
+            const key = MATERIAL_SURFACE_ALIASES[materialPreset] || materialPreset
+            surfacePreset = trackSurfacePresets[key] || null
+        } else if (materialPreset && typeof materialPreset === 'object') {
+            surfacePreset = materialPreset
+        }
+
         // Use preset name for audio if provided, otherwise default
-        const audioMaterial = typeof materialPreset === 'string' ? materialPreset : 'wood';
+        const audioMaterial = typeof materialPreset === 'string' ? materialPreset : 'wood'
         audio.registerBodyMaterial(body, audioMaterial)
 
         const entity = this.Filament.EntityManager.get().create()
         const matInstance = this.material.createInstance()
-        matInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, color)
 
-        // Apply PBR properties. Only set extended parameters when the procedural
-        // material is active (simple baked_color.filmat only supports baseColor + roughness).
-        if (materialPreset && typeof materialPreset === 'object') {
-            matInstance.setFloatParameter('roughness', materialPreset.roughness ?? 0.4)
-            if (this.hasProceduralMaterial) {
-                if (materialPreset.metallic !== undefined) {
-                    matInstance.setFloatParameter('metallic', materialPreset.metallic)
-                }
-                if (materialPreset.reflectance !== undefined) {
-                    matInstance.setFloatParameter('reflectance', materialPreset.reflectance)
-                }
-                if (materialPreset.clearCoat !== undefined && materialPreset.clearCoat > 0) {
-                    matInstance.setFloatParameter('clearCoat', materialPreset.clearCoat)
-                    matInstance.setFloatParameter('clearCoatRoughness', materialPreset.clearCoatRoughness ?? 0.0)
-                }
-                matInstance.setFloatParameter('bumpScale', materialPreset.bumpScale ?? 0.015)
-                matInstance.setFloatParameter('bumpFrequency', materialPreset.bumpFrequency ?? 30.0)
-            }
+        // Apply base color — prefer preset color when available
+        const baseColor = (surfacePreset && surfacePreset.baseColor) ? surfacePreset.baseColor : color
+        matInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, baseColor)
+
+        // Apply all preset parameters via the shared helper (hasProcedural-aware)
+        if (surfacePreset) {
+            applyFullPreset(matInstance, surfacePreset, this.hasProceduralMaterial, this.Filament)
         } else {
-            matInstance.setFloatParameter('roughness', 0.4)
+            // Fallback defaults when no preset is available
+            matInstance.setFloatParameter('roughness', DEFAULT_SURFACE_ROUGHNESS)
             if (this.hasProceduralMaterial) {
                 matInstance.setFloatParameter('bumpScale', 0.01)
                 matInstance.setFloatParameter('bumpFrequency', 20.0)
@@ -120,6 +135,25 @@ export class PhysicsFactoryMethods {
         tcm.setTransform(inst, mat)
         this.scene.addEntity(entity)
         this.staticEntities.push(entity)
+
+        // Spawn an emissive proxy point light for glowing surfaces (e.g. volcanic rock, crystal)
+        if (surfacePreset && surfacePreset.emissiveIntensity > 0 && surfacePreset.emissive) {
+            const lightEntity = this.Filament.EntityManager.get().create()
+            const lightColor = surfacePreset.emissive
+            const lightIntensity = surfacePreset.emissiveIntensity * 8000
+            this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].POINT)
+                .color(lightColor)
+                .intensity(lightIntensity)
+                .falloff(15.0)
+                .build(this.engine, lightEntity)
+            // Position the light at the surface centre
+            const ltcm = this.engine.getTransformManager()
+            const linst = ltcm.getInstance(lightEntity)
+            const lmat = [1,0,0,0, 0,1,0,0, 0,0,1,0, pos.x, pos.y + halfExtents.y, pos.z, 1]
+            ltcm.setTransform(linst, lmat)
+            this.scene.addEntity(lightEntity)
+            this.staticEntities.push(lightEntity)
+        }
     }
 
     createDynamicBox(pos, rotation, halfExtents, color, density = 1.0, material = 'wood', gravityScale = 1.0) {

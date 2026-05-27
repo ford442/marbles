@@ -231,12 +231,13 @@ export function createThemedMaterialInstance(material, Filament, presetName, bas
     const color = preset.color || baseColor
     instance.setColor3Parameter('baseColor', Filament.RgbType.sRGB, color)
 
-    // Core PBR
+    // roughness is safe on both baked_color.filmat and baked_procedural.filament
     instance.setFloatParameter('roughness', preset.roughness !== undefined ? preset.roughness : 0.4)
-    instance.setFloatParameter('metallic', preset.metallic !== undefined ? preset.metallic : 0.0)
-    instance.setFloatParameter('reflectance', preset.reflectance !== undefined ? preset.reflectance : 0.5)
 
     if (hasProcedural) {
+        // These parameters only exist in baked_procedural.filament
+        instance.setFloatParameter('metallic', preset.metallic !== undefined ? preset.metallic : 0.0)
+        instance.setFloatParameter('reflectance', preset.reflectance !== undefined ? preset.reflectance : 0.5)
         instance.setFloatParameter('clearCoat', preset.clearCoat !== undefined ? preset.clearCoat : 0.0)
         instance.setFloatParameter('clearCoatRoughness', preset.clearCoatRoughness !== undefined ? preset.clearCoatRoughness : 0.0)
         instance.setFloatParameter('bumpScale', preset.bumpScale !== undefined ? preset.bumpScale : 0.02)
@@ -244,6 +245,53 @@ export function createThemedMaterialInstance(material, Filament, presetName, bas
     }
 
     return { instance, preset }
+}
+
+/**
+ * Apply a full surface/track preset to an existing material instance.
+ * Only parameters actually supported by baked_procedural.filament are sent;
+ * the hasProcedural flag guards the advanced parameters so this is safe to
+ * call on the fallback baked_color.filmat as well.
+ *
+ * @param {object} matInstance  - Filament MaterialInstance
+ * @param {object} preset       - A trackSurfacePreset or marbleMaterialPreset object
+ * @param {boolean} hasProcedural - true when baked_procedural.filament loaded successfully
+ * @param {object} Filament     - The Filament module (for RgbType)
+ */
+export function applyFullPreset(matInstance, preset, hasProcedural, Filament) {
+    if (!matInstance || !preset) return
+
+    // baseColor from surface preset uses `baseColor`; marble presets use `color`
+    const color = preset.baseColor || preset.color
+    if (color) {
+        matInstance.setColor3Parameter('baseColor', Filament.RgbType.sRGB, color)
+    }
+
+    // roughness exists on both materials
+    if (preset.roughness !== undefined) {
+        matInstance.setFloatParameter('roughness', preset.roughness)
+    }
+
+    if (hasProcedural) {
+        if (preset.metallic !== undefined) {
+            matInstance.setFloatParameter('metallic', preset.metallic)
+        }
+        if (preset.reflectance !== undefined) {
+            matInstance.setFloatParameter('reflectance', preset.reflectance)
+        }
+        if (preset.clearCoat !== undefined) {
+            matInstance.setFloatParameter('clearCoat', preset.clearCoat)
+        }
+        if (preset.clearCoatRoughness !== undefined) {
+            matInstance.setFloatParameter('clearCoatRoughness', preset.clearCoatRoughness)
+        }
+        if (preset.bumpScale !== undefined) {
+            matInstance.setFloatParameter('bumpScale', preset.bumpScale)
+        }
+        if (preset.bumpFrequency !== undefined) {
+            matInstance.setFloatParameter('bumpFrequency', preset.bumpFrequency)
+        }
+    }
 }
 
 // Noise function for procedural bump (GLSL-compatible)
@@ -285,5 +333,6 @@ export default {
     materialPresets,
     createFilamentTexture,
     createEnhancedMaterialInstance,
+    applyFullPreset,
     noiseFunctions
 }

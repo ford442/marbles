@@ -839,14 +839,16 @@ export const creationMethods = {
             { x: offset.x, y: offset.y, z: offset.z },
             floorQ,
             { x: 4, y: 0.5, z: 4 },
-            [0.4, 0.4, 0.4]
+            [0.4, 0.4, 0.4],
+            'concrete'
         );
 
         this.createStaticBox(
             { x: offset.x - 2, y: offset.y, z: offset.z + 14 },
             floorQ,
             { x: 1, y: 0.5, z: 10 },
-            [0.6, 0.3, 0.3]
+            [0.6, 0.3, 0.3],
+            'concrete'
         );
 
         const angle = -0.3;
@@ -858,21 +860,24 @@ export const creationMethods = {
             { x: offset.x + 2, y: offset.y + 1, z: offset.z + 8 },
             rampQ,
             { x: 1, y: 0.5, z: 4 },
-            [0.3, 0.3, 0.6]
+            [0.3, 0.3, 0.6],
+            'metal'
         );
 
         this.createStaticBox(
             { x: offset.x + 2, y: offset.y, z: offset.z + 20 },
             floorQ,
             { x: 1.5, y: 0.5, z: 4 },
-            [0.3, 0.3, 0.6]
+            [0.3, 0.3, 0.6],
+            'metal'
         );
 
         this.createStaticBox(
             { x: offset.x, y: offset.y - 1, z: offset.z + 30 },
             floorQ,
             { x: 4, y: 0.5, z: 4 },
-            [0.4, 0.4, 0.4]
+            [0.4, 0.4, 0.4],
+            'concrete'
         );
     },
 
@@ -883,7 +888,8 @@ export const creationMethods = {
             { x: offset.x, y: offset.y, z: offset.z },
             floorQ,
             { x: 10, y: 0.5, z: 20 },
-            [0.2, 0.5, 0.2]
+            [0.2, 0.5, 0.2],
+            'sand'
         );
 
         for (let i = 0; i < 20; i++) {
@@ -894,7 +900,8 @@ export const creationMethods = {
                 { x: offset.x + rx, y: offset.y + 2, z: offset.z + rz },
                 floorQ,
                 { x: 0.5 + Math.sin(i) * 0.2, y: 2 + Math.cos(i), z: 0.5 + Math.sin(i) * 0.2 },
-                [0.55, 0.27, 0.07]
+                [0.55, 0.27, 0.07],
+                'wood'
             );
         }
     },
