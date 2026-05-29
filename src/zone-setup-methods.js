@@ -49,7 +49,8 @@ import { createNebulaNexusZone } from "./zones/nebula-nexus.js";
 import { createQuantumTunnelZone } from './zones/quantum-tunnel.js';
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import { audio } from './audio.js';
-import { DEFAULT_MSAA_SAMPLE_COUNT, DEFAULT_SSAO_INTENSITY, getPostFxQualityFlags, getShadowQualityConfig } from './rendering-defaults.js';
+import { DEFAULT_MSAA_SAMPLE_COUNT, getPostFxQualityFlags, getShadowQualityConfig } from './rendering-defaults.js';
+import { getBloomQualityConfig, getSsaoQualityConfig, getVignetteConfig, getColorGradingConfig } from './rendering/post-fx-presets.js';
 import {
     buildEnvironmentLighting,
     destroyEnvironmentLighting,
@@ -598,37 +599,16 @@ export class ZoneSetupMethods {
         const quality = this.settings?.graphics?.quality || 'medium';
         const { taaEnabled, motionBlurEnabled, ssrEnabled } = getPostFxQualityFlags(quality)
 
-        // Bloom - makes bright marbles and lights glow
-        // Resolution reduced to 256 for better framerate on mid-range hardware
+        // Bloom — resolution, strength, and quality scale with the quality tier
         try {
-            this.view.setBloomOptions({
-                enabled: true,
-                strength: 0.4,
-                resolution: 256,
-                levels: 5,
-                threshold: true,
-                highlight: 8.0,
-                blendMode: this.Filament['View$BloomOptions$BlendMode'].ADD,
-                quality: this.Filament['View$QualityLevel'].MEDIUM,
-                lensFlare: false,
-            })
+            this.view.setBloomOptions(getBloomQualityConfig(quality, this.Filament))
         } catch (e) {
             console.warn('[POST] Bloom setup failed:', e)
         }
 
-        // SSAO - ambient occlusion for contact shadows under marbles
-        // Quality set to LOW for better framerate; radius reduced slightly
+        // SSAO — radius, resolution, and quality scale with the quality tier
         try {
-            this.view.setAmbientOcclusionOptions({
-                radius: 0.3,
-                power: 2.0,
-                bias: 0.005,
-                resolution: 0.5,
-                // Reduced from 1.5 to improve mid-range GPU performance.
-                intensity: DEFAULT_SSAO_INTENSITY,
-                quality: this.Filament['View$QualityLevel'].LOW,
-                enabled: true,
-            })
+            this.view.setAmbientOcclusionOptions(getSsaoQualityConfig(quality, this.Filament))
         } catch (e) {
             console.warn('[POST] SSAO setup failed:', e)
         }
@@ -677,16 +657,24 @@ export class ZoneSetupMethods {
             console.warn('[POST] SSR setup failed:', e)
         }
 
-        // ACES tone mapping for cinematic, physically-correct look
+        // ACES tone mapping with per-tier contrast/saturation for a richer look on high-end hardware
         try {
+            const cgConfig = getColorGradingConfig(quality)
             const colorGrading = this.Filament.ColorGrading.Builder()
                 .toneMapping(this.Filament['ColorGrading$ToneMapping'].ACES)
-                .contrast(1.08)
-                .saturation(1.15)
+                .contrast(cgConfig.contrast)
+                .saturation(cgConfig.saturation)
                 .build(this.engine)
             this.view.setColorGrading(colorGrading)
         } catch (e) {
             console.warn('[POST] Color grading setup failed:', e)
+        }
+
+        // Vignette — subtle filmic darkening on high/ultra; disabled on medium and low
+        try {
+            this.view.setVignetteOptions(getVignetteConfig(quality))
+        } catch (e) {
+            // setVignetteOptions may not be present in all Filament builds; silently skip
         }
 
         // Production shadow quality — gated behind high/ultra presets.
