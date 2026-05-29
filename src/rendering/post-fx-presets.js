@@ -191,12 +191,12 @@ export function getColorGradingConfig(quality = 'medium') {
  *
  * @param {string} cameraMode
  * @param {string} quality
- * @param {number} [focusDistance=20] - Distance from camera eye to subject in world units (metres).
+ * @param {number} [focusDistance=20] - Distance from camera eye to subject in world units (meters).
  *   Typical cinematic orbit is ~25, follow/action ranges from ~15 to ~35 depending on speed.
  * @returns {object|null}
  */
 export function getDofConfig(cameraMode, quality = 'medium', focusDistance = 20) {
-    const heavyFx = quality === 'high' || quality === 'ultra'
+    const isHighQuality = quality === 'high' || quality === 'ultra'
     if (cameraMode === 'cinematic') {
         return {
             enabled: true,
@@ -206,7 +206,7 @@ export function getDofConfig(cameraMode, quality = 'medium', focusDistance = 20)
             maxApertureDiameter: 0.01,
         }
     }
-    if (heavyFx && (cameraMode === 'follow' || cameraMode === 'action')) {
+    if (isHighQuality && (cameraMode === 'follow' || cameraMode === 'action')) {
         return {
             enabled: true,
             focusDistance,

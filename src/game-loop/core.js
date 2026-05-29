@@ -363,6 +363,9 @@ export class GameLoopRenderCore {
                         const graphicsQuality = this.settings?.graphics?.quality || 'medium'
                         const dofOpts = getDofConfig(this.cameraMode, graphicsQuality, dist)
                         if (dofOpts) {
+                            // _dofEnabled starts undefined; !== true is intentional so the first
+                            // frame always initialises DoF, then subsequent frames only update when
+                            // the focus distance has shifted by more than DOF_UPDATE_THRESHOLD.
                             const shouldUpdateDof = this._dofEnabled !== true || Math.abs((this._dofFocusDistance || 0) - dist) > DOF_UPDATE_THRESHOLD
                             if (shouldUpdateDof) {
                                 try {
@@ -410,9 +413,11 @@ export class GameLoopRenderCore {
                             try {
                                 const graphicsQuality = this.settings?.graphics?.quality || 'medium'
                                 const dofOpts = getDofConfig('cinematic', graphicsQuality, dist)
-                                this.view.setDepthOfFieldOptions(dofOpts)
-                                this._dofEnabled = true
-                                this._dofFocusDistance = dist
+                                if (dofOpts) {
+                                    this.view.setDepthOfFieldOptions(dofOpts)
+                                    this._dofEnabled = true
+                                    this._dofFocusDistance = dist
+                                }
                             } catch (e) { /* DoF not supported, skip */ }
                         }
                     }
