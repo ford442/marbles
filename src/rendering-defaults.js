@@ -4,14 +4,22 @@ export const DEFAULT_MSAA_SAMPLE_COUNT = 4
 export function getPostFxQualityFlags(quality = 'medium') {
     const taaEnabled = quality !== 'low'
     const heavyFxEnabled = quality === 'high' || quality === 'ultra'
+    const vignetteEnabled = heavyFxEnabled
+    const dofEnabled = true // DoF is gated per camera-mode inside getDofConfig()
 
     return {
         taaEnabled,
         heavyFxEnabled,
         motionBlurEnabled: heavyFxEnabled,
         ssrEnabled: heavyFxEnabled,
+        vignetteEnabled,
+        dofEnabled,
     }
 }
+
+// Re-export quality-specific helpers from the dedicated presets module so that
+// existing importers can continue to pull everything from rendering-defaults.js.
+export { getBloomQualityConfig, getSsaoQualityConfig, getVignetteConfig, getColorGradingConfig, getDofConfig } from './rendering/post-fx-presets.js'
 
 /**
  * Returns shadow configuration objects keyed by quality tier.

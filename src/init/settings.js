@@ -1,6 +1,7 @@
 import { audio } from '../audio.js';
 import { DEFAULT_SETTINGS } from './filament-loader.js';
-import { DEFAULT_MSAA_SAMPLE_COUNT, DEFAULT_SSAO_INTENSITY, getPostFxQualityFlags, getShadowQualityConfig } from '../rendering-defaults.js';
+import { DEFAULT_MSAA_SAMPLE_COUNT, getPostFxQualityFlags, getShadowQualityConfig } from '../rendering-defaults.js';
+import { getBloomQualityConfig, getSsaoQualityConfig, getVignetteConfig } from '../rendering/post-fx-presets.js';
 
 export class InitSettings {
     loadSettings() {
@@ -139,21 +140,18 @@ export class InitSettings {
             this.scene.addEntity(this.sunLight)
         }
 
-        // Live bloom update — wired directly to the active Filament view
+        // Live bloom update — strength is user-adjustable; other params are quality-tiered
         if (this.view && s.bloom !== undefined) {
             try {
-                const bloomStrength = (s.bloom / 100) * 0.8
-                this.view.setBloomOptions({
-                    enabled: s.bloom > 0,
-                    strength: bloomStrength,
-                    resolution: 256,
-                    levels: 5,
-                    threshold: true,
-                    highlight: 8.0,
-                    blendMode: this.Filament['View$BloomOptions$BlendMode']?.ADD,
-                    quality: this.Filament['View$QualityLevel']?.MEDIUM,
-                    lensFlare: false,
-                })
+                const quality = s.quality || 'medium'
+                const bloomConfig = getBloomQualityConfig(quality, this.Filament)
+                bloomConfig.enabled = s.bloom > 0
+                // s.bloom is 0–100 (user slider); 50 is the nominal default.
+                // At 50 the tier's base strength is used unchanged; the user can
+                // halve it (0) or double it (100) from there.
+                const BLOOM_SLIDER_DEFAULT = 50
+                bloomConfig.strength = bloomConfig.strength * (s.bloom / BLOOM_SLIDER_DEFAULT)
+                this.view.setBloomOptions(bloomConfig)
             } catch (e) {
                 console.warn('[SETTINGS] Bloom live update failed:', e)
             }
@@ -162,15 +160,8 @@ export class InitSettings {
         // Live SSAO toggle — wired directly to the active Filament view
         if (this.view && s.ssao !== undefined) {
             try {
-                this.view.setAmbientOcclusionOptions({
-                    enabled: s.ssao !== false,
-                    radius: 0.3,
-                    power: 2.0,
-                    bias: 0.005,
-                    resolution: 0.5,
-                    intensity: DEFAULT_SSAO_INTENSITY,
-                    quality: this.Filament['View$QualityLevel']?.LOW,
-                })
+                const quality = s.quality || 'medium'
+                this.view.setAmbientOcclusionOptions(getSsaoQualityConfig(quality, this.Filament, s.ssao !== false))
             } catch (e) {
                 console.warn('[SETTINGS] SSAO live update failed:', e)
             }
@@ -222,6 +213,11 @@ export class InitSettings {
             } catch (e) {
                 console.warn('[SETTINGS] SSR live update failed:', e)
             }
+
+            // Vignette — enabled on high/ultra, silently skipped if API is absent
+            try {
+                this.view.setVignetteOptions(getVignetteConfig(quality))
+            } catch (e) { /* setVignetteOptions may not be available in all Filament builds */ }
 
             // Shadow quality — updated whenever the quality tier or shadow toggle changes.
             // Only apply shadow options when shadows are enabled.

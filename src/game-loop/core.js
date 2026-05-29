@@ -3,6 +3,12 @@ import { audio } from '../audio.js';
 import { quaternionToMat4, quatFromEuler } from '../math.js';
 import { LEVELS } from '../levels.js';
 import { getMarblePhysics } from '../wasm-bridge.js';
+import { getDofConfig } from '../rendering/post-fx-presets.js';
+
+// Camera modes that support depth-of-field; evaluated once, not per-frame.
+const DOF_CAMERA_MODES = new Set(['cinematic', 'follow', 'action'])
+// Minimum focus-distance change (world units) required to re-issue a DoF update.
+const DOF_UPDATE_THRESHOLD = 1.0
 
 export class GameLoopRenderCore {
     renderAndSync() {
@@ -222,7 +228,7 @@ export class GameLoopRenderCore {
             this.powerbarEl.style.width = `${this.chargePower * 100}%`
         }
 
-        if (this.view && (this.cameraMode !== 'cinematic' || !this.currentLevel) && this._dofEnabled === true) {
+        if (this.view && (!DOF_CAMERA_MODES.has(this.cameraMode) || !this.currentLevel) && this._dofEnabled === true) {
             try { this.view.setDepthOfFieldOptions({ enabled: false }) } catch (e) { /* not supported */ }
             this._dofEnabled = false
             this._dofFocusDistance = null
@@ -351,6 +357,25 @@ export class GameLoopRenderCore {
                             this._lastSetProjectionAspect = aspect
                         }
                     }
+
+                    // DoF for follow/action modes — subtle focus on the marble; only on high/ultra
+                    if (this.view) {
+                        const graphicsQuality = this.settings?.graphics?.quality || 'medium'
+                        const dofOpts = getDofConfig(this.cameraMode, graphicsQuality, dist)
+                        if (dofOpts) {
+                            // _dofEnabled starts undefined; !== true is intentional so the first
+                            // frame always initialises DoF, then subsequent frames only update when
+                            // the focus distance has shifted by more than DOF_UPDATE_THRESHOLD.
+                            const shouldUpdateDof = this._dofEnabled !== true || Math.abs((this._dofFocusDistance || 0) - dist) > DOF_UPDATE_THRESHOLD
+                            if (shouldUpdateDof) {
+                                try {
+                                    this.view.setDepthOfFieldOptions(dofOpts)
+                                    this._dofEnabled = true
+                                    this._dofFocusDistance = dist
+                                } catch (e) { /* DoF not supported */ }
+                            }
+                        }
+                    }
                 } else if (this.cameraMode === 'fpv') {
                     const r = target.scale * 0.5 || 0.5
                     const eyeX = t.x + this.cameraShake.x
@@ -386,17 +411,13 @@ export class GameLoopRenderCore {
                         const shouldUpdateDof = this._dofEnabled !== true || this._dofFocusDistance !== dist
                         if (shouldUpdateDof) {
                             try {
-                                this.view.setDepthOfFieldOptions({
-                                    enabled: true,
-                                    // Use the fixed orbit distance so focus distance matches exactly
-                                    focusDistance: dist,
-                                    blurScale: 1.0,
-                                    cocScale: 1.0,
-                                    // Small aperture (0.01) gives subtle bokeh without excessive blur
-                                    maxApertureDiameter: 0.01,
-                                })
-                                this._dofEnabled = true
-                                this._dofFocusDistance = dist
+                                const graphicsQuality = this.settings?.graphics?.quality || 'medium'
+                                const dofOpts = getDofConfig('cinematic', graphicsQuality, dist)
+                                if (dofOpts) {
+                                    this.view.setDepthOfFieldOptions(dofOpts)
+                                    this._dofEnabled = true
+                                    this._dofFocusDistance = dist
+                                }
                             } catch (e) { /* DoF not supported, skip */ }
                         }
                     }
