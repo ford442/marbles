@@ -5,6 +5,11 @@ import { LEVELS } from '../levels.js';
 import { getMarblePhysics } from '../wasm-bridge.js';
 import { getDofConfig } from '../rendering/post-fx-presets.js';
 
+// Camera modes that support depth-of-field; evaluated once, not per-frame.
+const DOF_CAMERA_MODES = new Set(['cinematic', 'follow', 'action'])
+// Minimum focus-distance change (world units) required to re-issue a DoF update.
+const DOF_UPDATE_THRESHOLD = 1.0
+
 export class GameLoopRenderCore {
     renderAndSync() {
         // Cache timestamp once per frame for reuse throughout renderAndSync
@@ -223,8 +228,7 @@ export class GameLoopRenderCore {
             this.powerbarEl.style.width = `${this.chargePower * 100}%`
         }
 
-        const _dofModes = new Set(['cinematic', 'follow', 'action'])
-        if (this.view && (!_dofModes.has(this.cameraMode) || !this.currentLevel) && this._dofEnabled === true) {
+        if (this.view && (!DOF_CAMERA_MODES.has(this.cameraMode) || !this.currentLevel) && this._dofEnabled === true) {
             try { this.view.setDepthOfFieldOptions({ enabled: false }) } catch (e) { /* not supported */ }
             this._dofEnabled = false
             this._dofFocusDistance = null
@@ -359,7 +363,7 @@ export class GameLoopRenderCore {
                         const graphicsQuality = this.settings?.graphics?.quality || 'medium'
                         const dofOpts = getDofConfig(this.cameraMode, graphicsQuality, dist)
                         if (dofOpts) {
-                            const shouldUpdateDof = this._dofEnabled !== true || Math.abs((this._dofFocusDistance || 0) - dist) > 1.0
+                            const shouldUpdateDof = this._dofEnabled !== true || Math.abs((this._dofFocusDistance || 0) - dist) > DOF_UPDATE_THRESHOLD
                             if (shouldUpdateDof) {
                                 try {
                                     this.view.setDepthOfFieldOptions(dofOpts)

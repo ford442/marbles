@@ -146,8 +146,11 @@ export class InitSettings {
                 const quality = s.quality || 'medium'
                 const bloomConfig = getBloomQualityConfig(quality, this.Filament)
                 bloomConfig.enabled = s.bloom > 0
-                // s.bloom is 0-100; at 50 (default) keep the tier's nominal strength
-                bloomConfig.strength = bloomConfig.strength * (s.bloom / 50)
+                // s.bloom is 0–100 (user slider); 50 is the nominal default.
+                // At 50 the tier's base strength is used unchanged; the user can
+                // halve it (0) or double it (100) from there.
+                const BLOOM_SLIDER_DEFAULT = 50
+                bloomConfig.strength = bloomConfig.strength * (s.bloom / BLOOM_SLIDER_DEFAULT)
                 this.view.setBloomOptions(bloomConfig)
             } catch (e) {
                 console.warn('[SETTINGS] Bloom live update failed:', e)

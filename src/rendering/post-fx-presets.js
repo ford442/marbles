@@ -191,7 +191,8 @@ export function getColorGradingConfig(quality = 'medium') {
  *
  * @param {string} cameraMode
  * @param {string} quality
- * @param {number} focusDistance - Distance from camera eye to subject
+ * @param {number} [focusDistance=20] - Distance from camera eye to subject in world units (metres).
+ *   Typical cinematic orbit is ~25, follow/action ranges from ~15 to ~35 depending on speed.
  * @returns {object|null}
  */
 export function getDofConfig(cameraMode, quality = 'medium', focusDistance = 20) {
