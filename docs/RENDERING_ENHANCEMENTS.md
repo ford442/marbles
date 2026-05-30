@@ -97,22 +97,64 @@ complementing the level-level `environment` field in `levels.js`.
 - [x] Performance: no regression on medium preset; low falls back to 1-band SH automatically.
 - [x] Documentation updated in `docs/RENDERING_ENHANCEMENTS.md`.
 
-### Future: KTX Cubemap Reflections (Phase 2)
+### Future: KTX Cubemap Reflections (Phase 2) — ✅ Implemented
 
-When `.ktx` environment cubemaps are available in `assets/environments/`, wire them
-into `buildEnvironmentLighting()`:
+Specular IBL via KTX1 cubemaps is now live for **high** and **ultra** quality.
 
-```javascript
-// Example addition in src/rendering/environment.js
-const texture = engine.createKtx2Texture('assets/environments/space_nebula.ktx2');
-const builder = Filament.IndirectLight.Builder()
-    .reflections(texture)      // specular IBL – view-dependent reflections
-    .irradianceSh(3, preset.sh)
-    .intensity(preset.iblIntensity);
+#### How it works
+
+1. `buildEnvironmentLighting()` (sync) builds the SH-only IBL as before — no
+   change for low/medium.
+2. For high/ultra, `setupEnvironmentLighting()` immediately fires an async
+   upgrade via `_upgradeEnvironmentWithCubemap(envName)`.
+3. The async path fetches `assets/environments/{envName}.ibl.ktx` and
+   `assets/environments/{envName}.skybox.ktx` in parallel.
+4. On success, the old SH-only IBL is destroyed and replaced with:
+   ```javascript
+   IndirectLight.Builder()
+       .reflections(iblTexture)    // specular IBL – view-dependent
+       .irradianceSh(3, preset.sh) // diffuse IBL  – same hand-tuned SH
+       .intensity(preset.iblIntensity)
+       .build(engine)
+   ```
+5. The skybox is rebuilt with `Skybox.Builder().environment(skyboxTexture)`.
+6. If the KTX file is absent or fails to load, the SH-only environment remains
+   active with no error surfaced to the user (console.log only).
+
+#### Shipped assets
+
+Five synthetic KTX1 cubemaps (one per preset) are shipped under
+`assets/environments/`.  They are generated from the same SH coefficients used
+for diffuse GI by running:
+
+```sh
+node scripts/generate-env-cubemaps.js
 ```
 
-Then update `Skybox.Builder().environment(texture)` to show the cubemap as the
-background instead of a flat colour.
+Replace them with `cmgen`-generated HDR cubemaps for photorealistic
+reflections.  See `assets/environments/README.md` for format details and
+replacement instructions.
+
+#### Material parameters wired
+
+`applyFullPreset()` in `src/material-system.js` now applies these optional
+parameters from every material preset that defines them:
+
+| Parameter             | Where defined                                       |
+|-----------------------|-----------------------------------------------------|
+| `clearCoatIor`        | `src/material-presets.js`, `src/rendering/material-variants.js` |
+| `environmentIntensity`| Same                                                |
+| `reflectionStrength`  | Same                                                |
+
+Each is applied with `try/catch` so older material shader versions that do not
+expose the uniform are handled gracefully.
+
+#### Acceptance criteria
+
+- [x] At least one environment (`neon_city`, `ice`, etc.) ships with a real cubemap reflection.
+- [x] Glossy marbles and floors show view-dependent specular highlights from the environment.
+- [x] No regression on low/medium quality presets (SH-only path unchanged).
+- [x] Documentation updated in `RENDERING_ENHANCEMENTS.md`.
 
 ---
 

@@ -54,6 +54,9 @@ import { getBloomQualityConfig, getSsaoQualityConfig, getVignetteConfig, getColo
 import {
     buildEnvironmentLighting,
     destroyEnvironmentLighting,
+    destroyEnvironmentWithCubemaps,
+    upgradeEnvironmentWithCubemap,
+    CUBEMAP_QUALITY_LEVELS,
     ENVIRONMENT_PRESETS,
 } from './rendering/environment.js';
 
@@ -715,16 +718,26 @@ export class ZoneSetupMethods {
      * Build and apply an IndirectLight + Skybox for the given environment.
      * Destroys any previously created IBL/Skybox objects first.
      *
+     * For 'high' and 'ultra' quality, fires an async upgrade that replaces the
+     * SH-only IBL with a full specular IBL backed by a KTX1 cubemap once the
+     * asset has loaded.  The SH fallback remains active until then.
+     *
      * @param {string} envName - Key from ENVIRONMENT_PRESETS (e.g. 'ice', 'volcanic')
      */
     setupEnvironmentLighting(envName = 'default') {
         const quality = this.settings?.graphics?.quality || 'medium';
 
-        // Tear down existing IBL / skybox before rebuilding
+        // Tear down existing IBL / skybox (including any previously loaded cubemap textures)
         if (this._iblObject || this._skyboxObject) {
-            destroyEnvironmentLighting(this.engine, this.scene, this._iblObject, this._skyboxObject);
+            destroyEnvironmentWithCubemaps(
+                this.engine, this.scene,
+                this._iblObject, this._skyboxObject,
+                this._iblTexture || null, this._skyboxTexture || null,
+            );
             this._iblObject = null;
             this._skyboxObject = null;
+            this._iblTexture = null;
+            this._skyboxTexture = null;
         }
 
         const { ibl, skybox } = buildEnvironmentLighting(
@@ -738,11 +751,50 @@ export class ZoneSetupMethods {
         // Keep references so we can destroy them on the next switch or cleanup
         this._iblObject = ibl;
         this._skyboxObject = skybox;
+        this._iblTexture = null;
+        this._skyboxTexture = null;
         this.currentEnvironment = envName;
 
         // Back-compat: keep this.ibl pointing at the active IBL object
         this.ibl = ibl;
         this.skyboxEntity = skybox;
+
+        // For high/ultra quality, asynchronously upgrade to full specular IBL
+        if (CUBEMAP_QUALITY_LEVELS.has(quality)) {
+            this._upgradeEnvironmentWithCubemap(envName);
+        }
+    }
+
+    /**
+     * Async helper: load KTX1 cubemaps and upgrade the current SH-only
+     * environment to full specular IBL.  Guards against stale upgrades if the
+     * environment was changed before the fetch completed.
+     *
+     * @param {string} envName
+     */
+    async _upgradeEnvironmentWithCubemap(envName) {
+        const result = await upgradeEnvironmentWithCubemap(
+            this.engine,
+            this.scene,
+            this.Filament,
+            envName,
+            this._iblObject,
+            this._skyboxObject,
+        );
+
+        // Guard: environment may have changed while we were awaiting
+        if (!result || this.currentEnvironment !== envName) {
+            return;
+        }
+
+        this._iblObject = result.ibl;
+        this._skyboxObject = result.skybox;
+        this._iblTexture = result.iblTexture;
+        this._skyboxTexture = result.skyboxTexture;
+
+        // Keep back-compat references current
+        this.ibl = result.ibl;
+        this.skyboxEntity = result.skybox;
     }
 
     /**

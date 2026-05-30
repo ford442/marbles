@@ -291,6 +291,25 @@ export function applyFullPreset(matInstance, preset, hasProcedural, Filament) {
         if (preset.bumpFrequency !== undefined) {
             matInstance.setFloatParameter('bumpFrequency', preset.bumpFrequency)
         }
+
+        // IBL / specular parameters — wired from material-presets.js / material-variants.js.
+        // These are optional parameters; use try/catch per-parameter since older material
+        // versions may not expose all three uniforms.
+        if (preset.clearCoatIor !== undefined) {
+            try {
+                matInstance.setFloatParameter('clearCoatIor', preset.clearCoatIor)
+            } catch (_) { /* parameter not present in this material version */ }
+        }
+        if (preset.environmentIntensity !== undefined) {
+            try {
+                matInstance.setFloatParameter('environmentIntensity', preset.environmentIntensity)
+            } catch (_) { /* parameter not present in this material version */ }
+        }
+        if (preset.reflectionStrength !== undefined) {
+            try {
+                matInstance.setFloatParameter('reflectionStrength', preset.reflectionStrength)
+            } catch (_) { /* parameter not present in this material version */ }
+        }
     }
 }
 
