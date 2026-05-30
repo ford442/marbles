@@ -506,10 +506,64 @@ export class GameLoopRenderCore {
                 }
             }
         } else {
-            const eyeX = this.camRadius * Math.sin(this.camAngle) + this.cameraShake.x
-            const eyeY = this.camHeight + this.cameraShake.y
-            const eyeZ = this.camRadius * Math.cos(this.camAngle) + this.cameraShake.z
-            this.camera.lookAt([eyeX, eyeY, eyeZ], [0, 0, 0], [0, 1, 0])
+            const target = this.playerMarble || this.getLeader();
+            let targetX = 0, targetY = 0, targetZ = 0;
+            let targetBodyHandle = -1;
+
+            if (target && target.rigidBody) {
+                const t = target.rigidBody.translation();
+                targetX = t.x;
+                targetY = t.y;
+                targetZ = t.z;
+                targetBodyHandle = target.rigidBody.handle;
+            }
+
+            let idealEyeX = targetX + this.camRadius * Math.sin(this.camAngle);
+            let idealEyeY = targetY + this.camHeight;
+            let idealEyeZ = targetZ + this.camRadius * Math.cos(this.camAngle);
+
+            if (this.world && typeof RAPIER !== 'undefined') {
+                const dx = idealEyeX - targetX;
+                const dy = idealEyeY - targetY;
+                const dz = idealEyeZ - targetZ;
+                const distToEye = Math.hypot(dx, dy, dz);
+
+                if (distToEye > 0.001) {
+                    const rayDir = { x: dx / distToEye, y: dy / distToEye, z: dz / distToEye };
+                    const r = target ? (target.scale * 0.5 || 0.5) : 0.5;
+                    const startDist = r + 0.1;
+                    const rayOrigin = {
+                        x: targetX + rayDir.x * startDist,
+                        y: targetY + rayDir.y * startDist,
+                        z: targetZ + rayDir.z * startDist
+                    };
+
+                    const maxRayDist = Math.max(0.01, distToEye - startDist);
+                    const ray = new RAPIER.Ray(rayOrigin, rayDir);
+                    const hit = this.world.castRay(ray, maxRayDist, false);
+
+                    if (hit) {
+                        const otherBody = hit.collider.parent();
+                        if (!otherBody || (otherBody.handle !== targetBodyHandle && !hit.collider.isSensor())) {
+                            const safeDist = hit.toi - 0.2;
+                            if (safeDist > 0) {
+                                idealEyeX = rayOrigin.x + rayDir.x * safeDist;
+                                idealEyeY = rayOrigin.y + rayDir.y * safeDist;
+                                idealEyeZ = rayOrigin.z + rayDir.z * safeDist;
+                            } else {
+                                idealEyeX = rayOrigin.x;
+                                idealEyeY = rayOrigin.y;
+                                idealEyeZ = rayOrigin.z;
+                            }
+                        }
+                    }
+                }
+            }
+
+            const eyeX = idealEyeX + this.cameraShake.x;
+            const eyeY = idealEyeY + this.cameraShake.y;
+            const eyeZ = idealEyeZ + this.cameraShake.z;
+            this.camera.lookAt([eyeX, eyeY, eyeZ], [targetX, targetY, targetZ], [0, 1, 0]);
         }
 
         // Update Moving Platforms
