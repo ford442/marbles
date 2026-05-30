@@ -1,33 +1,47 @@
 export class InitGraphics {
     createLight() {
-        const F = this.Filament
+        const F = this.Filament;
+        const em = F.EntityManager.get();
+
+        if (!this.sunLight) this.sunLight = em.create();
+        if (!this.fillLight) this.fillLight = em.create();
+        if (!this.backLight) this.backLight = em.create();
 
         // Primary sun light with shadows
-        this.sunLight = F.EntityManager.get().create()
-        const shadowsEnabled = this.settings?.graphics?.shadows !== false
+        const shadowsEnabled = this.settings?.graphics?.shadows !== false;
         const builder = F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
             .color([1.0, 0.96, 0.88])
-            .intensity(150000.0)
-            .direction([0.4, -1.0, -0.65])
+            .intensity(80000.0)
+            .direction([0.3, -1.0, 0.2]);
 
         if (shadowsEnabled) {
-            builder.castShadows(true)
+            builder.castShadows(true);
         } else {
-            builder.castShadows(false)
+            builder.castShadows(false);
         }
 
-        builder.build(this.engine, this.sunLight)
-        this.scene.addEntity(this.sunLight)
+        builder.build(this.engine, this.sunLight);
+        this.scene.addEntity(this.sunLight);
 
-        // Blue-sky fill light from opposite direction
-        this.fillLight = F.EntityManager.get().create()
-        F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
+        // Fill light (soft ambient fill)
+        F.LightManager.Builder(F['LightManager$Type'].POINT)
             .color([0.65, 0.78, 1.0])
-            .intensity(45000.0)
-            .direction([-0.4, -0.2, 0.7])
-            .castShadows(false)
-            .build(this.engine, this.fillLight)
-        this.scene.addEntity(this.fillLight)
+            .position([0, 8, -12])
+            .intensity(1200.0)
+            .falloff(25.0)
+            .build(this.engine, this.fillLight);
+        this.scene.addEntity(this.fillLight);
+
+        // Back / rim light
+        F.LightManager.Builder(F['LightManager$Type'].POINT)
+            .color([1.0, 0.95, 0.9])
+            .position([-15, 5, 8])
+            .intensity(600.0)
+            .falloff(30.0)
+            .build(this.engine, this.backLight);
+        this.scene.addEntity(this.backLight);
+
+        this.lightsInitialized = true;
     }
 
     enableShadowsOnEntity(entity) {
