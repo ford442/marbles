@@ -294,30 +294,23 @@ export const visualMethods = {
 
     setNightMode(enabled, bgColor) {
         const F = this.Filament;
+        const lm = this.engine.getLightManager();
+
+        if (!this.lightsInitialized || !this.sunLight || !this.fillLight || !this.backLight) {
+            console.warn('[LightManager] Lights not ready yet — deferring night mode');
+            return;
+        }
+
         if (enabled) {
             this.currentClearColor = bgColor || [0.02, 0.02, 0.08, 1.0];
             this.renderer.setClearOptions({ clearColor: this.currentClearColor, clear: true });
 
-            F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
-                .color([0.4, 0.5, 0.7])
-                .intensity(20000.0)
-                .direction([0.3, -1.0, -0.5])
-                .castShadows(true)
-                .build(this.engine, this.light);
-
-            F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
-                .color([0.3, 0.2, 0.5])
-                .intensity(5000.0)
-                .direction([-0.3, -0.3, 0.8])
-                .castShadows(false)
-                .build(this.engine, this.fillLight);
-
-            F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
-                .color([0.2, 0.2, 0.3])
-                .intensity(3000.0)
-                .direction([0.0, 1.0, 0.0])
-                .castShadows(false)
-                .build(this.engine, this.backLight);
+            // Dark trench vibe
+            lm.setIntensity(lm.getInstance(this.sunLight), 15000.0);
+            lm.setColor(lm.getInstance(this.sunLight), [0.4, 0.5, 0.7]);
+            lm.setIntensity(lm.getInstance(this.fillLight), 2200.0);
+            lm.setColor(lm.getInstance(this.fillLight), [0.6, 0.9, 1.0]);
+            lm.setIntensity(lm.getInstance(this.backLight), 1100.0);
 
             // Apply the default night IBL.  If the level specifies an explicit
             // environment, loadLevel() calls setEnvironment() after this which
@@ -326,7 +319,14 @@ export const visualMethods = {
         } else {
             this.currentClearColor = [0.1, 0.1, 0.1, 1.0];
             this.renderer.setClearOptions({ clearColor: this.currentClearColor, clear: true });
-            this.createLight();
+
+            // Day / normal mode
+            lm.setIntensity(lm.getInstance(this.sunLight), 80000.0);
+            lm.setColor(lm.getInstance(this.sunLight), [1.0, 0.96, 0.88]);
+            lm.setIntensity(lm.getInstance(this.fillLight), 1200.0);
+            lm.setColor(lm.getInstance(this.fillLight), [0.65, 0.78, 1.0]);
+            lm.setIntensity(lm.getInstance(this.backLight), 600.0);
+
             this.applyEnvironment('default');
         }
     },
