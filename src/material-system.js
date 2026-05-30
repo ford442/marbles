@@ -298,17 +298,17 @@ export function applyFullPreset(matInstance, preset, hasProcedural, Filament) {
         if (preset.clearCoatIor !== undefined) {
             try {
                 matInstance.setFloatParameter('clearCoatIor', preset.clearCoatIor)
-            } catch (_) { /* parameter not present in this material version */ }
+            } catch (e) { console.debug('[MAT] clearCoatIor not available in this material version:', e.message) }
         }
         if (preset.environmentIntensity !== undefined) {
             try {
                 matInstance.setFloatParameter('environmentIntensity', preset.environmentIntensity)
-            } catch (_) { /* parameter not present in this material version */ }
+            } catch (e) { console.debug('[MAT] environmentIntensity not available in this material version:', e.message) }
         }
         if (preset.reflectionStrength !== undefined) {
             try {
                 matInstance.setFloatParameter('reflectionStrength', preset.reflectionStrength)
-            } catch (_) { /* parameter not present in this material version */ }
+            } catch (e) { console.debug('[MAT] reflectionStrength not available in this material version:', e.message) }
         }
     }
 }

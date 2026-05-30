@@ -130,7 +130,7 @@ function evalSh3(sh, x, y, z) {
 function evalSh3Blended(sh, x, y, z, t) {
     const dc = [sh[0], sh[1], sh[2]]
     const full = evalSh3(sh, x, y, z)
-    return full.map((v, i) => v * (1 - t) + dc[i] * t * 0.282095 / 0.282095)
+    return full.map((v, i) => v * (1 - t) + dc[i] * t)
 }
 
 // ────────────────────────────────────────────────────────────────────────────
