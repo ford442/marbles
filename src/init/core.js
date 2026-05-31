@@ -3,6 +3,9 @@ import { audio } from '../audio.js';
 import { LEVELS } from '../levels.js';
 import { loadFilament } from './filament-loader.js';
 import { initMarblePhysicsWasm } from '../wasm-bridge.js';
+import { ParticleSystem } from '../particle-system.js';
+import { LightingSystem } from '../lighting-system.js';
+import { VolumetricLightsSystem } from '../rendering/volumetric-lights.js';
 
 export class InitCore {
     async init() {
@@ -553,11 +556,43 @@ export class InitCore {
             window.updateLoadingProgress(70, 'Assets loaded')
         }
 
+        // Initialize particle system
+        try {
+            const qualityTier = this.settings?.graphics?.quality || 'high'
+            this.particleSystem = new ParticleSystem(this.engine, this.scene, this.Filament, qualityTier)
+            console.log('[INIT] Particle system initialized')
+        } catch (e) {
+            console.error('[INIT] Particle system initialization failed:', e)
+            this.particleSystem = null
+        }
+
         if (typeof window.updateLoadingProgress === 'function') {
             window.updateLoadingProgress(75, 'Creating lights...')
         }
         this.createLight()
         console.log('[INIT] Lights created')
+        
+        // Initialize lighting system
+        try {
+            const qualityTier = this.settings?.graphics?.quality || 'high'
+            this.lightingSystem = new LightingSystem(this.engine, this.scene, this.Filament)
+            this.lightingSystem.registerLights(this.sunLight, this.fillLight, this.backLight)
+            this.lightingSystem.setQuality(qualityTier)
+            console.log('[INIT] Lighting system initialized')
+        } catch (e) {
+            console.error('[INIT] Lighting system initialization failed:', e)
+            this.lightingSystem = null
+        }
+
+        // Initialize volumetric light shaft system
+        try {
+            const qualityTier = this.settings?.graphics?.quality || 'high'
+            this.volumetricLights = new VolumetricLightsSystem(qualityTier)
+            console.log('[INIT] Volumetric lights system initialized')
+        } catch (e) {
+            console.error('[INIT] Volumetric lights initialization failed (non-fatal):', e)
+            this.volumetricLights = null
+        }
 
         if (typeof window.updateLoadingProgress === 'function') {
             window.updateLoadingProgress(85, 'Setting up post-processing...')

@@ -242,6 +242,31 @@ export function createThemedMaterialInstance(material, Filament, presetName, bas
         instance.setFloatParameter('clearCoatRoughness', preset.clearCoatRoughness !== undefined ? preset.clearCoatRoughness : 0.0)
         instance.setFloatParameter('bumpScale', preset.bumpScale !== undefined ? preset.bumpScale : 0.02)
         instance.setFloatParameter('bumpFrequency', preset.bumpFrequency !== undefined ? preset.bumpFrequency : 50.0)
+
+        // Emissive — self-illuminated marbles for bloom effects (Procedural material only)
+        if (preset.emissive !== undefined) {
+            instance.setColor3Parameter('emissive', Filament.RgbType.LINEAR, preset.emissive)
+        }
+        if (preset.emissiveIntensity !== undefined) {
+            instance.setFloatParameter('emissiveIntensity', preset.emissiveIntensity)
+        }
+
+        // Glass refraction & caustics (Procedural material only)
+        if (preset.refractionMode !== undefined) {
+            instance.setFloatParameter('refractionMode', preset.refractionMode)
+        }
+        if (preset.thickness !== undefined) {
+            instance.setFloatParameter('thickness', preset.thickness)
+        }
+        if (preset.causticIntensity !== undefined) {
+            instance.setFloatParameter('causticIntensity', preset.causticIntensity)
+        }
+        if (preset.chromaticDispersion !== undefined) {
+            instance.setFloatParameter('chromaticDispersion', preset.chromaticDispersion)
+        }
+        if (preset.fresnelStrength !== undefined) {
+            instance.setFloatParameter('fresnelStrength', preset.fresnelStrength)
+        }
     }
 
     return { instance, preset }
@@ -290,6 +315,45 @@ export function applyFullPreset(matInstance, preset, hasProcedural, Filament) {
         }
         if (preset.bumpFrequency !== undefined) {
             matInstance.setFloatParameter('bumpFrequency', preset.bumpFrequency)
+        }
+
+        // Emissive — self-illuminated marbles for bloom effects
+        if (preset.emissive !== undefined) {
+            try {
+                matInstance.setColor3Parameter('emissive', Filament.RgbType.LINEAR, preset.emissive)
+            } catch (e) { console.debug('[MAT] emissive not available in this material version:', e.message) }
+        }
+        if (preset.emissiveIntensity !== undefined) {
+            try {
+                matInstance.setFloatParameter('emissiveIntensity', preset.emissiveIntensity)
+            } catch (e) { console.debug('[MAT] emissiveIntensity not available in this material version:', e.message) }
+        }
+
+        // Glass refraction & caustics
+        if (preset.refractionMode !== undefined) {
+            try {
+                matInstance.setFloatParameter('refractionMode', preset.refractionMode)
+            } catch (e) { console.debug('[MAT] refractionMode not available in this material version:', e.message) }
+        }
+        if (preset.thickness !== undefined) {
+            try {
+                matInstance.setFloatParameter('thickness', preset.thickness)
+            } catch (e) { console.debug('[MAT] thickness not available in this material version:', e.message) }
+        }
+        if (preset.causticIntensity !== undefined) {
+            try {
+                matInstance.setFloatParameter('causticIntensity', preset.causticIntensity)
+            } catch (e) { console.debug('[MAT] causticIntensity not available in this material version:', e.message) }
+        }
+        if (preset.chromaticDispersion !== undefined) {
+            try {
+                matInstance.setFloatParameter('chromaticDispersion', preset.chromaticDispersion)
+            } catch (e) { console.debug('[MAT] chromaticDispersion not available in this material version:', e.message) }
+        }
+        if (preset.fresnelStrength !== undefined) {
+            try {
+                matInstance.setFloatParameter('fresnelStrength', preset.fresnelStrength)
+            } catch (e) { console.debug('[MAT] fresnelStrength not available in this material version:', e.message) }
         }
 
         // IBL / specular parameters — wired from material-presets.js / material-variants.js.

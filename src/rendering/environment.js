@@ -72,6 +72,8 @@ export const ENVIRONMENT_PRESETS = {
         sunIntensity: 150000.0,
         fillColor: [0.65, 0.78, 1.0],
         fillIntensity: 45000.0,
+        backColor: [1.0, 0.95, 0.9],
+        backIntensity: 22500.0,
     },
 
     // ---- space_nebula: purple/blue deep-space with vivid nebula glow ------
@@ -103,6 +105,8 @@ export const ENVIRONMENT_PRESETS = {
         sunIntensity: 60000.0,
         fillColor: [0.2, 0.1, 0.6],
         fillIntensity: 15000.0,
+        backColor: [0.3, 0.2, 0.8],
+        backIntensity: 9000.0,
     },
 
     // ---- ice: arctic glacier, crisp cold blues, high reflectance ----------
@@ -134,6 +138,8 @@ export const ENVIRONMENT_PRESETS = {
         sunIntensity: 180000.0,
         fillColor: [0.6, 0.78, 1.0],
         fillIntensity: 60000.0,
+        backColor: [0.8, 0.9, 1.0],
+        backIntensity: 27000.0,
     },
 
     // ---- volcanic: hot lava glow, warm amber underside, smoky sky ---------
@@ -165,6 +171,8 @@ export const ENVIRONMENT_PRESETS = {
         sunIntensity: 120000.0,
         fillColor: [0.8, 0.3, 0.05],
         fillIntensity: 30000.0,
+        backColor: [1.0, 0.6, 0.2],
+        backIntensity: 13500.0,
     },
 
     // ---- neon_city: cyberpunk cityscape, vivid cyan/magenta lights --------
@@ -196,6 +204,41 @@ export const ENVIRONMENT_PRESETS = {
         sunIntensity: 40000.0,
         fillColor: [0.9, 0.0, 0.6],
         fillIntensity: 20000.0,
+        backColor: [0.5, 0.2, 1.0],
+        backIntensity: 9000.0,
+    },
+
+    // ---- underwater: bioluminescent abyss, deep teal with ghostly light -----
+    underwater: {
+        label: 'Bioluminescent Abyss',
+        sh: new Float32Array([
+            // L00 – very dim ambient, deep teal
+             0.08,  0.10,  0.15,
+            // L1-1 – faint cyan glow from bioluminescence
+             0.04,  0.06,  0.08,
+            // L10  – minimal light from above (deep water blocks sun)
+            -0.02, -0.04, -0.05,
+            // L11  – cyan biolum side glow
+             0.08,  0.10,  0.12,
+            // L2-2 – subtle diagonal biolum shimmer
+             0.03,  0.04,  0.05,
+            // L2-1 – forward biolum glow
+             0.04,  0.06,  0.08,
+            // L20  – vertical gradient (water is denser at bottom)
+            -0.02, -0.03, -0.04,
+            // L21  – upward light scatter
+             0.02,  0.03,  0.04,
+            // L22  – diagonal shimmer
+             0.02,  0.03,  0.04,
+        ]),
+        iblIntensity: 12000.0,
+        skyboxColor: [0.0, 0.02, 0.05, 1.0],
+        sunColor: [0.4, 0.7, 0.9],
+        sunIntensity: 30000.0,
+        fillColor: [0.2, 0.6, 0.8],
+        fillIntensity: 8000.0,
+        backColor: [0.3, 0.8, 1.0],
+        backIntensity: 4500.0,
     },
 };
 
@@ -228,6 +271,7 @@ export const ZONE_ENVIRONMENT_MAP = {
     synthwave_surge: 'neon_city',
     plasma_pipeline: 'neon_city',
     cyber_track:     'neon_city',
+    abyssal_trench:  'underwater',
 };
 
 // ---------------------------------------------------------------------------

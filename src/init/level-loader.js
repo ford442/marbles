@@ -50,6 +50,12 @@ export class InitLevelLoader {
             this.setEnvironment(level.environment)
         }
 
+        // Apply per-level color grade override when it differs from the IBL environment.
+        // e.g. a level can use 'volcanic' IBL but request 'space_nebula' grading for a surreal twist.
+        if (level.colorGrade && level.colorGrade !== level.environment) {
+            this.applyColorGradingForEnvironment(level.colorGrade)
+        }
+
         if (level.camera) {
             this.cameraMode = level.camera.mode || 'orbit'
             this.camAngle = level.camera.angle || 0

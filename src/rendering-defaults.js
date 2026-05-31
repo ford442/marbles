@@ -19,7 +19,7 @@ export function getPostFxQualityFlags(quality = 'medium') {
 
 // Re-export quality-specific helpers from the dedicated presets module so that
 // existing importers can continue to pull everything from rendering-defaults.js.
-export { getBloomQualityConfig, getSsaoQualityConfig, getVignetteConfig, getColorGradingConfig, getDofConfig } from './rendering/post-fx-presets.js'
+export { getBloomQualityConfig, getSsaoQualityConfig, getVignetteConfig, getColorGradingConfig, getDofConfig, getFogQualityConfig, getEnvironmentFogPreset, getGlassQualityConfig } from './rendering/post-fx-presets.js'
 
 /**
  * Returns shadow configuration objects keyed by quality tier.

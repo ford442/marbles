@@ -336,6 +336,7 @@ export class GameLoopRenderCore {
                     }
 
                     this.camera.lookAt([eyeX, eyeY, eyeZ], [this.cameraFollowLookAt.x, this.cameraFollowLookAt.y, this.cameraFollowLookAt.z], upVector)
+                    this._cameraState = { eye: [eyeX, eyeY, eyeZ], target: [this.cameraFollowLookAt.x, this.cameraFollowLookAt.y, this.cameraFollowLookAt.z] }
 
                     // Dynamic FOV scaling based on speed
                     const baseFov = this.currentFov || 45
@@ -394,8 +395,10 @@ export class GameLoopRenderCore {
                     }
 
                     this.camera.lookAt([eyeX, eyeY, eyeZ], [eyeX + dirX, eyeY + dirY, eyeZ + dirZ], upVector)
+                    this._cameraState = { eye: [eyeX, eyeY, eyeZ], target: [eyeX + dirX, eyeY + dirY, eyeZ + dirZ] }
                 } else if (this.cameraMode === 'topdown') {
                     this.camera.lookAt([t.x + this.cameraShake.x, t.y + 40 + this.cameraShake.y, t.z + this.cameraShake.z], [t.x, t.y, t.z], [0, 0, -1])
+                    this._cameraState = { eye: [t.x + this.cameraShake.x, t.y + 40 + this.cameraShake.y, t.z + this.cameraShake.z], target: [t.x, t.y, t.z] }
                 } else if (this.cameraMode === 'cinematic') {
                     // Slowly orbit around the target
                     const cinematicAngle = now * 0.0005
@@ -405,6 +408,7 @@ export class GameLoopRenderCore {
                     const eyeY = t.y + height + this.cameraShake.y
                     const eyeZ = t.z + Math.cos(cinematicAngle) * dist + this.cameraShake.z
                     this.camera.lookAt([eyeX, eyeY, eyeZ], [t.x, t.y, t.z], [0, 1, 0])
+                    this._cameraState = { eye: [eyeX, eyeY, eyeZ], target: [t.x, t.y, t.z] }
 
                     // Depth of Field: focus on the marble for cinematic separation
                     if (this.view) {
@@ -428,6 +432,7 @@ export class GameLoopRenderCore {
                     const eyeY = t.y + height + this.cameraShake.y
                     const eyeZ = t.z + this.cameraShake.z
                     this.camera.lookAt([eyeX, eyeY, eyeZ], [t.x, t.y, t.z], [0, 1, 0])
+                    this._cameraState = { eye: [eyeX, eyeY, eyeZ], target: [t.x, t.y, t.z] }
                 } else if (this.cameraMode === 'drone') {
                     const dist = this.droneDist || 25.0
 
@@ -503,6 +508,7 @@ export class GameLoopRenderCore {
                     }
 
                     this.camera.lookAt([eyeX, eyeY, eyeZ], [this.cameraFollowLookAt.x, this.cameraFollowLookAt.y, this.cameraFollowLookAt.z], upVector)
+                    this._cameraState = { eye: [eyeX, eyeY, eyeZ], target: [this.cameraFollowLookAt.x, this.cameraFollowLookAt.y, this.cameraFollowLookAt.z] }
                 }
             }
         } else {
@@ -564,6 +570,7 @@ export class GameLoopRenderCore {
             const eyeY = idealEyeY + this.cameraShake.y;
             const eyeZ = idealEyeZ + this.cameraShake.z;
             this.camera.lookAt([eyeX, eyeY, eyeZ], [targetX, targetY, targetZ], [0, 1, 0]);
+            this._cameraState = { eye: [eyeX, eyeY, eyeZ], target: [targetX, targetY, targetZ] };
         }
 
         // Update Moving Platforms

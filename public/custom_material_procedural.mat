@@ -32,6 +32,34 @@ material {
         {
            type : float,
            name : clearCoatRoughness
+        },
+        {
+           type : float3,
+           name : emissive
+        },
+        {
+           type : float,
+           name : emissiveIntensity
+        },
+        {
+           type : float,
+           name : refractionMode
+        },
+        {
+           type : float,
+           name : thickness
+        },
+        {
+           type : float,
+           name : causticIntensity
+        },
+        {
+           type : float,
+           name : chromaticDispersion
+        },
+        {
+           type : float,
+           name : fresnelStrength
         }
     ],
     requires : [ uv0, tangents ],
@@ -121,6 +149,38 @@ fragment {
         material.reflectance = materialParams.reflectance;
         material.clearCoat = materialParams.clearCoat;
         material.clearCoatRoughness = materialParams.clearCoatRoughness;
+        
+        // Emissive — self-illuminated marbles for bloom effects
+        material.emissive.rgb = materialParams.emissive * materialParams.emissiveIntensity;
+        
+        // Glass-specific refractive effects
+        // refractionMode: 0 = off, 1 = fake caustics only, 2 = full refraction + caustics
+        if (materialParams.refractionMode > 0.5) {
+            // Generate caustics pattern: thickness-modulated sine wave
+            float causticPhase = sin(uv.x * 8.0 + uv.y * 8.0 + material.normal.x * 2.0) * 0.5 + 0.5;
+            float causticPattern = causticPhase * (1.0 - materialParams.thickness);
+            causticPattern *= materialParams.causticIntensity;
+            
+            // Fresnel effect: stronger at edges
+            float NdotV = abs(dot(getWorldNormalVector(), -getWorldViewVector()));
+            float fresnel = mix(0.04, 1.0, pow(1.0 - NdotV, 5.0));
+            fresnel *= materialParams.fresnelStrength;
+            
+            // Modulate base color with caustics and Fresnel
+            material.baseColor.rgb *= 1.0 + causticPattern;
+            material.baseColor.rgb += fresnel * vec3(0.3, 0.3, 0.5);
+            
+            // For high/ultra quality (refractionMode == 2.0), add chromatic dispersion
+            if (materialParams.refractionMode > 1.5) {
+                // Simulate chromatic dispersion with subtle RGB shift
+                float dispersion = materialParams.chromaticDispersion * 0.02;
+                material.baseColor.r *= 1.0 + dispersion;
+                material.baseColor.b *= 1.0 - dispersion;
+            }
+            
+            // Reduce roughness near edges for glass-like appearance
+            material.roughness = mix(material.roughness, 0.01, fresnel * 0.3);
+        }
         
         // Fake a tiny bit of subsurface scattering by tweaking ambient occlusion based on bump heights
         material.ambientOcclusion = clamp(1.0 - (abs(noise) * scale * 10.0), 0.5, 1.0);

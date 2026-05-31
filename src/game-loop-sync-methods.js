@@ -438,6 +438,27 @@ export class GameLoopSyncMethods {
             tcm.setTransform(this.cueInst, this._cueZeroMat)
         }
 
+        // Update particle system
+        if (this.particleSystem) {
+            const frameDeltaSec = this._lastSyncTime ? (now - this._lastSyncTime) / 1000 : 1 / 60
+            this.particleSystem.update(frameDeltaSec)
+        }
+        
+        // Update animated lighting
+        if (this.lightingSystem) {
+            const frameDeltaSec = this._lastSyncTime ? (now - this._lastSyncTime) / 1000 : 1 / 60
+            this.lightingSystem.update(frameDeltaSec)
+        }
+
+        // Update volumetric light shafts and caustics
+        if (this.volumetricLights && this._cameraState) {
+            const frameDeltaSec = this._lastSyncTime ? (now - this._lastSyncTime) / 1000 : 1 / 60
+            const aspect = (this.canvas?.width || window.innerWidth) / (this.canvas?.height || window.innerHeight)
+            this.volumetricLights.update(frameDeltaSec, this._cameraState, this.activeFov || this.currentFov || 45, aspect)
+        }
+
+        this._lastSyncTime = now
+
         // Render speed lines overlay
 if (this.renderSpeedLines) {
             this.renderSpeedLines();

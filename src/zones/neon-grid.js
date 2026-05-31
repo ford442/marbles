@@ -56,18 +56,24 @@ export function createNeonGridZone(game, offset) {
     );
 
     // --- Dynamic Neon Tube Lights ---
-    // Hot magenta accent from the left kinematic wall
+    // Hot magenta accent from the left kinematic wall with pulsing animation
     createZoneLight(game, 'POINT',
         { x: offset.x - 6, y: offset.y + 2, z: offset.z + 20 },
-        [1.0, 0.0, 0.85], 60000.0, 14.0);
+       [1.0, 0.0, 0.85], 60000.0, 14.0, {
+           behavior: 'neonPulse',
+           params: { speed: 2.5, minIntensity: 0.6 }
+       });
 
-    // Cyan accent from the right kinematic wall
+    // Cyan accent from the right kinematic wall with pulsing animation
     createZoneLight(game, 'POINT',
-        { x: offset.x + 6, y: offset.y + 2, z: offset.z + 40 },
-        [0.0, 1.0, 1.0], 60000.0, 14.0);
+       { x: offset.x + 6, y: offset.y + 2, z: offset.z + 40 },
+       [0.0, 1.0, 1.0], 60000.0, 14.0, {
+           behavior: 'neonPulse',
+           params: { speed: 2.8, minIntensity: 0.5 }
+       });
 
-    // Green grid-floor underlighting
+    // Green grid-floor underlighting with steady glow
     createZoneLight(game, 'POINT',
-        { x: offset.x, y: offset.y - 1, z: offset.z + 30 },
-        [0.1, 1.0, 0.3], 40000.0, 20.0);
+       { x: offset.x, y: offset.y - 1, z: offset.z + 30 },
+       [0.1, 1.0, 0.3], 40000.0, 20.0);
 }

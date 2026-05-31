@@ -50,7 +50,7 @@ import { createQuantumTunnelZone } from './zones/quantum-tunnel.js';
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import { audio } from './audio.js';
 import { DEFAULT_MSAA_SAMPLE_COUNT, getPostFxQualityFlags, getShadowQualityConfig } from './rendering-defaults.js';
-import { getBloomQualityConfig, getSsaoQualityConfig, getVignetteConfig, getColorGradingConfig } from './rendering/post-fx-presets.js';
+import { getBloomQualityConfig, getSsaoQualityConfig, getVignetteConfig, getColorGradingConfig, getEnvironmentColorGradingPreset, getFogQualityConfig, getEnvironmentFogPreset } from './rendering/post-fx-presets.js';
 import {
     buildEnvironmentLighting,
     destroyEnvironmentLighting,
@@ -272,6 +272,9 @@ export class ZoneSetupMethods {
                 break
             case 'quantum_tunnel':
                 createQuantumTunnelZone(this, offset)
+                break
+            case 'abyssal_trench':
+                this.createAbyssalTrenchZone(offset)
                 break
         }
     }
@@ -707,6 +710,32 @@ export class ZoneSetupMethods {
             }
         }
 
+        // Fog — atmospheric depth haze with quality tiering and environment-specific tints
+        // Disabled on low quality; medium/high/ultra use exponential fog with height falloff
+        try {
+            const fogConfig = getFogQualityConfig(quality);
+            if (fogConfig.enabled) {
+                // Start with quality-tier defaults
+                const fogOptions = { ...fogConfig };
+
+                // Merge environment-specific overrides (color, density, height falloff, etc)
+                // Default environment is 'default'; will be overridden per-level in applyEnvironment()
+                const envFogPreset = getEnvironmentFogPreset(this.currentEnvironment || 'default');
+                Object.assign(fogOptions, envFogPreset);
+
+                // Prevent negative heights or invalid configs
+                if (fogOptions.heightFalloff < 0) fogOptions.heightFalloff = 0;
+                if (fogOptions.heightFalloff > 1) fogOptions.heightFalloff = 1;
+
+                this.view.setFogOptions(fogOptions);
+                console.log(`[POST] Fog enabled: quality=${quality}, env=${this.currentEnvironment || 'default'}`);
+            } else {
+                this.view.setFogOptions({ enabled: false });
+            }
+        } catch (e) {
+            console.warn('[POST] Fog setup failed:', e);
+        }
+
         // Indirect Light (IBL) + Skybox — themed per-environment
         // Calls setupEnvironmentLighting() which builds from the named preset.
         // The initial environment is 'default'; levels override it via
@@ -766,6 +795,84 @@ export class ZoneSetupMethods {
     }
 
     /**
+     * Apply fog effects for the given environment name.
+     * Merges environment-specific fog preset with quality-tier fog config.
+     * Called automatically by applyEnvironment() when switching zones.
+     *
+     * @param {string} envName - Environment preset name (e.g. 'default', 'space_nebula', 'underwater')
+     */
+    applyEnvironmentFog(envName = 'default') {
+        if (!this.view) return;
+
+        const quality = this.settings?.graphics?.quality || 'medium';
+
+        try {
+            const fogConfig = getFogQualityConfig(quality);
+            if (fogConfig.enabled) {
+                // Start with quality-tier defaults
+                const fogOptions = { ...fogConfig };
+
+                // Merge environment-specific overrides
+                const envFogPreset = getEnvironmentFogPreset(envName);
+                Object.assign(fogOptions, envFogPreset);
+
+                // Validate fog config
+                if (fogOptions.heightFalloff < 0) fogOptions.heightFalloff = 0;
+                if (fogOptions.heightFalloff > 1) fogOptions.heightFalloff = 1;
+
+                this.view.setFogOptions(fogOptions);
+                console.log(`[FOG] Applied: quality=${quality}, env=${envName}`);
+            } else {
+                this.view.setFogOptions({ enabled: false });
+            }
+        } catch (e) {
+            console.warn('[FOG] Failed to apply environment fog:', e);
+        }
+    }
+
+    /**
+     * Apply per-environment color grading to the view.
+     * Merges the quality-tier base config from getColorGradingConfig() with
+     * environment-specific overrides from getEnvironmentColorGradingPreset(),
+     * then rebuilds and sets a new Filament ColorGrading object.
+     *
+     * Called automatically by applyEnvironment() and optionally overridden
+     * by the level's `colorGrade` field in loadLevel().
+     *
+     * @param {string} envName - Environment/color-grade preset key
+     */
+    applyColorGradingForEnvironment(envName = 'default') {
+        if (!this.view || !this.Filament || !this.engine) return;
+
+        try {
+            const quality = this.settings?.graphics?.quality || this.graphicsQuality || 'medium';
+            const baseConfig = getColorGradingConfig(quality);
+            const envConfig = getEnvironmentColorGradingPreset(envName);
+
+            // Env-specific values fully replace their quality-tier counterparts
+            const merged = { ...baseConfig, ...envConfig };
+
+            const builder = this.Filament.ColorGrading.Builder()
+                .toneMapping(this.Filament['ColorGrading$ToneMapping'].ACES)
+                .contrast(merged.contrast)
+                .saturation(merged.saturation);
+
+            // vibrance: protects already-saturated hues; safe try-catch in case
+            // the Filament WASM build doesn't expose this method.
+            if (merged.vibrance != null) {
+                try { builder.vibrance(merged.vibrance); } catch (_) { /* unsupported */ }
+            }
+
+            const colorGrading = builder.build(this.engine);
+            this.view.setColorGrading(colorGrading);
+
+            console.log(`[GRADE] Applied: env=${envName}, contrast=${merged.contrast.toFixed(2)}, sat=${merged.saturation.toFixed(2)}`);
+        } catch (e) {
+            console.warn('[GRADE] Color grading update failed:', e);
+        }
+    }
+
+    /**
      * Async helper: load KTX1 cubemaps and upgrade the current SH-only
      * environment to full specular IBL.  Guards against stale upgrades if the
      * environment was changed before the fetch completed.
@@ -811,6 +918,184 @@ export class ZoneSetupMethods {
             return;
         }
         this.setupEnvironmentLighting(envName);
+        
+        // Apply environment-specific directional and fill lights
+        if (this.lightingSystem) {
+            try {
+                const envPreset = ENVIRONMENT_PRESETS[envName] || ENVIRONMENT_PRESETS['default'];
+                this.lightingSystem.applyEnvironmentLighting(envName, envPreset);
+            } catch (e) {
+                console.warn('[LightingSystem] Failed to apply environment lighting:', e);
+            }
+        }
+
+        // Apply environment-specific fog after switching environment
+        this.applyEnvironmentFog(envName);
+
+        // Apply environment-specific color grading (contrast, saturation, vibrance)
+        this.applyColorGradingForEnvironment(envName);
+    }
+
+    /**
+     * Create an Abyssal Trench zone — a deep underwater environment with
+     * bioluminescent features and murky depth fog.
+     *
+     * Creates a descending trench with:
+     * - Curved walls with bioluminescent organisms
+     * - Sandy floor with glowing coral
+     * - Dense underwater fog with teal tint
+     *
+     * @param {object} offset - Base position offset
+     */
+    createAbyssalTrenchZone(offset) {
+        const pos = offset || { x: 0, y: 0, z: 0 };
+
+        // Floor (sandy ground at the bottom)
+        this.createStaticBody(
+            { x: pos.x, y: pos.y - 30, z: pos.z },
+            { type: 'box', halfExtents: { x: 60, y: 2, z: 60 } },
+            { metallic: 0.1, roughness: 0.8, color: [0.4, 0.35, 0.2] } // Sandy
+        );
+
+        // Left wall (curved, with bioluminescent organisms)
+        for (let i = 0; i < 8; i++) {
+            const heightOffset = i * 5;
+            const xOffset = -45 + (i * 2);
+            this.createStaticBody(
+                { x: pos.x + xOffset, y: pos.y - 20 + heightOffset, z: pos.z },
+                { type: 'box', halfExtents: { x: 3, y: 5, z: 50 } },
+                { metallic: 0.0, roughness: 0.9, color: [0.1, 0.2, 0.15] } // Dark stone
+            );
+
+            // Bioluminescent accent every other stone (emissive-like with bright color)
+            if (i % 2 === 0) {
+                this.createStaticBody(
+                    { x: pos.x + xOffset - 2, y: pos.y - 18 + heightOffset, z: pos.z + 45 },
+                    { type: 'sphere', radius: 1.5 },
+                    { metallic: 1.0, roughness: 0.2, color: [0.2, 0.9, 0.7] } // Cyan biolum
+                );
+            }
+        }
+
+        // Right wall (mirrored)
+        for (let i = 0; i < 8; i++) {
+            const heightOffset = i * 5;
+            const xOffset = 45 - (i * 2);
+            this.createStaticBody(
+                { x: pos.x + xOffset, y: pos.y - 20 + heightOffset, z: pos.z },
+                { type: 'box', halfExtents: { x: 3, y: 5, z: 50 } },
+                { metallic: 0.0, roughness: 0.9, color: [0.1, 0.2, 0.15] } // Dark stone
+            );
+
+            // Bioluminescent accent
+            if (i % 2 === 0) {
+                this.createStaticBody(
+                    { x: pos.x + xOffset + 2, y: pos.y - 18 + heightOffset, z: pos.z - 45 },
+                    { type: 'sphere', radius: 1.5 },
+                    { metallic: 1.0, roughness: 0.2, color: [0.4, 0.8, 0.9] } // Light cyan biolum
+                );
+            }
+        }
+
+        // Scattered coral and rocks on the floor with glowing points
+        const coralPositions = [
+            { x: -20, z: -20 }, { x: 20, z: -30 }, { x: 0, z: 20 }, { x: -35, z: 10 },
+            { x: 35, z: 0 }, { x: -10, z: -40 }, { x: 25, z: 35 }, { x: -40, z: 40 }
+        ];
+
+        for (const coral of coralPositions) {
+            this.createStaticBody(
+                { x: pos.x + coral.x, y: pos.y - 28, z: pos.z + coral.z },
+                { type: 'box', halfExtents: { x: 2, y: 1.5, z: 2 } },
+                { metallic: 0.2, roughness: 0.85, color: [0.3, 0.25, 0.1] } // Dull brown coral
+            );
+
+            // Glowing point at the top
+            this.createStaticBody(
+                { x: pos.x + coral.x, y: pos.y - 26, z: pos.z + coral.z },
+                { type: 'sphere', radius: 0.8 },
+                { metallic: 0.9, roughness: 0.3, color: [0.3, 1.0, 0.6] } // Bright green biolum
+            );
+        }
+
+        // --- Environmental Bubble Emitters ---
+        // Rising bubbles from the trench floor give an immersive underwater feel
+        if (this.particleSystem) {
+            const bubbleSpots = [
+                { x: -15, z: -15 }, { x: 15, z: -25 }, { x: 0, z: 15 },
+                { x: -30, z: 5 },   { x: 30, z: -5 },  { x: -5, z: -35 },
+                { x: 20, z: 30 },   { x: -35, z: 35 }
+            ];
+            for (const spot of bubbleSpots) {
+                this.particleSystem.addAmbientEmitter({
+                    pos: { x: pos.x + spot.x, y: pos.y - 28, z: pos.z + spot.z },
+                    type: 'bubble',
+                    rate: 0.8,
+                    count: 1,
+                    spread: 3,
+                    params: {
+                        buoyancy: 1.2 + Math.random() * 0.8,
+                        lifetime: 4.0 + Math.random() * 2.0,
+                        size: 0.12 + Math.random() * 0.1,
+                        color: [0.3, 0.85, 0.9, 0.45]
+                    }
+                });
+            }
+
+            // Dense bioluminescent particle haze near the walls
+            this.particleSystem.addAmbientEmitter({
+                pos: { x: pos.x - 35, y: pos.y - 10, z: pos.z },
+                type: 'bubble',
+                rate: 1.5,
+                count: 2,
+                spread: 6,
+                params: { buoyancy: 0.5, lifetime: 5.0, size: 0.08, color: [0.2, 1.0, 0.7, 0.3] }
+            });
+            this.particleSystem.addAmbientEmitter({
+                pos: { x: pos.x + 35, y: pos.y - 10, z: pos.z },
+                type: 'bubble',
+                rate: 1.5,
+                count: 2,
+                spread: 6,
+                params: { buoyancy: 0.5, lifetime: 5.0, size: 0.08, color: [0.4, 0.8, 1.0, 0.3] }
+            });
+        }
+
+        // --- Volumetric Bioluminescent Shafts + Water Caustics ---
+        // Register mid-water biolum lights as shaft sources and caustic sources
+        if (this.volumetricLights) {
+            const biolumPositions = [
+                { x: pos.x - 20, y: pos.y - 12, z: pos.z - 20, color: [0.2, 0.9, 0.7] },
+                { x: pos.x + 20, y: pos.y - 12, z: pos.z + 20, color: [0.3, 0.85, 1.0] },
+                { x: pos.x,      y: pos.y - 8,  z: pos.z,      color: [0.4, 1.0, 0.85] },
+            ];
+            for (const bp of biolumPositions) {
+                this.volumetricLights.addShaftSource({
+                    pos: { x: bp.x, y: bp.y, z: bp.z },
+                    color: bp.color,
+                    intensity: 60000,
+                    behavior: 'biolumSway',
+                    spread: 20
+                });
+            }
+
+            // Caustic ripples projected at floor level
+            const causticPositions = [
+                { x: pos.x - 10, z: pos.z - 10 },
+                { x: pos.x + 15, z: pos.z + 5  },
+                { x: pos.x - 5,  z: pos.z + 20 },
+            ];
+            for (const cp of causticPositions) {
+                this.volumetricLights.addCausticSource({
+                    pos: { x: cp.x, y: pos.y - 25, z: cp.z },
+                    color: [0.2, 0.85, 0.9],
+                    radius: 80,
+                    behavior: 'biolumSway'
+                });
+            }
+        }
+
+        console.log('[ZONE] Created Abyssal Trench zone');
     }
 
 }

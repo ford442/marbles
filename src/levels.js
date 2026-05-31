@@ -967,7 +967,7 @@ export const LEVELS = {
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: true,
         backgroundColor: [0.0, 0.05, 0.1, 1.0],
-        environment: 'space_nebula'
+        environment: 'underwater'
     },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,

@@ -87,10 +87,18 @@ export function createCrystalCavernZone(game, offset) {
     // Cyan glow from the crystal pillar cluster
     createZoneLight(game, 'POINT',
         { x: offset.x - 4, y: offset.y + 5, z: cavernStartZ + 25 },
-        [0.0, 1.0, 0.95], 55000.0, 16.0);
+        [0.0, 1.0, 0.95], 55000.0, 16.0, {
+            behavior: 'crystalShimmer',
+            shaft: true,
+            params: {}
+        });
 
     // Soft pink backlight from moving platforms area
     createZoneLight(game, 'POINT',
         { x: offset.x + 4, y: offset.y + 3, z: cavernStartZ + 45 },
-        [1.0, 0.1, 0.75], 50000.0, 15.0);
+        [1.0, 0.1, 0.75], 50000.0, 15.0, {
+            behavior: 'crystalShimmer',
+            shaft: true,
+            params: {}
+        });
 }

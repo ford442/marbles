@@ -8,6 +8,7 @@ import { ENVIRONMENT_PRESETS } from '../../rendering/environment.js';
 
 /**
  * Create a themed point or spot light and register it as a static scene entity.
+ * Supports optional animation behaviors for dynamic lighting effects.
  *
  * @param {object} game         - The game instance (engine, scene, Filament, staticEntities)
  * @param {'POINT'|'SPOT'} type - Filament light type
@@ -15,9 +16,10 @@ import { ENVIRONMENT_PRESETS } from '../../rendering/environment.js';
  * @param {[number,number,number]} color        - Linear RGB color
  * @param {number} intensity    - Luminous intensity (lux or lm depending on type)
  * @param {number} falloff      - Light radius / falloff distance
+ * @param {object} animConfig   - Optional animation config: { behavior: 'lavaFlicker'|'neonPulse'|'biolumSway'|'crystalShimmer', params: {...} }
  * @returns {object} The Filament entity for the created light
  */
-export function createZoneLight(game, type, pos, color, intensity, falloff) {
+export function createZoneLight(game, type, pos, color, intensity, falloff, animConfig = null) {
     const F = game.Filament;
     const lightType = type === 'SPOT'
         ? F['LightManager$Type'].SPOT
@@ -33,6 +35,39 @@ export function createZoneLight(game, type, pos, color, intensity, falloff) {
         .build(game.engine, lightEntity);
     game.scene.addEntity(lightEntity);
     game.staticEntities.push(lightEntity);
+    
+    // Register for animation if specified
+    if (animConfig && game.lightingSystem && animConfig.behavior) {
+        try {
+            game.lightingSystem.addAnimatedLight(
+                lightEntity,
+                animConfig.behavior,
+                {
+                    ...animConfig.params,
+                    baseColor: color,
+                    baseIntensity: intensity
+                }
+            );
+        } catch (e) {
+            console.warn('[createZoneLight] Failed to register animated light:', e);
+        }
+    }
+
+    // Auto-register as a volumetric shaft source when explicitly opted in
+    if (animConfig?.shaft && game.volumetricLights) {
+        try {
+            game.volumetricLights.addShaftSource({
+                pos,
+                color,
+                intensity,
+                behavior: animConfig.behavior || null,
+                spread: falloff
+            });
+        } catch (e) {
+            console.warn('[createZoneLight] Failed to register shaft source:', e);
+        }
+    }
+    
     return lightEntity;
 }
 

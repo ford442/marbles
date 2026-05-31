@@ -25,6 +25,21 @@ export class InitCleanup {
             this.engine.destroyEntity(entity)
         }
         this.staticEntities = []
+        
+        // Clear animated lights from zone
+        if (this.lightingSystem) {
+            this.lightingSystem.clearAnimatedLights()
+        }
+
+        // Clear volumetric shaft and caustic sources
+        if (this.volumetricLights) {
+            this.volumetricLights.clearSources()
+        }
+
+        // Clear ambient zone particle emitters
+        if (this.particleSystem) {
+            this.particleSystem.clearAmbientEmitters()
+        }
 
         for (const obj of this.dynamicObjects) {
             this.world.removeRigidBody(obj.rigidBody)

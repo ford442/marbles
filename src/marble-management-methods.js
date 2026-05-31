@@ -3,6 +3,7 @@ import { audio } from './audio.js';
 import { marblesInfo } from './marbles_data.js';
 import { quaternionToMat4 } from './math.js';
 import { materialPresets, createThemedMaterialInstance } from './material-system.js';
+import { getGlassQualityConfig } from './rendering-defaults.js';
 
 export class MarbleManagementMethods {
     createMarbles(spawnPos) {
@@ -57,7 +58,28 @@ export class MarbleManagementMethods {
                 if (info.clearCoatRoughness !== undefined) matInstance.setFloatParameter('clearCoatRoughness', info.clearCoatRoughness)
                 if (info.bumpScale !== undefined) matInstance.setFloatParameter('bumpScale', info.bumpScale)
                 if (info.bumpFrequency !== undefined) matInstance.setFloatParameter('bumpFrequency', info.bumpFrequency)
-            }
+                
+                // Emissive — allow per-marble override
+                if (info.emissive !== undefined) {
+                    matInstance.setColor3Parameter('emissive', this.Filament.RgbType.LINEAR, info.emissive)
+                }
+                if (info.emissiveIntensity !== undefined) {
+                    matInstance.setFloatParameter('emissiveIntensity', info.emissiveIntensity)
+                }
+
+                // Glass refraction & caustics — apply quality-gated configuration for glass marbles
+                if (info.materialType === 'classicGlass' || (preset && preset.refractionIndex)) {
+                    const quality = this.settings?.graphics?.quality || 'medium'
+                    const glassConfig = getGlassQualityConfig(quality)
+                     
+                    // Apply glass quality config, but allow per-marble overrides
+                    matInstance.setFloatParameter('refractionMode', info.refractionMode !== undefined ? info.refractionMode : glassConfig.refractionMode)
+                    matInstance.setFloatParameter('thickness', info.thickness !== undefined ? info.thickness : glassConfig.thickness)
+                    matInstance.setFloatParameter('causticIntensity', info.causticIntensity !== undefined ? info.causticIntensity : glassConfig.causticIntensity)
+                    matInstance.setFloatParameter('chromaticDispersion', info.chromaticDispersion !== undefined ? info.chromaticDispersion : glassConfig.chromaticDispersion)
+                    matInstance.setFloatParameter('fresnelStrength', info.fresnelStrength !== undefined ? info.fresnelStrength : glassConfig.fresnelStrength)
+                }
+             }
 
             const vb = info.geometry === 'cube' ? this.vb : this.sphereVb
             const ib = info.geometry === 'cube' ? this.ib : this.sphereIb

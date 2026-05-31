@@ -1,7 +1,7 @@
 import { audio } from '../audio.js';
 import { DEFAULT_SETTINGS } from './filament-loader.js';
 import { DEFAULT_MSAA_SAMPLE_COUNT, getPostFxQualityFlags, getShadowQualityConfig } from '../rendering-defaults.js';
-import { getBloomQualityConfig, getSsaoQualityConfig, getVignetteConfig } from '../rendering/post-fx-presets.js';
+import { getBloomQualityConfig, getSsaoQualityConfig, getVignetteConfig, getFogQualityConfig, getEnvironmentFogPreset } from '../rendering/post-fx-presets.js';
 
 export class InitSettings {
     loadSettings() {
@@ -242,6 +242,27 @@ export class InitSettings {
                         console.warn('[SETTINGS] setSoftShadowOptions live update failed:', e)
                     }
                 }
+            }
+
+            // Fog quality — updated when quality tier changes or quality-dependent settings update
+            try {
+                const fogConfig = getFogQualityConfig(quality);
+                if (fogConfig.enabled) {
+                    const fogOptions = { ...fogConfig };
+                    // Apply environment-specific fog overrides if environment is available
+                    const envName = this.currentEnvironment || 'default';
+                    const envFogPreset = getEnvironmentFogPreset(envName);
+                    Object.assign(fogOptions, envFogPreset);
+
+                    if (fogOptions.heightFalloff < 0) fogOptions.heightFalloff = 0;
+                    if (fogOptions.heightFalloff > 1) fogOptions.heightFalloff = 1;
+
+                    this.view.setFogOptions(fogOptions);
+                } else {
+                    this.view.setFogOptions({ enabled: false });
+                }
+            } catch (e) {
+                console.warn('[SETTINGS] Fog live update failed:', e);
             }
         }
     }

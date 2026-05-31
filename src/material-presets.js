@@ -27,9 +27,13 @@ export const marbleMaterialPresets = {
         rimLightIntensity: 0.8,
         subsurfaceScattering: 0.4,
         ambientOcclusion: 0.2,
-        // Glass-specific extras
+        // Glass-specific refraction & caustics
         refractionIndex: 1.52,
         causticIntensity: 0.55,
+        refractionMode: 2.0,      // 0=off, 1=cheap, 2=full (quality-gated)
+        thickness: 0.3,           // Caustics modulation by material thickness
+        chromaticDispersion: 1.2, // RGB split intensity
+        fresnelStrength: 0.6,     // Edge light intensity
         // Environment-aware fields (ready for IBL cubemaps — Issue #287)
         environmentIntensity: 1.2,
         reflectionStrength: 1.0,
