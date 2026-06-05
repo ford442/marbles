@@ -192,14 +192,16 @@ export class InitSettings {
                 console.warn('[SETTINGS] TAA live update failed:', e)
             }
 
-            try {
-                this.view.setMotionBlurOptions({
-                    enabled: heavyFxEnabled,
-                    intensity: 0.32,
-                    maxDisplacement: 0.18,
-                })
-            } catch (e) {
-                console.warn('[SETTINGS] Motion blur live update failed:', e)
+            if (typeof this.view.setMotionBlurOptions === 'function') {
+                try {
+                    this.view.setMotionBlurOptions({
+                        enabled: heavyFxEnabled,
+                        intensity: 0.32,
+                        maxDisplacement: 0.18,
+                    })
+                } catch (e) {
+                    console.warn('[SETTINGS] Motion blur live update failed:', e)
+                }
             }
 
             try {
@@ -223,10 +225,12 @@ export class InitSettings {
             // Only apply shadow options when shadows are enabled.
             if (s.shadows !== false) {
                 const { shadowOptions, vsmOptions, softOptions } = getShadowQualityConfig(quality)
-                try {
-                    this.view.setShadowOptions(shadowOptions)
-                } catch (e) {
-                    console.warn('[SETTINGS] setShadowOptions live update failed:', e)
+                if (typeof this.view.setShadowOptions === 'function') {
+                    try {
+                        this.view.setShadowOptions(shadowOptions)
+                    } catch (e) {
+                        console.warn('[SETTINGS] setShadowOptions live update failed:', e)
+                    }
                 }
                 if (vsmOptions) {
                     try {
@@ -257,6 +261,7 @@ export class InitSettings {
                     if (fogOptions.heightFalloff < 0) fogOptions.heightFalloff = 0;
                     if (fogOptions.heightFalloff > 1) fogOptions.heightFalloff = 1;
 
+                    fogOptions.color = fogOptions.color?.slice(0, 3) || [1.0, 1.0, 1.0];
                     this.view.setFogOptions(fogOptions);
                 } else {
                     this.view.setFogOptions({ enabled: false });
