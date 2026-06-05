@@ -280,8 +280,13 @@ export class ZoneSetupMethods {
     }
 
     async setupAssets() {
-        // Try loading the enhanced procedural PBR material first, fall back to the simple material
-        const materialFiles = ['./baked_procedural.filament', './baked_color.filmat']
+        // Load the known-good material by default. The procedural package was
+        // compiled by an older matc and can abort newer Filament runtimes during
+        // createMaterial(), so keep it as an explicit development opt-in.
+        const useProceduralMaterial = new URLSearchParams(window.location.search).get('proceduralMaterial') === '1'
+        const materialFiles = useProceduralMaterial
+            ? ['./baked_procedural.filament', './baked_color.filmat']
+            : ['./baked_color.filmat']
         let materialBuffer = null
         let materialFile = null
 
@@ -639,15 +644,18 @@ export class ZoneSetupMethods {
             console.warn('[POST] TAA setup failed:', e)
         }
 
-        // Motion Blur - cinematic blur for fast-moving marbles and camera
-        try {
-            this.view.setMotionBlurOptions({
-                enabled: motionBlurEnabled,
-                intensity: 0.32,
-                maxDisplacement: 0.18,
-            })
-        } catch (e) {
-            console.warn('[POST] Motion Blur setup failed:', e)
+        // Motion Blur - cinematic blur for fast-moving marbles and camera.
+        // Some Filament JS builds do not expose this wrapper; skip cleanly.
+        if (typeof this.view.setMotionBlurOptions === 'function') {
+            try {
+                this.view.setMotionBlurOptions({
+                    enabled: motionBlurEnabled,
+                    intensity: 0.32,
+                    maxDisplacement: 0.18,
+                })
+            } catch (e) {
+                console.warn('[POST] Motion Blur setup failed:', e)
+            }
         }
 
         // SSR - screen-space reflections for shiny floor and ice surfaces
@@ -687,10 +695,12 @@ export class ZoneSetupMethods {
         // medium and below use basic PCF shadows (cheaper, still decent).
         const { shadowOptions, vsmOptions, softOptions } = getShadowQualityConfig(quality);
         if (this.view) {
-            try {
-                this.view.setShadowOptions(shadowOptions);
-            } catch (e) {
-                console.warn('[POST] setShadowOptions failed:', e);
+            if (typeof this.view.setShadowOptions === 'function') {
+                try {
+                    this.view.setShadowOptions(shadowOptions);
+                } catch (e) {
+                    console.warn('[POST] setShadowOptions failed:', e);
+                }
             }
 
             if (vsmOptions) {
@@ -727,6 +737,7 @@ export class ZoneSetupMethods {
                 if (fogOptions.heightFalloff < 0) fogOptions.heightFalloff = 0;
                 if (fogOptions.heightFalloff > 1) fogOptions.heightFalloff = 1;
 
+                fogOptions.color = fogOptions.color?.slice(0, 3) || [1.0, 1.0, 1.0];
                 this.view.setFogOptions(fogOptions);
                 console.log(`[POST] Fog enabled: quality=${quality}, env=${this.currentEnvironment || 'default'}`);
             } else {
@@ -820,6 +831,7 @@ export class ZoneSetupMethods {
                 if (fogOptions.heightFalloff < 0) fogOptions.heightFalloff = 0;
                 if (fogOptions.heightFalloff > 1) fogOptions.heightFalloff = 1;
 
+                fogOptions.color = fogOptions.color?.slice(0, 3) || [1.0, 1.0, 1.0];
                 this.view.setFogOptions(fogOptions);
                 console.log(`[FOG] Applied: quality=${quality}, env=${envName}`);
             } else {

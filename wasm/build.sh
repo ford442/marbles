@@ -25,10 +25,9 @@ elif [ -f "/content/build_space/emsdk/emsdk_env.sh" ]; then
 elif command -v emcmake &>/dev/null; then
     : # Already on PATH — nothing to source
 else
-    echo "❌  Emscripten not found."
-    echo "    Install emsdk: https://emscripten.org/docs/getting_started/downloads.html"
-    echo "    Then set the EMSDK environment variable or add emcmake to PATH."
-    exit 1
+    echo "⚠️  Emscripten not found; skipping optional MarblePhysics WASM build."
+    echo "    The browser will use the JavaScript physics fallbacks unless ?wasmPhysics=1 is explicitly enabled."
+    exit 0
 fi
 
 # ── Build ─────────────────────────────────────────────────────────────────────

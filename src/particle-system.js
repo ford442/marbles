@@ -120,20 +120,23 @@ export class ParticleSystem {
         
         // Create vertex buffer
         try {
+            const VertexAttribute = this.Filament['VertexAttribute']
+            const AttributeType = this.Filament['VertexBuffer$AttributeType']
+            const IndexType = this.Filament['IndexBuffer$IndexType']
+
             this.billboardVb = this.Filament.VertexBuffer.Builder()
                 .bufferCount(1)
                 .vertexCount(4)
-                .attribute(this.Filament['VertexAttribute']['POSITION'], 0, this.Filament['ComponentType']['FLOAT'], 0, 20)
-                .attribute(this.Filament['VertexAttribute']['UV0'], 0, this.Filament['ComponentType']['FLOAT'], 12, 20)
-                .normalized(this.Filament['VertexAttribute']['COLOR'])
+                .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, 20)
+                .attribute(VertexAttribute.UV0, 0, AttributeType.FLOAT2, 12, 20)
                 .build(this.engine)
             
             this.billboardVb.setBufferAt(this.engine, 0, positions)
             
             // Create index buffer
             this.billboardIb = this.Filament.IndexBuffer.Builder()
-                .elementCount(6)
-                .indexType(this.Filament['IndexType']['USHORT'])
+                .indexCount(6)
+                .bufferType(IndexType.USHORT)
                 .build(this.engine)
             
             this.billboardIb.setBuffer(this.engine, indices)

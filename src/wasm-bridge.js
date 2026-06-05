@@ -203,11 +203,21 @@ export async function initMarblePhysicsWasm() {
 
     _initPromise = (async () => {
         try {
+            const wasmEnabled = typeof window !== 'undefined' && (
+                window.MARBLES_ENABLE_WASM_PHYSICS === true ||
+                new URLSearchParams(window.location.search).get('wasmPhysics') === '1'
+            );
+            if (!wasmEnabled) {
+                console.info('[WASM] MarblePhysics disabled; using JS fallbacks. Add ?wasmPhysics=1 to opt in.');
+                return false;
+            }
+
             // Dynamic import so Vite/bundlers can code-split if desired.
             // The factory function is exported by Emscripten's -sMODULARIZE=1.
             // The path '/wasm/marble_physics.js' is a Vite-served static asset;
             // see public/wasm/ (built by `npm run build:wasm`).
-            const { default: MarblePhysicsModule } = await import(/* @vite-ignore */ '/wasm/marble_physics.js?url').then(m => import(/* @vite-ignore */ m.default));
+            const wasmModuleUrl = '/wasm/marble_physics.js';
+            const { default: MarblePhysicsModule } = await import(/* @vite-ignore */ wasmModuleUrl);
             const instance = await MarblePhysicsModule();
             _wasmApi     = instance;
             _usingWasm   = true;
