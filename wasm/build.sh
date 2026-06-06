@@ -22,6 +22,8 @@ elif [ -f "/opt/emsdk/emsdk_env.sh" ]; then
     source /opt/emsdk/emsdk_env.sh
 elif [ -f "/content/build_space/emsdk/emsdk_env.sh" ]; then
     source "/content/build_space/emsdk/emsdk_env.sh"
+elif [ -f "/root/emsdk/emsdk_env.sh" ]; then
+    source "/root/emsdk/emsdk_env.sh"
 elif command -v emcmake &>/dev/null; then
     : # Already on PATH — nothing to source
 else

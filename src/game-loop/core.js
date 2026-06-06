@@ -53,12 +53,16 @@ export class GameLoopRenderCore {
 
                 p.rigidBody.setNextKinematicTranslation({ x: nx, y: ny, z: nz })
 
-                // --- NEW: Sync visual entity ---
-                if (p.entity) {
+         if (p.entity) {
                     const tcm = this.engine.getTransformManager()
                     const inst = tcm.getInstance(p.entity)
                     const mat = quaternionToMat4({ x: nx, y: ny, z: nz }, p.rigidBody.rotation())
                     tcm.setTransform(inst, mat)
+            if (p.lightEntity) {
+                const lcm = this.engine.getLightManager()
+                const lInst = lcm.getInstance(p.lightEntity)
+                if (lInst) {
+                    lcm.setPosition(lInst, [x, y, z])
                 }
             }
         }
