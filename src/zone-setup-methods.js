@@ -1,3 +1,7 @@
+import { applyZoneSetupCore } from './zone-setup/core.js';
+import { applyZoneSetupAssets } from './zone-setup/assets.js';
+import { applyZoneSetupEnvironment } from './zone-setup/environment.js';
+import { applyZoneSetupGrapple } from './zone-setup/grapple.js';
 import { createMushroomBounceZone } from './mushroom_bounce_zone.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { createSphere } from './sphere.js';
@@ -951,9 +955,8 @@ export class ZoneSetupMethods {
 }
 
 export function applyZoneSetupMethods(targetClass) {
-    for (const name of Object.getOwnPropertyNames(ZoneSetupMethods.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = ZoneSetupMethods.prototype[name];
-        }
-    }
+    applyZoneSetupCore(targetClass);
+    applyZoneSetupAssets(targetClass);
+    applyZoneSetupEnvironment(targetClass);
+    applyZoneSetupGrapple(targetClass);
 }

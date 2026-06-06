@@ -1,192 +1,145 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
 
-export function createAbyssalTrenchZone(game, offset) {
-    const F = game.Filament;
-    const floorQ = { x: 0, y: 0, z: 0, w: 1 };
+export function createAbyssalTrenchZone(zone, offset) {
+    const pos = offset;
+    const F = zone.game?.Filament || zone.Filament; // support both patterns if needed
 
-    // Helper to create a basic filament visual entity inline
-    const createVisual = (pos, halfExtents, color, roughness = 0.4, bump = false, emissive = false) => {
-        const entity = F.EntityManager.get().create();
-        const matInstance = game.material.createInstance();
-        matInstance.setColor3Parameter('baseColor', F.RgbType.sRGB, color);
-        matInstance.setFloatParameter('roughness', roughness);
+    console.log('[ZONE] Creating Abyssal Trench zone at', pos);
 
-        if (bump && game.hasProceduralMaterial) {
-            matInstance.setFloatParameter('bumpScale', 0.05);
-            matInstance.setFloatParameter('bumpFrequency', 30.0);
-        }
+    // 1. Entrance Platform
+    zone.createFloorZone({ x: pos.x, y: pos.y, z: pos.z - 40 }, { 
+        width: 10, depth: 10, friction: 0.8 
+    });
+    audio.registerBodyMaterial(/* get body from zone if needed */, 'concrete');
 
-        F.RenderableManager.Builder(1)
-            .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
-            .material(0, matInstance)
-            .geometry(0, F.RenderableManager$PrimitiveType.TRIANGLES, game.vb, game.ib)
-            .receiveShadows(true)
-            .castShadows(true)
-            .build(game.engine, entity);
+    // 2. Icy Low-Friction Slide
+    const slideMaterial = zone.material.createInstance();
+    slideMaterial.setColor3Parameter('baseColor', F.RgbType.sRGB, [0.0, 0.1, 0.3]);
+    slideMaterial.setFloatParameter('roughness', 0.0);
 
-        game.scene.addEntity(entity);
+    zone.createTrackZone({ x: pos.x, y: pos.y - 3, z: pos.z - 20 }, {
+        width: 10,
+        length: 30,
+        slope: 0.2,
+        friction: 0.01,
+        restitution: 0.2,
+        customMaterial: slideMaterial
+    });
 
-        if (emissive) {
-            const lightEntity = F.EntityManager.get().create();
-            F.LightManager.Builder(F['LightManager$Type'].POINT)
-                .color(color) // Match emissive color
-                .intensity(80000.0)
-                .falloff(15.0)
-                .position([pos.x, pos.y, pos.z])
-                .build(game.engine, lightEntity);
-            game.scene.addEntity(lightEntity);
-            game.staticEntities.push(lightEntity);
-        }
-
-        return { entity, matInstance, lightEntity: emissive ? lightEntity : null };
-    };
-
-    // --- Entrance Platform ---
-    {
-        const hExtents = { x: 5, y: 0.5, z: 5 };
-        const bodyDesc = RAPIER.RigidBodyDesc.fixed()
-            .setTranslation(offset.x, offset.y, offset.z)
-            .setRotation(floorQ);
-        const body = game.world.createRigidBody(bodyDesc);
-        const colliderDesc = RAPIER.ColliderDesc.cuboid(hExtents.x, hExtents.y, hExtents.z);
-        game.world.createCollider(colliderDesc, body);
-        game.staticBodies.push(body);
-        audio.registerBodyMaterial(body, 'concrete');
-
-        const { entity } = createVisual({ x: offset.x, y: offset.y, z: offset.z }, hExtents, [0.1, 0.1, 0.15]);
-
-        const mat = new Float32Array([
-            hExtents.x * 2, 0, 0, 0,
-            0, hExtents.y * 2, 0, 0,
-            0, 0, hExtents.z * 2, 0,
-            offset.x, offset.y, offset.z, 1
-        ]);
-        const tcm = game.engine.getTransformManager();
-        const inst = tcm.getInstance(entity);
-        tcm.setTransform(inst, mat);
-    }
-
-    // --- Icy Low-Friction Slide ---
-    // Slanted downward slide for gaining speed
-    {
-        const hExtents = { x: 5, y: 0.5, z: 15 };
-        const slopeAngle = 0.2; // Radians down
-        const pos = { x: offset.x, y: offset.y - 3, z: offset.z + 18 };
-
-        const q = {
-            w: Math.cos(slopeAngle * 0.5),
-            x: Math.sin(slopeAngle * 0.5),
-            y: 0,
-            z: 0
-        };
-
-        const bodyDesc = RAPIER.RigidBodyDesc.fixed()
-            .setTranslation(pos.x, pos.y, pos.z)
-            .setRotation(q);
-        const body = game.world.createRigidBody(bodyDesc);
-
-        // Low friction for ice
-        const colliderDesc = RAPIER.ColliderDesc.cuboid(hExtents.x, hExtents.y, hExtents.z).setFriction(0.01);
-        game.world.createCollider(colliderDesc, body);
-        game.staticBodies.push(body);
-        audio.registerBodyMaterial(body, 'glass');
-
-        // Dark icy blue visual
-        const { entity } = createVisual(pos, hExtents, [0.0, 0.1, 0.3], 0.0);
-
-        // Standard column-major quaternion to matrix
-        const x2 = q.x + q.x, y2 = q.y + q.y, z2 = q.z + q.z;
-        const xx = q.x * x2, xy = q.x * y2, xz = q.x * z2;
-        const yy = q.y * y2, yz = q.y * z2, zz = q.z * z2;
-        const wx = q.w * x2, wy = q.w * y2, wz = q.w * z2;
-
-        const m00 = 1 - (yy + zz);
-        const m01 = xy - wz;
-        const m02 = xz + wy;
-        const m10 = xy + wz;
-        const m11 = 1 - (xx + zz);
-        const m12 = yz - wx;
-        const m20 = xz - wy;
-        const m21 = yz + wx;
-        const m22 = 1 - (xx + yy);
-
-        const scaleX = hExtents.x * 2;
-        const scaleY = hExtents.y * 2;
-        const scaleZ = hExtents.z * 2;
-
-        const mat = new Float32Array([
-            m00 * scaleX, m10 * scaleX, m20 * scaleX, 0,
-            m01 * scaleY, m11 * scaleY, m21 * scaleY, 0,
-            m02 * scaleZ, m12 * scaleZ, m22 * scaleZ, 0,
-            pos.x, pos.y, pos.z, 1
-        ]);
-
-        const tcm = game.engine.getTransformManager();
-        const inst = tcm.getInstance(entity);
-        tcm.setTransform(inst, mat);
-    }
-
-    // --- Gap Jump (implicitly defined by space between 30 and 40) ---
-
-    // --- Bioluminescent Kinematic Moving Platforms ---
-    const platformCount = 3;
-    for (let i = 0; i < platformCount; i++) {
-        const hExtents = { x: 3, y: 0.5, z: 3 };
-        const zOffset = offset.z + 45 + (i * 10);
-        const startX = offset.x;
-        const startY = offset.y - 12; // Lower down since we slid down
-        const amplitude = 6;
-        const speed = 2.0 + (i * 0.5);
-
-        const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
-            .setTranslation(startX, startY, zOffset);
-        const body = game.world.createRigidBody(bodyDesc);
-
-        const colliderDesc = RAPIER.ColliderDesc.cuboid(hExtents.x, hExtents.y, hExtents.z).setFriction(0.5);
-        game.world.createCollider(colliderDesc, body);
-        audio.registerBodyMaterial(body, 'glass');
-
-        // Bioluminescent glowing green/cyan
+    // 3. Bioluminescent Kinematic Moving Platforms (Gap Jump)
+    for (let i = 0; i < 3; i++) {
+        const zOffset = pos.z + 45 + (i * 10);
+        const startY = pos.y - 12;
         const color = i % 2 === 0 ? [0.1, 1.0, 0.5] : [0.1, 0.5, 1.0];
-        const { entity, lightEntity } = createVisual({ x: startX, y: startY, z: zOffset }, hExtents, color, 0.2, false, true);
 
-        game.movingPlatforms.push({
-            rigidBody: body,
-            entity: entity,
-            lightEntity: lightEntity,
-            halfExtents: hExtents,
-            type: 'horizontal',
-            center: startX,
-            amplitude: amplitude,
-            initialPos: { x: startX, y: startY, z: zOffset },
-            speed: speed
+        const plat = zone.createMovingZone({ 
+            x: pos.x, 
+            y: startY, 
+            z: zOffset 
+        }, {
+            width: 6, depth: 6, height: 1,
+            color,
+            emissive: true,
+            friction: 0.5
+        });
+
+        zone.movingPlatforms.push({
+            rigidBody: plat.rigidBody,
+            entity: plat.entity,
+            initialPos: { x: pos.x, y: startY, z: zOffset },
+            axis: 'y',           // or 'horizontal' if you prefer x/z movement
+            speed: 2.0 + (i * 0.5),
+            amplitude: 6.0,
+            phase: i * Math.PI
         });
     }
 
-    // --- Exit Platform ---
-    {
-        const hExtents = { x: 5, y: 0.5, z: 5 };
-        const pos = { x: offset.x, y: offset.y - 12, z: offset.z + 75 };
-        const bodyDesc = RAPIER.RigidBodyDesc.fixed()
-            .setTranslation(pos.x, pos.y, pos.z)
-            .setRotation(floorQ);
-        const body = game.world.createRigidBody(bodyDesc);
-        const colliderDesc = RAPIER.ColliderDesc.cuboid(hExtents.x, hExtents.y, hExtents.z);
-        game.world.createCollider(colliderDesc, body);
-        game.staticBodies.push(body);
-        audio.registerBodyMaterial(body, 'concrete');
+    // 4. Hydro-Vents (Jump Pads)
+    zone.createJumpZone({ x: pos.x, y: pos.y - 25, z: pos.z + 70 }, {
+        width: 8, depth: 8,
+        boostForce: 30,
+        color: [0.0, 1.0, 0.5]
+    });
 
-        const { entity } = createVisual(pos, hExtents, [0.1, 0.1, 0.15]);
+    // 5. Exit Platform + Goal
+    zone.createFloorZone({ x: pos.x, y: pos.y - 12, z: pos.z + 90 }, { 
+        width: 15, depth: 15, friction: 0.8 
+    });
+    zone.createGoalZone({ x: pos.x, y: pos.y - 11.5, z: pos.z + 90 });
 
-        const mat = new Float32Array([
-            hExtents.x * 2, 0, 0, 0,
-            0, hExtents.y * 2, 0, 0,
-            0, 0, hExtents.z * 2, 0,
-            pos.x, pos.y, pos.z, 1
-        ]);
-        const tcm = game.engine.getTransformManager();
-        const inst = tcm.getInstance(entity);
-        tcm.setTransform(inst, mat);
+    // --- Environmental Details ---
+    const coralPositions = [
+        { x: pos.x - 10, y: pos.y - 5, z: pos.z - 20 },
+        { x: pos.x + 12, y: pos.y - 15, z: pos.z + 10 },
+        { x: pos.x - 15, y: pos.y - 20, z: pos.z + 40 },
+        { x: pos.x + 10, y: pos.y - 25, z: pos.z + 60 }
+    ];
+
+    for (const coral of coralPositions) {
+        zone.createBlockZone(coral, {
+            width: 3, height: 10, depth: 3,
+            color: [0.8, 0.3, 0.4],
+            isStatic: true
+        });
     }
+
+    // Rising Bubbles
+    if (zone.particleSystem) {
+        const bubbleSpots = [
+            { x: pos.x - 5, z: pos.z },
+            { x: pos.x + 5, z: pos.z + 30 },
+            { x: pos.x, z: pos.z + 60 }
+        ];
+        for (const spot of bubbleSpots) {
+            zone.particleSystem.createEmitter({
+                pos: { x: spot.x, y: pos.y - 30, z: spot.z },
+                rate: 12,
+                velocity: { x: 0, y: 3.5, z: 0 },
+                velocitySpread: { x: 1.2, y: 1.5, z: 1.2 },
+                params: { 
+                    buoyancy: 0.6, 
+                    lifetime: 6.0, 
+                    size: 0.09, 
+                    color: [0.4, 0.85, 1.0, 0.35] 
+                }
+            });
+        }
+    }
+
+    // Volumetric Bioluminescent Shafts + Caustics
+    if (zone.volumetricLights) {
+        const shaftSources = [
+            { x: pos.x - 20, y: pos.y - 12, z: pos.z - 20, color: [0.2, 0.9, 0.7] },
+            { x: pos.x + 20, y: pos.y - 12, z: pos.z + 20, color: [0.3, 0.85, 1.0] },
+            { x: pos.x, y: pos.y - 8, z: pos.z, color: [0.4, 1.0, 0.85] },
+        ];
+
+        for (const s of shaftSources) {
+            zone.volumetricLights.addShaftSource({
+                pos: { x: s.x, y: s.y, z: s.z },
+                color: s.color,
+                intensity: 65000,
+                behavior: 'biolumSway',
+                spread: 22
+            });
+        }
+
+        // Caustics on the trench floor
+        const causticSpots = [
+            { x: pos.x - 10, z: pos.z - 10 },
+            { x: pos.x + 15, z: pos.z + 5 },
+            { x: pos.x - 5, z: pos.z + 20 },
+        ];
+        for (const c of causticSpots) {
+            zone.volumetricLights.addCausticSource({
+                pos: { x: c.x, y: pos.y - 25, z: c.z },
+                color: [0.2, 0.85, 0.9],
+                radius: 85,
+                behavior: 'biolumSway'
+            });
+        }
+    }
+
+    console.log('[ZONE] Abyssal Trench zone created successfully');
 }
