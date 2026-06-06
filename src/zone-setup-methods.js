@@ -47,6 +47,7 @@ import { createPlasmaPipelineZone } from "./zones/plasma-pipeline.js";
 import { createNeonPulseGridZone } from "./zones/neon-pulse-grid.js";
 import { createNebulaNexusZone } from "./zones/nebula-nexus.js";
 import { createQuantumTunnelZone } from './zones/quantum-tunnel.js';
+import { createAbyssalTrenchZone } from './zones/abyssal-trench.js';
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import { audio } from './audio.js';
 import { DEFAULT_MSAA_SAMPLE_COUNT, getPostFxQualityFlags, getShadowQualityConfig } from './rendering-defaults.js';
@@ -274,7 +275,7 @@ export class ZoneSetupMethods {
                 createQuantumTunnelZone(this, offset)
                 break
             case 'abyssal_trench':
-                this.createAbyssalTrenchZone(offset)
+                createAbyssalTrenchZone(this, offset)
                 break
         }
     }
@@ -947,169 +948,6 @@ export class ZoneSetupMethods {
         // Apply environment-specific color grading (contrast, saturation, vibrance)
         this.applyColorGradingForEnvironment(envName);
     }
-
-    /**
-     * Create an Abyssal Trench zone — a deep underwater environment with
-     * bioluminescent features and murky depth fog.
-     *
-     * Creates a descending trench with:
-     * - Curved walls with bioluminescent organisms
-     * - Sandy floor with glowing coral
-     * - Dense underwater fog with teal tint
-     *
-     * @param {object} offset - Base position offset
-     */
-    createAbyssalTrenchZone(offset) {
-        const pos = offset || { x: 0, y: 0, z: 0 };
-
-        // Floor (sandy ground at the bottom)
-        this.createStaticBody(
-            { x: pos.x, y: pos.y - 30, z: pos.z },
-            { type: 'box', halfExtents: { x: 60, y: 2, z: 60 } },
-            { metallic: 0.1, roughness: 0.8, color: [0.4, 0.35, 0.2] } // Sandy
-        );
-
-        // Left wall (curved, with bioluminescent organisms)
-        for (let i = 0; i < 8; i++) {
-            const heightOffset = i * 5;
-            const xOffset = -45 + (i * 2);
-            this.createStaticBody(
-                { x: pos.x + xOffset, y: pos.y - 20 + heightOffset, z: pos.z },
-                { type: 'box', halfExtents: { x: 3, y: 5, z: 50 } },
-                { metallic: 0.0, roughness: 0.9, color: [0.1, 0.2, 0.15] } // Dark stone
-            );
-
-            // Bioluminescent accent every other stone (emissive-like with bright color)
-            if (i % 2 === 0) {
-                this.createStaticBody(
-                    { x: pos.x + xOffset - 2, y: pos.y - 18 + heightOffset, z: pos.z + 45 },
-                    { type: 'sphere', radius: 1.5 },
-                    { metallic: 1.0, roughness: 0.2, color: [0.2, 0.9, 0.7] } // Cyan biolum
-                );
-            }
-        }
-
-        // Right wall (mirrored)
-        for (let i = 0; i < 8; i++) {
-            const heightOffset = i * 5;
-            const xOffset = 45 - (i * 2);
-            this.createStaticBody(
-                { x: pos.x + xOffset, y: pos.y - 20 + heightOffset, z: pos.z },
-                { type: 'box', halfExtents: { x: 3, y: 5, z: 50 } },
-                { metallic: 0.0, roughness: 0.9, color: [0.1, 0.2, 0.15] } // Dark stone
-            );
-
-            // Bioluminescent accent
-            if (i % 2 === 0) {
-                this.createStaticBody(
-                    { x: pos.x + xOffset + 2, y: pos.y - 18 + heightOffset, z: pos.z - 45 },
-                    { type: 'sphere', radius: 1.5 },
-                    { metallic: 1.0, roughness: 0.2, color: [0.4, 0.8, 0.9] } // Light cyan biolum
-                );
-            }
-        }
-
-        // Scattered coral and rocks on the floor with glowing points
-        const coralPositions = [
-            { x: -20, z: -20 }, { x: 20, z: -30 }, { x: 0, z: 20 }, { x: -35, z: 10 },
-            { x: 35, z: 0 }, { x: -10, z: -40 }, { x: 25, z: 35 }, { x: -40, z: 40 }
-        ];
-
-        for (const coral of coralPositions) {
-            this.createStaticBody(
-                { x: pos.x + coral.x, y: pos.y - 28, z: pos.z + coral.z },
-                { type: 'box', halfExtents: { x: 2, y: 1.5, z: 2 } },
-                { metallic: 0.2, roughness: 0.85, color: [0.3, 0.25, 0.1] } // Dull brown coral
-            );
-
-            // Glowing point at the top
-            this.createStaticBody(
-                { x: pos.x + coral.x, y: pos.y - 26, z: pos.z + coral.z },
-                { type: 'sphere', radius: 0.8 },
-                { metallic: 0.9, roughness: 0.3, color: [0.3, 1.0, 0.6] } // Bright green biolum
-            );
-        }
-
-        // --- Environmental Bubble Emitters ---
-        // Rising bubbles from the trench floor give an immersive underwater feel
-        if (this.particleSystem) {
-            const bubbleSpots = [
-                { x: -15, z: -15 }, { x: 15, z: -25 }, { x: 0, z: 15 },
-                { x: -30, z: 5 },   { x: 30, z: -5 },  { x: -5, z: -35 },
-                { x: 20, z: 30 },   { x: -35, z: 35 }
-            ];
-            for (const spot of bubbleSpots) {
-                this.particleSystem.addAmbientEmitter({
-                    pos: { x: pos.x + spot.x, y: pos.y - 28, z: pos.z + spot.z },
-                    type: 'bubble',
-                    rate: 0.8,
-                    count: 1,
-                    spread: 3,
-                    params: {
-                        buoyancy: 1.2 + Math.random() * 0.8,
-                        lifetime: 4.0 + Math.random() * 2.0,
-                        size: 0.12 + Math.random() * 0.1,
-                        color: [0.3, 0.85, 0.9, 0.45]
-                    }
-                });
-            }
-
-            // Dense bioluminescent particle haze near the walls
-            this.particleSystem.addAmbientEmitter({
-                pos: { x: pos.x - 35, y: pos.y - 10, z: pos.z },
-                type: 'bubble',
-                rate: 1.5,
-                count: 2,
-                spread: 6,
-                params: { buoyancy: 0.5, lifetime: 5.0, size: 0.08, color: [0.2, 1.0, 0.7, 0.3] }
-            });
-            this.particleSystem.addAmbientEmitter({
-                pos: { x: pos.x + 35, y: pos.y - 10, z: pos.z },
-                type: 'bubble',
-                rate: 1.5,
-                count: 2,
-                spread: 6,
-                params: { buoyancy: 0.5, lifetime: 5.0, size: 0.08, color: [0.4, 0.8, 1.0, 0.3] }
-            });
-        }
-
-        // --- Volumetric Bioluminescent Shafts + Water Caustics ---
-        // Register mid-water biolum lights as shaft sources and caustic sources
-        if (this.volumetricLights) {
-            const biolumPositions = [
-                { x: pos.x - 20, y: pos.y - 12, z: pos.z - 20, color: [0.2, 0.9, 0.7] },
-                { x: pos.x + 20, y: pos.y - 12, z: pos.z + 20, color: [0.3, 0.85, 1.0] },
-                { x: pos.x,      y: pos.y - 8,  z: pos.z,      color: [0.4, 1.0, 0.85] },
-            ];
-            for (const bp of biolumPositions) {
-                this.volumetricLights.addShaftSource({
-                    pos: { x: bp.x, y: bp.y, z: bp.z },
-                    color: bp.color,
-                    intensity: 60000,
-                    behavior: 'biolumSway',
-                    spread: 20
-                });
-            }
-
-            // Caustic ripples projected at floor level
-            const causticPositions = [
-                { x: pos.x - 10, z: pos.z - 10 },
-                { x: pos.x + 15, z: pos.z + 5  },
-                { x: pos.x - 5,  z: pos.z + 20 },
-            ];
-            for (const cp of causticPositions) {
-                this.volumetricLights.addCausticSource({
-                    pos: { x: cp.x, y: pos.y - 25, z: cp.z },
-                    color: [0.2, 0.85, 0.9],
-                    radius: 80,
-                    behavior: 'biolumSway'
-                });
-            }
-        }
-
-        console.log('[ZONE] Created Abyssal Trench zone');
-    }
-
 }
 
 export function applyZoneSetupMethods(targetClass) {

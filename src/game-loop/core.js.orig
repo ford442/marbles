@@ -105,7 +105,7 @@ export class GameLoopRenderCore {
 
                 this.lastBoostTime = now
                 audio.playBoost()
-                
+
                 if (this.hudManager) this.hudManager.markAbilityUsed('boost')
             }
         }
@@ -616,14 +616,6 @@ export class GameLoopRenderCore {
 
             const inst = tcm.getInstance(p.entity)
             tcm.setTransform(inst, mat)
-
-            if (p.lightEntity) {
-                const lcm = this.engine.getLightManager()
-                const lInst = lcm.getInstance(p.lightEntity)
-                if (lInst) {
-                    lcm.setPosition(lInst, [x, y, z])
-                }
-            }
         }
 
         for (const p of this.rotatingPlatforms) {
@@ -658,7 +650,7 @@ export class GameLoopRenderCore {
             const q = quatFromEuler(p.rotation, Math.PI / 4, 0)
             const bob = this.timeStopActive ? 0 : Math.sin(timeSec * 3) * 0.2
             const t = { x: p.pos.x, y: p.baseY + bob, z: p.pos.z }
-            
+
             const mat = quaternionToMat4(t, q)
             const s = 0.5
             mat[0] *= s; mat[1] *= s; mat[2] *= s
@@ -679,13 +671,13 @@ export class GameLoopRenderCore {
                 const bobOffset = this.timeStopActive ? 0 : Math.sin(this.collectibleRotation * 2) * 0.2
                 const newY = c.baseY + bobOffset
                 const q = quatFromEuler(this.collectibleRotation, 0, Math.PI / 4)
-                
+
                 const mat = quaternionToMat4({ x: c.pos.x, y: newY, z: c.pos.z }, q)
                 const scale = 0.5
                 mat[0] *= scale; mat[1] *= scale; mat[2] *= scale
                 mat[4] *= scale; mat[5] *= scale; mat[6] *= scale
                 mat[8] *= scale; mat[9] *= scale; mat[10] *= scale
-                
+
                 const inst = tcm.getInstance(c.entity)
                 tcm.setTransform(inst, mat)
 
