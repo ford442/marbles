@@ -11,7 +11,7 @@ export function createAbyssalTrenchZone(zone, offset) {
     zone.createFloorZone({ x: pos.x, y: pos.y, z: pos.z - 40 }, { 
         width: 10, depth: 10, friction: 0.8 
     });
-    audio.registerBodyMaterial(/* get body from zone if needed */, 'concrete');
+    audio.registerBodyMaterial(null, 'concrete');
 
     // 2. Icy Low-Friction Slide
     const slideMaterial = zone.material.createInstance();
