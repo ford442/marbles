@@ -39,3 +39,4 @@ export { createPlasmaPipelineZone } from './plasma-pipeline.js';
 export { createNeonPulseGridZone } from './neon-pulse-grid.js';
 export { createQuantumTunnelZone } from './quantum-tunnel.js';
 export { createAbyssalTrenchZone } from './abyssal-trench.js';
+export { createNeonPlungeZone } from './neon-plunge.js';
