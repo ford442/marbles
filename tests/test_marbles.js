@@ -88,6 +88,7 @@ try {
     checkMarble("Abyssal Eye", ['color', 'radius', 'density', 'restitution', 'gravityScale', 'friction', 'roughness', 'emissive: true', 'lightIntensity', 'lightColor'], true);
     checkMarble("Void Walker", ['color', 'radius', 'density', 'restitution', 'gravityScale', 'friction', 'roughness', 'emissive: true', 'lightIntensity', 'lightColor'], true);
     checkMarble("Ethereal Juggernaut", ['color', 'radius', 'density', 'friction', 'restitution', 'clearCoat', 'clearCoatRoughness', 'emissive: true', 'lightIntensity', 'lightColor', 'materialType: "glass"']);
+    checkMarble("Hyper-Bouncing Prism", ['color', 'radius', 'density', 'friction', 'restitution', 'clearCoat', 'clearCoatRoughness', 'emissive: true', 'lightIntensity', 'lightColor', 'materialType: "glass"']);
     checkMarble("Astral Jumper", ['color', 'radius', 'density', 'restitution', 'gravityScale', 'friction', 'roughness', 'emissive: true', 'lightIntensity', 'lightColor'], true);
     checkMarble("Phantom Glass", ['color', 'radius', 'density', 'friction', 'restitution', 'roughness', 'gravityScale', 'emissive: true', 'lightIntensity', 'lightColor', 'materialType: "glass"']);
     checkMarble("Aegis Diamond", ['color', 'radius', 'density', 'friction', 'restitution', 'clearCoat', 'clearCoatRoughness', 'emissive: true', 'lightIntensity', 'lightColor', 'materialType: "glass"']);
