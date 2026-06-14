@@ -37,6 +37,9 @@ export class InputMethods {
                 if (e.button === 0) {
                     this.charging = true
                     this.chargePower = 0
+                } else if (e.button === 1) { // Middle Mouse Button
+                    e.preventDefault()
+                    this.toggleTargetLockOn()
                 } else if (e.button === 2) {
                     this.startGrapple()
                 }
@@ -52,6 +55,14 @@ export class InputMethods {
                     }
                 } else if (e.button === 2) {
                     this.stopGrapple()
+                }
+            }
+        })
+
+        document.addEventListener('keydown', (e) => {
+            if (document.pointerLockElement === this.canvas && !this.isPaused) {
+                if (e.key.toLowerCase() === 'l' && !e.repeat) {
+                    this.toggleTargetLockOn()
                 }
             }
         })
@@ -307,6 +318,52 @@ export class InputMethods {
              }
         }
         return null
+    }
+
+    toggleTargetLockOn() {
+        const now = Date.now()
+        if (now - (this.lastLockTime || 0) < 300) return // debounce
+        this.lastLockTime = now
+
+        if (this.isLockedOn) {
+            // Unlock
+            this.isLockedOn = false
+            this.lockOnTarget = null
+            console.log("[GAME] Target Lock-On Disabled")
+        } else {
+            // Find best target
+            const target = this.findBestLockOnTarget()
+            if (target) {
+                this.isLockedOn = true
+                this.lockOnTarget = target
+                console.log("[GAME] Target Lock-On Enabled:", target.name)
+            }
+        }
+    }
+
+    findBestLockOnTarget() {
+        if (!this.playerMarble || !this.marbles) return null
+
+        const pPos = this.playerMarble.rigidBody.translation()
+
+        let best = null
+        let bestDistSq = Infinity
+
+        for (const m of this.marbles) {
+            if (m === this.playerMarble) continue
+            const mPos = m.rigidBody.translation()
+            const dx = mPos.x - pPos.x
+            const dy = mPos.y - pPos.y
+            const dz = mPos.z - pPos.z
+            const distSq = dx * dx + dy * dy + dz * dz
+
+            if (distSq < bestDistSq) {
+                bestDistSq = distSq
+                best = m
+            }
+        }
+
+        return best
     }
 
 }

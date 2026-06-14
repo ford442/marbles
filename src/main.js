@@ -61,6 +61,12 @@ class MarblesGame {
 
         this.keys = {}
         this.cameraMode = 'orbit'
+
+        // Target Lock-On Camera controls
+        this.isLockedOn = false
+        this.lockOnTarget = null
+        this.lastLockTime = 0
+
         this.score = 0
         this.scoreEl = document.getElementById('score')
         this.comboEl = document.getElementById('combo')
