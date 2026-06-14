@@ -793,6 +793,22 @@ export const LEVELS = {
         nightMode: true,
         backgroundColor: [0.02, 0.05, 0.08, 1.0]
     },
+    neon_plunge_run: {
+        name: 'Neon Plunge Run',
+        description: 'A steep neon dive with moving platforms.',
+        zones: [
+            { type: 'neon_plunge', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: -20, z: 120 } }
+        ],
+        spawn: { x: 0, y: 5, z: -5 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [115, 125], y: [-25, -15] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.01, 0.0, 0.05, 1.0],
+        environment: 'neon_city'
+    },
     cyber_ice_track_run: {
         name: 'Cyber Ice Track',
         description: 'Navigate low friction ice and dodging platforms!',

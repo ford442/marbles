@@ -231,6 +231,9 @@ export class ZoneSetupCore {
             case 'cyber_ice_track':
                 createCyberIceTrackZone(this, offset)
                 break
+            case 'neon_plunge':
+                createNeonPlungeZone(this, offset)
+                break
             case 'neon_alley':
                 createNeonAlleyZone(this, offset)
                 break
@@ -288,3 +291,4 @@ export function applyZoneSetupCore(targetClass) {
     }
 }
 import { createAbyssalTrenchZone } from '../zones/abyssal-trench.js';
+import { createNeonPlungeZone } from '../zones/neon-plunge.js';
