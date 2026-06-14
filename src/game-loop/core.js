@@ -9,6 +9,61 @@ import { getDofConfig } from '../rendering/post-fx-presets.js';
 const DOF_CAMERA_MODES = new Set(['cinematic', 'follow', 'action'])
 // Minimum focus-distance change (world units) required to re-issue a DoF update.
 const DOF_UPDATE_THRESHOLD = 1.0
+const CORE_TRANSFORM_POS_EPS_SQ = 0.000001
+const CORE_TRANSFORM_ROT_EPS_SQ = 0.000001
+const CORE_COLOR_EPS = 1 / 255
+
+function getCachedTransformInstance(tcm, owner, entity) {
+    if (owner._transformEntity !== entity || owner._transformInst === undefined) {
+        owner._transformEntity = entity
+        owner._transformInst = tcm.getInstance(entity)
+    }
+    return owner._transformInst
+}
+
+function transformChanged(owner, t, r, scaleKey = 1) {
+    if (owner._forceTransformSync) {
+        owner._forceTransformSync = false
+        return true
+    }
+
+    const last = owner._lastTransformSync
+    if (last &&
+        last.scaleKey === scaleKey &&
+        ((t.x - last.x) * (t.x - last.x) + (t.y - last.y) * (t.y - last.y) + (t.z - last.z) * (t.z - last.z)) < CORE_TRANSFORM_POS_EPS_SQ &&
+        ((r.x - last.rx) * (r.x - last.rx) + (r.y - last.ry) * (r.y - last.ry) + (r.z - last.rz) * (r.z - last.rz) + (r.w - last.rw) * (r.w - last.rw)) < CORE_TRANSFORM_ROT_EPS_SQ) {
+        return false
+    }
+
+    owner._lastTransformSync = { x: t.x, y: t.y, z: t.z, rx: r.x, ry: r.y, rz: r.z, rw: r.w, scaleKey }
+    return true
+}
+
+function scaledTransform(t, q, scale) {
+    const mat = quaternionToMat4(t, q)
+    mat[0] *= scale.x; mat[1] *= scale.x; mat[2] *= scale.x
+    mat[4] *= scale.y; mat[5] *= scale.y; mat[6] *= scale.y
+    mat[8] *= scale.z; mat[9] *= scale.z; mat[10] *= scale.z
+    return mat
+}
+
+function setColor3IfChanged(game, owner, matInstance, color, now, minIntervalMs = 50) {
+    if (!matInstance) return false
+    const last = owner._lastBaseColor
+    const lastAt = owner._lastBaseColorAt || 0
+    if (last && (now - lastAt) < minIntervalMs) return false
+    if (last &&
+        Math.abs(color[0] - last[0]) < CORE_COLOR_EPS &&
+        Math.abs(color[1] - last[1]) < CORE_COLOR_EPS &&
+        Math.abs(color[2] - last[2]) < CORE_COLOR_EPS) {
+        owner._lastBaseColorAt = now
+        return false
+    }
+    owner._lastBaseColor = [color[0], color[1], color[2]]
+    owner._lastBaseColorAt = now
+    matInstance.setColor3Parameter('baseColor', game.Filament.RgbType.sRGB, color)
+    return true
+}
 
 export class GameLoopRenderCore {
     renderAndSync() {
@@ -609,18 +664,26 @@ export class GameLoopRenderCore {
             if (p.type === 'vertical') y = p.center + offset
             if (p.type === 'depth') z = p.center + offset
 
-            p.rigidBody.setNextKinematicTranslation({ x, y, z })
+            const t = { x, y, z }
+            p.rigidBody.setNextKinematicTranslation(t)
 
-            const mat = quaternionToMat4({ x, y, z }, p.rigidBody.rotation())
             const sx = p.halfExtents.x * 2
             const sy = p.halfExtents.y * 2
             const sz = p.halfExtents.z * 2
-            mat[0] *= sx; mat[1] *= sx; mat[2] *= sx
-            mat[4] *= sy; mat[5] *= sy; mat[6] *= sy
-            mat[8] *= sz; mat[9] *= sz; mat[10] *= sz
+            const radius = Math.hypot(p.halfExtents.x, p.halfExtents.y, p.halfExtents.z)
+            const visible = this.cullingManager?.isVisible(`moving-platform:${p.entity}`, [x, y, z], radius, 'dynamic') ?? true
+            this.cullingManager?.setEntityVisible(p.entity, visible, `moving-platform:${p.entity}`)
+            if (!visible) {
+                p._forceTransformSync = true
+                continue
+            }
 
-            const inst = tcm.getInstance(p.entity)
-            tcm.setTransform(inst, mat)
+            const r = p.rigidBody.rotation()
+            const scaleKey = `${sx},${sy},${sz}`
+            if (transformChanged(p, t, r, scaleKey)) {
+                const mat = scaledTransform(t, r, { x: sx, y: sy, z: sz })
+                tcm.setTransform(getCachedTransformInstance(tcm, p, p.entity), mat)
+            }
         }
 
         for (const p of this.rotatingPlatforms) {
@@ -632,17 +695,23 @@ export class GameLoopRenderCore {
 
             p.rigidBody.setNextKinematicRotation(q)
 
-            const t = p.rigidBody.translation()
-            const mat = quaternionToMat4(t, q)
             const sx = p.halfExtents.x * 2
             const sy = p.halfExtents.y * 2
             const sz = p.halfExtents.z * 2
-            mat[0] *= sx; mat[1] *= sx; mat[2] *= sx
-            mat[4] *= sy; mat[5] *= sy; mat[6] *= sy
-            mat[8] *= sz; mat[9] *= sz; mat[10] *= sz
+            const t = p.rigidBody.translation()
+            const radius = Math.hypot(p.halfExtents.x, p.halfExtents.y, p.halfExtents.z)
+            const visible = this.cullingManager?.isVisible(`rotating-platform:${p.entity}`, [t.x, t.y, t.z], radius, 'dynamic') ?? true
+            this.cullingManager?.setEntityVisible(p.entity, visible, `rotating-platform:${p.entity}`)
+            if (!visible) {
+                p._forceTransformSync = true
+                continue
+            }
 
-            const inst = tcm.getInstance(p.entity)
-            tcm.setTransform(inst, mat)
+            const scaleKey = `${sx},${sy},${sz}`
+            if (transformChanged(p, t, q, scaleKey)) {
+                const mat = scaledTransform(t, q, { x: sx, y: sy, z: sz })
+                tcm.setTransform(getCachedTransformInstance(tcm, p, p.entity), mat)
+            }
         }
 
         this.updateGrapple()
@@ -653,6 +722,8 @@ export class GameLoopRenderCore {
             this.cullingManager?.setEntityVisible(p.entity, powerVisible, `powerup:${p.entity}`)
             if (!powerVisible) {
                 culledPowerUps += 1
+                p._forceTransformSync = true
+                if (!this.timeStopActive) p.rotation += 0.05
                 continue
             }
 
@@ -663,14 +734,10 @@ export class GameLoopRenderCore {
             const bob = this.timeStopActive ? 0 : Math.sin(timeSec * 3) * 0.2
             const t = { x: p.pos.x, y: p.baseY + bob, z: p.pos.z }
 
-            const mat = quaternionToMat4(t, q)
-            const s = 0.5
-            mat[0] *= s; mat[1] *= s; mat[2] *= s
-            mat[4] *= s; mat[5] *= s; mat[6] *= s
-            mat[8] *= s; mat[9] *= s; mat[10] *= s
-
-            const inst = tcm.getInstance(p.entity)
-            tcm.setTransform(inst, mat)
+            if (transformChanged(p, t, q, 0.5)) {
+                const mat = scaledTransform(t, q, { x: 0.5, y: 0.5, z: 0.5 })
+                tcm.setTransform(getCachedTransformInstance(tcm, p, p.entity), mat)
+            }
         }
 
         // Update Collectibles
@@ -724,19 +791,17 @@ export class GameLoopRenderCore {
                 this.cullingManager?.setEntityVisible(c.entity, collectibleVisible, `collectible:${c.entity}`)
                 if (!collectibleVisible) {
                     culledCollectibles += 1
+                    c._forceTransformSync = true
                     continue
                 }
 
                 const q = quatFromEuler(this.collectibleRotation, 0, Math.PI / 4)
+                const t = { x: c.pos.x, y: newY, z: c.pos.z }
 
-                const mat = quaternionToMat4({ x: c.pos.x, y: newY, z: c.pos.z }, q)
-                const scale = 0.5
-                mat[0] *= scale; mat[1] *= scale; mat[2] *= scale
-                mat[4] *= scale; mat[5] *= scale; mat[6] *= scale
-                mat[8] *= scale; mat[9] *= scale; mat[10] *= scale
-
-                const inst = tcm.getInstance(c.entity)
-                tcm.setTransform(inst, mat)
+                if (transformChanged(c, t, q, 0.5)) {
+                    const mat = scaledTransform(t, q, { x: 0.5, y: 0.5, z: 0.5 })
+                    tcm.setTransform(getCachedTransformInstance(tcm, c, c.entity), mat)
+                }
             }
         }
 
@@ -976,24 +1041,33 @@ export class GameLoopRenderCore {
                     body.applyImpulse({ x: force.x, y: force.y + body.mass() * 0.2, z: force.z }, true)
                 }
 
-                // Sync Filament transform to Rapier rigid body
-                const inst = tcm.getInstance(bh.entity)
                 const r = bh.rigidBody.rotation()
-                const mat = quaternionToMat4(pos, r)
-
-                // The scale visual effect (pulsing slightly)
                 const pulse = 1.0 + Math.sin(timeAlive * 0.01) * 0.1
                 const s = 1.5 * pulse // Adjust visual size
-                mat[0] *= s; mat[1] *= s; mat[2] *= s
-                mat[4] *= s; mat[5] *= s; mat[6] *= s
-                mat[8] *= s; mat[9] *= s; mat[10] *= s
+                const visualVisible = this.cullingManager?.isVisible(`black-hole:${bh.entity}`, [pos.x, pos.y, pos.z], s, 'dynamic') ?? true
+                this.cullingManager?.setEntityVisible(bh.entity, visualVisible, `black-hole:${bh.entity}`)
+                if (bh.lightEntity) this.cullingManager?.setEntityVisible(bh.lightEntity, visualVisible, `black-hole-light:${bh.lightEntity}`)
 
-                tcm.setTransform(inst, mat)
+                if (!visualVisible) {
+                    bh._forceTransformSync = true
+                    if (bh.lightEntity) {
+                        bh._lightSync = bh._lightSync || {}
+                        bh._lightSync._forceTransformSync = true
+                    }
+                    continue
+                }
+
+                if (transformChanged(bh, pos, r, s)) {
+                    const mat = scaledTransform(pos, r, { x: s, y: s, z: s })
+                    tcm.setTransform(getCachedTransformInstance(tcm, bh, bh.entity), mat)
+                }
 
                 if (bh.lightEntity) {
-                    const lightInst = tcm.getInstance(bh.lightEntity)
-                    const lightMat = quaternionToMat4(pos, { x: 0, y: 0, z: 0, w: 1 })
-                    tcm.setTransform(lightInst, lightMat)
+                    bh._lightSync = bh._lightSync || {}
+                    if (transformChanged(bh._lightSync, pos, { x: 0, y: 0, z: 0, w: 1 })) {
+                        const lightMat = quaternionToMat4(pos, { x: 0, y: 0, z: 0, w: 1 })
+                        tcm.setTransform(getCachedTransformInstance(tcm, bh._lightSync, bh.lightEntity), lightMat)
+                    }
                 }
             }
         }
@@ -1053,22 +1127,32 @@ export class GameLoopRenderCore {
 
                 this.activeMissiles.splice(i, 1)
             } else {
-                // Sync Filament transform
-                const inst = tcm.getInstance(m.entity)
                 const r = m.rigidBody.rotation()
-                const mat = quaternionToMat4(pos, r)
-
                 const s = 0.4
-                mat[0] *= s; mat[1] *= s; mat[2] *= s
-                mat[4] *= s; mat[5] *= s; mat[6] *= s
-                mat[8] *= s; mat[9] *= s; mat[10] *= s
+                const visualVisible = this.cullingManager?.isVisible(`missile:${m.entity}`, [pos.x, pos.y, pos.z], s, 'dynamic') ?? true
+                this.cullingManager?.setEntityVisible(m.entity, visualVisible, `missile:${m.entity}`)
+                if (m.lightEntity) this.cullingManager?.setEntityVisible(m.lightEntity, visualVisible, `missile-light:${m.lightEntity}`)
 
-                tcm.setTransform(inst, mat)
+                if (!visualVisible) {
+                    m._forceTransformSync = true
+                    if (m.lightEntity) {
+                        m._lightSync = m._lightSync || {}
+                        m._lightSync._forceTransformSync = true
+                    }
+                    continue
+                }
+
+                if (transformChanged(m, pos, r, s)) {
+                    const mat = scaledTransform(pos, r, { x: s, y: s, z: s })
+                    tcm.setTransform(getCachedTransformInstance(tcm, m, m.entity), mat)
+                }
 
                 if (m.lightEntity) {
-                    const lightInst = tcm.getInstance(m.lightEntity)
-                    const lightMat = quaternionToMat4(pos, { x: 0, y: 0, z: 0, w: 1 })
-                    tcm.setTransform(lightInst, lightMat)
+                    m._lightSync = m._lightSync || {}
+                    if (transformChanged(m._lightSync, pos, { x: 0, y: 0, z: 0, w: 1 })) {
+                        const lightMat = quaternionToMat4(pos, { x: 0, y: 0, z: 0, w: 1 })
+                        tcm.setTransform(getCachedTransformInstance(tcm, m._lightSync, m.lightEntity), lightMat)
+                    }
                 }
             }
         }
@@ -1099,29 +1183,37 @@ export class GameLoopRenderCore {
                 const blinkRate = Math.max(50, timeLeft / 5) // Speeds up as it gets closer
                 const blink = Math.floor(now / blinkRate) % 2 === 0
 
-                if (b.matInstance) {
-                    const color = blink ? [1.0, 0.2, 0.0] : [0.2, 0.2, 0.2]
-                    b.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color)
-                }
+                const color = blink ? [1.0, 0.2, 0.0] : [0.2, 0.2, 0.2]
+                setColor3IfChanged(this, b, b.matInstance, color, now, 40)
 
                 // Sync Filament transform to Rapier rigid body
-                const inst = tcm.getInstance(b.entity)
                 const t = b.rigidBody.translation()
                 const r = b.rigidBody.rotation()
-                const mat = quaternionToMat4(t, r)
-
-                // Scale matrix for 0.4 radius
                 const s = 0.8
-                mat[0] *= s; mat[1] *= s; mat[2] *= s
-                mat[4] *= s; mat[5] *= s; mat[6] *= s
-                mat[8] *= s; mat[9] *= s; mat[10] *= s
+                const visualVisible = this.cullingManager?.isVisible(`bomb:${b.entity}`, [t.x, t.y, t.z], s, 'dynamic') ?? true
+                this.cullingManager?.setEntityVisible(b.entity, visualVisible, `bomb:${b.entity}`)
+                if (b.lightEntity) this.cullingManager?.setEntityVisible(b.lightEntity, visualVisible, `bomb-light:${b.lightEntity}`)
 
-                tcm.setTransform(inst, mat)
+                if (!visualVisible) {
+                    b._forceTransformSync = true
+                    if (b.lightEntity) {
+                        b._lightSync = b._lightSync || {}
+                        b._lightSync._forceTransformSync = true
+                    }
+                    continue
+                }
+
+                if (transformChanged(b, t, r, s)) {
+                    const mat = scaledTransform(t, r, { x: s, y: s, z: s })
+                    tcm.setTransform(getCachedTransformInstance(tcm, b, b.entity), mat)
+                }
 
                 if (b.lightEntity) {
-                    const lightInst = tcm.getInstance(b.lightEntity)
-                    const lightMat = quaternionToMat4(t, { x: 0, y: 0, z: 0, w: 1 })
-                    tcm.setTransform(lightInst, lightMat)
+                    b._lightSync = b._lightSync || {}
+                    if (transformChanged(b._lightSync, t, { x: 0, y: 0, z: 0, w: 1 })) {
+                        const lightMat = quaternionToMat4(t, { x: 0, y: 0, z: 0, w: 1 })
+                        tcm.setTransform(getCachedTransformInstance(tcm, b._lightSync, b.lightEntity), lightMat)
+                    }
                 }
             }
         }

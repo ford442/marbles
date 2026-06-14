@@ -1,6 +1,34 @@
 import { materialPresets } from '../../material-system.js';
 import { ENVIRONMENT_PRESETS } from '../../rendering/environment.js';
 
+const GOAL_COLOR_EPS = 1 / 255
+const GOAL_COLOR_INTERVAL_MS = 80
+const GOAL_LIGHT_INTERVAL_MS = 50
+
+function getCachedTransformInstance(tcm, owner, entity) {
+    if (owner._transformEntity !== entity || owner._transformInst === undefined) {
+        owner._transformEntity = entity
+        owner._transformInst = tcm.getInstance(entity)
+    }
+    return owner._transformInst
+}
+
+function setColor3IfChanged(F, owner, color, now) {
+    const last = owner._lastBaseColor
+    const lastAt = owner._lastBaseColorAt || 0
+    if (last && (now - lastAt) < GOAL_COLOR_INTERVAL_MS) return
+    if (last &&
+        Math.abs(color[0] - last[0]) < GOAL_COLOR_EPS &&
+        Math.abs(color[1] - last[1]) < GOAL_COLOR_EPS &&
+        Math.abs(color[2] - last[2]) < GOAL_COLOR_EPS) {
+        owner._lastBaseColorAt = now
+        return
+    }
+    owner._lastBaseColor = [color[0], color[1], color[2]]
+    owner._lastBaseColorAt = now
+    owner.matInstance?.setColor3Parameter('baseColor', F.RgbType.sRGB, color)
+}
+
 /**
  * Visual-related methods
  * These methods handle visual effects, lighting, and particle systems
@@ -181,20 +209,41 @@ export const visualMethods = {
             } else {
                 effect.state = 'idle';
             }
+
+            const effectVisible = this.cullingManager?.isVisible(
+                `goal-effect:${effect.id}`,
+                [effect.pos.x, effect.pos.y, effect.pos.z],
+                8,
+                'dynamic'
+            ) ?? true
+            if (effect.light) this.cullingManager?.setEntityVisible(effect.light, effectVisible, `goal-effect-light:${effect.id}`)
+            for (const ring of effect.rings) {
+                this.cullingManager?.setEntityVisible(ring.entity, effectVisible, `goal-effect-ring:${ring.entity}`)
+            }
+            if (!effectVisible) {
+                effect._forceGoalRingSync = true
+                continue
+            }
             
             // Update pulsing light intensity
             const pulseSpeed = effect.state === 'near' ? 8 : 4;
             const baseInt = effect.state === 'near' ? effect.nearIntensity : effect.baseIntensity;
             const pulseIntensity = baseInt * (0.8 + 0.2 * Math.sin(effect.time * pulseSpeed));
             
-            // Update light - rebuild with new intensity
-            if (effect.light) {
+            // Update light - rebuild with new intensity, throttled to avoid per-frame builder work.
+            const lightChanged =
+                effect._lastLightState !== effect.state ||
+                Math.abs((effect._lastLightIntensity || 0) - pulseIntensity) > baseInt * 0.02
+            if (effect.light && (lightChanged || now - (effect._lastLightUpdateAt || 0) >= GOAL_LIGHT_INTERVAL_MS)) {
                 F.LightManager.Builder(F['LightManager$Type'].POINT)
                     .color([1.0, 0.6, 0.0])
                     .intensity(pulseIntensity)
                     .position([effect.pos.x, effect.pos.y + 2, effect.pos.z])
                     .falloff(effect.state === 'near' ? 20 : 15)
                     .build(this.engine, effect.light);
+                effect._lastLightState = effect.state
+                effect._lastLightIntensity = pulseIntensity
+                effect._lastLightUpdateAt = now
             }
             
             // Update rings - rotation and bobbing
@@ -210,21 +259,19 @@ export const visualMethods = {
                 const cosR = Math.cos(ring.rotation);
                 const sinR = Math.sin(ring.rotation);
                 
-                // Build rotation matrix for Y-axis rotation
-                const mat = new Float32Array([
-                    cosR * ring.radius, 0, sinR * ring.radius, 0,
-                    0, 0.02, 0, 0,
-                    -sinR * ring.radius, 0, cosR * ring.radius, 0,
-                    effect.pos.x, y, effect.pos.z, 1
-                ]);
+                const mat = ring._mat || (ring._mat = new Float32Array(16));
+                mat[0] = cosR * ring.radius; mat[1] = 0; mat[2] = sinR * ring.radius; mat[3] = 0;
+                mat[4] = 0; mat[5] = 0.02; mat[6] = 0; mat[7] = 0;
+                mat[8] = -sinR * ring.radius; mat[9] = 0; mat[10] = cosR * ring.radius; mat[11] = 0;
+                mat[12] = effect.pos.x; mat[13] = y; mat[14] = effect.pos.z; mat[15] = 1;
                 
-                const inst = tcm.getInstance(ring.entity);
+                const inst = getCachedTransformInstance(tcm, ring, ring.entity);
                 tcm.setTransform(inst, mat);
                 
                 // Fade rings in sequence
                 if (effect.state === 'near') {
                     // All rings bright when near
-                    ring.matInstance.setColor3Parameter('baseColor', F.RgbType.sRGB, [1.0, 0.95, 0.5]);
+                    setColor3IfChanged(F, ring, [1.0, 0.95, 0.5], now);
                 } else {
                     // Sequential fade based on time
                     const fadePhase = (effect.time * 0.5 + ring.index * 0.3) % 3;
@@ -232,7 +279,7 @@ export const visualMethods = {
                     const r = 1.0;
                     const g = 0.84 * brightness;
                     const b = 0.0;
-                    ring.matInstance.setColor3Parameter('baseColor', F.RgbType.sRGB, [r, g, b]);
+                    setColor3IfChanged(F, ring, [r, g, b], now);
                 }
             }
             
