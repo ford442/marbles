@@ -16,6 +16,8 @@ export class InitLevelLoader {
 
         this.clearLevel()
         console.log('[LEVEL] Cleared previous level')
+        this.perfMonitor?.resetLevel(levelId)
+        this.cullingManager?.reset()
 
         this.ghostRecording = []
         this.ghostPlaybackIndex = 0
@@ -67,6 +69,7 @@ export class InitLevelLoader {
         for (const zone of level.zones) {
             await this.createZone(zone)
         }
+        this.flushStaticBatches?.()
         console.log(`[LEVEL] Created ${this.staticEntities.length} static entities`)
 
         console.log(`[LEVEL] Spawning marbles at ${JSON.stringify(level.spawn)}...`)
@@ -76,6 +79,8 @@ export class InitLevelLoader {
         if (this.bestGhosts[levelId]) {
             this.createGhostMarble()
         }
+
+        this.perfMonitor?.recordLevelLoad(levelId, level)
 
         console.log('[LEVEL] Level loading complete!')
 

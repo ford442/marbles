@@ -2,8 +2,22 @@ import { quaternionToMat4, quatFromEuler } from './math.js';
 
 export class GameLoopSyncMethods {
     syncTransformsAndRender(now) {
+        const perfSyncStart = performance.now()
+        const perfCounts = {
+            visualParticlesStart: this.visualParticles?.length || 0,
+            visualParticlesCulled: 0,
+            temporaryPlatforms: this.temporaryPlatforms?.length || 0,
+            marbles: this.marbles?.length || 0,
+            dynamicObjects: this.dynamicObjects?.length || 0,
+            cueVisible: this.cueInst ? 1 : 0,
+            activeMarbleLight: this.activeMarbleLightEntity ? 1 : 0,
+            physicsStepMs: 0,
+            renderMs: 0,
+            renderedFrame: false,
+        }
         // Cache transform manager once per frame to avoid repeated WASM boundary crossings
         const tcm = this.engine.getTransformManager()
+        this.cullingManager?.updateStaticBatches()
 
         // Handle visual particles lifecycle
         for (let i = this.visualParticles.length - 1; i >= 0; i--) {
@@ -17,6 +31,15 @@ export class GameLoopSyncMethods {
                 this.Filament.EntityManager.get().destroy(p.entity)
                 this.visualParticles.splice(i, 1)
             } else {
+                const particleCenter = p.pos ? [p.pos.x, p.pos.y, p.pos.z] : null
+                const particleRadius = p.maxRadius || p.scale || 1
+                const particleVisible = this.cullingManager?.isVisible(`particle:${p.entity}`, particleCenter, particleRadius, 'particle') ?? true
+                this.cullingManager?.setEntityVisible(p.entity, particleVisible, `particle:${p.entity}`)
+                if (!particleVisible) {
+                    perfCounts.visualParticlesCulled += 1
+                    continue
+                }
+
                 if (p.isEMPRing) {
                     // EMP shockwave ring effect
                     const progress = timeAlive / p.duration
@@ -355,7 +378,9 @@ export class GameLoopSyncMethods {
 
         // Skip physics and game logic when paused
         if (!this.isPaused) {
+            const physicsStart = performance.now()
             this.world.step()
+            perfCounts.physicsStepMs = performance.now() - physicsStart
             this.processCollisionEvents()
             this.checkGameLogic()
         }
@@ -465,11 +490,13 @@ if (this.renderSpeedLines) {
         }
 
         if (this.renderer && this.swapChain && this.view) {
+            const renderStart = performance.now()
             try {
                 // === MODERN / RECOMMENDED FILAMENT PATTERN ===
                 if (this.renderer.beginFrame(this.swapChain)) {
                     this.renderer.render(this.swapChain, this.view);
                     this.renderer.endFrame();
+                    perfCounts.renderedFrame = true
 
                     // First-frame handling (loading screen)
                     if (!this._firstFrameRendered) {
@@ -493,6 +520,8 @@ if (this.renderSpeedLines) {
                     console.error('[RENDER] renderer.render() failed:', renderErr);
                 }
             }
+            perfCounts.renderMs = performance.now() - renderStart
+            this.perfMonitor?.recordRenderTiming(perfCounts.renderMs, perfCounts.renderedFrame)
 
             this.engine.execute();
         } 
@@ -501,6 +530,16 @@ if (this.renderSpeedLines) {
             console.error('[RENDER] Render guard failed — renderer:', !!this.renderer, 
                          'swapChain:', !!this.swapChain, 'view:', !!this.view);
         }
+        perfCounts.syncMs = performance.now() - perfSyncStart
+        perfCounts.estimatedTransformSets =
+            (perfCounts.visualParticlesStart - perfCounts.visualParticlesCulled) +
+            perfCounts.temporaryPlatforms +
+            perfCounts.marbles +
+            perfCounts.dynamicObjects +
+            perfCounts.cueVisible +
+            perfCounts.activeMarbleLight
+        perfCounts.estimatedGetInstanceCalls = perfCounts.estimatedTransformSets
+        this.perfMonitor?.recordSyncWork(perfCounts)
     }
 }
 

@@ -5,9 +5,10 @@ export class GameLogicCore {
     checkGameLogic() {
         if (!this.currentLevel || this.levelComplete) return
 
+        let horizSpeed = 0
         if (this.playerMarble) {
             const linvel = this.playerMarble.rigidBody.linvel()
-            const horizSpeed = Math.hypot(linvel.x, linvel.z)
+            horizSpeed = Math.hypot(linvel.x, linvel.z)
 
             if (this.highSpeedTime === undefined) this.highSpeedTime = 0
             if (this.lastSpeedAwardTime === undefined) this.lastSpeedAwardTime = 0

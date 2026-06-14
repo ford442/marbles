@@ -20,7 +20,7 @@ export function batchBoxGeometry(baseVertices, baseIndices, instances) {
         return { vertices: baseVertices, indices: baseIndices, count: 1 }
     }
 
-    const vertexStride = 11 // position(3) + tangent(4) + uv(2) + color?(2) — match CUBE_VERTICES
+    const vertexStride = 9 // position(3) + tangent(4) + uv(2) — match CUBE_VERTICES
     const vertsPerBox = baseVertices.length / vertexStride
     const indicesPerBox = baseIndices.length
 
@@ -161,7 +161,7 @@ function quatToMat4(q, p, s) {
  * @param {any} Filament      The Filament namespace object
  * @param {any} engine        Filament engine instance
  * @param {{vertices: Float32Array, indices: Uint16Array}} batch
- * @param {number} vertexStride  Floats per vertex (e.g. 11 for cube)
+ * @param {number} vertexStride  Floats per vertex (e.g. 9 for cube)
  * @returns {{vb: VertexBuffer, ib: IndexBuffer}}
  */
 export function buildBatchedBuffers(Filament, engine, batch, vertexStride) {
@@ -189,13 +189,14 @@ export function buildBatchedBuffers(Filament, engine, batch, vertexStride) {
  * Create a single renderable entity from batched buffers.
  * This replaces `N` separate box entities with `1` entity.
  */
-export function createBatchedRenderable(engine, scene, Filament, vb, ib, materialInstance, boundingBoxHalfExtent) {
+export function createBatchedRenderable(engine, scene, Filament, vb, ib, materialInstance, boundingBox = null) {
     const entity = Filament.EntityManager.get().create()
+    const bounds = boundingBox || { center: [0, 0, 0], halfExtent: [50, 50, 50] }
 
     Filament.RenderableManager.Builder(1)
         .boundingBox({
-            center: [0, 0, 0],
-            halfExtent: boundingBoxHalfExtent || [50, 50, 50]
+            center: bounds.center || [0, 0, 0],
+            halfExtent: bounds.halfExtent || [50, 50, 50]
         })
         .material(0, materialInstance)
         .geometry(0, Filament['RenderableManager$PrimitiveType'].TRIANGLES, vb, ib)
@@ -205,4 +206,49 @@ export function createBatchedRenderable(engine, scene, Filament, vb, ib, materia
 
     scene.addEntity(entity)
     return entity
+}
+
+export function computeBatchBounds(instances) {
+    const min = [Infinity, Infinity, Infinity]
+    const max = [-Infinity, -Infinity, -Infinity]
+
+    for (const inst of instances) {
+        const pos = inst.position || [0, 0, 0]
+        const rot = inst.rotation || [0, 0, 0, 1]
+        const scl = inst.scale || [1, 1, 1]
+        const m = quatToMat4(rot, pos, scl)
+
+        for (let x of [-0.5, 0.5]) {
+            for (let y of [-0.5, 0.5]) {
+                for (let z of [-0.5, 0.5]) {
+                    const wx = m[0] * x + m[4] * y + m[8] * z + m[12]
+                    const wy = m[1] * x + m[5] * y + m[9] * z + m[13]
+                    const wz = m[2] * x + m[6] * y + m[10] * z + m[14]
+                    min[0] = Math.min(min[0], wx)
+                    min[1] = Math.min(min[1], wy)
+                    min[2] = Math.min(min[2], wz)
+                    max[0] = Math.max(max[0], wx)
+                    max[1] = Math.max(max[1], wy)
+                    max[2] = Math.max(max[2], wz)
+                }
+            }
+        }
+    }
+
+    if (!Number.isFinite(min[0])) {
+        return { center: [0, 0, 0], halfExtent: [1, 1, 1] }
+    }
+
+    return {
+        center: [
+            (min[0] + max[0]) / 2,
+            (min[1] + max[1]) / 2,
+            (min[2] + max[2]) / 2,
+        ],
+        halfExtent: [
+            Math.max(0.5, (max[0] - min[0]) / 2),
+            Math.max(0.5, (max[1] - min[1]) / 2),
+            Math.max(0.5, (max[2] - min[2]) / 2),
+        ]
+    }
 }

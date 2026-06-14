@@ -11,6 +11,8 @@ import { applyGameLoopMethods } from './game-loop-methods.js';
 import { applyGameLoopRenderMethods } from './game-loop-render-methods.js';
 import { applyGameLoopSyncMethods } from './game-loop-sync-methods.js';
 import { HUDManager } from './hud-manager.js';
+import { PerfMonitor } from './perf-monitor.js';
+import { CullingManager } from './culling-manager.js';
 
 class MarblesGame {
     constructor() {
@@ -324,6 +326,8 @@ class MarblesGame {
 
         // Initialize HUD Manager
         this.hudManager = new HUDManager(this)
+        this.perfMonitor = new PerfMonitor(this)
+        this.cullingManager = new CullingManager(this)
     }
 }
 

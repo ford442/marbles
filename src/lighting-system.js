@@ -50,7 +50,7 @@ export class LightingSystem {
         this.currentEnvironment = envName
         
         try {
-            const lm = this.Filament.LightManager
+            const lm = this.engine.getLightManager()
             
             // Update sun light
             if (envPreset.sunColor && envPreset.sunIntensity) {
@@ -127,7 +127,7 @@ export class LightingSystem {
         
         if (this.animatedLights.length === 0) return
         
-        const lm = this.Filament.LightManager
+        const lm = this.engine.getLightManager()
         
         for (const entry of this.animatedLights) {
             const {light, behavior, params, baseColor, baseIntensity} = entry

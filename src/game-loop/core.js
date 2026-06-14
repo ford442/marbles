@@ -14,6 +14,7 @@ export class GameLoopRenderCore {
     renderAndSync() {
         // Cache timestamp once per frame for reuse throughout renderAndSync
         const now = Date.now()
+        this.perfMonitor?.beginFrame()
         const INITIAL_FRAME_DELTA_SEC = 1 / 60
         const frameDeltaSec = this._lastRenderTick ? (now - this._lastRenderTick) / 1000 : INITIAL_FRAME_DELTA_SEC
         this._lastRenderTick = now
@@ -22,6 +23,8 @@ export class GameLoopRenderCore {
         // Throttle HUD CSS style updates to ~10Hz to reduce layout/paint overhead
         const shouldUpdateHUD = (now - (this._lastHudStyleUpdate || 0)) >= 100
         if (shouldUpdateHUD) this._lastHudStyleUpdate = now
+        let culledPowerUps = 0
+        let culledCollectibles = 0
         const rotSpeed = 0.02
         const zoomSpeed = 0.5
 
@@ -573,6 +576,8 @@ export class GameLoopRenderCore {
             this._cameraState = { eye: [eyeX, eyeY, eyeZ], target: [targetX, targetY, targetZ] };
         }
 
+        this.cullingManager?.beginFrame()
+
         // Update Moving Platforms
         // If time stop is active, we don't advance the timeSec for moving platforms
         if (this.timeStopActive) {
@@ -644,6 +649,13 @@ export class GameLoopRenderCore {
 
         // Update PowerUps
         for (const p of this.powerUps) {
+            const powerVisible = this.cullingManager?.isVisible(`powerup:${p.entity}`, [p.pos.x, p.baseY, p.pos.z], 1, 'dynamic') ?? true
+            this.cullingManager?.setEntityVisible(p.entity, powerVisible, `powerup:${p.entity}`)
+            if (!powerVisible) {
+                culledPowerUps += 1
+                continue
+            }
+
             if (!this.timeStopActive) {
                 p.rotation += 0.05
             }
@@ -670,16 +682,6 @@ export class GameLoopRenderCore {
                 const c = this.collectibles[i]
                 const bobOffset = this.timeStopActive ? 0 : Math.sin(this.collectibleRotation * 2) * 0.2
                 const newY = c.baseY + bobOffset
-                const q = quatFromEuler(this.collectibleRotation, 0, Math.PI / 4)
-
-                const mat = quaternionToMat4({ x: c.pos.x, y: newY, z: c.pos.z }, q)
-                const scale = 0.5
-                mat[0] *= scale; mat[1] *= scale; mat[2] *= scale
-                mat[4] *= scale; mat[5] *= scale; mat[6] *= scale
-                mat[8] *= scale; mat[9] *= scale; mat[10] *= scale
-
-                const inst = tcm.getInstance(c.entity)
-                tcm.setTransform(inst, mat)
 
                 if (this.playerMarble) {
                     const pt = this.playerMarble.rigidBody.translation()
@@ -714,8 +716,27 @@ export class GameLoopRenderCore {
                         this.scene.remove(c.entity)
                         this.engine.destroyEntity(c.entity)
                         this.collectibles.splice(i, 1)
+                        continue
                     }
                 }
+
+                const collectibleVisible = this.cullingManager?.isVisible(`collectible:${c.entity}`, [c.pos.x, newY, c.pos.z], 1, 'dynamic') ?? true
+                this.cullingManager?.setEntityVisible(c.entity, collectibleVisible, `collectible:${c.entity}`)
+                if (!collectibleVisible) {
+                    culledCollectibles += 1
+                    continue
+                }
+
+                const q = quatFromEuler(this.collectibleRotation, 0, Math.PI / 4)
+
+                const mat = quaternionToMat4({ x: c.pos.x, y: newY, z: c.pos.z }, q)
+                const scale = 0.5
+                mat[0] *= scale; mat[1] *= scale; mat[2] *= scale
+                mat[4] *= scale; mat[5] *= scale; mat[6] *= scale
+                mat[8] *= scale; mat[9] *= scale; mat[10] *= scale
+
+                const inst = tcm.getInstance(c.entity)
+                tcm.setTransform(inst, mat)
             }
         }
 
@@ -1109,6 +1130,26 @@ export class GameLoopRenderCore {
         if (this.hudManager) {
             this.hudManager.updateAllAbilities()
         }
+
+        this.perfMonitor?.recordCoreWork({
+            movingPlatforms: this.movingPlatforms?.length || 0,
+            rotatingPlatforms: this.rotatingPlatforms?.length || 0,
+            powerUps: this.powerUps?.length || 0,
+            culledPowerUps,
+            collectibles: this.collectibles?.length || 0,
+            culledCollectibles,
+            activeBlackHoles: this.activeBlackHoles?.length || 0,
+            activeBombs: this.activeBombs?.length || 0,
+            activeMissiles: this.activeMissiles?.length || 0,
+            estimatedTransformSets:
+                (this.movingPlatforms?.length || 0) +
+                (this.rotatingPlatforms?.length || 0) +
+                Math.max(0, (this.powerUps?.length || 0) - culledPowerUps) +
+                Math.max(0, (this.collectibles?.length || 0) - culledCollectibles) +
+                (this.activeBlackHoles?.length || 0) +
+                (this.activeBombs?.length || 0) +
+                (this.activeMissiles?.length || 0)
+        })
 
         // Update goal zone effects
         if (this.playerMarble) {

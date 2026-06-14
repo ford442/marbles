@@ -2,6 +2,13 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { quatFromEuler, quaternionToMat4 } from './math.js';
 import { audio } from './audio.js';
 import { materialPresets, trackSurfacePresets, applyFullPreset } from './material-system.js';
+import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
+import {
+    batchBoxGeometry,
+    buildBatchedBuffers,
+    computeBatchBounds,
+    createBatchedRenderable
+} from './gpu-instancing.js';
 
 // Default roughness applied to surfaces that have no matching preset
 const DEFAULT_SURFACE_ROUGHNESS = 0.4
@@ -21,6 +28,107 @@ const MATERIAL_SURFACE_ALIASES = {
 };
 
 export class PhysicsFactoryMethods {
+    isStaticBatchingEnabled() {
+        if (this.rendererType === 'simple-webgl' || window.usingSimpleRenderer) return false
+        const params = new URLSearchParams(window.location.search)
+        return !(params.get('staticBatch') === '0' || params.has('noStaticBatch') || params.has('noBatch'))
+    }
+
+    resolveStaticSurfacePreset(materialPreset) {
+        if (typeof materialPreset === 'string') {
+            const key = MATERIAL_SURFACE_ALIASES[materialPreset] || materialPreset
+            return trackSurfacePresets[key] || null
+        }
+        return materialPreset && typeof materialPreset === 'object' ? materialPreset : null
+    }
+
+    createStaticMaterialInstance(color, materialPreset, surfacePreset = null) {
+        const matInstance = this.material.createInstance()
+        const baseColor = (surfacePreset && surfacePreset.baseColor) ? surfacePreset.baseColor : color
+        matInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, baseColor)
+
+        if (surfacePreset) {
+            applyFullPreset(matInstance, surfacePreset, this.hasProceduralMaterial, this.Filament)
+        } else {
+            matInstance.setFloatParameter('roughness', DEFAULT_SURFACE_ROUGHNESS)
+            if (this.hasProceduralMaterial) {
+                matInstance.setFloatParameter('bumpScale', 0.01)
+                matInstance.setFloatParameter('bumpFrequency', 20.0)
+            }
+        }
+
+        return matInstance
+    }
+
+    getStaticBatchKey(color, materialPreset, surfacePreset) {
+        const presetKey = typeof materialPreset === 'string'
+            ? `preset:${MATERIAL_SURFACE_ALIASES[materialPreset] || materialPreset}`
+            : `preset-object:${JSON.stringify(surfacePreset || null)}`
+        const colorKey = surfacePreset?.baseColor
+            ? 'preset-color'
+            : (color || []).map(v => Number(v).toFixed(3)).join(',')
+        return `${presetKey}|color:${colorKey}`
+    }
+
+    queueStaticBoxBatch(pos, rotation, halfExtents, color, materialPreset, surfacePreset) {
+        if (!this._staticBoxBatchGroups) this._staticBoxBatchGroups = new Map()
+
+        const key = this.getStaticBatchKey(color, materialPreset, surfacePreset)
+        let group = this._staticBoxBatchGroups.get(key)
+        if (!group) {
+            group = {
+                key,
+                color: [...color],
+                materialPreset,
+                surfacePreset,
+                instances: []
+            }
+            this._staticBoxBatchGroups.set(key, group)
+        }
+
+        group.instances.push({
+            position: [pos.x, pos.y, pos.z],
+            rotation: [rotation.x, rotation.y, rotation.z, rotation.w],
+            scale: [halfExtents.x * 2, halfExtents.y * 2, halfExtents.z * 2]
+        })
+    }
+
+    flushStaticBatches() {
+        const groups = this._staticBoxBatchGroups
+        if (!groups || groups.size === 0) {
+            this.staticBatchStats = { groups: 0, boxes: 0, collapsedEntities: 0 }
+            return
+        }
+
+        if (!this.staticBatchResources) this.staticBatchResources = []
+
+        let boxes = 0
+        let groupsBuilt = 0
+        for (const group of groups.values()) {
+            if (!group.instances.length) continue
+            const batch = batchBoxGeometry(CUBE_VERTICES, CUBE_INDICES, group.instances)
+            const { vb, ib } = buildBatchedBuffers(this.Filament, this.engine, batch, 9)
+            const matInstance = this.createStaticMaterialInstance(group.color, group.materialPreset, group.surfacePreset)
+            const bounds = computeBatchBounds(group.instances)
+            const radius = Math.hypot(bounds.halfExtent[0], bounds.halfExtent[1], bounds.halfExtent[2])
+            const entity = createBatchedRenderable(this.engine, this.scene, this.Filament, vb, ib, matInstance, bounds)
+
+            this.staticEntities.push(entity)
+            this.staticBatchResources.push({ entity, vb, ib, matInstance, bounds, radius, boxes: group.instances.length })
+            boxes += group.instances.length
+            groupsBuilt += 1
+        }
+
+        this.staticBatchStats = {
+            groups: groupsBuilt,
+            boxes,
+            collapsedEntities: Math.max(0, boxes - groupsBuilt)
+        }
+        window.staticBatchStats = this.staticBatchStats
+        console.info('[BATCH] static boxes', this.staticBatchStats)
+        groups.clear()
+    }
+
     createPhaseBox(pos, rotation, halfExtents, color, material = 'glass') {
         const bodyDesc = RAPIER.RigidBodyDesc.fixed()
             .setTranslation(pos.x, pos.y, pos.z)
@@ -81,36 +189,37 @@ export class PhysicsFactoryMethods {
         this.staticBodies.push(body)
 
         // Resolve surface preset: string key → trackSurfacePresets lookup (with alias)
-        let surfacePreset = null
-        if (typeof materialPreset === 'string') {
-            const key = MATERIAL_SURFACE_ALIASES[materialPreset] || materialPreset
-            surfacePreset = trackSurfacePresets[key] || null
-        } else if (materialPreset && typeof materialPreset === 'object') {
-            surfacePreset = materialPreset
-        }
+        const surfacePreset = this.resolveStaticSurfacePreset(materialPreset)
 
         // Use preset name for audio if provided, otherwise default
         const audioMaterial = typeof materialPreset === 'string' ? materialPreset : 'wood'
         audio.registerBodyMaterial(body, audioMaterial)
 
-        const entity = this.Filament.EntityManager.get().create()
-        const matInstance = this.material.createInstance()
+        if (this.isStaticBatchingEnabled()) {
+            this.queueStaticBoxBatch(pos, rotation, halfExtents, color, materialPreset, surfacePreset)
 
-        // Apply base color — prefer preset color when available
-        const baseColor = (surfacePreset && surfacePreset.baseColor) ? surfacePreset.baseColor : color
-        matInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, baseColor)
-
-        // Apply all preset parameters via the shared helper (hasProcedural-aware)
-        if (surfacePreset) {
-            applyFullPreset(matInstance, surfacePreset, this.hasProceduralMaterial, this.Filament)
-        } else {
-            // Fallback defaults when no preset is available
-            matInstance.setFloatParameter('roughness', DEFAULT_SURFACE_ROUGHNESS)
-            if (this.hasProceduralMaterial) {
-                matInstance.setFloatParameter('bumpScale', 0.01)
-                matInstance.setFloatParameter('bumpFrequency', 20.0)
+            if (surfacePreset && surfacePreset.emissiveIntensity > 0 && surfacePreset.emissive) {
+                const lightEntity = this.Filament.EntityManager.get().create()
+                const lightColor = surfacePreset.emissive
+                const lightIntensity = surfacePreset.emissiveIntensity * 8000
+                this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].POINT)
+                    .color(lightColor)
+                    .intensity(lightIntensity)
+                    .falloff(15.0)
+                    .build(this.engine, lightEntity)
+                const ltcm = this.engine.getTransformManager()
+                const linst = ltcm.getInstance(lightEntity)
+                const lmat = [1,0,0,0, 0,1,0,0, 0,0,1,0, pos.x, pos.y + halfExtents.y, pos.z, 1]
+                ltcm.setTransform(linst, lmat)
+                this.scene.addEntity(lightEntity)
+                this.staticEntities.push(lightEntity)
             }
+
+            return
         }
+
+        const entity = this.Filament.EntityManager.get().create()
+        const matInstance = this.createStaticMaterialInstance(color, materialPreset, surfacePreset)
 
         this.Filament.RenderableManager.Builder(1)
             .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })

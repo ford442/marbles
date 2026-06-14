@@ -20,6 +20,7 @@ The game features approximately 40 levels with diverse zones, obstacles, scoring
 |-----------|------------|-----------------|
 | Build Tool | Vite | ^7.3.1 |
 | 3D Engine | Filament (Google) | ^1.51.5, loaded via global `filament.js` script tag |
+| Debug Renderer | Simplified WebGL2 | Opt-in with `?renderer=simple`, shares Rapier/game state through a Filament-like adapter |
 | Physics Engine | Rapier3D-Compat | ^0.13.0 (`@dimforge/rapier3d-compat`) |
 | Language | JavaScript (ES Modules) + TypeScript/TSX | Mixed codebase |
 | UI Framework | React | Used in sequencer/importer modals |
@@ -173,6 +174,10 @@ The `MarblesGame` constructor initializes a monolithic state object with ~300 li
 - **Filament** handles all rendering.
 - Every frame, physics transforms are extracted from rigid bodies, converted via `quaternionToMat4()`, and applied to Filament renderable entities via `TransformManager`.
 - Scale is applied separately by multiplying the upper 3x3 matrix columns.
+- For agent/browser debugging, `?renderer=simple` uses the same game loop and Rapier state but draws a reduced WebGL2 top-down view. Check `window.rendererType`, `window.usingSimpleRenderer`, and `window.rendererFallbackReason` before assuming which renderer is active. See `docs/RENDERER_FALLBACK.md`.
+- For performance debugging, use `?perf=1` or `?fps=1` and press `F2` to toggle the FPS/frame-time overlay. `window.perfMonitor.getLevelSummary()` and `window.perfLevelLoads` expose sampled level metrics; see `docs/PERFORMANCE_BASELINE.md`.
+- Filament static box visuals are auto-batched after zone creation. Use `?staticBatch=0` / `?noStaticBatch` to compare the pre-batch path; physics fixed bodies remain individual.
+- CPU-side visual culling is enabled by default on the Filament path. Use `?culling=0`, `?noCulling`, or `?noCull` for A/B checks. It hides culled static batches from the Filament scene and skips far power-up, collectible, and visual-particle transform writes while leaving physics/gameplay state active.
 
 ### React / TSX UI Layer
 

@@ -98,6 +98,10 @@ const force = physics.computeForceField(
 - Filament Engine for WebGL2 rendering
 - Camera positioned at (0, 10, 20) looking at origin
 - Entities synchronized with physics rigid bodies
+- Optional simplified WebGL2 debug renderer via `?renderer=simple`, `?renderer=webgl`, or the in-page renderer toggle
+- Optional FPS/performance overlay via `?fps=1`, `?perf=1`, or `F2`; see `docs/PERFORMANCE_BASELINE.md`
+- Static box visuals are batched by default on the Filament path; use `?staticBatch=0` for before/after checks
+- Lightweight CPU culling is enabled by default on the Filament path; use `?culling=0` or `?noCulling` for before/after checks
 
 ### Transform System
 The `quaternionToMat4()` helper function converts Rapier's quaternion rotations and positions into column-major 4x4 transformation matrices for Filament:
@@ -132,6 +136,9 @@ function quaternionToMat4(position, quaternion) {
 
 - Filament uses a UMD/WASM loading pattern which may require additional configuration in some environments
 - The physics simulation runs independently and can be tested even if Filament rendering is unavailable
+- Use `?renderer=simple` for a lightweight shared-state WebGL2 view that draws level geometry and live marble positions without Filament materials/post-processing. Runtime breadcrumbs include `window.rendererType`, `window.usingSimpleRenderer`, and `window.rendererFallbackReason`.
+- See `docs/RENDERER_FALLBACK.md` for renderer toggle usage and debugging guidance.
+- Use `?perf=1` or `?fps=1` to show the FPS/frame-time overlay and expose `window.perfMonitor` summaries for level baseline captures. See `docs/PERFORMANCE_BASELINE.md`.
+- Use `?culling=0` or `?noCulling` to disable the conservative distance/view-cone culler when checking pop-in, static batch visibility, or dynamic visual updates.
 - Console logs show marble positions updating as physics simulation runs
 - Build the WASM module with `npm run build:wasm` (requires Emscripten); see `wasm/README.md`
-

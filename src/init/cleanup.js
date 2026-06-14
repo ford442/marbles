@@ -25,6 +25,15 @@ export class InitCleanup {
             this.engine.destroyEntity(entity)
         }
         this.staticEntities = []
+        if (this.staticBatchResources) {
+            for (const batch of this.staticBatchResources) {
+                if (batch.matInstance) this.engine.destroyMaterialInstance(batch.matInstance)
+            }
+            this.staticBatchResources = []
+        }
+        if (this._staticBoxBatchGroups) this._staticBoxBatchGroups.clear()
+        this.staticBatchStats = { groups: 0, boxes: 0, collapsedEntities: 0 }
+        this.cullingManager?.reset()
         
         // Clear animated lights from zone
         if (this.lightingSystem) {

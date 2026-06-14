@@ -6,6 +6,12 @@ import { initMarblePhysicsWasm } from '../wasm-bridge.js';
 import { ParticleSystem } from '../particle-system.js';
 import { LightingSystem } from '../lighting-system.js';
 import { VolumetricLightsSystem } from '../rendering/volumetric-lights.js';
+import {
+    getRequestedRendererMode,
+    installRendererModeControls,
+    installSimpleDebugBackend,
+    setRuntimeRendererGlobals,
+} from '../rendering/simple-debug-renderer.js';
 
 export class InitCore {
     async init() {
@@ -485,26 +491,16 @@ export class InitCore {
             console.log(`[INIT] MarblePhysics WASM ${ok ? 'active' : 'using JS fallbacks'}`)
         })
 
-        console.log('[INIT] Initializing Filament rendering...')
-        if (typeof window.updateLoadingProgress === 'function') {
-            window.updateLoadingProgress(25, 'Loading Filament rendering engine...')
-        }
+        const rendererRequest = getRequestedRendererMode()
+        this.rendererType = rendererRequest.type
+        this.rendererFallbackReason = ''
+        setRuntimeRendererGlobals(this.rendererType, this.rendererFallbackReason)
 
-        try {
-            this.Filament = await loadFilament()
-        } catch (filamentError) {
-            const message = filamentError?.message || 'Unknown error'
-            console.error('[INIT] Filament failed to load:', filamentError)
-            this._showInitError(message)
-            return
-        }
-
+        console.log(`[INIT] Initializing ${rendererRequest.type === 'simple-webgl' ? 'Simple WebGL2 debug' : 'Filament'} rendering...`)
         if (typeof window.updateLoadingProgress === 'function') {
-            window.updateLoadingProgress(45, 'Filament rendering ready')
-        }
-        console.log('[INIT] Filament loaded')
-        if (typeof window.updateLoadingProgress === 'function') {
-            window.updateLoadingProgress(50, 'Creating rendering engine...')
+            window.updateLoadingProgress(25, rendererRequest.type === 'simple-webgl'
+                ? 'Creating simple WebGL2 debug renderer...'
+                : 'Loading Filament rendering engine...')
         }
 
         const width = window.innerWidth
@@ -513,38 +509,63 @@ export class InitCore {
         this.canvas.height = height
         console.log(`[INIT] Canvas sized to ${width}x${height}`)
 
-        try {
-            this.engine = this.Filament.Engine.create(this.canvas)
-            this.scene = this.engine.createScene()
-            this.swapChain = this.engine.createSwapChain()
-            this.renderer = this.engine.createRenderer()
-        } catch (engineError) {
-            const message = engineError?.message || 'Unknown rendering error'
-            console.error('[INIT] Failed to create Filament engine:', engineError)
-            const errorText = message.includes('WebGL 2.0')
-                ? 'WebGL 2.0 is not supported or failed to initialize in this browser.'
-                : `Failed to initialize 3D renderer: ${message}`
-            this._showInitError(errorText)
-            return
+        if (rendererRequest.type === 'simple-webgl') {
+            installSimpleDebugBackend(this)
+            console.log('[INIT] Simple WebGL2 debug renderer ready')
+        } else {
+            try {
+                this.Filament = await loadFilament()
+            } catch (filamentError) {
+                const message = filamentError?.message || 'Unknown error'
+                console.error('[INIT] Filament failed to load, falling back to simple renderer:', filamentError)
+                installSimpleDebugBackend(this, `Filament load failed: ${message}`)
+            }
+
+            if (this.rendererType !== 'simple-webgl') {
+                if (typeof window.updateLoadingProgress === 'function') {
+                    window.updateLoadingProgress(45, 'Filament rendering ready')
+                }
+                console.log('[INIT] Filament loaded')
+                if (typeof window.updateLoadingProgress === 'function') {
+                    window.updateLoadingProgress(50, 'Creating rendering engine...')
+                }
+
+                try {
+                    this.engine = this.Filament.Engine.create(this.canvas)
+                    this.scene = this.engine.createScene()
+                    this.swapChain = this.engine.createSwapChain()
+                    this.renderer = this.engine.createRenderer()
+                    this.rendererType = 'filament'
+                    this.rendererModeLabel = 'Filament'
+                    setRuntimeRendererGlobals('filament', '')
+                } catch (engineError) {
+                    const message = engineError?.message || 'Unknown rendering error'
+                    console.error('[INIT] Failed to create Filament engine, falling back to simple renderer:', engineError)
+                    installSimpleDebugBackend(this, `Filament engine failed: ${message}`)
+                }
+            }
         }
 
-        console.log('[INIT] Filament engine created')
+        if (this.rendererType !== 'simple-webgl') {
+            console.log('[INIT] Filament engine created')
 
-        const cameraEntity = this.Filament.EntityManager.get().create()
-        this.camera = this.engine.createCamera(cameraEntity)
-        this.view = this.engine.createView()
-        this.view.setCamera(this.camera)
-        this.view.setScene(this.scene)
-        this.view.setViewport([0, 0, width, height])
+            const cameraEntity = this.Filament.EntityManager.get().create()
+            this.camera = this.engine.createCamera(cameraEntity)
+            this.view = this.engine.createView()
+            this.view.setCamera(this.camera)
+            this.view.setScene(this.scene)
+            this.view.setViewport([0, 0, width, height])
 
-        const CameraFov = this.Filament?.['Camera$Fov']
-        const aspect = width / height
-        const fovMode = CameraFov ? CameraFov.VERTICAL : 0
-        this.camera.setProjectionFov(this.currentFov, aspect, 0.1, 1000.0, fovMode)
-        this.camera.lookAt([0, 10, 20], [0, 0, 0], [0, 1, 0])
+            const CameraFov = this.Filament?.['Camera$Fov']
+            const aspect = width / height
+            const fovMode = CameraFov ? CameraFov.VERTICAL : 0
+            this.camera.setProjectionFov(this.currentFov, aspect, 0.1, 1000.0, fovMode)
+            this.camera.lookAt([0, 10, 20], [0, 0, 0], [0, 1, 0])
 
-        this.renderer.setClearOptions({ clearColor: [0.1, 0.1, 0.1, 1.0], clear: true })
-        console.log('[INIT] Camera and view configured')
+            this.renderer.setClearOptions({ clearColor: [0.1, 0.1, 0.1, 1.0], clear: true })
+        }
+        installRendererModeControls(this.rendererType)
+        console.log(`[INIT] Camera and view configured (${this.rendererModeLabel || this.rendererType})`)
 
         console.log('[INIT] Loading assets...')
         if (typeof window.updateLoadingProgress === 'function') {
@@ -556,13 +577,16 @@ export class InitCore {
             window.updateLoadingProgress(70, 'Assets loaded')
         }
 
-        // Initialize particle system
-        try {
-            const qualityTier = this.settings?.graphics?.quality || 'high'
-            this.particleSystem = new ParticleSystem(this.engine, this.scene, this.Filament, qualityTier)
-            console.log('[INIT] Particle system initialized')
-        } catch (e) {
-            console.error('[INIT] Particle system initialization failed:', e)
+        if (this.rendererType !== 'simple-webgl') {
+            try {
+                const qualityTier = this.settings?.graphics?.quality || 'high'
+                this.particleSystem = new ParticleSystem(this.engine, this.scene, this.Filament, qualityTier)
+                console.log('[INIT] Particle system initialized')
+            } catch (e) {
+                console.error('[INIT] Particle system initialization failed:', e)
+                this.particleSystem = null
+            }
+        } else {
             this.particleSystem = null
         }
 
@@ -572,36 +596,47 @@ export class InitCore {
         this.createLight()
         console.log('[INIT] Lights created')
         
-        // Initialize lighting system
-        try {
-            const qualityTier = this.settings?.graphics?.quality || 'high'
-            this.lightingSystem = new LightingSystem(this.engine, this.scene, this.Filament)
-            this.lightingSystem.registerLights(this.sunLight, this.fillLight, this.backLight)
-            this.lightingSystem.setQuality(qualityTier)
-            console.log('[INIT] Lighting system initialized')
-        } catch (e) {
-            console.error('[INIT] Lighting system initialization failed:', e)
+        if (this.rendererType !== 'simple-webgl') {
+            try {
+                const qualityTier = this.settings?.graphics?.quality || 'high'
+                this.lightingSystem = new LightingSystem(this.engine, this.scene, this.Filament)
+                this.lightingSystem.registerLights(this.sunLight, this.fillLight, this.backLight)
+                this.lightingSystem.setQuality(qualityTier)
+                console.log('[INIT] Lighting system initialized')
+            } catch (e) {
+                console.error('[INIT] Lighting system initialization failed:', e)
+                this.lightingSystem = null
+            }
+        } else {
             this.lightingSystem = null
         }
 
         // Initialize volumetric light shaft system
-        try {
-            const qualityTier = this.settings?.graphics?.quality || 'high'
-            this.volumetricLights = new VolumetricLightsSystem(qualityTier)
-            console.log('[INIT] Volumetric lights system initialized')
-        } catch (e) {
-            console.error('[INIT] Volumetric lights initialization failed (non-fatal):', e)
+        if (this.rendererType !== 'simple-webgl') {
+            try {
+                const qualityTier = this.settings?.graphics?.quality || 'high'
+                this.volumetricLights = new VolumetricLightsSystem(qualityTier)
+                console.log('[INIT] Volumetric lights system initialized')
+            } catch (e) {
+                console.error('[INIT] Volumetric lights initialization failed (non-fatal):', e)
+                this.volumetricLights = null
+            }
+        } else {
             this.volumetricLights = null
         }
 
         if (typeof window.updateLoadingProgress === 'function') {
             window.updateLoadingProgress(85, 'Setting up post-processing...')
         }
-        try {
-            this.setupPostProcessing()
-            console.log('[INIT] Post-processing enabled')
-        } catch (e) {
-            console.error('[INIT] Post-processing setup failed (non-fatal):', e)
+        if (this.rendererType !== 'simple-webgl') {
+            try {
+                this.setupPostProcessing()
+                console.log('[INIT] Post-processing enabled')
+            } catch (e) {
+                console.error('[INIT] Post-processing setup failed (non-fatal):', e)
+            }
+        } else {
+            console.log('[INIT] Post-processing skipped for simple debug renderer')
         }
 
         if (typeof window.updateLoadingProgress === 'function') {
