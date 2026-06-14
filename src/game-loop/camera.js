@@ -345,17 +345,32 @@ export class GameLoopCamera {
             }
         } else if (this.isLockedOn && this.lockOnTarget) {
             const target = this.lockOnTarget;
-            if (target && target.rigidBody) {
+            if (target && target.rigidBody && this.playerMarble) {
                 const t = target.rigidBody.translation();
+                const pt = this.playerMarble.rigidBody.translation();
+
+                // Calculate direction from player to target
+                const dxTarget = t.x - pt.x;
+                const dzTarget = t.z - pt.z;
+
+                // Update aimYaw to gradually face target
+                const targetYaw = Math.atan2(dxTarget, dzTarget);
+
+                // Smoothly rotate camera towards target
+                let yawDiff = targetYaw - this.aimYaw;
+                while (yawDiff > Math.PI) yawDiff -= Math.PI * 2;
+                while (yawDiff < -Math.PI) yawDiff += Math.PI * 2;
+                this.aimYaw += yawDiff * 0.1;
+
                 let idealEye = {
-                    x: t.x - Math.sin(this.aimYaw) * Math.cos(this.pitchAngle) * this.currentCamDist,
-                    y: t.y + Math.sin(this.pitchAngle) * this.currentCamDist + 1.0,
-                    z: t.z - Math.cos(this.aimYaw) * Math.cos(this.pitchAngle) * this.currentCamDist
+                    x: pt.x - Math.sin(this.aimYaw) * Math.cos(this.pitchAngle) * this.currentCamDist,
+                    y: pt.y + Math.sin(this.pitchAngle) * this.currentCamDist + 1.0,
+                    z: pt.z - Math.cos(this.aimYaw) * Math.cos(this.pitchAngle) * this.currentCamDist
                 };
 
                 // Camera Collision Avoidance (same logic as follow mode)
                 if (this.world && typeof RAPIER !== 'undefined') {
-                    const rayOrigin = { x: t.x, y: t.y + 0.5, z: t.z };
+                    const rayOrigin = { x: pt.x, y: pt.y + 0.5, z: pt.z };
                     const dx = idealEye.x - rayOrigin.x;
                     const dy = idealEye.y - rayOrigin.y;
                     const dz = idealEye.z - rayOrigin.z;
@@ -390,9 +405,14 @@ export class GameLoopCamera {
                     this.cameraFollowPos.y += (idealEye.y - this.cameraFollowPos.y) * 0.1;
                     this.cameraFollowPos.z += (idealEye.z - this.cameraFollowPos.z) * 0.1;
 
-                    this.cameraLookPos.x += (t.x - this.cameraLookPos.x) * 0.15;
-                    this.cameraLookPos.y += (t.y - this.cameraLookPos.y) * 0.15;
-                    this.cameraLookPos.z += (t.z - this.cameraLookPos.z) * 0.15;
+                    // Interpolate lock-on look pos between player and target
+                    const lookX = pt.x + (t.x - pt.x) * 0.5;
+                    const lookY = pt.y + (t.y - pt.y) * 0.5 + 1.0;
+                    const lookZ = pt.z + (t.z - pt.z) * 0.5;
+
+                    this.cameraLookPos.x += (lookX - this.cameraLookPos.x) * 0.15;
+                    this.cameraLookPos.y += (lookY - this.cameraLookPos.y) * 0.15;
+                    this.cameraLookPos.z += (lookZ - this.cameraLookPos.z) * 0.15;
                 }
 
                 this.camera.lookAt(
