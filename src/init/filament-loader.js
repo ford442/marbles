@@ -6,7 +6,9 @@ const DEFAULT_SETTINGS = {
         quality: 'medium',
         shadows: true,
         bloom: 50,
-        ssao: true
+        ssao: true,
+        renderScale: 1.0,
+        dynamicResolution: true
     },
     audio: {
         master: 80,

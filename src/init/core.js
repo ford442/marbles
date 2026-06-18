@@ -12,6 +12,7 @@ import {
     installSimpleDebugBackend,
     setRuntimeRendererGlobals,
 } from '../rendering/simple-debug-renderer.js';
+import { getRenderDimensions, applyDynamicResolution } from '../render-resolution.js';
 
 export class InitCore {
     async init() {
@@ -503,11 +504,14 @@ export class InitCore {
                 : 'Loading Filament rendering engine...')
         }
 
-        const width = window.innerWidth
-        const height = window.innerHeight
+        const { cssWidth, cssHeight, bufferWidth, bufferHeight, scale } = getRenderDimensions(this.settings)
+        const width = bufferWidth
+        const height = bufferHeight
+        this.canvas.style.width = cssWidth + 'px'
+        this.canvas.style.height = cssHeight + 'px'
         this.canvas.width = width
         this.canvas.height = height
-        console.log(`[INIT] Canvas sized to ${width}x${height}`)
+        console.log(`[INIT] Canvas sized to ${width}x${height} (css ${cssWidth}x${cssHeight}, renderScale ${scale})`)
 
         if (rendererRequest.type === 'simple-webgl') {
             installSimpleDebugBackend(this)
@@ -563,6 +567,10 @@ export class InitCore {
             this.camera.lookAt([0, 10, 20], [0, 0, 0], [0, 1, 0])
 
             this.renderer.setClearOptions({ clearColor: [0.1, 0.1, 0.1, 1.0], clear: true })
+
+            // Dynamic resolution: let the GPU lower the internal render target
+            // when it can't hit framerate, then scale back up when it can.
+            applyDynamicResolution(this.view, this.Filament, this.settings?.graphics?.dynamicResolution)
         }
         installRendererModeControls(this.rendererType)
         console.log(`[INIT] Camera and view configured (${this.rendererModeLabel || this.rendererType})`)

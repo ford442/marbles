@@ -62,6 +62,32 @@ export class InitSettingsTabs {
             })
         }
 
+        const renderScaleSlider = document.getElementById('setting-renderscale')
+        const renderScaleValue = document.getElementById('value-renderscale')
+        if (renderScaleSlider) {
+            renderScaleSlider.addEventListener('change', (e) => {
+                const pct = parseInt(e.target.value)
+                if (renderScaleValue) renderScaleValue.textContent = `${pct}%`
+                if (this.settings) {
+                    this.settings.graphics.renderScale = pct / 100
+                    this.applyGraphicsSettings()
+                }
+            })
+            renderScaleSlider.addEventListener('input', (e) => {
+                if (renderScaleValue) renderScaleValue.textContent = `${e.target.value}%`
+            })
+        }
+
+        const dynResToggle = document.getElementById('setting-dynres')
+        if (dynResToggle) {
+            dynResToggle.addEventListener('change', (e) => {
+                if (this.settings) {
+                    this.settings.graphics.dynamicResolution = e.target.checked
+                    this.applyGraphicsSettings()
+                }
+            })
+        }
+
         // Audio settings
         const masterSlider = document.getElementById('setting-master')
         const masterValue = document.getElementById('value-master')
@@ -155,6 +181,15 @@ export class InitSettingsTabs {
 
         const ssaoToggle = document.getElementById('setting-ssao')
         if (ssaoToggle) ssaoToggle.checked = s.graphics.ssao
+
+        const renderScaleSlider = document.getElementById('setting-renderscale')
+        const renderScaleValue = document.getElementById('value-renderscale')
+        const renderScalePct = Math.round((s.graphics.renderScale ?? 1.0) * 100)
+        if (renderScaleSlider) renderScaleSlider.value = renderScalePct
+        if (renderScaleValue) renderScaleValue.textContent = `${renderScalePct}%`
+
+        const dynResToggle = document.getElementById('setting-dynres')
+        if (dynResToggle) dynResToggle.checked = s.graphics.dynamicResolution !== false
 
         // Audio
         const masterSlider = document.getElementById('setting-master')

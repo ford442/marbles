@@ -2,6 +2,7 @@ import { audio } from '../audio.js';
 import { DEFAULT_SETTINGS } from './filament-loader.js';
 import { DEFAULT_MSAA_SAMPLE_COUNT, getPostFxQualityFlags, getShadowQualityConfig } from '../rendering-defaults.js';
 import { getBloomQualityConfig, getSsaoQualityConfig, getVignetteConfig, getFogQualityConfig, getEnvironmentFogPreset } from '../rendering/post-fx-presets.js';
+import { applyDynamicResolution } from '../render-resolution.js';
 
 export class InitSettings {
     loadSettings() {
@@ -138,6 +139,21 @@ export class InitSettings {
 
             builder.build(this.engine, this.sunLight)
             this.scene.addEntity(this.sunLight)
+        }
+
+        // Dynamic resolution (FPS protection) — toggled live on the active view
+        if (this.view) {
+            applyDynamicResolution(this.view, this.Filament, s.dynamicResolution)
+        }
+
+        // Render scale — re-size the canvas backing store. resize() reads the
+        // current renderScale from settings, so just trigger it.
+        if (typeof this.resize === 'function' && this.view) {
+            try {
+                this.resize()
+            } catch (e) {
+                console.warn('[SETTINGS] Render scale resize failed:', e)
+            }
         }
 
         // Live bloom update — strength is user-adjustable; other params are quality-tiered

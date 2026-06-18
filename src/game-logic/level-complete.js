@@ -1,4 +1,5 @@
 import { LEVELS } from '../levels.js';
+import { getRenderDimensions } from '../render-resolution.js';
 
 export class GameLogicLevelComplete {
     showLevelCompleteModal(completionTime, newRecord) {
@@ -215,15 +216,16 @@ export class GameLogicLevelComplete {
     }
 
     resize() {
-        const width = window.innerWidth
-        const height = window.innerHeight
+        const { cssWidth, cssHeight, bufferWidth, bufferHeight } = getRenderDimensions(this.settings)
+        const width = bufferWidth
+        const height = bufferHeight
 
-        this.canvas.style.width = width + 'px'
-        this.canvas.style.height = height + 'px'
+        this.canvas.style.width = cssWidth + 'px'
+        this.canvas.style.height = cssHeight + 'px'
         this.canvas.width = width
         this.canvas.height = height
 
-        console.log(`[RESIZE] Canvas: ${width}x${height}`)
+        console.log(`[RESIZE] Canvas: ${width}x${height} (css ${cssWidth}x${cssHeight})`)
 
         if (this.view && this.camera) {
             this.view.setViewport([0, 0, width, height])
