@@ -2583,8 +2583,28 @@
                         </div>
                         <p class="setting-description">Enhanced depth and contact shadows</p>
                     </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <span>Render Resolution</span>
+                            <span class="setting-value" id="value-renderscale">100%</span>
+                        </div>
+                        <p class="setting-description">Lower for more FPS, higher for a sharper image</p>
+                        <input type="range" id="setting-renderscale" class="settings-slider" min="50" max="200" step="5" value="100">
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <span>Dynamic Resolution</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="setting-dynres" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <p class="setting-description">Automatically adjust resolution to keep framerate smooth</p>
+                    </div>
                 </div>
-                
+
                 <!-- Audio Tab -->
                 <div class="settings-section" id="tab-audio">
                     <div class="setting-item">

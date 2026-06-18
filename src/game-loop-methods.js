@@ -25,7 +25,8 @@ export class GameLoopMethods {
             return
         }
 
-        this.pollGamepads()
+        // Note: gamepads are already polled once per frame in loop(); no need
+        // to poll again here.
 
         // Record Ghost
         if (!this.levelComplete && this.levelStartTime && this.playerMarble && !this.timeStopActive) {
@@ -87,15 +88,17 @@ export class GameLoopMethods {
 
             // Generate Camera Shake (respect accessibility setting)
             const shakeMultiplier = this.getScreenShakeIntensity ? this.getScreenShakeIntensity() : 1.0
+            // Reuse a single cameraShake object instead of allocating a new one
+            // every frame (this runs at 60 FPS and would otherwise churn the GC).
+            if (!this.cameraShake) this.cameraShake = { x: 0, y: 0, z: 0 }
+            const shake = this.cameraShake
             if (this.adrenaline > 20 && shakeMultiplier > 0) {
                 const shakeIntensity = (this.adrenaline - 20) / 80.0 * 0.5 * shakeMultiplier
-                this.cameraShake = {
-                    x: (Math.random() - 0.5) * shakeIntensity,
-                    y: (Math.random() - 0.5) * shakeIntensity,
-                    z: (Math.random() - 0.5) * shakeIntensity
-                }
+                shake.x = (Math.random() - 0.5) * shakeIntensity
+                shake.y = (Math.random() - 0.5) * shakeIntensity
+                shake.z = (Math.random() - 0.5) * shakeIntensity
             } else {
-                this.cameraShake = { x: 0, y: 0, z: 0 }
+                shake.x = 0; shake.y = 0; shake.z = 0
             }
 
             // Add Tremor Camera Shake
