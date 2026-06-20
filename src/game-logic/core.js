@@ -87,7 +87,20 @@ export class GameLogicCore {
                     points += Math.floor(this.trickState.spin * 10)
                 }
 
-                if (this.trickState.airTime > 90) {
+                let verticalDistance = 0;
+                if (this.trickState.maxAltitude !== undefined && this.trickState.startAltitude !== undefined) {
+                     verticalDistance = this.trickState.maxAltitude - this.trickState.startAltitude;
+                }
+
+                if (verticalDistance > 15.0 && this.trickState.airTime > 60) {
+                    points += 100;
+                    messages.push('Sky High!');
+                }
+
+                if (this.trickState.airTime > 150) {
+                    points += 150;
+                    messages.push('Orbital Hang Time!');
+                } else if (this.trickState.airTime > 90) {
                     points += 50
                     messages.push('Hang Time')
                 } else if (this.trickState.airTime > 60) {
@@ -125,6 +138,8 @@ export class GameLogicCore {
             this.trickState.rolls = 0
             this.trickState.wallBounces = 0
             this.trickState.driftTime = 0
+            this.trickState.maxAltitude = 0
+            this.trickState.startAltitude = 0
 
             this.isWallRiding = false
             this.wallRideTime = 0
@@ -141,6 +156,15 @@ export class GameLogicCore {
                 this.isStomping = false
             }
         } else if (this.playerMarble) {
+            if (this.trickState.maxAltitude === undefined) {
+                this.trickState.maxAltitude = 0
+                this.trickState.startAltitude = 0
+            }
+            if (this.trickState.airTime === 1) {
+                 this.trickState.startAltitude = this.playerMarble.rigidBody.translation().y
+            }
+            this.trickState.maxAltitude = Math.max(this.trickState.maxAltitude, this.playerMarble.rigidBody.translation().y)
+
             if (this.trickState.driftTime > 30) {
                 const points = Math.floor(this.trickState.driftTime * 2)
                 this.awardTrickPoints('Drift King!', points, '#ffff00')
