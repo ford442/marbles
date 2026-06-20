@@ -279,6 +279,9 @@ export class ZoneSetupCore {
             case 'abyssal_trench':
                 createAbyssalTrenchZone(this, offset)
                 break
+        case 'void_station':
+            createVoidStationZone(this, offset)
+            break
         }
     }
 }
@@ -292,3 +295,4 @@ export function applyZoneSetupCore(targetClass) {
 }
 import { createAbyssalTrenchZone } from '../zones/abyssal-trench.js';
 import { createNeonPlungeZone } from '../zones/neon-plunge.js';
+import { createVoidStationZone } from '../zones/void-station.js';
