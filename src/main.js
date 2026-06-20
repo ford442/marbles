@@ -157,7 +157,7 @@ class MarblesGame {
         this.powerUpRotation = 0
         this.isStomping = false
         this.stompStartTime = 0
-        this.trickState = { airTime: 0, spin: 0, wallRides: 0, highSpeed: 0, flips: 0, rolls: 0, wallBounces: 0 }
+        this.trickState = { airTime: 0, spin: 0, wallRides: 0, highSpeed: 0, flips: 0, rolls: 0, wallBounces: 0, maxAltitude: 0, startAltitude: 0 }
 
         this.isWallRiding = false
         this.wallRideTime = 0
