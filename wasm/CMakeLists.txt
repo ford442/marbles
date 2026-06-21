@@ -6,33 +6,50 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(marble_physics marble_physics.cpp)
 
-# Emscripten requires the output to carry a .js extension so the glue code
-# can be imported from JavaScript.
+# Emscripten glue code must end in .js
 set_target_properties(marble_physics PROPERTIES SUFFIX ".js")
 
-target_compile_options(marble_physics PRIVATE
-    -O2
-    -fno-exceptions
-)
+if(EMSCRIPTEN)
+    # ==================== COMPILE OPTIONS ====================
+    target_compile_options(marble_physics PRIVATE
+        -O3                    # Max optimization (Release builds)
+        -msimd128              # WebAssembly SIMD — big win for vec3 math
+        -ffast-math            # Faster FP math (safe for these helpers)
+        -fno-exceptions
+        -fvisibility=hidden    # Smaller binary / better inlining
+    )
 
-target_link_options(marble_physics PRIVATE
-    # Embind is the Emscripten C++↔JS binding layer.
-    --bind
-    -lembind
+    # ==================== LINK / EMSCRIPTEN OPTIONS ====================
+    target_link_options(marble_physics PRIVATE
+        # Embind (C++ ↔ JS)
+        --bind
+        -lembind
 
-    # Wrap the module in a factory function so it can be dynamically imported.
-    -sMODULARIZE=1
-    -sEXPORT_NAME="MarblePhysicsModule"
+        # Factory pattern (required by src/wasm-bridge.js)
+        -sMODULARIZE=1
+        -sEXPORT_NAME="MarblePhysicsModule"
 
-    # Target modern browsers and Web Workers.
-    -sENVIRONMENT=web,worker
+        # Target environment
+        -sENVIRONMENT=web,worker
 
-    # Allow the heap to grow if needed (avoids OOM on heavy scenes).
-    -sALLOW_MEMORY_GROWTH=1
+        # Memory — 32 MB initial gives good headroom without constant growth
+        -sALLOW_MEMORY_GROWTH=1
+        -sINITIAL_MEMORY=33554432
+        # -sMAXIMUM_MEMORY=268435456   # Uncomment to hard-cap at 256 MB
 
-    # 16 MB initial heap (sufficient for vector math helpers).
-    -sINITIAL_MEMORY=16777216
+        # Release performance & size wins
+        -O3
+        -sDISABLE_EXCEPTION_CATCHING=1
+        -sASSERTIONS=0
+        -sELIMINATE_DUPLICATE_FUNCTIONS=1
+        -sWASM_BIGINT=1
+        -sALLOW_TABLE_GROWTH=1
 
-    -O2
-    -fno-exceptions
-)
+        # Optional extra aggressive flags (uncomment & test):
+        # -sAGGRESSIVE_VARIABLE_ELIMINATION=1
+        # --closure 1                 # Minify the JS glue (can break embind — test carefully)
+    )
+else()
+    # Native / testing build
+    target_compile_options(marble_physics PRIVATE -O3 -ffast-math)
+endif()

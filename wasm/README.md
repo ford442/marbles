@@ -97,5 +97,6 @@ body.applyImpulse(force, true);
   continues to run with pure-JS fallbacks while loading.
 - No `SharedArrayBuffer` or special headers are needed for this module;
   threading is not used.
-- The module is optimized at `-O2`.  Use `-O3` for maximum throughput at the
-  cost of a larger `.wasm` binary.
+- The module is built with `-O3`, WebAssembly SIMD (`-msimd128`), fast-math,
+  duplicate elimination, and other size/perf flags for the vector math hot path.
+  The pure-JS fallbacks remain available when the WASM build is not present.
