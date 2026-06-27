@@ -1,3 +1,4 @@
+export { createPrismaticSpeedwayZone } from "./prismatic-speedway.js";
 export { createVolcanoZone } from './volcano.js';
 export { createMysticForestZone } from './mystic-forest.js';
 export { createFloatingIslandsZone } from './floating-islands.js';

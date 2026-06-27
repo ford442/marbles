@@ -234,6 +234,9 @@ export class ZoneSetupCore {
             case 'neon_plunge':
                 createNeonPlungeZone(this, offset)
                 break
+            case 'prismatic_speedway':
+                createPrismaticSpeedwayZone(this, offset)
+                break
             case 'neon_alley':
                 createNeonAlleyZone(this, offset)
                 break
@@ -295,4 +298,5 @@ export function applyZoneSetupCore(targetClass) {
 }
 import { createAbyssalTrenchZone } from '../zones/abyssal-trench.js';
 import { createNeonPlungeZone } from '../zones/neon-plunge.js';
+import { createPrismaticSpeedwayZone } from '../zones/prismatic-speedway.js';
 import { createVoidStationZone } from '../zones/void-station.js';

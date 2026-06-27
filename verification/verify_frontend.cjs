@@ -18,7 +18,7 @@ const { chromium } = require('playwright');
 
   for (let i = 0; i < count; i++) {
     const text = await levels.nth(i).locator('h3').innerText();
-    if (text === 'Cyber Ice Track') {
+    if (text === 'Prismatic Speedway') {
       await levels.nth(i).click();
       found = true;
       break;
@@ -26,7 +26,7 @@ const { chromium } = require('playwright');
   }
 
   if (!found) {
-    console.error('Cyber Ice Track level not found!');
+    console.error('Prismatic Speedway level not found!');
     await browser.close();
     process.exit(1);
   }
@@ -43,8 +43,8 @@ const { chromium } = require('playwright');
     process.exit(1);
   }
 
-  await page.screenshot({ path: 'cyber_ice_track_loaded.png' });
-  console.log('Successfully loaded Cyber Ice Track and took a screenshot.');
+  await page.screenshot({ path: 'prismatic_speedway_loaded.png' });
+  console.log('Successfully loaded Prismatic Speedway and took a screenshot.');
 
   await browser.close();
 })();
