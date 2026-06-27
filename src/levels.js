@@ -809,6 +809,22 @@ export const LEVELS = {
         backgroundColor: [0.01, 0.0, 0.05, 1.0],
         environment: 'neon_city'
     },
+    prismatic_speedway_run: {
+        name: 'Prismatic Speedway',
+        description: 'A high-speed neon track with low-friction ice, huge jumps, and moving prisms.',
+        zones: [
+            { type: 'prismatic_speedway', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: -5, z: 130 } }
+        ],
+        spawn: { x: 0, y: 5, z: -5 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [125, 135], y: [-10, 0] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.01, 0.0, 0.05, 1.0],
+        environment: 'neon_city'
+    },
     cyber_ice_track_run: {
         name: 'Cyber Ice Track',
         description: 'Navigate low friction ice and dodging platforms!',
