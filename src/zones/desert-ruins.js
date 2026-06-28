@@ -1,4 +1,5 @@
 import { quatFromEuler } from '../math.js';
+import { decorateDesertRuins } from './methods/decorations.js';
 
 export function createDesertRuinsZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
@@ -78,4 +79,6 @@ export function createDesertRuinsZone(game, offset) {
         { x: offset.x, y: offset.y + 1.0, z: exitZ },
         [1.0, 0.8, 0.0] // Gold goal
     );
+
+    decorateDesertRuins(game, offset);
 }

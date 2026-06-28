@@ -374,6 +374,20 @@ export function applyFullPreset(matInstance, preset, hasProcedural, Filament) {
                 matInstance.setFloatParameter('reflectionStrength', preset.reflectionStrength)
             } catch (e) { console.debug('[MAT] reflectionStrength not available in this material version:', e.message) }
         }
+
+        // Tiered surface detail uniforms (procedural marble shader)
+        const detailUniforms = [
+            'bumpOctaves', 'surfaceType', 'subsurfaceStrength', 'anisotropyStrength',
+            'grainScale', 'scratchesIntensity', 'iridescenceScale', 'effectTime',
+            'sparkleStrength', 'heatShimmer',
+        ]
+        for (const key of detailUniforms) {
+            if (preset[key] !== undefined) {
+                try {
+                    matInstance.setFloatParameter(key, preset[key])
+                } catch (e) { console.debug(`[MAT] ${key} not available:`, e.message) }
+            }
+        }
     }
 }
 

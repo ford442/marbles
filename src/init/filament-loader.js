@@ -8,7 +8,9 @@ const DEFAULT_SETTINGS = {
         bloom: 50,
         ssao: true,
         renderScale: 1.0,
-        dynamicResolution: true
+        dynamicResolution: true,
+        targetFps: 60,
+        performanceMode: 'auto',
     },
     audio: {
         master: 80,

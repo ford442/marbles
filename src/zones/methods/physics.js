@@ -8,6 +8,12 @@ import { audio } from '../../audio.js';
 
 export const physicsMethods = {
     createKinematicBox(pos, halfExtents, color, type, center, amplitude) {
+        const budget = this.levelEffectBudget
+        if (budget && !budget.canAllocate('kinematicMovers')) {
+            return
+        }
+        if (budget) budget.allocate('kinematicMovers')
+
         const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
             .setTranslation(pos.x, pos.y, pos.z);
         const body = this.world.createRigidBody(bodyDesc);

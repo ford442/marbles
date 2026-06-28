@@ -580,6 +580,7 @@ export class InitCore {
             window.updateLoadingProgress(55, 'Loading materials and assets...')
         }
         await this.setupAssets()
+        this.effectPool?.prewarm()
         console.log('[INIT] Assets loaded')
         if (typeof window.updateLoadingProgress === 'function') {
             window.updateLoadingProgress(70, 'Assets loaded')
@@ -589,6 +590,7 @@ export class InitCore {
             try {
                 const qualityTier = this.settings?.graphics?.quality || 'high'
                 this.particleSystem = new ParticleSystem(this.engine, this.scene, this.Filament, qualityTier)
+                this.particleSystem._game = this
                 console.log('[INIT] Particle system initialized')
             } catch (e) {
                 console.error('[INIT] Particle system initialization failed:', e)
@@ -610,6 +612,8 @@ export class InitCore {
                 this.lightingSystem = new LightingSystem(this.engine, this.scene, this.Filament)
                 this.lightingSystem.registerLights(this.sunLight, this.fillLight, this.backLight)
                 this.lightingSystem.setQuality(qualityTier)
+                this.lightingSystem.isLightActive = (entity) => this.lightingBudget?.isBudgetActive(entity) ?? true
+                this.lightingSystem.isAnimateAllowed = (entity) => this.lightingBudget?.isAnimateAllowed(entity) ?? true
                 console.log('[INIT] Lighting system initialized')
             } catch (e) {
                 console.error('[INIT] Lighting system initialization failed:', e)

@@ -5,10 +5,16 @@ import { materialPresets, trackSurfacePresets, applyFullPreset } from './materia
 import { CUBE_VERTICES, CUBE_INDICES } from './cube-geometry.js';
 import {
     batchBoxGeometry,
+    batchGeometry,
     buildBatchedBuffers,
     computeBatchBounds,
+    computeMeshBatchBounds,
     createBatchedRenderable
 } from './gpu-instancing.js';
+import {
+    DECORATIVE_PRIMITIVES,
+    DECORATIVE_VERTEX_STRIDE
+} from './decorative-primitives.js';
 
 // Default roughness applied to surfaces that have no matching preset
 const DEFAULT_SURFACE_ROUGHNESS = 0.4
@@ -93,40 +99,139 @@ export class PhysicsFactoryMethods {
         })
     }
 
-    flushStaticBatches() {
-        const groups = this._staticBoxBatchGroups
-        if (!groups || groups.size === 0) {
-            this.staticBatchStats = { groups: 0, boxes: 0, collapsedEntities: 0 }
+    getDecorativeBatchKey(primitiveType, color, materialPreset, surfacePreset) {
+        return `${primitiveType}|${this.getStaticBatchKey(color, materialPreset, surfacePreset)}`
+    }
+
+    queueDecorativeBatch(primitiveType, instances, color, materialPreset = null) {
+        if (!DECORATIVE_PRIMITIVES[primitiveType]) {
+            console.warn(`[BATCH] unknown decorative primitive: ${primitiveType}`)
             return
+        }
+        if (!this._decorativeBatchGroups) this._decorativeBatchGroups = new Map()
+
+        const surfacePreset = this.resolveStaticSurfacePreset(materialPreset)
+        const key = this.getDecorativeBatchKey(primitiveType, color, materialPreset, surfacePreset)
+        let group = this._decorativeBatchGroups.get(key)
+        if (!group) {
+            group = {
+                key,
+                primitiveType,
+                color: [...color],
+                materialPreset,
+                surfacePreset,
+                instances: []
+            }
+            this._decorativeBatchGroups.set(key, group)
+        }
+        group.instances.push(...instances)
+    }
+
+    /**
+     * Queue thin box instances into the existing static-box batcher (zero extra draw groups).
+     * Useful for rivets, hazard panels, and girder flanges that share track materials.
+     */
+    queueDecorativeBoxes(instances, color, materialPreset = null) {
+        if (!instances?.length) return
+        const surfacePreset = this.resolveStaticSurfacePreset(materialPreset)
+        for (const inst of instances) {
+            const pos = inst.position || [0, 0, 0]
+            const rot = inst.rotation || [0, 0, 0, 1]
+            const scl = inst.scale || [1, 1, 1]
+            this.queueStaticBoxBatch(
+                { x: pos[0], y: pos[1], z: pos[2] },
+                { x: rot[0], y: rot[1], z: rot[2], w: rot[3] },
+                { x: scl[0] / 2, y: scl[1] / 2, z: scl[2] / 2 },
+                color,
+                materialPreset,
+                surfacePreset
+            )
+        }
+    }
+
+    flushDecorativeBatches() {
+        const groups = this._decorativeBatchGroups
+        if (!groups || groups.size === 0) {
+            return { groups: 0, instances: 0, collapsedEntities: 0 }
         }
 
         if (!this.staticBatchResources) this.staticBatchResources = []
 
-        let boxes = 0
+        let instances = 0
         let groupsBuilt = 0
         for (const group of groups.values()) {
             if (!group.instances.length) continue
-            const batch = batchBoxGeometry(CUBE_VERTICES, CUBE_INDICES, group.instances)
-            const { vb, ib } = buildBatchedBuffers(this.Filament, this.engine, batch, 9)
+            const mesh = DECORATIVE_PRIMITIVES[group.primitiveType]
+            const batch = batchGeometry(mesh.vertices, mesh.indices, group.instances, DECORATIVE_VERTEX_STRIDE)
+            const { vb, ib } = buildBatchedBuffers(this.Filament, this.engine, batch, DECORATIVE_VERTEX_STRIDE)
             const matInstance = this.createStaticMaterialInstance(group.color, group.materialPreset, group.surfacePreset)
-            const bounds = computeBatchBounds(group.instances)
+            const bounds = computeMeshBatchBounds(mesh.vertices, mesh.indices, group.instances, DECORATIVE_VERTEX_STRIDE)
             const radius = Math.hypot(bounds.halfExtent[0], bounds.halfExtent[1], bounds.halfExtent[2])
             const entity = createBatchedRenderable(this.engine, this.scene, this.Filament, vb, ib, matInstance, bounds)
 
             this.staticEntities.push(entity)
-            this.staticBatchResources.push({ entity, vb, ib, matInstance, bounds, radius, boxes: group.instances.length })
-            boxes += group.instances.length
+            this.staticBatchResources.push({
+                entity,
+                vb,
+                ib,
+                matInstance,
+                bounds,
+                radius,
+                boxes: group.instances.length,
+                decorative: group.primitiveType
+            })
+            instances += group.instances.length
             groupsBuilt += 1
+        }
+
+        groups.clear()
+        return {
+            groups: groupsBuilt,
+            instances,
+            collapsedEntities: Math.max(0, instances - groupsBuilt)
+        }
+    }
+
+    flushStaticBatches() {
+        const groups = this._staticBoxBatchGroups
+        if (!this.staticBatchResources) this.staticBatchResources = []
+
+        let boxes = 0
+        let groupsBuilt = 0
+        if (groups && groups.size > 0) {
+            for (const group of groups.values()) {
+                if (!group.instances.length) continue
+                const batch = batchBoxGeometry(CUBE_VERTICES, CUBE_INDICES, group.instances)
+                const { vb, ib } = buildBatchedBuffers(this.Filament, this.engine, batch, 9)
+                const matInstance = this.createStaticMaterialInstance(group.color, group.materialPreset, group.surfacePreset)
+                const bounds = computeBatchBounds(group.instances)
+                const radius = Math.hypot(bounds.halfExtent[0], bounds.halfExtent[1], bounds.halfExtent[2])
+                const entity = createBatchedRenderable(this.engine, this.scene, this.Filament, vb, ib, matInstance, bounds)
+
+                this.staticEntities.push(entity)
+                this.staticBatchResources.push({ entity, vb, ib, matInstance, bounds, radius, boxes: group.instances.length })
+                boxes += group.instances.length
+                groupsBuilt += 1
+            }
+            groups.clear()
         }
 
         this.staticBatchStats = {
             groups: groupsBuilt,
             boxes,
-            collapsedEntities: Math.max(0, boxes - groupsBuilt)
+            collapsedEntities: Math.max(0, boxes - groupsBuilt),
+            decorative: { groups: 0, instances: 0, collapsedEntities: 0 }
         }
+
+        if (this.isStaticBatchingEnabled()) {
+            const decorativeStats = this.flushDecorativeBatches()
+            this.staticBatchStats.decorative = decorativeStats
+            this.staticBatchStats.groups += decorativeStats.groups
+            this.staticBatchStats.collapsedEntities += decorativeStats.collapsedEntities
+        }
+
         window.staticBatchStats = this.staticBatchStats
         console.info('[BATCH] static boxes', this.staticBatchStats)
-        groups.clear()
     }
 
     createPhaseBox(pos, rotation, halfExtents, color, material = 'glass') {

@@ -1,4 +1,13 @@
 import { quaternionToMat4, quatFromEuler } from './math.js';
+import {
+    shouldUpdateParticle,
+    shouldSkipParticleColorUpdate,
+    particleDistanceSq,
+} from './particle-sync-helpers.js';
+import {
+    updateMarbleMaterialTiers,
+    updateMarbleDynamicMaterialEffects,
+} from './marble-material-tier.js';
 
 const IDENTITY_QUAT = { x: 0, y: 0, z: 0, w: 1 }
 const TRANSFORM_POS_EPS_SQ = 0.000001
@@ -82,6 +91,8 @@ function setScaledTransformIfChanged(tcm, owner, entity, pos, quat, scale, perfC
 export class GameLoopSyncMethods {
     syncTransformsAndRender(now) {
         this._syncNow = now
+        this._effectFrameIndex = (this._effectFrameIndex || 0) + 1
+        this.effectPool?.beginFrame()
         const perfSyncStart = performance.now()
         const perfCounts = {
             visualParticlesStart: this.visualParticles?.length || 0,
@@ -98,10 +109,14 @@ export class GameLoopSyncMethods {
             transformsSkipped: 0,
             transformInstanceCacheMisses: 0,
             materialUpdatesSkipped: 0,
+            marbleDynamicFxUpdates: 0,
+            marbleDynamicFxSkipped: 0,
         }
         // Cache transform manager once per frame to avoid repeated WASM boundary crossings
         const tcm = this.engine.getTransformManager()
         this.cullingManager?.updateStaticBatches()
+        this.marbleLodManager?.updateMarbles(now)
+        updateMarbleMaterialTiers(this, now)
 
         // Handle visual particles lifecycle
         for (let i = this.visualParticles.length - 1; i >= 0; i--) {
@@ -109,10 +124,7 @@ export class GameLoopSyncMethods {
             const timeAlive = now - p.spawnTime
 
             if (timeAlive > p.duration) {
-                this.scene.remove(p.entity)
-                if (p.matInstance) this.engine.destroyMaterialInstance(p.matInstance)
-                this.engine.destroyEntity(p.entity)
-                this.Filament.EntityManager.get().destroy(p.entity)
+                this.effectPool?.releaseVisualParticle(p)
                 this.visualParticles.splice(i, 1)
             } else {
                 const particleCenter = p.pos ? [p.pos.x, p.pos.y, p.pos.z] : null
@@ -124,6 +136,12 @@ export class GameLoopSyncMethods {
                     continue
                 }
 
+                const distSq = particleDistanceSq(p, this._cameraState?.eye)
+                if (!shouldUpdateParticle(p, timeAlive, distSq, this._effectFrameIndex)) {
+                    perfCounts.transformsSkipped += 1
+                    continue
+                }
+                const skipColor = shouldSkipParticleColorUpdate(p, timeAlive)
                 if (p.isEMPRing) {
                     // EMP shockwave ring effect
                     const progress = timeAlive / p.duration
@@ -138,7 +156,7 @@ export class GameLoopSyncMethods {
                     const g = 0.8 + progress * 0.2  // Slight color shift as it fades
                     const b = 1.0
                     
-                    if (!setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
 
                     const mat = quaternionToMat4(p.pos, IDENTITY_QUAT)
 
@@ -164,7 +182,7 @@ export class GameLoopSyncMethods {
                     const r = 0.2 * (1.0 - progress)
                     const g = 0.9 * (1.0 - progress * 0.5)
                     const b = 1.0
-                    if (!setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
 
                     const mat = quaternionToMat4(p.pos, IDENTITY_QUAT)
 
@@ -182,7 +200,7 @@ export class GameLoopSyncMethods {
                     const r = 1.0 - progress
                     const g = 0.2 - progress * 0.2
                     const b = 0.0
-                    if (!setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
 
                     const mat = quaternionToMat4(p.pos, IDENTITY_QUAT)
 
@@ -211,7 +229,7 @@ export class GameLoopSyncMethods {
                     const r = 1.0
                     const g = 0.9 - progress * 0.5
                     const b = 0.3 - progress * 0.3
-                    if (!setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
 
                     const mat = quaternionToMat4(p.pos, IDENTITY_QUAT)
 
@@ -242,7 +260,7 @@ export class GameLoopSyncMethods {
                     const r = progress * 0.5
                     const g = 0.6 + progress * 0.4 * fade
                     const b = 0.8 + progress * 0.2 * fade
-                    if (!setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
 
                     const mat = quaternionToMat4(p.pos, IDENTITY_QUAT)
 
@@ -267,7 +285,7 @@ export class GameLoopSyncMethods {
                     const g = 0.9 * fade
                     const b = 1.0 * fade
                     
-                    if (!setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
 
                     const mat = quaternionToMat4(p.pos, IDENTITY_QUAT)
 
@@ -295,7 +313,7 @@ export class GameLoopSyncMethods {
                     
                     // Color brightens then fades
                     const brightness = 1.0 - progress * 0.5
-                    if (!setColor3IfChanged(this, p, p.matInstance, [brightness, brightness * 0.9, brightness * 0.5])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [brightness, brightness * 0.9, brightness * 0.5])) perfCounts.materialUpdatesSkipped += 1
                     
                     // Add rotation
                     const rotY = (p.rotationSpeed || 0) * timeAlive * 0.01
@@ -320,7 +338,7 @@ export class GameLoopSyncMethods {
                     const r = p.color.r * opacity + 1.0 * (1.0 - opacity)
                     const g = p.color.g * opacity + 1.0 * (1.0 - opacity)
                     const b = p.color.b * opacity + 1.0 * (1.0 - opacity)
-                    if (!setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
                     
                     const mat = quaternionToMat4(p.pos, IDENTITY_QUAT)
                     
@@ -345,7 +363,7 @@ export class GameLoopSyncMethods {
                     p.scale = 1.0 - progress
                     
                     const brightness = 1.0 - progress * 0.5
-                    if (!setColor3IfChanged(this, p, p.matInstance, [1.0, 1.0, brightness])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [1.0, 1.0, brightness])) perfCounts.materialUpdatesSkipped += 1
                     
                     // Orient ray along velocity direction
                     const yaw = p.angle
@@ -369,7 +387,7 @@ export class GameLoopSyncMethods {
                     
                     // Quick fade
                     const brightness = 1.0 - progress
-                    if (!setColor3IfChanged(this, p, p.matInstance, [brightness, brightness * 0.9, brightness * 0.5])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [brightness, brightness * 0.9, brightness * 0.5])) perfCounts.materialUpdatesSkipped += 1
                     
                     const mat = quaternionToMat4(p.pos, IDENTITY_QUAT)
                     
@@ -390,7 +408,7 @@ export class GameLoopSyncMethods {
                     const r = 1.0 - progress * 0.8
                     const g = 0.6 - progress * 0.6
                     const b = 0.0
-                    if (!setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
 
                     const mat = quaternionToMat4(p.pos, IDENTITY_QUAT)
 
@@ -413,10 +431,7 @@ export class GameLoopSyncMethods {
 
             if (timeAlive > maxDuration) {
                 this.world.removeRigidBody(p.rigidBody)
-                this.scene.remove(p.entity)
-                if (p.matInstance) this.engine.destroyMaterialInstance(p.matInstance)
-                this.engine.destroyEntity(p.entity)
-                this.Filament.EntityManager.get().destroy(p.entity)
+                this.effectPool?.releaseHoloPlatform(p)
                 this.temporaryPlatforms.splice(i, 1)
             } else {
                 const timeLeft = maxDuration - timeAlive
@@ -483,6 +498,8 @@ export class GameLoopSyncMethods {
                 setScaledTransformIfChanged(tcm, lightOwner, this.activeMarbleLightEntity, t, IDENTITY_QUAT, 1, perfCounts)
             }
         }
+
+        updateMarbleDynamicMaterialEffects(this, now, perfCounts)
 
         for (const obj of this.dynamicObjects) {
             const t = obj.rigidBody.translation()
@@ -553,6 +570,7 @@ export class GameLoopSyncMethods {
         }
         
         // Update animated lighting
+        this.lightingBudget?.update()
         if (this.lightingSystem) {
             const frameDeltaSec = this._lastSyncTime ? (now - this._lastSyncTime) / 1000 : 1 / 60
             this.lightingSystem.update(frameDeltaSec)

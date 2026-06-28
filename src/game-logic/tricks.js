@@ -47,34 +47,15 @@ export class GameLogicTricks {
         }
 
         // Add a visual particle ring at the impact point
-        const ringEntity = this.Filament.EntityManager.get().create()
-        const ringMatInstance = this.material.createInstance()
-        ringMatInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 0.2, 0.0])
-        ringMatInstance.setFloatParameter('roughness', 0.8)
-
-        const halfExtents = { x: 0.1, y: 0.1, z: 0.1 }
-
-        this.Filament.RenderableManager.Builder(1)
-            .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
-            .material(0, ringMatInstance)
-            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
-            .receiveShadows(true)
-            .castShadows(true)
-            .build(this.engine, ringEntity)
-
-        this.scene.addEntity(ringEntity)
-
-        // Add to visualParticles to be animated and cleaned up in loop()
-        // We'll give it a special flag or use the scale to animate it growing outward
-        this.visualParticles.push({
-            entity: ringEntity,
-            matInstance: ringMatInstance,
+        this.effectPool?.spawnVisualParticle({
+            color: [1.0, 0.2, 0.0],
+            roughness: 0.8,
             spawnTime: Date.now(),
             pos: { x: center.x, y: center.y - 0.4, z: center.z },
-            vel: { x: 0, y: 0, z: 0 }, // It expands rather than moves
+            vel: { x: 0, y: 0, z: 0 },
             duration: 500,
             scale: 1.0,
-            isRing: true // Custom flag to animate differently
+            isRing: true
         })
     }
 
@@ -134,34 +115,16 @@ export class GameLogicTricks {
     spawnDriftSparks(pos) {
         if (!this.visualParticles) return
 
-        for (let i = 0; i < 3; i++) {
-            const rayEntity = this.Filament.EntityManager.get().create()
-            const rayMatInstance = this.material.createInstance()
-
-            // Orange/Yellow sparks
+        const count = this.effectPool?.budget.getVisualBurstCount(3) ?? 3
+        for (let i = 0; i < count; i++) {
             const isYellow = Math.random() > 0.5
             const color = isYellow ? [1.0, 1.0, 0.0] : [1.0, 0.5, 0.0]
-
-            rayMatInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color)
-            rayMatInstance.setFloatParameter('roughness', 0.2)
-            rayMatInstance.setFloatParameter('metallic', 0.0)
-
-            this.Filament.RenderableManager.Builder(1)
-                .boundingBox({ center: [0, 0, 0], halfExtent: [0.05, 0.05, 0.05] })
-                .material(0, rayMatInstance)
-                .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
-                .receiveShadows(false)
-                .castShadows(false)
-                .build(this.engine, rayEntity)
-
-            this.scene.addEntity(rayEntity)
-
             const angle = Math.random() * Math.PI * 2
             const speed = 2.0 + Math.random() * 3.0
 
-            this.visualParticles.push({
-                entity: rayEntity,
-                matInstance: rayMatInstance,
+            this.effectPool?.spawnVisualParticle({
+                color,
+                roughness: 0.2,
                 spawnTime: Date.now(),
                 pos: { x: pos.x, y: pos.y, z: pos.z },
                 vel: {
@@ -170,8 +133,8 @@ export class GameLogicTricks {
                     z: Math.sin(angle) * speed
                 },
                 duration: 200 + Math.random() * 200,
-                isCollectionRay: true, // Reuse ray physics
-                angle: angle
+                isCollectionRay: true,
+                angle
             })
         }
     }

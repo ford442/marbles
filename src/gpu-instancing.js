@@ -16,13 +16,24 @@
  * @returns {{vertices: Float32Array, indices: Uint16Array, count: number}}
  */
 export function batchBoxGeometry(baseVertices, baseIndices, instances) {
+    return batchGeometry(baseVertices, baseIndices, instances, 9)
+}
+
+/**
+ * Merge multiple transformed copies of a mesh into one batched buffer.
+ *
+ * @param {Float32Array} baseVertices
+ * @param {Uint16Array} baseIndices
+ * @param {Array<{position: number[], rotation?: number[], scale?: number[]}>} instances
+ * @param {number} vertexStride  Floats per vertex (9 for cube / decorative meshes)
+ */
+export function batchGeometry(baseVertices, baseIndices, instances, vertexStride = 9) {
     if (!instances || instances.length === 0) {
         return { vertices: baseVertices, indices: baseIndices, count: 1 }
     }
 
-    const vertexStride = 9 // position(3) + tangent(4) + uv(2) — match CUBE_VERTICES
-    const vertsPerBox = baseVertices.length / vertexStride
-    const indicesPerBox = baseIndices.length
+    const vertsPerMesh = baseVertices.length / vertexStride
+    const indicesPerMesh = baseIndices.length
 
     const totalVertices = new Float32Array(baseVertices.length * instances.length)
     const totalIndices = new Uint16Array(baseIndices.length * instances.length)
@@ -30,20 +41,17 @@ export function batchBoxGeometry(baseVertices, baseIndices, instances) {
     for (let i = 0; i < instances.length; i++) {
         const inst = instances[i]
         const pos = inst.position || [0, 0, 0]
-        const rot = inst.rotation || [0, 0, 0, 1] // quaternion
+        const rot = inst.rotation || [0, 0, 0, 1]
         const scl = inst.scale || [1, 1, 1]
-
-        // Build transform matrix from pos/rot/scale
         const m = quatToMat4(rot, pos, scl)
 
-        const vertexOffset = i * vertsPerBox * vertexStride
-        const indexOffset = i * indicesPerBox
+        const vertexOffset = i * vertsPerMesh * vertexStride
+        const indexOffset = i * indicesPerMesh
 
-        for (let v = 0; v < vertsPerBox; v++) {
+        for (let v = 0; v < vertsPerMesh; v++) {
             const srcIdx = v * vertexStride
             const dstIdx = vertexOffset + v * vertexStride
 
-            // Transform position
             const px = baseVertices[srcIdx]
             const py = baseVertices[srcIdx + 1]
             const pz = baseVertices[srcIdx + 2]
@@ -52,15 +60,13 @@ export function batchBoxGeometry(baseVertices, baseIndices, instances) {
             totalVertices[dstIdx + 1] = m[1] * px + m[5] * py + m[9]  * pz + m[13]
             totalVertices[dstIdx + 2] = m[2] * px + m[6] * py + m[10] * pz + m[14]
 
-            // Copy tangent and UV unchanged (tangent should be transformed by normal matrix for correctness,
-            // but for uniform scale and small decorations this is acceptable)
             for (let k = 3; k < vertexStride; k++) {
                 totalVertices[dstIdx + k] = baseVertices[srcIdx + k]
             }
         }
 
-        for (let idx = 0; idx < indicesPerBox; idx++) {
-            totalIndices[indexOffset + idx] = baseIndices[idx] + i * vertsPerBox
+        for (let idx = 0; idx < indicesPerMesh; idx++) {
+            totalIndices[indexOffset + idx] = baseIndices[idx] + i * vertsPerMesh
         }
     }
 
@@ -209,8 +215,23 @@ export function createBatchedRenderable(engine, scene, Filament, vb, ib, materia
 }
 
 export function computeBatchBounds(instances) {
+    return computeMeshBatchBounds(null, null, instances, null, true)
+}
+
+/**
+ * Compute an axis-aligned bounding box for batched mesh instances.
+ * When base mesh data is provided, uses all transformed vertices; otherwise
+ * falls back to a unit cube corner approximation (legacy box batching).
+ */
+export function computeMeshBatchBounds(baseVertices, baseIndices, instances, vertexStride = 9, unitCubeFallback = false) {
     const min = [Infinity, Infinity, Infinity]
     const max = [-Infinity, -Infinity, -Infinity]
+
+    const useMesh = baseVertices && baseIndices && !unitCubeFallback
+    const corners = unitCubeFallback
+        ? [[-0.5, -0.5, -0.5], [0.5, -0.5, -0.5], [-0.5, 0.5, -0.5], [0.5, 0.5, -0.5],
+           [-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [-0.5, 0.5, 0.5], [0.5, 0.5, 0.5]]
+        : null
 
     for (const inst of instances) {
         const pos = inst.position || [0, 0, 0]
@@ -218,19 +239,37 @@ export function computeBatchBounds(instances) {
         const scl = inst.scale || [1, 1, 1]
         const m = quatToMat4(rot, pos, scl)
 
-        for (let x of [-0.5, 0.5]) {
-            for (let y of [-0.5, 0.5]) {
-                for (let z of [-0.5, 0.5]) {
-                    const wx = m[0] * x + m[4] * y + m[8] * z + m[12]
-                    const wy = m[1] * x + m[5] * y + m[9] * z + m[13]
-                    const wz = m[2] * x + m[6] * y + m[10] * z + m[14]
-                    min[0] = Math.min(min[0], wx)
-                    min[1] = Math.min(min[1], wy)
-                    min[2] = Math.min(min[2], wz)
-                    max[0] = Math.max(max[0], wx)
-                    max[1] = Math.max(max[1], wy)
-                    max[2] = Math.max(max[2], wz)
-                }
+        if (useMesh) {
+            const vertsPerMesh = baseVertices.length / vertexStride
+            for (let v = 0; v < vertsPerMesh; v++) {
+                const srcIdx = v * vertexStride
+                const px = baseVertices[srcIdx]
+                const py = baseVertices[srcIdx + 1]
+                const pz = baseVertices[srcIdx + 2]
+                const wx = m[0] * px + m[4] * py + m[8] * pz + m[12]
+                const wy = m[1] * px + m[5] * py + m[9] * pz + m[13]
+                const wz = m[2] * px + m[6] * py + m[10] * pz + m[14]
+                min[0] = Math.min(min[0], wx)
+                min[1] = Math.min(min[1], wy)
+                min[2] = Math.min(min[2], wz)
+                max[0] = Math.max(max[0], wx)
+                max[1] = Math.max(max[1], wy)
+                max[2] = Math.max(max[2], wz)
+            }
+        } else {
+            for (const corner of corners) {
+                const x = corner[0]
+                const y = corner[1]
+                const z = corner[2]
+                const wx = m[0] * x + m[4] * y + m[8] * z + m[12]
+                const wy = m[1] * x + m[5] * y + m[9] * z + m[13]
+                const wz = m[2] * x + m[6] * y + m[10] * z + m[14]
+                min[0] = Math.min(min[0], wx)
+                min[1] = Math.min(min[1], wy)
+                min[2] = Math.min(min[2], wz)
+                max[0] = Math.max(max[0], wx)
+                max[1] = Math.max(max[1], wy)
+                max[2] = Math.max(max[2], wz)
             }
         }
     }

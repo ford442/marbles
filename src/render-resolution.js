@@ -33,16 +33,18 @@ export function getRenderDimensions(settings) {
 // render target when it can't keep up, then scale back up when there's
 // headroom — protecting framerate while staying as sharp as possible. The
 // result is upscaled with a sharpening filter so the quality hit is minimal.
-export function applyDynamicResolution(view, Filament, enabled) {
+export function applyDynamicResolution(view, Filament, enabled, options = {}) {
     if (!view || typeof view.setDynamicResolutionOptions !== 'function') return;
+    const min = options.minScale ?? 0.5;
+    const minScale = Array.isArray(min) ? min : [min, min];
     try {
         const QualityLevel = Filament?.['View$QualityLevel'];
         view.setDynamicResolutionOptions({
             enabled: enabled !== false,
             homogeneousScaling: true,
-            minScale: [0.5, 0.5],
+            minScale,
             maxScale: [1.0, 1.0],
-            sharpness: 0.9,
+            sharpness: options.sharpness ?? 0.9,
             quality: QualityLevel ? QualityLevel.MEDIUM : 1,
         });
     } catch (e) {

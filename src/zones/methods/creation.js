@@ -1,5 +1,6 @@
 import { quatFromEuler, quaternionToMat4 } from '../../math.js';
 import { materialPresets } from '../../material-system.js';
+import { decorateSpiralTrack } from './decorations.js';
 
 /**
  * Zone creation methods
@@ -308,6 +309,8 @@ export const creationMethods = {
              [0.8, 0.8, 0.2],
              'metal'
         );
+
+        decorateSpiralTrack(this, offset);
     },
 
     createBlockZone(offset) {

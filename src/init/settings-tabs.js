@@ -88,6 +88,29 @@ export class InitSettingsTabs {
             })
         }
 
+        const targetFpsSelect = document.getElementById('setting-target-fps')
+        if (targetFpsSelect) {
+            targetFpsSelect.addEventListener('change', (e) => {
+                if (this.settings) {
+                    const val = e.target.value
+                    this.settings.graphics.targetFps = val === 'unlimited' ? 'unlimited' : parseInt(val, 10)
+                }
+            })
+        }
+
+        const perfModeSelect = document.getElementById('setting-performance-mode')
+        if (perfModeSelect) {
+            perfModeSelect.addEventListener('change', (e) => {
+                if (this.settings) {
+                    this.settings.graphics.performanceMode = e.target.value
+                    if (e.target.value === 'locked') {
+                        this.autoQualityGovernor?.reset()
+                    }
+                    this.applySettings()
+                }
+            })
+        }
+
         // Audio settings
         const masterSlider = document.getElementById('setting-master')
         const masterValue = document.getElementById('value-master')
@@ -190,6 +213,16 @@ export class InitSettingsTabs {
 
         const dynResToggle = document.getElementById('setting-dynres')
         if (dynResToggle) dynResToggle.checked = s.graphics.dynamicResolution !== false
+
+        const targetFpsSelect = document.getElementById('setting-target-fps')
+        if (targetFpsSelect) {
+            targetFpsSelect.value = String(s.graphics.targetFps ?? 60)
+        }
+
+        const perfModeSelect = document.getElementById('setting-performance-mode')
+        if (perfModeSelect) {
+            perfModeSelect.value = s.graphics.performanceMode || 'auto'
+        }
 
         // Audio
         const masterSlider = document.getElementById('setting-master')

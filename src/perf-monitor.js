@@ -1,3 +1,5 @@
+import { AutoQualityGovernor } from './auto-quality-governor.js'
+
 const PERF_URL_FLAGS = ['fps', 'perf', 'debugPerf']
 const FRAME_BUDGET_60HZ = 16.67
 
@@ -134,6 +136,11 @@ export class PerfMonitor {
         this.samples.push(this.currentFrame)
         if (this.samples.length > this.maxSamples) this.samples.shift()
         this.latestMetrics = this.collectMetrics()
+        if (this.game.autoQualityGovernor?.isActive()) {
+            const p95 = AutoQualityGovernor.computeP95(this.samples)
+            this.game.autoQualityGovernor.tick(p95)
+            this.latestMetrics = this.collectMetrics()
+        }
         this.updateOverlay(now)
         this.maybeLogRuntime(now)
     }
@@ -179,7 +186,14 @@ export class PerfMonitor {
         const activeParticleCount = (particleStats.activeCount || 0) + safeCount(game.visualParticles)
         const animatedLights = safeCount(game.lightingSystem?.animatedLights)
         const cullingStats = game.cullingManager?.stats || {}
+        const lodStats = game.marbleLodManager?.stats || {}
+        const poolStats = game.effectPool?.stats || {}
+        const gov = game.autoQualityGovernor?.getStatus?.() || {}
+        const budgetStats = game.levelEffectBudget?.counts || {}
+        const lightBudgetStats = game.lightingBudget?.stats || {}
+        const lightBudgetLimits = game.lightingBudget?.getLimits?.() || {}
         const baselineLights = [game.sunLight, game.fillLight, game.backLight].filter(Boolean).length
+        const dynamicLights = lightBudgetStats.active ?? 0
         const proxyRenderables =
             safeCount(game.staticEntities) +
             safeCount(game.marbles) +
@@ -208,19 +222,39 @@ export class PerfMonitor {
             particleSystemActive: particleStats.activeCount || 0,
             particleEmitters: safeCount(game.particleSystem?.ambientEmitters),
             activeParticles: activeParticleCount,
-            lights: baselineLights + animatedLights + (game.activeMarbleLightEntity ? 1 : 0),
+            lights: baselineLights + dynamicLights,
+            activeLights: dynamicLights,
+            lightBudget: lightBudgetLimits.maxDynamic ?? 0,
+            lightBudgetRegistered: lightBudgetStats.registered ?? 0,
+            lightBudgetCulled: (lightBudgetStats.culledByBudget ?? 0) + (lightBudgetStats.culledByDistance ?? 0),
             animatedLights,
             staticBatchGroups: game.staticBatchStats?.groups || 0,
             staticBatchedBoxes: game.staticBatchStats?.boxes || 0,
             staticCollapsedEntities: game.staticBatchStats?.collapsedEntities || 0,
+            decorativeInstances: game.staticBatchStats?.decorative?.instances || 0,
             cullingEnabled: Boolean(cullingStats.enabled),
             culledStatic: cullingStats.staticHidden || 0,
             culledDynamic: cullingStats.dynamicHidden || 0,
             culledParticles: cullingStats.particleHidden || 0,
             cullingVisibleEntities: cullingStats.visibleEntities || 0,
+            lod0: lodStats.lod0 || 0,
+            lod1: lodStats.lod1 || 0,
+            lod2: lodStats.lod2 || 0,
+            effectPoolPooled: poolStats.pooled || 0,
+            effectPoolActive: poolStats.active || 0,
+            effectPoolAllocFrame: poolStats.allocationsThisFrame || 0,
             physicsBodiesProxy: safeCount(game.staticBodies) + safeCount(game.dynamicBodies),
             renderablesProxy: proxyRenderables,
             drawCallsProxy: proxyRenderables + activeParticleCount,
+            autoQualityStep: gov.autoQualityStep ?? 0,
+            autoQualityState: gov.state ?? '-',
+            autoQualityLabel: gov.lastStepLabel ?? '',
+            targetFps: gov.targetFps ?? 60,
+            performanceMode: gov.performanceMode ?? 'auto',
+            currentQualityBias: gov.currentQualityBias ?? 0,
+            levelBudget: budgetStats,
+            levelBudgetExceeded: game.levelEffectBudget?.exceeded || {},
+            fancyPresetCount: game._fancyPresetCount ?? 0,
         }
     }
 
@@ -248,6 +282,10 @@ export class PerfMonitor {
             latestMetrics: this.latestMetrics,
             latestCoreWork: frames.at(-1)?.coreWork || null,
             latestSyncWork: frames.at(-1)?.syncWork || null,
+            autoQualityStep: this.game.autoQualityGovernor?.autoQualityStep ?? 0,
+            targetFps: this.game.autoQualityGovernor?.getTargetFps?.() ?? 60,
+            currentQualityBias: this.game.autoQualityGovernor?.getEffectQualityBias?.() ?? 0,
+            autoQualityState: this.game.autoQualityGovernor?.state ?? '-',
         }
     }
 
@@ -262,15 +300,19 @@ export class PerfMonitor {
         this.lastOverlayUpdate = now
         const summary = this.getSummary(this.samples.slice(-180))
         const metrics = this.latestMetrics
+        const gov = this.game.autoQualityGovernor?.getStatus?.() || {}
         this.textEl.textContent = [
             `${summary.avgFps.toFixed(1)} fps  ${summary.p95FrameMs.toFixed(1)}ms p95`,
             `level: ${metrics.levelId || '-'}`,
+            gov.enabled ? `autoQuality: step ${gov.autoQualityStep}${gov.lastStepLabel ? ` — ${gov.lastStepLabel}` : ''} (${gov.state})` : `perf mode: ${gov.performanceMode || 'locked'}`,
             `entities: ${metrics.staticEntities} static, ${metrics.renderablesProxy} renderable proxy`,
-            `batches: ${metrics.staticBatchGroups} groups, ${metrics.staticBatchedBoxes} boxes`,
+            `batches: ${metrics.staticBatchGroups} groups, ${metrics.staticBatchedBoxes} boxes, ${metrics.decorativeInstances || 0} greebles`,
             `bodies: ${metrics.physicsBodiesProxy}  marbles: ${metrics.marbles}`,
-            `particles: ${metrics.activeParticles}  lights: ${metrics.lights}`,
+            `particles: ${metrics.activeParticles}  lights: ${metrics.activeLights}/${metrics.lightBudget} dyn (${metrics.lights} total)`,
             `culled: ${metrics.culledStatic} static, ${metrics.culledDynamic} dyn, ${metrics.culledParticles} fx`,
-            `transforms: ${summary.latestSyncWork?.estimatedTransformSets || 0} sync + ${summary.latestCoreWork?.estimatedTransformSets || 0} core`,
+            `lod: ${metrics.lod0} hi, ${metrics.lod1} mid, ${metrics.lod2} low  fancy: ${metrics.fancyPresetCount || 0}/4`,
+            `pool: ${metrics.effectPoolActive} active, ${metrics.effectPoolPooled} idle, +${metrics.effectPoolAllocFrame}/f`,
+            `transforms: ${summary.latestSyncWork?.estimatedTransformSets || 0} sync + ${summary.latestCoreWork?.estimatedTransformSets || 0} core  mat skip: ${summary.latestSyncWork?.materialUpdatesSkipped ?? 0}`,
             `F2 toggles overlay`
         ].join('\n')
         this.drawGraph(this.samples.slice(-this.graph.width))

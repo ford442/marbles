@@ -1,6 +1,5 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
-import { quaternionToMat4 } from '../math.js';
 
 export class AbilityBlink {
     triggerBlink() {
@@ -66,42 +65,14 @@ export class AbilityBlink {
     }
 
     spawnBlinkParticle(pos, color) {
-        const entity = this.Filament.EntityManager.get().create()
-        const matInstance = this.material.createInstance()
-        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color)
-        matInstance.setFloatParameter('roughness', 0.1)
-
-        const radius = this.playerMarble ? (this.playerMarble.scale * 0.5 || 0.5) : 0.5
-
-        this.Filament.RenderableManager.Builder(1)
-            .boundingBox({ center: [0, 0, 0], halfExtent: [radius, radius, radius] })
-            .material(0, matInstance)
-            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
-            .receiveShadows(true)
-            .castShadows(true)
-            .build(this.engine, entity)
-
-        const tcm = this.engine.getTransformManager()
-        const inst = tcm.getInstance(entity)
-        const mat = quaternionToMat4(pos, { x: 0, y: 0, z: 0, w: 1 })
-
-        const sx = radius * 2; const sy = radius * 2; const sz = radius * 2;
-        mat[0] *= sx; mat[1] *= sx; mat[2] *= sx;
-        mat[4] *= sy; mat[5] *= sy; mat[6] *= sy;
-        mat[8] *= sz; mat[9] *= sz; mat[10] *= sz;
-
-        tcm.setTransform(inst, mat)
-        this.scene.addEntity(entity)
-
-        this.visualParticles.push({
-            entity: entity,
-            matInstance: matInstance,
+        this.effectPool?.spawnVisualParticle({
+            color,
+            roughness: 0.1,
             spawnTime: Date.now(),
             pos: { x: pos.x, y: pos.y, z: pos.z },
             vel: { x: 0, y: 0.5, z: 0 },
             duration: 300,
             scale: 1.0,
-            isRing: false // Will fade out and shrink
         })
     }
 }

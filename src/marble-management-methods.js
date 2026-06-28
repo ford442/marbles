@@ -2,8 +2,13 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from './audio.js';
 import { marblesInfo } from './marbles_data.js';
 import { quaternionToMat4 } from './math.js';
-import { materialPresets, createThemedMaterialInstance } from './material-system.js';
-import { getGlassQualityConfig } from './rendering-defaults.js';
+import { materialPresets } from './material-system.js';
+import {
+    createMarbleMaterialInstance,
+    applyMarbleMaterialPreset,
+    MATERIAL_TIER,
+} from './marble-material-tier.js';
+import { shouldUseMarbleProxyLight, LIGHT_OWNER } from './lighting-budget.js';
 
 export class MarbleManagementMethods {
     createMarbles(spawnPos) {
@@ -38,58 +43,30 @@ export class MarbleManagementMethods {
 
             const entity = this.Filament.EntityManager.get().create()
 
-            // Use the themed material helper which applies all preset parameters
-            // supported by the current procedural material, plus stores extra
-            // metadata for future GPU upgrades.
-            const { instance: matInstance, preset } = createThemedMaterialInstance(
-                this.material,
-                this.Filament,
-                info.materialType,
+            const isCube = info.geometry === 'cube'
+            const isPlayerSpawn = this.marbles.length === 0
+            const spawnTier = isPlayerSpawn ? MATERIAL_TIER.FULL : MATERIAL_TIER.SIMPLIFIED
+            const presetName = info.materialType || 'polishedMarble'
+
+            const { instance: matInstance, preset } = createMarbleMaterialInstance(
+                this,
+                presetName,
                 info.color,
-                this.hasProceduralMaterial
+                spawnTier
             )
 
-            // Allow per-marble overrides of any parameter
-            if (info.roughness !== undefined) matInstance.setFloatParameter('roughness', info.roughness)
-            if (this.hasProceduralMaterial) {
-                if (info.metallic !== undefined) matInstance.setFloatParameter('metallic', info.metallic)
-                if (info.reflectance !== undefined) matInstance.setFloatParameter('reflectance', info.reflectance)
-                if (info.clearCoat !== undefined) matInstance.setFloatParameter('clearCoat', info.clearCoat)
-                if (info.clearCoatRoughness !== undefined) matInstance.setFloatParameter('clearCoatRoughness', info.clearCoatRoughness)
-                if (info.bumpScale !== undefined) matInstance.setFloatParameter('bumpScale', info.bumpScale)
-                if (info.bumpFrequency !== undefined) matInstance.setFloatParameter('bumpFrequency', info.bumpFrequency)
-                
-                // Emissive — allow per-marble override
-                if (info.emissive !== undefined) {
-                    matInstance.setColor3Parameter('emissive', this.Filament.RgbType.LINEAR, info.emissive)
-                }
-                if (info.emissiveIntensity !== undefined) {
-                    matInstance.setFloatParameter('emissiveIntensity', info.emissiveIntensity)
-                }
-
-                // Glass refraction & caustics — apply quality-gated configuration for glass marbles
-                if (info.materialType === 'classicGlass' || (preset && preset.refractionIndex)) {
-                    const quality = this.settings?.graphics?.quality || 'medium'
-                    const glassConfig = getGlassQualityConfig(quality)
-                     
-                    // Apply glass quality config, but allow per-marble overrides
-                    matInstance.setFloatParameter('refractionMode', info.refractionMode !== undefined ? info.refractionMode : glassConfig.refractionMode)
-                    matInstance.setFloatParameter('thickness', info.thickness !== undefined ? info.thickness : glassConfig.thickness)
-                    matInstance.setFloatParameter('causticIntensity', info.causticIntensity !== undefined ? info.causticIntensity : glassConfig.causticIntensity)
-                    matInstance.setFloatParameter('chromaticDispersion', info.chromaticDispersion !== undefined ? info.chromaticDispersion : glassConfig.chromaticDispersion)
-                    matInstance.setFloatParameter('fresnelStrength', info.fresnelStrength !== undefined ? info.fresnelStrength : glassConfig.fresnelStrength)
-                }
-             }
-
-            const vb = info.geometry === 'cube' ? this.vb : this.sphereVb
-            const ib = info.geometry === 'cube' ? this.ib : this.sphereIb
+            const startLod = isCube ? null : (isPlayerSpawn ? 0 : 1)
+            const lodMeshes = isCube ? null : this.marbleLodMeshes
+            const vb = isCube ? this.vb : (lodMeshes?.[startLod]?.vb ?? this.sphereVb)
+            const ib = isCube ? this.ib : (lodMeshes?.[startLod]?.ib ?? this.sphereIb)
+            const castShadows = isCube ? true : (lodMeshes?.[startLod]?.castShadows !== false)
 
             this.Filament.RenderableManager.Builder(1)
                 .boundingBox({ center: [0, 0, 0], halfExtent: [radius, radius, radius] })
                 .material(0, matInstance)
                 .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, vb, ib)
                 .receiveShadows(true)
-                .castShadows(true)
+                .castShadows(castShadows)
                 .build(this.engine, entity)
 
             this.scene.addEntity(entity)
@@ -114,9 +91,13 @@ export class MarbleManagementMethods {
                 baseGravityScale: info.gravityScale !== undefined ? info.gravityScale : 1.0,
                 originalGravityScale: info.gravityScale !== undefined ? info.gravityScale : 1.0,
                 // Store full preset metadata for future GPU upgrades
-                materialPreset: preset || null,
-                materialPresetName: info.materialType || null,
+                materialPreset: { ...(preset || {}), ...this._marbleInfoMaterialFields(info) },
+                materialPresetName: presetName,
                 matInstance,
+                _materialTier: spawnTier,
+                geometry: info.geometry || 'sphere',
+                lodMeshes,
+                lodLevel: startLod ?? 1,
             }
 
             // Emissive proxy light — prefer explicit marbles_data flag, then fall
@@ -135,6 +116,8 @@ export class MarbleManagementMethods {
 
             this.marbles.push(marbleObj)
             this.dynamicBodies.add(rigidBody)
+            applyMarbleMaterialPreset(marbleObj, this, spawnTier)
+            this._applyMarbleMaterialOverrides(marbleObj, info)
         }
 
         this.currentMarbleIndex = 0
@@ -143,8 +126,45 @@ export class MarbleManagementMethods {
         this.updateActiveMarbleLight()
     }
 
+    _marbleInfoMaterialFields(info) {
+        const fields = {}
+        const keys = [
+            'roughness', 'metallic', 'reflectance', 'clearCoat', 'clearCoatRoughness',
+            'bumpScale', 'bumpFrequency', 'anisotropy', 'grainScale', 'scratchesIntensity',
+            'iridescenceScale', 'sparkleDensity', 'heatIntensity', 'crackGlow',
+            'thickness', 'fresnelStrength', 'chromaticDispersion', 'emissiveIntensity',
+        ]
+        for (const key of keys) {
+            if (info[key] !== undefined) fields[key] = info[key]
+        }
+        return fields
+    }
+
+    _applyMarbleMaterialOverrides(marble, info) {
+        const mat = marble?.matInstance
+        if (!mat) return
+        if (info.roughness !== undefined) mat.setFloatParameter('roughness', info.roughness)
+        if (!this.hasProceduralMaterial) return
+        if (info.metallic !== undefined) mat.setFloatParameter('metallic', info.metallic)
+        if (info.reflectance !== undefined) mat.setFloatParameter('reflectance', info.reflectance)
+        if (info.clearCoat !== undefined) mat.setFloatParameter('clearCoat', info.clearCoat)
+        if (info.clearCoatRoughness !== undefined) mat.setFloatParameter('clearCoatRoughness', info.clearCoatRoughness)
+        if (info.bumpScale !== undefined) mat.setFloatParameter('bumpScale', info.bumpScale)
+        if (info.bumpFrequency !== undefined) mat.setFloatParameter('bumpFrequency', info.bumpFrequency)
+        if (info.anisotropy !== undefined) mat.setFloatParameter('anisotropyStrength', info.anisotropy)
+        if (info.grainScale !== undefined) mat.setFloatParameter('grainScale', info.grainScale)
+        if (info.scratchesIntensity !== undefined) mat.setFloatParameter('scratchesIntensity', info.scratchesIntensity)
+        if (info.emissive !== undefined) {
+            mat.setColor3Parameter('emissive', this.Filament.RgbType.LINEAR, info.emissive)
+        }
+        if (info.emissiveIntensity !== undefined) {
+            mat.setFloatParameter('emissiveIntensity', info.emissiveIntensity)
+        }
+    }
+
     updateActiveMarbleLight() {
         if (this.activeMarbleLightEntity) {
+            this.lightingBudget?.unregister(this.activeMarbleLightEntity)
             this.scene.remove(this.activeMarbleLightEntity)
             this.engine.destroyEntity(this.activeMarbleLightEntity)
             this.Filament.EntityManager.get().destroy(this.activeMarbleLightEntity)
@@ -152,17 +172,35 @@ export class MarbleManagementMethods {
         }
 
         const marble = this.playerMarble
-        if (marble && marble.emissive) {
-            const lightEntity = this.Filament.EntityManager.get().create()
-            this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].POINT)
-                .color(marble.lightColor || marble.color)
-                .intensity(marble.lightIntensity || 10000.0)
-                .falloff(20.0)
-                .build(this.engine, lightEntity)
-            this.scene.addEntity(lightEntity)
-            this.activeMarbleLightEntity = lightEntity
-            marble.lightEntity = lightEntity
+        if (!marble || !marble.emissive) return
+
+        const quality = this.settings?.graphics?.quality || 'medium'
+        if (!shouldUseMarbleProxyLight(quality)) {
+            return
         }
+
+        const lightEntity = this.Filament.EntityManager.get().create()
+        this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].POINT)
+            .color(marble.lightColor || marble.color)
+            .intensity(marble.lightIntensity || 10000.0)
+            .falloff(20.0)
+            .castShadows(false)
+            .build(this.engine, lightEntity)
+        this.scene.addEntity(lightEntity)
+        this.activeMarbleLightEntity = lightEntity
+        marble.lightEntity = lightEntity
+
+        this.lightingBudget?.register({
+            entity: lightEntity,
+            owner: LIGHT_OWNER.player,
+            getPos: () => {
+                const t = marble.rigidBody?.translation?.()
+                return t ? { x: t.x, y: t.y, z: t.z } : marble.initialPos
+            },
+            falloff: 20,
+            baseIntensity: marble.lightIntensity || 10000,
+            castsShadow: false,
+        })
     }
 
     getLeader() {
@@ -302,73 +340,21 @@ export class MarbleManagementMethods {
         document.getElementById('portal-a-status').style.color = '#444'
         document.getElementById('portal-b-status').style.color = '#444'
 
-        if (this.activeMissiles) {
-            for (const m of this.activeMissiles) {
-                this.world.removeRigidBody(m.rigidBody)
-                this.scene.remove(m.entity)
-                if (m.matInstance) this.engine.destroyMaterialInstance(m.matInstance)
-                this.engine.destroyEntity(m.entity)
-                this.Filament.EntityManager.get().destroy(m.entity)
-
-                if (m.lightEntity) {
-                    this.scene.remove(m.lightEntity)
-                    this.engine.destroyEntity(m.lightEntity)
-                    this.Filament.EntityManager.get().destroy(m.lightEntity)
+        const drainProjectiles = (list) => {
+            if (!list?.length) return []
+            for (const obj of [...list]) {
+                if (obj.rigidBody) {
+                    this.dynamicBodies.delete(obj.rigidBody)
+                    this.world.removeRigidBody(obj.rigidBody)
                 }
+                this.effectPool?.releaseProjectile(obj)
             }
-            this.activeMissiles = []
+            return []
         }
 
-        if (this.activeBombs) {
-            for (const b of this.activeBombs) {
-                this.world.removeRigidBody(b.rigidBody)
-                this.scene.remove(b.entity)
-                if (b.matInstance) this.engine.destroyMaterialInstance(b.matInstance)
-                this.engine.destroyEntity(b.entity)
-                this.Filament.EntityManager.get().destroy(b.entity)
-
-                if (b.lightEntity) {
-                    this.scene.remove(b.lightEntity)
-                    this.engine.destroyEntity(b.lightEntity)
-                    this.Filament.EntityManager.get().destroy(b.lightEntity)
-                }
-            }
-            this.activeBombs = []
-        }
-
-        if (this.activeMissiles) {
-            for (const m of this.activeMissiles) {
-                this.world.removeRigidBody(m.rigidBody)
-                this.scene.remove(m.entity)
-                if (m.matInstance) this.engine.destroyMaterialInstance(m.matInstance)
-                this.engine.destroyEntity(m.entity)
-                this.Filament.EntityManager.get().destroy(m.entity)
-
-                if (m.lightEntity) {
-                    this.scene.remove(m.lightEntity)
-                    this.engine.destroyEntity(m.lightEntity)
-                    this.Filament.EntityManager.get().destroy(m.lightEntity)
-                }
-            }
-            this.activeMissiles = []
-        }
-
-        if (this.activeBlackHoles) {
-            for (const bh of this.activeBlackHoles) {
-                this.world.removeRigidBody(bh.rigidBody)
-                this.scene.remove(bh.entity)
-                if (bh.matInstance) this.engine.destroyMaterialInstance(bh.matInstance)
-                this.engine.destroyEntity(bh.entity)
-                this.Filament.EntityManager.get().destroy(bh.entity)
-
-                if (bh.lightEntity) {
-                    this.scene.remove(bh.lightEntity)
-                    this.engine.destroyEntity(bh.lightEntity)
-                    this.Filament.EntityManager.get().destroy(bh.lightEntity)
-                }
-            }
-            this.activeBlackHoles = []
-        }
+        this.activeMissiles = drainProjectiles(this.activeMissiles)
+        this.activeBombs = drainProjectiles(this.activeBombs)
+        this.activeBlackHoles = drainProjectiles(this.activeBlackHoles)
 
         // Rebuild dynamicBodies Set from the surviving tracked arrays
         this.dynamicBodies = new Set()

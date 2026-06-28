@@ -1,5 +1,6 @@
 import { quatFromEuler } from '../math.js';
 import { createZoneLight } from './methods/visuals.js';
+import { decorateLavaTubes } from './methods/decorations.js';
 
 export function createLavaTubesZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
@@ -116,4 +117,6 @@ export function createLavaTubesZone(game, offset) {
             });
         }
     }
+
+    decorateLavaTubes(game, offset);
 }

@@ -13,6 +13,11 @@ import { applyGameLoopSyncMethods } from './game-loop-sync-methods.js';
 import { HUDManager } from './hud-manager.js';
 import { PerfMonitor } from './perf-monitor.js';
 import { CullingManager } from './culling-manager.js';
+import { MarbleLodManager } from './marble-lod.js';
+import { EffectPoolManager } from './effect-pool.js';
+import { AutoQualityGovernor } from './auto-quality-governor.js';
+import { LevelEffectBudget } from './level-effect-budget.js';
+import { LightingBudgetManager } from './lighting-budget.js';
 
 class MarblesGame {
     constructor() {
@@ -327,7 +332,12 @@ class MarblesGame {
         // Initialize HUD Manager
         this.hudManager = new HUDManager(this)
         this.perfMonitor = new PerfMonitor(this)
+        this.autoQualityGovernor = new AutoQualityGovernor(this)
+        this.levelEffectBudget = new LevelEffectBudget(this)
+        this.lightingBudget = new LightingBudgetManager(this)
         this.cullingManager = new CullingManager(this)
+        this.marbleLodManager = new MarbleLodManager(this)
+        this.effectPool = new EffectPoolManager(this)
     }
 }
 

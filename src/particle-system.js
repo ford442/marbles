@@ -32,6 +32,7 @@ export class ParticleSystem {
             ultra: 1200
         }
         this.maxParticles = budgets[this.quality] || budgets.medium
+        this._stressScale = 1.0
         this.activeParticles = []
         
         // Particle pool (preallocated)
@@ -74,11 +75,20 @@ export class ParticleSystem {
         }
     }
 
+    setStressScale(scale) {
+        this._stressScale = Math.max(0.2, Math.min(1, Number(scale) || 1))
+    }
+
     /**
      * Register a continuous ambient particle emitter for a zone.
      * @param {object} config - { pos: {x,y,z}, type, rate (per second), count, params, spread }
      */
     addAmbientEmitter(config) {
+        const budget = this._game?.levelEffectBudget
+        if (budget && !budget.canAllocate('particleEmitters')) {
+            return
+        }
+        if (budget) budget.allocate('particleEmitters')
         this.ambientEmitters.push({
             pos: config.pos,
             type: config.type || 'dust',
@@ -304,7 +314,8 @@ export class ParticleSystem {
         // Tick ambient zone emitters
         for (const emitter of this.ambientEmitters) {
             emitter.timer += deltaTime
-            const interval = 1.0 / emitter.rate
+            const rateScale = (emitter._rateScale ?? 1) * (this._stressScale ?? 1)
+            const interval = 1.0 / Math.max(0.01, emitter.rate * rateScale)
             while (emitter.timer >= interval) {
                 emitter.timer -= interval
                 const s = emitter.spread

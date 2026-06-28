@@ -1,4 +1,4 @@
-import { createSphere } from '../sphere.js';
+import { buildMarbleLodMeshes } from '../marble-lod.js';
 import { CUBE_VERTICES, CUBE_INDICES } from '../cube-geometry.js';
 
 export class ZoneSetupAssets {
@@ -74,21 +74,10 @@ export class ZoneSetupAssets {
             .build(this.engine)
         this.ib.setBuffer(this.engine, CUBE_INDICES)
 
-        const sphereData = createSphere(0.5, 64, 32)
-        this.sphereVb = this.Filament.VertexBuffer.Builder()
-            .vertexCount(sphereData.vertices.length / 9)
-            .bufferCount(1)
-            .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, 36)
-            .attribute(VertexAttribute.TANGENTS, 0, AttributeType.FLOAT4, 12, 36)
-            .attribute(VertexAttribute.UV0, 0, AttributeType.FLOAT2, 28, 36)
-            .build(this.engine)
-        this.sphereVb.setBufferAt(this.engine, 0, sphereData.vertices)
-
-        this.sphereIb = this.Filament.IndexBuffer.Builder()
-            .indexCount(sphereData.indices.length)
-            .bufferType(this.Filament['IndexBuffer$IndexType'].USHORT)
-            .build(this.engine)
-        this.sphereIb.setBuffer(this.engine, sphereData.indices)
+        buildMarbleLodMeshes(this, 0.5)
+        if (!this.sphereVb || !this.sphereIb) {
+            throw new Error('[ASSETS] Failed to build marble LOD meshes')
+        }
 
         this.createCueStick()
         this.createGrappleLine()

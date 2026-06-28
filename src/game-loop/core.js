@@ -990,16 +990,7 @@ export class GameLoopRenderCore {
             if (timeAlive > bh.duration) {
                 this.dynamicBodies.delete(bh.rigidBody)
                 this.world.removeRigidBody(bh.rigidBody)
-                this.scene.remove(bh.entity)
-                if (bh.matInstance) this.engine.destroyMaterialInstance(bh.matInstance)
-                this.engine.destroyEntity(bh.entity)
-                this.Filament.EntityManager.get().destroy(bh.entity)
-
-                if (bh.lightEntity) {
-                    this.scene.remove(bh.lightEntity)
-                    this.engine.destroyEntity(bh.lightEntity)
-                    this.Filament.EntityManager.get().destroy(bh.lightEntity)
-                }
+                this.effectPool?.releaseProjectile(bh)
 
                 this.activeBlackHoles.splice(i, 1)
             } else {
@@ -1114,16 +1105,7 @@ export class GameLoopRenderCore {
                 }
                 this.dynamicBodies.delete(m.rigidBody)
                 this.world.removeRigidBody(m.rigidBody)
-                this.scene.remove(m.entity)
-                if (m.matInstance) this.engine.destroyMaterialInstance(m.matInstance)
-                this.engine.destroyEntity(m.entity)
-                this.Filament.EntityManager.get().destroy(m.entity)
-
-                if (m.lightEntity) {
-                    this.scene.remove(m.lightEntity)
-                    this.engine.destroyEntity(m.lightEntity)
-                    this.Filament.EntityManager.get().destroy(m.lightEntity)
-                }
+                this.effectPool?.releaseProjectile(m)
 
                 this.activeMissiles.splice(i, 1)
             } else {
@@ -1166,16 +1148,7 @@ export class GameLoopRenderCore {
                 this.explodeBomb(b)
                 this.dynamicBodies.delete(b.rigidBody)
                 this.world.removeRigidBody(b.rigidBody)
-                this.scene.remove(b.entity)
-                if (b.matInstance) this.engine.destroyMaterialInstance(b.matInstance)
-                this.engine.destroyEntity(b.entity)
-                this.Filament.EntityManager.get().destroy(b.entity)
-
-                if (b.lightEntity) {
-                    this.scene.remove(b.lightEntity)
-                    this.engine.destroyEntity(b.lightEntity)
-                    this.Filament.EntityManager.get().destroy(b.lightEntity)
-                }
+                this.effectPool?.releaseProjectile(b)
 
                 this.activeBombs.splice(i, 1)
             } else {

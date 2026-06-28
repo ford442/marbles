@@ -18,6 +18,9 @@ export class InitLevelLoader {
         console.log('[LEVEL] Cleared previous level')
         this.perfMonitor?.resetLevel(levelId)
         this.cullingManager?.reset()
+        this.marbleLodManager?.reset()
+        this.effectPool?.reset()
+        this.levelEffectBudget?.reset()
 
         this.ghostRecording = []
         this.ghostPlaybackIndex = 0
@@ -74,6 +77,7 @@ export class InitLevelLoader {
 
         console.log(`[LEVEL] Spawning marbles at ${JSON.stringify(level.spawn)}...`)
         this.createMarbles(level.spawn)
+        this.effectPool?.recordLevelBaseline()
         console.log(`[LEVEL] Created ${this.marbles.length} marbles`)
 
         if (this.bestGhosts[levelId]) {

@@ -2595,6 +2595,31 @@
 
                     <div class="setting-item">
                         <div class="setting-label">
+                            <span>Target FPS</span>
+                        </div>
+                        <p class="setting-description">Auto quality governor tries to hold this frame-rate target</p>
+                        <select id="setting-target-fps" class="settings-select">
+                            <option value="30">30 FPS</option>
+                            <option value="60" selected>60 FPS</option>
+                            <option value="120">120 FPS</option>
+                            <option value="unlimited">Unlimited</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <span>Performance Mode</span>
+                        </div>
+                        <p class="setting-description">Auto adapts quality under load; Locked keeps your preset; Max Performance prioritizes FPS</p>
+                        <select id="setting-performance-mode" class="settings-select">
+                            <option value="auto" selected>Auto (recommended)</option>
+                            <option value="locked">Locked Quality</option>
+                            <option value="maxPerformance">Max Performance</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
                             <span>Dynamic Resolution</span>
                             <label class="toggle-switch">
                                 <input type="checkbox" id="setting-dynres" checked>

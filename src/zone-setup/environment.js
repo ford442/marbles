@@ -163,7 +163,10 @@ export class ZoneSetupEnvironment {
      * @param {string} envName - Key from ENVIRONMENT_PRESETS (e.g. 'ice', 'volcanic')
      */
     setupEnvironmentLighting(envName = 'default') {
-        const quality = this.settings?.graphics?.quality || 'medium';
+        const runtime = this._runtimeGraphicsOverrides || {};
+        const quality = runtime.forceShOnlyIbl
+            ? 'medium'
+            : (this.settings?.graphics?.quality || 'medium');
 
         // Tear down existing IBL / skybox (including any previously loaded cubemap textures)
         if (this._iblObject || this._skyboxObject) {
@@ -198,7 +201,7 @@ export class ZoneSetupEnvironment {
         this.skyboxEntity = skybox;
 
         // For high/ultra quality, asynchronously upgrade to full specular IBL
-        if (CUBEMAP_QUALITY_LEVELS.has(quality)) {
+        if (!runtime.forceShOnlyIbl && CUBEMAP_QUALITY_LEVELS.has(quality)) {
             this._upgradeEnvironmentWithCubemap(envName);
         }
     }

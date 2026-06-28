@@ -1,4 +1,5 @@
 // Space Station Level Module
+import { decorateSpaceStation } from './zones/methods/decorations.js';
 
 export const spaceStationLevel = {
     name: 'Space Station',
@@ -156,4 +157,6 @@ export function createSpaceStationZone(game, offset) {
         [0.5, 0.5, 0.6],
         'metal'
     );
+
+    decorateSpaceStation(game, offset);
 }

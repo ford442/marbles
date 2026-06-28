@@ -1,5 +1,6 @@
 import { materialPresets } from '../../material-system.js';
 import { ENVIRONMENT_PRESETS } from '../../rendering/environment.js';
+import { LIGHT_OWNER } from '../../lighting-budget.js';
 
 const GOAL_COLOR_EPS = 1 / 255
 const GOAL_COLOR_INTERVAL_MS = 80
@@ -38,16 +39,24 @@ function setColor3IfChanged(F, owner, color, now) {
  * Create a themed point or spot light and register it as a static scene entity.
  * Supports optional animation behaviors for dynamic lighting effects.
  *
+ * Prefer createZoneGlow() for distant neon underglow / sparkle cards (emissive + bloom, no Filament light).
+ *
  * @param {object} game         - The game instance (engine, scene, Filament, staticEntities)
  * @param {'POINT'|'SPOT'} type - Filament light type
  * @param {{x:number,y:number,z:number}} pos   - World-space position
  * @param {[number,number,number]} color        - Linear RGB color
  * @param {number} intensity    - Luminous intensity (lux or lm depending on type)
  * @param {number} falloff      - Light radius / falloff distance
- * @param {object} animConfig   - Optional animation config: { behavior: 'lavaFlicker'|'neonPulse'|'biolumSway'|'crystalShimmer', params: {...} }
- * @returns {object} The Filament entity for the created light
+ * @param {object} animConfig   - Optional animation config: { behavior, params, shaft, hero }
+ * @returns {object|null} The Filament entity for the created light
  */
 export function createZoneLight(game, type, pos, color, intensity, falloff, animConfig = null) {
+    const budget = game.levelEffectBudget
+    if (budget && !budget.canAllocate('zoneLights')) {
+        return null
+    }
+    if (budget) budget.allocate('zoneLights')
+
     const F = game.Filament;
     const lightType = type === 'SPOT'
         ? F['LightManager$Type'].SPOT
@@ -95,8 +104,65 @@ export function createZoneLight(game, type, pos, color, intensity, falloff, anim
             console.warn('[createZoneLight] Failed to register shaft source:', e);
         }
     }
+
+    game.lightingBudget?.register({
+        entity: lightEntity,
+        type,
+        owner: LIGHT_OWNER.zone,
+        hero: animConfig?.hero === true,
+        pos: { x: pos.x, y: pos.y, z: pos.z },
+        falloff,
+        animated: Boolean(animConfig?.behavior),
+        baseIntensity: intensity,
+        castsShadow: false,
+    });
     
     return lightEntity;
+}
+
+/**
+ * Emissive glow card — cheaper than createZoneLight() for distant decor / sparkles.
+ * Uses emissive material + bloom; no Filament point light or budget slot.
+ *
+ * @param {object} game
+ * @param {{x:number,y:number,z:number}} pos
+ * @param {[number,number,number]} color - sRGB base/emissive tint
+ * @param {[number,number,number]} [halfExtent] - box half extents (thin Y = card)
+ * @param {object} [options] - { roughness, emissiveIntensity }
+ * @returns {object|null} Filament entity
+ */
+export function createZoneGlow(game, pos, color, halfExtent = [0.6, 0.04, 0.6], options = {}) {
+    if (!game.material || !game.engine) return null;
+
+    const F = game.Filament;
+    const entity = F.EntityManager.get().create();
+    const mat = game.material.createInstance();
+    mat.setColor3Parameter('baseColor', F.RgbType.sRGB, color);
+    mat.setFloatParameter('roughness', options.roughness ?? 0.15);
+    if (game.hasProceduralMaterial) {
+        mat.setColor3Parameter('emissive', F.RgbType.LINEAR, color);
+        mat.setFloatParameter('emissiveIntensity', options.emissiveIntensity ?? 2.5);
+    }
+
+    const he = halfExtent;
+    F.RenderableManager.Builder(1)
+        .boundingBox({ center: [0, 0, 0], halfExtent: he })
+        .material(0, mat)
+        .geometry(0, F.RenderableManager$PrimitiveType.TRIANGLES, game.vb, game.ib)
+        .receiveShadows(false)
+        .castShadows(false)
+        .build(game.engine, entity);
+
+    const tcm = game.engine.getTransformManager();
+    const inst = tcm.getInstance(entity);
+    const mat4 = new Float32Array(16);
+    mat4[0] = 1; mat4[5] = 1; mat4[10] = 1; mat4[15] = 1;
+    mat4[12] = pos.x; mat4[13] = pos.y; mat4[14] = pos.z;
+    tcm.setTransform(inst, mat4);
+
+    game.scene.addEntity(entity);
+    game.staticEntities.push(entity);
+    return entity;
 }
 
 export const visualMethods = {
@@ -156,6 +222,7 @@ export const visualMethods = {
             .intensity(50000.0)
             .position([goalPos.x, goalPos.y + 2, goalPos.z])
             .falloff(15.0)
+            .castShadows(false)
             .build(this.engine, lightEntity);
         this.scene.addEntity(lightEntity);
         
@@ -180,6 +247,17 @@ export const visualMethods = {
         };
         
         this.goalEffects.push(goalEffect);
+
+        this.lightingBudget?.register({
+            entity: lightEntity,
+            owner: LIGHT_OWNER.goal,
+            pos: { x: goalPos.x, y: goalPos.y + 2, z: goalPos.z },
+            getPos: () => ({ x: goalEffect.pos.x, y: goalEffect.pos.y + 2, z: goalEffect.pos.z }),
+            falloff: 20,
+            baseIntensity: goalEffect.baseIntensity,
+            castsShadow: false,
+        });
+
         return goalEffect;
     },
 
@@ -292,47 +370,25 @@ export const visualMethods = {
     },
 
     spawnGoalParticle(effect) {
-        const F = this.Filament;
-        const particleEntity = F.EntityManager.get().create();
-        const particleMat = this.material.createInstance();
-        
-        // Golden sparkle color with slight variation
-        const hue = Math.random() * 0.1; // Slight gold variation
-        const brightness = 0.8 + Math.random() * 0.2;
-        particleMat.setColor3Parameter('baseColor', F.RgbType.sRGB, 
-            [brightness, brightness * 0.9, brightness * 0.3]);
-        particleMat.setFloatParameter('roughness', 0.0);
-        
-        F.RenderableManager.Builder(1)
-            .boundingBox({ center: [0, 0, 0], halfExtent: [0.05, 0.05, 0.05] })
-            .material(0, particleMat)
-            .geometry(0, F.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
-            .receiveShadows(false)
-            .castShadows(false)
-            .build(this.engine, particleEntity);
-        
-        this.scene.addEntity(particleEntity);
-        
-        // Random position in center area with outward velocity
+        if (!this.effectPool?.budget.canSpawnVisualParticle()) return
+
         const angle = Math.random() * Math.PI * 2;
         const radius = Math.random() * 0.3;
         const x = effect.pos.x + Math.cos(angle) * radius;
         const z = effect.pos.z + Math.sin(angle) * radius;
         const y = effect.pos.y + 0.5;
-        
-        // Upward velocity with slight spread
         const spread = 0.5;
-        const vel = {
-            x: (Math.random() - 0.5) * spread,
-            y: 1.5 + Math.random() * 1.0, // Upward
-            z: (Math.random() - 0.5) * spread
-        };
-        
-        this.visualParticles.push({
-            entity: particleEntity,
-            matInstance: particleMat,
+        const brightness = 0.8 + Math.random() * 0.2;
+
+        this.effectPool.spawnVisualParticle({
+            color: [brightness, brightness * 0.9, brightness * 0.3],
+            roughness: 0.0,
             pos: { x, y, z },
-            vel: vel,
+            vel: {
+                x: (Math.random() - 0.5) * spread,
+                y: 1.5 + Math.random() * 1.0,
+                z: (Math.random() - 0.5) * spread
+            },
             spawnTime: Date.now(),
             duration: 1500 + Math.random() * 500,
             scale: 1.0,
