@@ -282,9 +282,12 @@ export class ZoneSetupCore {
             case 'abyssal_trench':
                 createAbyssalTrenchZone(this, offset)
                 break
-        case 'void_station':
-            createVoidStationZone(this, offset)
-            break
+            case 'void_station':
+                createVoidStationZone(this, offset)
+                break
+            case 'storm_peak':
+                createStormPeakZone(this, offset)
+                break
         }
     }
 }
@@ -300,3 +303,4 @@ import { createAbyssalTrenchZone } from '../zones/abyssal-trench.js';
 import { createNeonPlungeZone } from '../zones/neon-plunge.js';
 import { createPrismaticSpeedwayZone } from '../zones/prismatic-speedway.js';
 import { createVoidStationZone } from '../zones/void-station.js';
+import { createStormPeakZone } from '../zones/storm-peak.js';
