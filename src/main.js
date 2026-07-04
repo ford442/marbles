@@ -149,6 +149,7 @@ class MarblesGame {
         this.pitchAngle = 0
         this.chargePower = 0
         this.charging = false
+        this.isGrappleZipping = false
         this.isAiming = false
         this.playerMarble = null
         this.lastDashTime = 0

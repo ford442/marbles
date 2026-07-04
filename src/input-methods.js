@@ -39,7 +39,11 @@ export class InputMethods {
                     this.chargePower = 0
                 } else if (e.button === 1) { // Middle Mouse Button
                     e.preventDefault()
-                    this.toggleTargetLockOn()
+                    if (this.isGrappling) {
+                        this.isGrappleZipping = true
+                    } else {
+                        this.toggleTargetLockOn()
+                    }
                 } else if (e.button === 2) {
                     this.startGrapple()
                 }
@@ -53,6 +57,8 @@ export class InputMethods {
                         this.charging = false
                         this.shootMarble()
                     }
+                } else if (e.button === 1) {
+                    this.isGrappleZipping = false
                 } else if (e.button === 2) {
                     this.stopGrapple()
                 }
