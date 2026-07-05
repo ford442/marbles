@@ -41,3 +41,4 @@ export { createNeonPulseGridZone } from './neon-pulse-grid.js';
 export { createQuantumTunnelZone } from './quantum-tunnel.js';
 export { createAbyssalTrenchZone } from './abyssal-trench.js';
 export { createNeonPlungeZone } from './neon-plunge.js';
+export { createStormPeakZone } from "./storm-peak.js";

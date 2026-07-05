@@ -1017,6 +1017,22 @@ export const LEVELS = {
         backgroundColor: [0.01, 0.0, 0.05, 1.0],
         environment: 'space_nebula'
     },
+    storm_peak_run: {
+        name: 'Storm Peak',
+        description: 'Brave the icy slide, pulsing clouds, and high winds of Storm Peak!',
+        zones: [
+            { type: 'storm_peak', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: 15, z: 105 } }
+        ],
+        spawn: { x: 0, y: 5, z: -40 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [100, 110], y: [10, 20] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.1, 0.1, 0.15, 1.0],
+        environment: 'space_nebula'
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
