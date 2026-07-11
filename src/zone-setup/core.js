@@ -288,6 +288,10 @@ export class ZoneSetupCore {
             case 'storm_peak':
                 createStormPeakZone(this, offset)
                 break
+            case "stellar_forge":
+                createStellarForgeZone(this, offset)
+                break
+                break
         }
     }
 }
@@ -303,4 +307,5 @@ import { createAbyssalTrenchZone } from '../zones/abyssal-trench.js';
 import { createNeonPlungeZone } from '../zones/neon-plunge.js';
 import { createPrismaticSpeedwayZone } from '../zones/prismatic-speedway.js';
 import { createVoidStationZone } from '../zones/void-station.js';
+import { createStellarForgeZone } from "../zones/stellar-forge.js";
 import { createStormPeakZone } from '../zones/storm-peak.js';

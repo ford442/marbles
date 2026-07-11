@@ -1033,6 +1033,22 @@ export const LEVELS = {
         backgroundColor: [0.1, 0.1, 0.15, 1.0],
         environment: 'space_nebula'
     },
+    stellar_forge_run: {
+        name: "Stellar Forge",
+        description: "Brave the icy slide and the glowing hot forge hammers!",
+        zones: [
+            { type: "stellar_forge", pos: { x: 0, y: 0, z: 0 } },
+            { type: "goal", pos: { x: 0, y: -5, z: 85 } }
+        ],
+        spawn: { x: 0, y: 5, z: -40 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [80, 90], y: [-10, 5] } }
+        ],
+        camera: { mode: "follow", height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.15, 0.05, 0.0, 1.0],
+        environment: "volcanic"
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
