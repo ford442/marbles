@@ -1018,20 +1018,276 @@ export const LEVELS = {
         environment: 'space_nebula'
     },
     storm_peak_run: {
-        name: 'Storm Peak',
-        description: 'Brave the icy slide, pulsing clouds, and high winds of Storm Peak!',
+    stellar_forge_run: {
+        name: "Stellar Forge",
+        description: "Brave the icy slide and the glowing hot forge hammers!",
         zones: [
-            { type: 'storm_peak', pos: { x: 0, y: 0, z: 0 } },
-            { type: 'goal', pos: { x: 0, y: 15, z: 105 } }
+            { type: "stellar_forge", pos: { x: 0, y: 0, z: 0 } },
+            { type: "goal", pos: { x: 0, y: -5, z: 85 } }
         ],
         spawn: { x: 0, y: 5, z: -40 },
         goals: [
-            { id: 1, range: { x: [-10, 10], z: [100, 110], y: [10, 20] } }
+            { id: 1, range: { x: [-10, 10], z: [80, 90], y: [-10, 5] } }
         ],
-        camera: { mode: 'follow', height: 15, offset: -25 },
+        camera: { mode: "follow", height: 15, offset: -25 },
         nightMode: true,
+        backgroundColor: [0.15, 0.05, 0.0, 1.0],
+        environment: "volcanic"
+    },
+        name: 'Storm Peak',
+    stellar_forge_run: {
+        name: "Stellar Forge",
+        description: "Brave the icy slide and the glowing hot forge hammers!",
+        zones: [
+            { type: "stellar_forge", pos: { x: 0, y: 0, z: 0 } },
+            { type: "goal", pos: { x: 0, y: -5, z: 85 } }
+        ],
+        spawn: { x: 0, y: 5, z: -40 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [80, 90], y: [-10, 5] } }
+        ],
+        camera: { mode: "follow", height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.15, 0.05, 0.0, 1.0],
+        environment: "volcanic"
+    },
+        description: 'Brave the icy slide, pulsing clouds, and high winds of Storm Peak!',
+    stellar_forge_run: {
+        name: "Stellar Forge",
+        description: "Brave the icy slide and the glowing hot forge hammers!",
+        zones: [
+            { type: "stellar_forge", pos: { x: 0, y: 0, z: 0 } },
+            { type: "goal", pos: { x: 0, y: -5, z: 85 } }
+        ],
+        spawn: { x: 0, y: 5, z: -40 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [80, 90], y: [-10, 5] } }
+        ],
+        camera: { mode: "follow", height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.15, 0.05, 0.0, 1.0],
+        environment: "volcanic"
+    },
+        zones: [
+    stellar_forge_run: {
+        name: "Stellar Forge",
+        description: "Brave the icy slide and the glowing hot forge hammers!",
+        zones: [
+            { type: "stellar_forge", pos: { x: 0, y: 0, z: 0 } },
+            { type: "goal", pos: { x: 0, y: -5, z: 85 } }
+        ],
+        spawn: { x: 0, y: 5, z: -40 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [80, 90], y: [-10, 5] } }
+        ],
+        camera: { mode: "follow", height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.15, 0.05, 0.0, 1.0],
+        environment: "volcanic"
+    },
+            { type: 'storm_peak', pos: { x: 0, y: 0, z: 0 } },
+    stellar_forge_run: {
+        name: "Stellar Forge",
+        description: "Brave the icy slide and the glowing hot forge hammers!",
+        zones: [
+            { type: "stellar_forge", pos: { x: 0, y: 0, z: 0 } },
+            { type: "goal", pos: { x: 0, y: -5, z: 85 } }
+        ],
+        spawn: { x: 0, y: 5, z: -40 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [80, 90], y: [-10, 5] } }
+        ],
+        camera: { mode: "follow", height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.15, 0.05, 0.0, 1.0],
+        environment: "volcanic"
+    },
+            { type: 'goal', pos: { x: 0, y: 15, z: 105 } }
+    stellar_forge_run: {
+        name: "Stellar Forge",
+        description: "Brave the icy slide and the glowing hot forge hammers!",
+        zones: [
+            { type: "stellar_forge", pos: { x: 0, y: 0, z: 0 } },
+            { type: "goal", pos: { x: 0, y: -5, z: 85 } }
+        ],
+        spawn: { x: 0, y: 5, z: -40 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [80, 90], y: [-10, 5] } }
+        ],
+        camera: { mode: "follow", height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.15, 0.05, 0.0, 1.0],
+        environment: "volcanic"
+    },
+        ],
+    stellar_forge_run: {
+        name: "Stellar Forge",
+        description: "Brave the icy slide and the glowing hot forge hammers!",
+        zones: [
+            { type: "stellar_forge", pos: { x: 0, y: 0, z: 0 } },
+            { type: "goal", pos: { x: 0, y: -5, z: 85 } }
+        ],
+        spawn: { x: 0, y: 5, z: -40 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [80, 90], y: [-10, 5] } }
+        ],
+        camera: { mode: "follow", height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.15, 0.05, 0.0, 1.0],
+        environment: "volcanic"
+    },
+        spawn: { x: 0, y: 5, z: -40 },
+    stellar_forge_run: {
+        name: "Stellar Forge",
+        description: "Brave the icy slide and the glowing hot forge hammers!",
+        zones: [
+            { type: "stellar_forge", pos: { x: 0, y: 0, z: 0 } },
+            { type: "goal", pos: { x: 0, y: -5, z: 85 } }
+        ],
+        spawn: { x: 0, y: 5, z: -40 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [80, 90], y: [-10, 5] } }
+        ],
+        camera: { mode: "follow", height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.15, 0.05, 0.0, 1.0],
+        environment: "volcanic"
+    },
+        goals: [
+    stellar_forge_run: {
+        name: "Stellar Forge",
+        description: "Brave the icy slide and the glowing hot forge hammers!",
+        zones: [
+            { type: "stellar_forge", pos: { x: 0, y: 0, z: 0 } },
+            { type: "goal", pos: { x: 0, y: -5, z: 85 } }
+        ],
+        spawn: { x: 0, y: 5, z: -40 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [80, 90], y: [-10, 5] } }
+        ],
+        camera: { mode: "follow", height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.15, 0.05, 0.0, 1.0],
+        environment: "volcanic"
+    },
+            { id: 1, range: { x: [-10, 10], z: [100, 110], y: [10, 20] } }
+    stellar_forge_run: {
+        name: "Stellar Forge",
+        description: "Brave the icy slide and the glowing hot forge hammers!",
+        zones: [
+            { type: "stellar_forge", pos: { x: 0, y: 0, z: 0 } },
+            { type: "goal", pos: { x: 0, y: -5, z: 85 } }
+        ],
+        spawn: { x: 0, y: 5, z: -40 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [80, 90], y: [-10, 5] } }
+        ],
+        camera: { mode: "follow", height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.15, 0.05, 0.0, 1.0],
+        environment: "volcanic"
+    },
+        ],
+    stellar_forge_run: {
+        name: "Stellar Forge",
+        description: "Brave the icy slide and the glowing hot forge hammers!",
+        zones: [
+            { type: "stellar_forge", pos: { x: 0, y: 0, z: 0 } },
+            { type: "goal", pos: { x: 0, y: -5, z: 85 } }
+        ],
+        spawn: { x: 0, y: 5, z: -40 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [80, 90], y: [-10, 5] } }
+        ],
+        camera: { mode: "follow", height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.15, 0.05, 0.0, 1.0],
+        environment: "volcanic"
+    },
+        camera: { mode: 'follow', height: 15, offset: -25 },
+    stellar_forge_run: {
+        name: "Stellar Forge",
+        description: "Brave the icy slide and the glowing hot forge hammers!",
+        zones: [
+            { type: "stellar_forge", pos: { x: 0, y: 0, z: 0 } },
+            { type: "goal", pos: { x: 0, y: -5, z: 85 } }
+        ],
+        spawn: { x: 0, y: 5, z: -40 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [80, 90], y: [-10, 5] } }
+        ],
+        camera: { mode: "follow", height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.15, 0.05, 0.0, 1.0],
+        environment: "volcanic"
+    },
+        nightMode: true,
+    stellar_forge_run: {
+        name: "Stellar Forge",
+        description: "Brave the icy slide and the glowing hot forge hammers!",
+        zones: [
+            { type: "stellar_forge", pos: { x: 0, y: 0, z: 0 } },
+            { type: "goal", pos: { x: 0, y: -5, z: 85 } }
+        ],
+        spawn: { x: 0, y: 5, z: -40 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [80, 90], y: [-10, 5] } }
+        ],
+        camera: { mode: "follow", height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.15, 0.05, 0.0, 1.0],
+        environment: "volcanic"
+    },
         backgroundColor: [0.1, 0.1, 0.15, 1.0],
+    stellar_forge_run: {
+        name: "Stellar Forge",
+        description: "Brave the icy slide and the glowing hot forge hammers!",
+        zones: [
+            { type: "stellar_forge", pos: { x: 0, y: 0, z: 0 } },
+            { type: "goal", pos: { x: 0, y: -5, z: 85 } }
+        ],
+        spawn: { x: 0, y: 5, z: -40 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [80, 90], y: [-10, 5] } }
+        ],
+        camera: { mode: "follow", height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.15, 0.05, 0.0, 1.0],
+        environment: "volcanic"
+    },
         environment: 'space_nebula'
+    stellar_forge_run: {
+        name: "Stellar Forge",
+        description: "Brave the icy slide and the glowing hot forge hammers!",
+        zones: [
+            { type: "stellar_forge", pos: { x: 0, y: 0, z: 0 } },
+            { type: "goal", pos: { x: 0, y: -5, z: 85 } }
+        ],
+        spawn: { x: 0, y: 5, z: -40 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [80, 90], y: [-10, 5] } }
+        ],
+        camera: { mode: "follow", height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.15, 0.05, 0.0, 1.0],
+        environment: "volcanic"
+    },
+    },
+    stellar_forge_run: {
+        name: "Stellar Forge",
+        description: "Brave the icy slide and the glowing hot forge hammers!",
+        zones: [
+            { type: "stellar_forge", pos: { x: 0, y: 0, z: 0 } },
+            { type: "goal", pos: { x: 0, y: -5, z: 85 } }
+        ],
+        spawn: { x: 0, y: 5, z: -40 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [80, 90], y: [-10, 5] } }
+        ],
+        camera: { mode: "follow", height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.15, 0.05, 0.0, 1.0],
+        environment: "volcanic"
     },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
