@@ -43,5 +43,12 @@
     "angle": 0,
     "height": 10,
     "radius": 25
-  }
+  },
+  "medals": {
+    "goldTime": 60,
+    "silverTime": 120,
+    "bronzeTime": 240,
+    "parTime": 90
+  },
+  "collectiblesTotal": 0
 }

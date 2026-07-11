@@ -95,12 +95,39 @@ For A/B captures, compare `/?renderer=filament&perf=1` with `/?renderer=filament
 
 ## Likely Culprits
 
-- The sync path in `src/game-loop-sync-methods.js` updates all marbles every frame through `TransformManager.getInstance()` and `setTransform()`.
+- `src/game-loop/sync.js` updates all marbles every frame through `TransformManager.getInstance()` and `setTransform()`.
 - Visual particles add per-frame JS updates and transform writes; sampled complex zones reached roughly 60-150 active visual particles.
 - Dynamic objects and temporary/moving platforms add additional physics bodies and transform writes, especially in `space_station`.
-- `src/game-loop/core.js` performs per-frame collectible hover, power-up spin, moving platform, and active effect transforms.
+- `src/game-loop/render.js` performs per-frame collectible hover, power-up spin, moving platform, and active effect transforms.
 - Lights and animated lights are most visible in neon/lava zones. Filament draw-call counts are not exposed here, so `drawCallsProxy` is a pressure estimate based on renderable objects, particles, and active particle counts.
 
 ## Next Baseline Pass
 
 Run the same route on a normal browser/GPU with `?renderer=filament&perf=1`, sample each hot level for 10-20 seconds after loading, and paste `window.perfMonitor.getLevelSummary()` into this report. Use `?renderer=simple&perf=1` when isolating physics/update costs from Filament material and lighting complexity.
+
+## MarblePhysics WASM Batch Benchmark
+
+Node micro-benchmark for force-field application (black-hole style: inverse-linear falloff, `falloffExp=1`, `minDist=0.5`, `maxDist=25`). Measures average milliseconds per simulated frame over 200 iterations after 50 warmup iterations.
+
+Run:
+
+```bash
+node scripts/benchmark-wasm-bridge.mjs          # JS scalar vs JS batch
+node scripts/benchmark-wasm-bridge.mjs --wasm     # includes WASM HEAPF32 batch path
+npm run build:wasm                                # required before --wasm
+```
+
+Captured on 2026-07-11 (Node v24.5.0, `/root/marbles` dev host):
+
+| Entities | Scalar JS (ms) | Batch JS (ms) | JS batch speedup | Batch WASM (ms) | WASM vs scalar |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 50 | 0.017 | 0.010 | 1.66× | 0.042 | 0.40× |
+| 200 | 0.023 | 0.027 | 0.86× | 0.010 | 2.40× |
+| 1000 | 0.144 | 0.139 | 1.03× | 0.049 | 2.95× |
+
+Notes:
+
+- WASM batch pays a fixed HEAP copy + `_malloc` setup cost; it wins clearly once entity counts exceed the `FORCE_BATCH_THRESHOLD` (8) used in `render.js` for black-hole and magnet paths.
+- JS batch avoids per-call Embind `{x,y,z}` allocations and is modestly faster than scalar JS at scale even without WASM.
+- Opt in at runtime with `?wasmPhysics=1`; local dev without emsdk continues to use JS fallbacks (`npm run build:wasm` skips gracefully when Emscripten is absent).
+- Shared test vectors live in `tests/test_wasm_bridge.js` (scalar + batch parity).

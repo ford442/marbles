@@ -26,10 +26,15 @@ export class InitSettings {
 
         // Apply loaded settings
         this.applySettings()
+        this.abilitySystem?.loadKeybinds(this.settings?.controls?.keybinds)
+        this.abilitySystem?.init()
     }
 
     saveSettings() {
         try {
+            if (this.abilitySystem) {
+                this.settings.controls.keybinds = this.abilitySystem.exportKeybinds()
+            }
             localStorage.setItem('marbles3d_settings', JSON.stringify(this.settings))
             console.log('[SETTINGS] Saved to localStorage')
         } catch (e) {
@@ -58,6 +63,9 @@ export class InitSettings {
         }
         if (saved.controls) {
             Object.assign(merged.controls, saved.controls)
+            if (saved.controls.keybinds) {
+                merged.controls.keybinds = { ...merged.controls.keybinds, ...saved.controls.keybinds }
+            }
         }
         if (saved.accessibility) {
             Object.assign(merged.accessibility, saved.accessibility)

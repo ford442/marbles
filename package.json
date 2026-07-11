@@ -7,10 +7,19 @@
     "dev": "vite",
     "build": "npm run build:wasm && vite build",
     "preview": "vite preview",
-    "build:wasm": "bash wasm/build.sh"
+    "build:wasm": "bash wasm/build.sh",
+    "validate:assets": "node scripts/validate-assets.cjs",
+    "test": "npm run test:unit",
+    "test:unit": "node scripts/run-unit-tests.mjs",
+    "test:e2e": "node tests/e2e/test_missile.cjs",
+    "lint": "eslint src tests scripts --ext .js,.cjs,.mjs --ignore-pattern tests/e2e --quiet",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.63.0",
+    "@typescript-eslint/parser": "^8.63.0",
     "cross-env": "^10.1.0",
+    "eslint": "^8.57.1",
     "jsdom": "^28.1.0",
     "playwright": "^1.59.1",
     "typescript": "^6.0.2",

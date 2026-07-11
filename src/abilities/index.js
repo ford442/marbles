@@ -6,6 +6,8 @@ import { applyAbilityBlackHole } from './black-hole.js';
 import { applyAbilityBomb } from './bomb.js';
 import { applyAbilityConstructs } from './constructs.js';
 
+export { ABILITY_REGISTRY, ALL_ABILITY_IDS, getAbilityDefinition } from './registry.js';
+
 export function applyAbilityMethods(targetClass) {
     applyAbilityBlink(targetClass);
     applyAbilityEmpTremor(targetClass);

@@ -1,5 +1,5 @@
 import { audio } from '../audio.js';
-import { LEVELS } from '../levels.js';
+import { getLevel } from '../levels/catalog.js';
 
 export class GameLogicCore {
     checkGameLogic() {
@@ -62,7 +62,7 @@ export class GameLogicCore {
 
             if (this.trickState.airTime > 30 || this.trickState.wallRides > 0 || this.trickState.wallBounces > 0) {
                 let points = Math.floor(this.trickState.airTime * 2)
-                let messages = []
+                const messages = []
 
                 // 1 full rotation = approx 2*PI radians. We check accumulated radians rotated.
                 const totalFlips = Math.floor(Math.abs(this.trickState.flips) / (Math.PI * 2))
@@ -274,7 +274,7 @@ export class GameLogicCore {
             }
         }
 
-        const level = LEVELS[this.currentLevel]
+        const level = getLevel(this.currentLevel)
         let allGoalsScored = level.goals.length > 0
 
         for (const m of this.marbles) {
@@ -444,6 +444,19 @@ export class GameLogicCore {
             if (!this.bestGhosts[this.currentLevel] || this.ghostRecording.length < this.bestGhosts[this.currentLevel].length) {
                 this.bestGhosts[this.currentLevel] = [...this.ghostRecording]
                 newRecord = true
+            }
+
+            const level = getLevel(this.currentLevel)
+            if (this.campaignProgress && level) {
+                const saved = this.campaignProgress.recordCompletion(this.currentLevel, {
+                    time: completionTime,
+                    level,
+                    collectibles: this.collectiblesCollected || 0,
+                    collectiblesTotal: level.collectiblesTotal || 0,
+                })
+                if (saved.bestTime === completionTime) {
+                    newRecord = true
+                }
             }
 
             setTimeout(() => {

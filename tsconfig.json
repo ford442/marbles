@@ -7,11 +7,12 @@
             "WebWorker"
         ],
         "module": "ESNext",
-        "moduleResolution": "node",
+        "moduleResolution": "bundler",
+        "ignoreDeprecations": "6.0",
         "allowSyntheticDefaultImports": true,
         "esModuleInterop": true,
         "allowJs": true,
-        "checkJs": false,
+        "checkJs": true,
         "strict": true,
         "noImplicitAny": true,
         "strictNullChecks": true,
@@ -29,11 +30,8 @@
         "tsBuildInfoFile": "node_modules/.cache/tsconfig.tsbuildinfo"
     },
     "include": [
-        "**/*.ts",
-        "**/*.tsx",
-        "**/*.js",
-        "**/*.jsx",
-        ".github/copilot-instructions.md"
+        "src/**/*.ts",
+        "src/math.js"
     ],
     "exclude": [
         "node_modules",
@@ -41,6 +39,8 @@
         "emsdk",
         "**/*.wasm",
         "dist",
-        "build"
+        "build",
+        "wasm/build",
+        "docs/backups"
     ]
 }

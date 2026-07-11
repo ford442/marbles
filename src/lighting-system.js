@@ -149,7 +149,7 @@ export class LightingSystem {
                 const inst = lm.getInstance(light)
                 if (!inst) continue
                 
-                let color = [...baseColor]
+                const color = [...baseColor]
                 let intensity = baseIntensity
                 
                 // Apply behavior-specific animation

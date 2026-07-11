@@ -36,7 +36,11 @@ function validateAgainstSchema(data, schema, assetPath) {
         // Type checking
         if (propSchema.type) {
           const actualType = Array.isArray(value) ? 'array' : typeof value;
-          if (actualType !== propSchema.type) {
+          if (propSchema.type === 'integer') {
+            if (actualType !== 'number' || !Number.isInteger(value)) {
+              errors.push(`Field '${key}' should be integer, got ${value}`);
+            }
+          } else if (actualType !== propSchema.type) {
             errors.push(`Field '${key}' should be ${propSchema.type}, got ${actualType}`);
           }
         }
@@ -95,6 +99,66 @@ function loadJSON(filePath) {
   }
 }
 
+function validateManifest(results) {
+  const manifestPath = path.join(ASSETS_DIR, 'manifest.json');
+  const manifest = loadJSON(manifestPath);
+
+  console.log('📋 Manifest:');
+  if (manifest.error) {
+    console.log(`  ❌ manifest.json - JSON Parse Error: ${manifest.error}`);
+    results.invalid++;
+    results.errors.push({ file: 'manifest.json', error: manifest.error });
+    console.log('');
+    return;
+  }
+
+  const sections = [
+    ['maps', 'map'],
+    ['marbles', 'marble'],
+    ['sounds', 'sound'],
+  ];
+
+  for (const [sectionName] of sections) {
+    const section = manifest[sectionName];
+    if (!section || typeof section !== 'object') continue;
+
+    for (const [entryId, entry] of Object.entries(section)) {
+      const filePath = entry?.file;
+      if (!filePath) {
+        console.log(`  ❌ ${sectionName}.${entryId} - missing file path`);
+        results.invalid++;
+        results.errors.push({ file: `manifest.${sectionName}.${entryId}`, errors: ['missing file path'] });
+        continue;
+      }
+
+      const resolved = path.join(ASSETS_DIR, filePath.replace(/^assets\//, ''));
+      if (!fs.existsSync(resolved)) {
+        console.log(`  ❌ ${sectionName}.${entryId} - file not found: ${filePath}`);
+        results.invalid++;
+        results.errors.push({ file: `manifest.${sectionName}.${entryId}`, errors: [`file not found: ${filePath}`] });
+        continue;
+      }
+
+      const data = loadJSON(resolved);
+      if (data.error) {
+        console.log(`  ❌ ${sectionName}.${entryId} - ${filePath} parse error: ${data.error}`);
+        results.invalid++;
+        results.errors.push({ file: filePath, error: data.error });
+        continue;
+      }
+
+      if (data.id && data.id !== entryId) {
+        console.log(`  ⚠️  ${sectionName}.${entryId} - asset id "${data.id}" differs from manifest key`);
+      }
+
+      console.log(`  ✅ ${sectionName}.${entryId} → ${filePath}`);
+      results.valid++;
+    }
+  }
+
+  console.log('');
+}
+
 function validateAssets() {
   console.log('🔍 Validating Assets...\n');
 
@@ -110,10 +174,10 @@ function validateAssets() {
     errors: []
   };
 
-  // Validate maps
+  validateManifest(results);
+
   const mapsDir = path.join(ASSETS_DIR, 'maps');
   const mapFiles = fs.readdirSync(mapsDir).filter(f => f.endsWith('.json') && f !== 'TEMPLATE.json');
-  
   console.log('📍 Maps:');
   for (const file of mapFiles) {
     const filePath = path.join(mapsDir, file);

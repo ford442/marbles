@@ -1,4 +1,4 @@
-import { LEVELS } from '../levels.js';
+import { getLevel } from '../levels/catalog.js';
 
 export class InitLevelLoader {
     async loadLevel(levelId) {
@@ -8,7 +8,7 @@ export class InitLevelLoader {
         }
 
         console.log(`[LEVEL] Loading level: ${levelId}`)
-        const level = LEVELS[levelId]
+        const level = getLevel(levelId)
         if (!level) {
             console.error(`[LEVEL] Level ${levelId} not found!`)
             return
@@ -29,6 +29,7 @@ export class InitLevelLoader {
         this.levelNameEl.textContent = level.name
         this.goalDefinitions = level.goals
         this.checkpointDefinitions = level.checkpoints || []
+        this.abilitySystem?.applyLevelMask(level.abilities)
         this.score = 0
         this.scoreEl.textContent = 'Score: 0'
         this.combo = 1
@@ -42,6 +43,7 @@ export class InitLevelLoader {
 
         if (this.timerEl) this.timerEl.textContent = 'Time: 0.00s'
         this.levelComplete = false
+        this.collectiblesCollected = 0
 
         if (level.nightMode) {
             this.setNightMode(true, level.backgroundColor)

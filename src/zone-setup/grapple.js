@@ -1,4 +1,5 @@
 import RAPIER from '@dimforge/rapier3d-compat';
+import { audio } from '../audio.js';
 
 export class ZoneSetupGrapple {
     createGrappleLine() {
@@ -214,9 +215,9 @@ export class ZoneSetupGrapple {
             const rLen = Math.hypot(rx, ry, rz)
             rx /= rLen; ry /= rLen; rz /= rLen
 
-            let newUx = dirY * rz - dirZ * ry
-            let newUy = dirZ * rx - dirX * rz
-            let newUz = dirX * ry - dirY * rx
+            const newUx = dirY * rz - dirZ * ry
+            const newUy = dirZ * rx - dirX * rz
+            const newUz = dirX * ry - dirY * rx
 
             const thick = 0.05
 

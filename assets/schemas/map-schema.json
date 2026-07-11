@@ -29,7 +29,7 @@
     },
     "difficulty": {
       "type": "string",
-      "enum": ["easy", "medium", "hard", "expert"],
+      "enum": ["easy", "medium", "hard", "expert", "extreme"],
       "description": "Difficulty level"
     },
     "zones": {
@@ -65,6 +65,10 @@
             "items": { "type": "number", "minimum": 0, "maximum": 1 },
             "minItems": 3,
             "maxItems": 3
+          },
+          "rotY": {
+            "type": "number",
+            "description": "Y-axis rotation in radians (optional)"
           }
         }
       }
@@ -106,6 +110,41 @@
         "radius": { "type": "number" },
         "offset": { "type": "number" }
       }
+    },
+    "abilities": {
+      "type": "object",
+      "description": "Per-level ability subset. Omit to allow all registered abilities.",
+      "properties": {
+        "enabled": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Whitelist of ability ids (e.g. tutorial uses [\"jump\"])"
+        },
+        "disabled": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Blacklist of ability ids"
+        }
+      }
+    },
+    "medals": {
+      "type": "object",
+      "description": "Time thresholds (seconds) for gold/silver/bronze medals and par display",
+      "properties": {
+        "goldTime": { "type": "number", "description": "Finish at or below for gold" },
+        "silverTime": { "type": "number", "description": "Finish at or below for silver" },
+        "bronzeTime": { "type": "number", "description": "Finish at or below for bronze" },
+        "parTime": { "type": "number", "description": "Designer par time for HUD/reference" }
+      }
+    },
+    "collectiblesTotal": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total collectible pickups in the level (for completion %)"
+    },
+    "chapter": {
+      "type": "string",
+      "description": "Optional campaign chapter override (tutorial, classic, neon, extreme, expert)"
     }
   }
 }

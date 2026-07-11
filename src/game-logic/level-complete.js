@@ -1,35 +1,25 @@
-import { LEVELS } from '../levels.js';
+import { getLevel, getOrderedLevelIds } from '../levels/catalog.js';
 import { getRenderDimensions } from '../render-resolution.js';
+import {
+    computeMedal,
+    formatRunTime,
+    getMedalThresholds,
+    medalEmoji,
+} from '../levels/campaign.js';
 
 export class GameLogicLevelComplete {
     showLevelCompleteModal(completionTime, newRecord) {
         const modal = document.getElementById('level-complete-modal')
         if (!modal) return
 
-        const level = LEVELS[this.currentLevel]
+        const level = getLevel(this.currentLevel)
         const levelName = level?.name || this.currentLevel
+        const thresholds = getMedalThresholds(level)
 
-        // Format time as MM:SS.ms
-        const minutes = Math.floor(completionTime / 60)
-        const seconds = Math.floor(completionTime % 60)
-        const milliseconds = Math.floor((completionTime % 1) * 10)
-        const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds}`
+        const formattedTime = formatRunTime(completionTime)
 
-        // Determine medal based on time
-        let medal = ''
-        let medalEmoji = ''
-        if (completionTime < 30) {
-            medal = 'gold'
-            medalEmoji = '🥇'
-        } else if (completionTime < 60) {
-            medal = 'silver'
-            medalEmoji = '🥈'
-        } else if (completionTime < 120) {
-            medal = 'bronze'
-            medalEmoji = '🥉'
-        } else {
-            medalEmoji = '⭐'
-        }
+        const medal = computeMedal(completionTime, thresholds)
+        const medalEmojiStr = medalEmoji(medal)
 
         // Calculate score breakdown
         const baseScore = this.score || 0
@@ -41,7 +31,7 @@ export class GameLogicLevelComplete {
         // Update modal content
         document.getElementById('modal-level-name').textContent = levelName
         document.getElementById('modal-completion-time').textContent = formattedTime
-        document.getElementById('modal-medal').textContent = medalEmoji
+        document.getElementById('modal-medal').textContent = medalEmojiStr
         document.getElementById('modal-base-score').textContent = baseScore.toLocaleString()
         document.getElementById('modal-time-bonus').textContent = `+${timeBonus.toLocaleString()}`
         document.getElementById('modal-combo-bonus').textContent = `+${comboBonus.toLocaleString()}`
@@ -58,7 +48,7 @@ export class GameLogicLevelComplete {
         const btnMenu = document.getElementById('btn-main-menu')
 
         // Get ordered list of level IDs
-        const levelIds = Object.keys(LEVELS)
+        const levelIds = getOrderedLevelIds()
         const currentIndex = levelIds.indexOf(this.currentLevel)
         const nextLevelId = levelIds[currentIndex + 1]
 

@@ -220,13 +220,14 @@ export const creationMethods = {
         );
     },
 
-    createFloorZone(offset, size) {
+    createFloorZone(offset, size, rotY, color) {
         const sz = size || { x: 50, y: 0.5, z: 50 };
+        const q = rotY ? quatFromEuler(rotY, 0, 0) : { x: 0, y: 0, z: 0, w: 1 };
         this.createStaticBox(
             { x: offset.x, y: offset.y, z: offset.z },
-            { x: 0, y: 0, z: 0, w: 1 },
+            q,
             { x: sz.x / 2, y: sz.y / 2, z: sz.z / 2 },
-            [0.3, 0.3, 0.3],
+            color || [0.3, 0.3, 0.3],
             'concrete'
         );
     },

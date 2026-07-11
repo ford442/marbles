@@ -23,10 +23,10 @@ __pycache__/
 *.o
 *.a
 
-# WASM Renderer build outputs
-/wasm_renderer/build/
-/wasm_renderer/dist/
-/wasm_renderer/public/
+# Experimental WebGPU renderer (archived under docs/backups/)
+/docs/backups/experimental-wasm-renderer/build/
+/docs/backups/experimental-wasm-renderer/dist/
+/docs/backups/experimental-wasm-renderer/public/
 /public/wasm/
 /cmake-build-*/
 

@@ -39,11 +39,11 @@ export const ABILITY_METADATA = {
     missile: { icon: '🚀', key: 'L', name: 'Missile', color: '#ff8800' },
     emp: { icon: '⚡', key: 'K', name: 'EMP', color: '#00ccff' },
     groundslam: { icon: '💥', key: 'Digit0', name: 'Ground Slam', color: '#cd853f' },
-    blackhole: { icon: '⚫', key: 'N/A', name: 'Black Hole', color: '#aa00ff' },
+    blackhole: { icon: '⚫', key: '9', name: 'Black Hole', color: '#aa00ff' },
     vortex: { icon: '🌀', key: 'Y', name: 'Vortex', color: '#ff00ff' },
     timestop: { icon: '⏱', key: 'N/A', name: 'Time Stop', color: '#ffffff' },
     rewind: { icon: '⏪', key: 'T', name: 'Rewind', color: '#ff4500' },
-    holo: { icon: '👻', key: 'N/A', name: 'Holo', color: '#00ffff' },
+    holo: { icon: '👻', key: '`', name: 'Holo', color: '#00ffff' },
     ice: { icon: '❄', key: 'G', name: 'Frost Bridge', color: '#00ffff' },
     phase: { icon: '👤', key: '6', name: 'Phase Shift', color: '#aa00ff' },
     flip: { icon: '↕', key: 'U', name: 'Gravity Flip', color: '#ff00ff' },
@@ -206,6 +206,12 @@ export class HUDManager {
         const el = this.abilityElements.get(abilityId);
         if (!el) return;
 
+        if (this.game.abilitySystem && !this.game.abilitySystem.isEnabled(abilityId)) {
+            el.style.display = 'none';
+            this.abilityVisible.set(abilityId, false);
+            return;
+        }
+
         const now = Date.now();
         const overlay = el.querySelector('.ability-cooldown-overlay');
         
@@ -259,6 +265,12 @@ export class HUDManager {
         const now = this._lastHudUpdate = Date.now();
 
         const g = this.game;
+        const abilitySystem = g.abilitySystem;
+
+        // Registry-managed icon cooldowns (migrated abilities)
+        if (abilitySystem) {
+            abilitySystem.tickHudIcons(this, now);
+        }
 
         // Movement abilities
         if (g.lastBoostTime !== undefined && g.boostCooldown) {
@@ -286,11 +298,6 @@ export class HUDManager {
             this.updateAbilityCooldown('teleport', progress);
         }
 
-        if (g.lastBlinkTime !== undefined && g.blinkCooldown) {
-            const progress = Math.min(1, (now - g.lastBlinkTime) / g.blinkCooldown);
-            this.updateAbilityCooldown('blink', progress);
-        }
-
         if (g.lastGravityPulseTime !== undefined && g.gravityPulseCooldown) {
             const progress = Math.min(1, (now - g.lastGravityPulseTime) / g.gravityPulseCooldown);
             this.updateAbilityCooldown('gravitypulse', progress);
@@ -302,16 +309,6 @@ export class HUDManager {
         }
 
         // Combat abilities
-        if (g.lastBombTime !== undefined && g.bombCooldown) {
-            const progress = Math.min(1, (now - g.lastBombTime) / g.bombCooldown);
-            this.updateAbilityCooldown('bomb', progress);
-        }
-
-        if (g.lastMissileTime !== undefined && g.missileCooldown) {
-            const progress = Math.min(1, (now - g.lastMissileTime) / g.missileCooldown);
-            this.updateAbilityCooldown('missile', progress);
-        }
-
         if (g.lastEmpTime !== undefined && g.empCooldown) {
             const progress = Math.min(1, (now - g.lastEmpTime) / g.empCooldown);
             this.updateAbilityCooldown('emp', progress);
@@ -320,11 +317,6 @@ export class HUDManager {
         if (g.lastTremorTime !== undefined && g.tremorCooldown) {
             const progress = Math.min(1, (now - g.lastTremorTime) / g.tremorCooldown);
             this.updateAbilityCooldown('groundslam', progress);
-        }
-
-        if (g.lastBlackHoleTime !== undefined && g.blackHoleCooldown) {
-            const progress = Math.min(1, (now - g.lastBlackHoleTime) / g.blackHoleCooldown);
-            this.updateAbilityCooldown('blackhole', progress, g.activeBlackHoles?.length > 0);
         }
 
         if (g.vortexEnergy !== undefined && g.maxVortexEnergy) {
@@ -341,11 +333,6 @@ export class HUDManager {
         if (g._rewindBuffer !== undefined) {
             const progress = (g._rewindCount || 0) / (g.maxRewindFrames || 300);
             this.updateAbilityCooldown('rewind', progress, g.isRewinding);
-        }
-
-        if (g.lastHoloTime !== undefined && g.holoCooldown) {
-            const progress = Math.min(1, (now - g.lastHoloTime) / g.holoCooldown);
-            this.updateAbilityCooldown('holo', progress);
         }
 
         if (g.iceEnergy !== undefined && g.maxIceEnergy) {

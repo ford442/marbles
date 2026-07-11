@@ -13,7 +13,9 @@ to native-speed code compiled with [Emscripten](https://emscripten.org/).
 | `vec3Length` | Length (magnitude) of a vector |
 | `vec3Normalize` | Normalize a vector to unit length |
 | `applyVelocityDamping` | Frame-rate–independent velocity damping + speed cap |
+| `applyVelocityDampingBatch` | Batched damping over `HEAPF32` xyz triplets |
 | `computeForceField` | Inverse-power-law attraction / repulsion force field |
+| `computeForceFieldsBatch` | Batched force fields (one origin, many targets) |
 | `computeSpringForce` | Hooke's-law spring with velocity damping |
 | `reflectVelocity` | Specular velocity reflection off a surface normal |
 | `closestPointOnSegment` | Closest point on a line segment (grapple / rail logic) |
@@ -81,7 +83,16 @@ const force = physics.computeForceField(
     25.0   // maximum effective radius
 );
 body.applyImpulse(force, true);
+
+// Batched path (used automatically when entity count > FORCE_BATCH_THRESHOLD)
+physics.computeForceFieldsBatch(
+    positions, strengths, outForces, count,
+    fieldX, fieldY, fieldZ,
+    falloffExp, minDist, maxDist, softening
+);
 ```
+
+Benchmark: `node scripts/benchmark-wasm-bridge.mjs [--wasm]` (see `docs/PERFORMANCE_BASELINE.md`).
 
 ## Adding New Functions
 

@@ -34,7 +34,7 @@ export function decorateSpaceStation(game, offset) {
     const pipes = []
     const bumpers = []
 
-    for (let z of [offset.z + 8, offset.z + 28, offset.z + 48]) {
+    for (const z of [offset.z + 8, offset.z + 28, offset.z + 48]) {
         girders.push(instance({ x: offset.x - 6.2, y: offset.y + 3.5, z }, [0, 0, 0, 1], [0.35, 0.35, 2.5]))
         girders.push(instance({ x: offset.x + 6.2, y: offset.y + 3.5, z }, [0, 0, 0, 1], [0.35, 0.35, 2.5]))
     }
@@ -168,7 +168,7 @@ export function decorateIceBridges(game, offset) {
 
     for (let i = 0; i < segmentCount; i += 2) {
         const zPos = bridgeStartZ + i * segmentLength
-        for (let side of [-1, 1]) {
+        for (const side of [-1, 1]) {
             for (let j = 0; j < 4; j++) {
                 crystals.push(instance(
                     { x: offset.x + side * 1.8, y: offset.y - 0.5 - j * 0.35, z: zPos + j * 1.5 },

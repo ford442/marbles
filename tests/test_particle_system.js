@@ -9,7 +9,6 @@
  */
 
 import { ParticleSystem } from '../src/particle-system.js';
-import { ParticleEmitters } from '../src/particle-materials.js';
 
 console.log('=== Particle System Tests ===\n');
 
@@ -80,41 +79,8 @@ ps3.emitParticles('bubble', [0, 0, 0], 2);
 ps3.emitParticles('dust', [0, 0, 0], 4);
 console.assert(ps3.stats.emittedThisFrame === 24, 'Should emit multiple types');
 
-// Test 8: Particle emitter helpers
-console.log('✓ Test 8: Particle emitter helpers');
-const ps4 = new ParticleSystem(null, 'high');
-
-// Speed trail
-ParticleEmitters.createSpeedTrail(ps4, [0, 0, 0], [10, 0, 0], [1, 0, 0], 1.0);
-console.assert(ps4.stats.emittedThisFrame > 0, 'Speed trail should emit particles');
-
-// Impact burst
-const beforeImpact = ps4.stats.emittedThisFrame;
-ParticleEmitters.createImpactBurst(ps4, [0, 0, 0]);
-console.assert(ps4.stats.emittedThisFrame > beforeImpact, 'Impact burst should emit particles');
-
-// Boost jet
-const beforeBoost = ps4.stats.emittedThisFrame;
-ParticleEmitters.createBoostJet(ps4, [0, 0, 0], [5, 0, 0], [1, 1, 0]);
-console.assert(ps4.stats.emittedThisFrame > beforeBoost, 'Boost jet should emit particles');
-
-// Abyssal bubbles
-const beforeBubble = ps4.stats.emittedThisFrame;
-ParticleEmitters.createAbyssalBubbles(ps4, [0, 0, 0]);
-console.assert(ps4.stats.emittedThisFrame > beforeBubble, 'Bubbles should emit particles');
-
-// Volcanic sparks
-const beforeVolcanic = ps4.stats.emittedThisFrame;
-ParticleEmitters.createVolcanicSparks(ps4, [0, 0, 0]);
-console.assert(ps4.stats.emittedThisFrame > beforeVolcanic, 'Volcanic sparks should emit particles');
-
-// Dust puff
-const beforeDust = ps4.stats.emittedThisFrame;
-ParticleEmitters.createDustPuff(ps4, [0, 0, 0]);
-console.assert(ps4.stats.emittedThisFrame > beforeDust, 'Dust puff should emit particles');
-
-// Test 9: Continuous updates
-console.log('✓ Test 9: Continuous updates');
+// Test 8: Continuous updates
+console.log('✓ Test 8: Continuous updates');
 const ps5 = new ParticleSystem(null, 'medium');
 ps5.emitParticles('trail', [0, 0, 0], 10, { lifetime: 1.0 });
 const active1 = ps5.stats.activeCount;
@@ -128,8 +94,8 @@ ps5.update(0.5); // Total 1.1 seconds
 const active4 = ps5.stats.activeCount;
 console.assert(active4 === 0, 'Particles should be dead after lifetime exceeded');
 
-// Test 10: Pool reuse
-console.log('✓ Test 10: Pool reuse');
+// Test 9: Pool reuse
+console.log('✓ Test 9: Pool reuse');
 const ps6 = new ParticleSystem(null, 'medium');
 ps6.emitParticles('trail', [0, 0, 0], 200, { lifetime: 0.1 });
 console.assert(ps6.stats.activeCount <= ps6.maxParticles, 'Should not exceed max particles');
@@ -137,8 +103,8 @@ ps6.update(0.2); // Particles should die
 ps6.emitParticles('impact', [1, 1, 1], 200, { lifetime: 0.1 });
 console.assert(ps6.stats.activeCount <= ps6.maxParticles, 'Should reuse pooled particles');
 
-// Test 11: Particle position and velocity initialization
-console.log('✓ Test 11: Particle position and velocity initialization');
+// Test 10: Particle position and velocity initialization
+console.log('✓ Test 10: Particle position and velocity initialization');
 const ps7 = new ParticleSystem(null, 'high');
 ps7.emitParticles('trail', [10, 20, 30], 1, {
     velocity: [1, 2, 3],
@@ -147,8 +113,8 @@ ps7.emitParticles('trail', [10, 20, 30], 1, {
 // Check that a particle was created (we can't directly inspect particles in this test framework)
 console.assert(ps7.stats.activeCount === 1, 'Should have 1 active particle');
 
-// Test 12: Type-specific initialization
-console.log('✓ Test 12: Type-specific initialization');
+// Test 11: Type-specific initialization
+console.log('✓ Test 11: Type-specific initialization');
 const ps8 = new ParticleSystem(null, 'high');
 
 // Trail particles should have drag
@@ -164,21 +130,21 @@ console.assert(
     'Should have both trail and bubble particles'
 );
 
-// Test 13: Ambient emitter registration
-console.log('✓ Test 13: Ambient emitter registration');
+// Test 12: Ambient emitter registration
+console.log('✓ Test 12: Ambient emitter registration');
 const ps9 = new ParticleSystem(null, 'high');
 console.assert(ps9.ambientEmitters.length === 0, 'Should start with no ambient emitters');
 ps9.addAmbientEmitter({ pos: { x: 0, y: 0, z: 0 }, type: 'bubble', rate: 2.0, count: 1 });
 ps9.addAmbientEmitter({ pos: { x: 5, y: 0, z: 5 }, type: 'spark', rate: 1.0, count: 2 });
 console.assert(ps9.ambientEmitters.length === 2, 'Should have 2 ambient emitters');
 
-// Test 14: Ambient emitter clearing
-console.log('✓ Test 14: Ambient emitter clearing');
+// Test 13: Ambient emitter clearing
+console.log('✓ Test 13: Ambient emitter clearing');
 ps9.clearAmbientEmitters();
 console.assert(ps9.ambientEmitters.length === 0, 'clearAmbientEmitters should remove all emitters');
 
-// Test 15: Ambient emitters emit particles on update
-console.log('✓ Test 15: Ambient emitters emit particles on update');
+// Test 14: Ambient emitters emit particles on update
+console.log('✓ Test 14: Ambient emitters emit particles on update');
 const ps10 = new ParticleSystem(null, 'high');
 ps10.addAmbientEmitter({
     pos: { x: 0, y: 0, z: 0 },
@@ -193,8 +159,8 @@ ps10.ambientEmitters[0].timer = 1.0 / 100 - 0.001;
 ps10.update(0.05);  // 50ms; enough to cross the interval
 console.assert(ps10.stats.activeCount >= 3, 'Ambient emitter should have produced particles');
 
-// Test 16: Spread distributes emission positions
-console.log('✓ Test 16: Ambient emitter with spread');
+// Test 15: Spread distributes emission positions
+console.log('✓ Test 15: Ambient emitter with spread');
 const ps11 = new ParticleSystem(null, 'high');
 ps11.addAmbientEmitter({
     pos: { x: 10, y: 0, z: 10 },
@@ -213,6 +179,6 @@ console.log(`Particle System Stats:
   - Max Particles (high): 600
   - Quality Tiers: low(50), medium(200), high(600), ultra(1200)
   - Particle Types: trail, impact, spark, bubble, dust
-  - Emitter Helpers: speed trails, impacts, boosts, bubbles, sparks, dust
+  - Emitter Helpers: archived in docs/backups/unused-game-modules/misc/particle-materials.js
   - Ambient Emitters: zone-persistent continuous emitters (bubbles, sparks)
   - Features: Pooling, CPU simulation, type-specific behavior, ambient zone effects`);

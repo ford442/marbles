@@ -1,10 +1,11 @@
-import { spaceStationLevel } from './space_station.js';
-import { skateParkLevel } from './skate_park.js';
-import { pinballLevel } from './pinball_zone.js';
-import { canyonRunLevel } from './canyon_run.js';
-import { antigravityLevel } from './antigravity_zone.js';
+import { spaceStationLevel } from './zones/space-station.js';
+import { skateParkLevel } from './zones/skate-park.js';
+import { pinballLevel } from './zones/pinball-zone.js';
+import { canyonRunLevel } from './zones/canyon-run.js';
+import { antigravityLevel } from './zones/antigravity-zone.js';
 
-export const LEVELS = {
+/** Code-only levels (experimental / not yet migrated to JSON). Shown when `?devLevels=1`. */
+export const DEV_LEVELS = {
     mushroom_hop: {
         name: 'Mushroom Hop',
         description: 'Bounce across the giant mushrooms!',
@@ -45,67 +46,6 @@ export const LEVELS = {
         spawn: { x: 0, y: 8, z: -12 },
         goals: [
             { id: 1, range: { x: [-10, 10], z: [54, 58], y: [-7, -3] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 }
-    },
-    tutorial: {
-        name: 'Tutorial Ramp',
-        description: 'Learn the basics on a simple ramp',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'goal', pos: { x: 0, y: 0.25, z: 32.5 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-2, 2], z: [30.5, 34.5], y: [0, 2] } }
-        ],
-        camera: { mode: 'orbit', angle: 0, height: 10, radius: 25 }
-    },
-    landing: {
-        name: 'Landing Zone',
-        description: 'Navigate around pillars',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'landing', pos: { x: 0, y: 0, z: 25 } },
-            { type: 'goal', pos: { x: 0, y: 0.25, z: 32.5 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-2, 2], z: [30.5, 34.5], y: [0, 2] } }
-        ],
-        camera: { mode: 'orbit', angle: 0, height: 12, radius: 30 }
-    },
-    jump: {
-        name: 'The Jump',
-        description: 'Make the big leap!',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 60, y: 0.5, z: 80 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'landing', pos: { x: 0, y: 0, z: 25 } },
-            { type: 'jump', pos: { x: 0, y: 0, z: 37.5 } },
-            { type: 'goal', pos: { x: 0, y: -1.4, z: 63 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-2, 2], z: [61, 65], y: [-3, -1] } }
-        ],
-        camera: { mode: 'follow', height: 12, offset: -20 }
-    },
-    slalom: {
-        name: 'Slalom Challenge',
-        description: 'Weave through the pillars',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 60, y: 0.5, z: 120 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'landing', pos: { x: 0, y: 0, z: 25 } },
-            { type: 'slalom', pos: { x: 0, y: -2, z: 85 } },
-            { type: 'goal', pos: { x: 0, y: -1.4, z: 100 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-2, 2], z: [98, 102], y: [-2, 0] } }
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },

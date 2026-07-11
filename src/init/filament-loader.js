@@ -19,7 +19,8 @@ const DEFAULT_SETTINGS = {
     },
     controls: {
         sensitivity: 50,
-        invertY: false
+        invertY: false,
+        keybinds: {}
     },
     accessibility: {
         uiScale: 100,

@@ -1,6 +1,15 @@
-import { marbleDraft } from './marble_draft.js';
+/** Premium marbles (formerly marble_draft.js); inlined to keep src/ free of draft modules. */
+const premiumMarbles = [
+    { name: "Celestial Pearl", color: [0.95, 0.9, 1.0], offset: { x: 0.0, y: 5, z: 0 }, radius: 0.65, density: 1.2, restitution: 0.95, gravityScale: 0.8, friction: 0.05, roughness: 0.1, emissive: true, lightIntensity: 45000.0, lightColor: [0.8, 0.9, 1.0] },
+    { name: "Celestial Orb", color: [0.3, 0.7, 1.0], offset: { x: 0.0, y: 5, z: 0 }, radius: 0.6, density: 1.5, restitution: 0.8, gravityScale: 0.8, friction: 0.1, roughness: 0.05, emissive: true, lightIntensity: 30000.0, lightColor: [0.5, 0.0, 1.0] },
+    { name: "Abyssal Eye", color: [0.1, 0.0, 0.2], offset: { x: 0.0, y: 5, z: 0 }, radius: 0.55, density: 5.0, restitution: 0.2, gravityScale: 1.5, friction: 0.8, roughness: 0.0, emissive: true, lightIntensity: 60000.0, lightColor: [0.3, 0.0, 0.8] },
+    { name: "Void Walker", color: [0.1, 0.1, 0.1], offset: { x: 0.0, y: 5, z: 5 }, radius: 0.5, density: 0.5, restitution: 0.8, gravityScale: 0.3, friction: 0.1, roughness: 0.9, emissive: true, lightIntensity: 20000.0, lightColor: [0.5, 0.0, 1.0] },
+    { name: "Astral Jumper", color: [0.0, 0.5, 1.0], offset: { x: 0.0, y: 5, z: 10 }, radius: 0.5, density: 1.0, restitution: 1.5, gravityScale: 0.4, friction: 0.1, roughness: 0.0, emissive: true, lightIntensity: 35000.0, lightColor: [0.0, 0.5, 1.0] },
+    { name: "Hypernova Glass", color: [1.0, 0.2, 0.6], offset: { x: 0.0, y: 5, z: 15 }, radius: 0.75, density: 15.0, restitution: 1.8, gravityScale: 1.0, friction: 0.0, roughness: 0.0, clearCoat: 1.0, clearCoatRoughness: 0.0, materialType: "glass", emissive: true, lightIntensity: 80000.0, lightColor: [1.0, 0.3, 0.8] },
+];
+
 export const marblesInfo = [
-    ...marbleDraft,
+    ...premiumMarbles,
     { name: "Ghost", color: [0.9, 1.0, 1.0], offset: { x: 0.0, y: 5.0, z: 0.0 }, radius: 0.5, density: 0.1, gravityScale: 0.2, friction: 0.05, emissive: true, lightIntensity: 10000.0, lightColor: [0.9, 1.0, 1.0], materialType: "classicGlass", thickness: 0.25, fresnelStrength: 0.75, chromaticDispersion: 1.1 },
     { name: "Red Standard", color: [1.0, 0.0, 0.0], offset: { x: -1.0, y: 0, z: 0 }, roughness: 0.4 },
     { name: "Blue Standard", color: [0.0, 0.0, 1.0], offset: { x: 1.0, y: 0, z: 0 }, roughness: 0.4 },
@@ -70,3 +79,21 @@ export const marblesInfo = [
     { name: "Astral Behemoth", color: [1.0, 0.8, 0.2], offset: { x: 44.0, y: 5, z: 0 }, radius: 1.8, density: 400.0, friction: 0.0, restitution: 2.8, clearCoat: 1.0, clearCoatRoughness: 0.0, emissive: true, lightIntensity: 250000.0, lightColor: [1.0, 0.8, 0.2], materialType: "glass" },
     { name: "Aetherium Catalyst", color: [0.3, 1.0, 0.8], offset: { x: 46.0, y: 5, z: 0 }, radius: 1.2, density: 200.0, friction: 0.0, restitution: 3.5, clearCoat: 1.0, clearCoatRoughness: 0.0, emissive: true, lightIntensity: 180000.0, lightColor: [0.3, 1.0, 0.8], materialType: "glass" }
 ];
+
+/** Append manifest marbles that are not already represented in the hard-coded roster. */
+export function mergeRegistryMarbles(registry) {
+    let slot = 0;
+    for (const marbleDef of registry.getAllMarbles()) {
+        const converted = registry.convertMarbleToGameFormat(marbleDef);
+        if (marblesInfo.some((m) => m.id === converted.id || m.name === converted.name)) {
+            continue;
+        }
+        converted.offset = {
+            x: (slot % 6) * 1.5 - 3.75,
+            y: 0,
+            z: Math.floor(slot / 6) * 2,
+        };
+        marblesInfo.push(converted);
+        slot++;
+    }
+}

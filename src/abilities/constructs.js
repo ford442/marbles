@@ -168,7 +168,7 @@ export class AbilityConstructs {
             }
 
             // Simple normal approximation - assume the closest cardinal direction or just upright if Y is steep
-            let normal = { x: 0, y: 1, z: 0 }
+            const normal = { x: 0, y: 1, z: 0 }
 
             // Check world wall normal logic (or just simple bounce direction based on hit position relative to collider center)
             const otherBody = hit.collider.parent()

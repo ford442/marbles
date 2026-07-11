@@ -1,4 +1,4 @@
-name: Debug Build (Codepit)
+name: Marbles CI
 
 on:
   push:
@@ -7,85 +7,54 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Marbles 3D — validate assets, run unit tests, lint, typecheck, build WASM + Vite bundle.
+# Playwright e2e tests (tests/e2e/) are manual: start `npm run dev`, then `npm run test:e2e`.
+
 jobs:
-  build:
+  ci:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          
-      # Note: The web_sequencer submodule has its own debug_build.yml workflow
-      # that runs independently. This workflow is for codepit-level debugging.
-      # 
-      # For web_sequencer builds, see:
-      # .github/workflows/debug_build.yml
-          
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 9
-          run_install: false
-          
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-          
-      - name: Setup pnpm cache
-        uses: actions/cache@v3
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-            
-      # Note: web_sequencer has its own workflow. 
-      # This is just a compatibility check for the codepit parent repo.
-      - name: Check web_sequencer workflow exists
-        run: |
-          if [ -f ".github/workflows/debug_build.yml" ]; then
-            echo "✅ web_sequencer has its own debug_build.yml"
-            echo "For detailed builds, check the web_sequencer workflow runs"
-          fi
+          cache: npm
 
-      # Setup Emscripten (matching web_sequencer workflow version)
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate assets
+        run: npm run validate:assets
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
       - name: Setup Emscripten
-        # use tip-of-tree build by default; this keeps CI aligned with the
-        # local development environment that now installs `tot`.
         uses: mymindstorm/setup-emsdk@v14
         with:
           version: '3.1.50'
           no-cache: true
-          
-      - name: Verify Emscripten
-        run: |
-          emcc --version
-          
-      - name: Install dependencies
-        working-directory: .
-        run: npm install
 
-      # Build WASM modules
-      - name: Build Vite app
-        working-directory: .
+      - name: Build WASM and Vite app
         run: npm run build
-        
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
-        if: always()
+        if: success()
         with:
-          name: build-artifacts
+          name: marbles-dist
           path: |
             dist/
-            public/*.wasm
-            public/*.js
+            public/wasm/marble_physics.js
+            public/wasm/marble_physics.wasm
           retention-days: 7

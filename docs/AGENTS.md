@@ -8,9 +8,9 @@ This document provides essential information for AI coding agents working on the
 - **Physics Simulation**: Rapier3D-Compat for realistic physics (gravity: -9.81 m/s²)
 - **3D Rendering**: Google Filament (WASM) for high-performance WebGL2 rendering
 - **Build System**: Vite for development and production builds
-- **UI Layer**: React/TSX components for the sequencer and importer modals
+- **UI Layer**: Vanilla HTML HUD (`index.html`, `hud-manager.js`); React stack archived under `docs/backups/orphan-react-stack/`
 - **Backend**: Python FastAPI with Google Cloud Storage integration
-- **WASM Renderer**: Optional C++ WebGPU renderer (`wasm_renderer/`) built with Emscripten
+- **WASM physics helpers**: C++ numeric kernels (`wasm/`) — see `docs/architecture/language-strategy.md`
 
 The game features approximately 40 levels with diverse zones, obstacles, scoring goals, checkpoints, collectibles, power-ups, and 50+ marble types with unique physics properties.
 
@@ -93,11 +93,10 @@ marbles/
 │   └── services/           # Business logic (index, sync)
 ├── universal/              # Standalone utilities
 │   └── app_storage_manager.py # Monolithic FastAPI duplicate (legacy)
-├── wasm_renderer/          # C++ WebGPU renderer (Emscripten + CMake)
-│   ├── CMakeLists.txt
-│   ├── build.sh
-│   ├── main.cpp
-│   └── README.md
+├── docs/backups/
+│   ├── orphan-react-stack/     # Archived React sequencer / importers (non-runtime)
+│   └── experimental-wasm-renderer/  # Archived WebGPU experiment (non-runtime)
+├── wasm/                   # MarblePhysics C++ helpers (Emscripten → public/wasm/)
 ├── assets/                 # Game assets
 │   ├── maps/               # Level definitions
 │   ├── marbles/            # Marble definitions
@@ -318,14 +317,11 @@ The project includes a `.devcontainer/` configuration for GitHub Codespaces:
 - **Desktop**: VNC access via port 6080
 - **Forwarded ports**: 3000, 5173, 6080, 8080
 
-### WASM Renderer (`wasm_renderer/`)
+### MarblePhysics WASM (`wasm/`)
 
-An optional C++ WebGPU rendering backend:
-- Built with **CMake** and **Emscripten**
-- Supports WGSL compute shaders, ping-pong textures, uniform buffer management
-- Output: `wasm_renderer_test.js` + `wasm_renderer_test.wasm`
-- Toggle between JS and WASM renderers at runtime
-- Requires Chrome/Edge 113+ for WebGPU support
+Custom C++ helpers for batched float kernels (force fields, damping). Built with Emscripten; consumed via `src/wasm-bridge.js`. See `docs/architecture/language-strategy.md` for when to add C++ vs JS.
+
+Archived WebGPU renderer: `docs/backups/experimental-wasm-renderer/` (not on the game runtime path).
 
 ## Common Issues & Troubleshooting
 

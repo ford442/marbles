@@ -66,18 +66,10 @@ emscripten::val vec3Normalize(float x, float y, float z) {
 
 // ── Velocity Damping ──────────────────────────────────────────────────────────
 
-/**
- * Applies exponential velocity damping and an optional speed cap per frame.
- *
- * @param vx/vy/vz     Current velocity vector.
- * @param dampingFactor Linear damping coefficient (0 = none, 1 = full stop).
- * @param dt            Frame delta-time in seconds.
- * @param maxSpeed      Clamp speed to this value (0 = unlimited).
- * @returns             Damped velocity {x, y, z}.
- */
-emscripten::val applyVelocityDamping(float vx, float vy, float vz,
-                                     float dampingFactor, float dt,
-                                     float maxSpeed) {
+/** Shared scalar kernel used by both Embind and batch entry points. */
+inline void applyVelocityDampingVec(float vx, float vy, float vz,
+                                    float dampingFactor, float dt, float maxSpeed,
+                                    float& outX, float& outY, float& outZ) {
     const float decay = 1.0f - std::clamp(dampingFactor * dt, 0.0f, 1.0f);
     float nx = vx * decay;
     float ny = vy * decay;
@@ -91,21 +83,87 @@ emscripten::val applyVelocityDamping(float vx, float vy, float vz,
         }
     }
 
+    outX = nx;
+    outY = ny;
+    outZ = nz;
+}
+
+/**
+ * Applies exponential velocity damping and an optional speed cap per frame.
+ *
+ * @param vx/vy/vz     Current velocity vector.
+ * @param dampingFactor Linear damping coefficient (0 = none, 1 = full stop).
+ * @param dt            Frame delta-time in seconds.
+ * @param maxSpeed      Clamp speed to this value (0 = unlimited).
+ * @returns             Damped velocity {x, y, z}.
+ */
+emscripten::val applyVelocityDamping(float vx, float vy, float vz,
+                                     float dampingFactor, float dt,
+                                     float maxSpeed) {
     emscripten::val result = emscripten::val::object();
+    float nx, ny, nz;
+    applyVelocityDampingVec(vx, vy, vz, dampingFactor, dt, maxSpeed, nx, ny, nz);
     result.set("x", nx);
     result.set("y", ny);
     result.set("z", nz);
     return result;
 }
 
+/**
+ * Batched velocity damping. Reads/writes xyz triplets in HEAPF32 buffers.
+ * When in-place, pass the same pointer for velocitiesPtr and outPtr.
+ */
+void applyVelocityDampingBatch(uintptr_t velocitiesPtr, uintptr_t outPtr, int count,
+                               float dampingFactor, float dt, float maxSpeed) {
+    if (count <= 0) return;
+
+    float* velocities = reinterpret_cast<float*>(velocitiesPtr);
+    float* out        = reinterpret_cast<float*>(outPtr);
+
+    for (int i = 0; i < count; ++i) {
+        const int base = i * 3;
+        float nx, ny, nz;
+        applyVelocityDampingVec(velocities[base], velocities[base + 1], velocities[base + 2],
+                                dampingFactor, dt, maxSpeed, nx, ny, nz);
+        out[base]     = nx;
+        out[base + 1] = ny;
+        out[base + 2] = nz;
+    }
+}
+
 // ── Force Fields ──────────────────────────────────────────────────────────────
+
+/** Shared scalar kernel used by both Embind and batch entry points. */
+inline void computeForceFieldVec(float fieldX, float fieldY, float fieldZ,
+                                 float marbleX, float marbleY, float marbleZ,
+                                 float strength, float falloffExp,
+                                 float minDist, float maxDist, float softening,
+                                 float& outX, float& outY, float& outZ) {
+    const float dx = fieldX - marbleX;
+    const float dy = fieldY - marbleY;
+    const float dz = fieldZ - marbleZ;
+    const float dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+
+    if (dist > maxDist || dist < 1e-6f) {
+        outX = outY = outZ = 0.f;
+        return;
+    }
+
+    const float clampedDist = std::max(dist, minDist);
+    const float falloff     = std::pow(clampedDist, falloffExp) + softening;
+    const float forceMag    = strength / falloff;
+
+    outX = (dx / dist) * forceMag;
+    outY = (dy / dist) * forceMag;
+    outZ = (dz / dist) * forceMag;
+}
 
 /**
  * Computes the gravitational-style impulse a point force-field exerts on a
  * marble at the given position.
  *
  * The force magnitude follows an inverse power law:
- *   F = strength / clampedDist^falloffExp
+ *   F = strength / (clamp(dist, minDist)^falloffExp + softening)
  *
  * @param fieldX/Y/Z   Origin of the force field (e.g. black-hole position).
  * @param marbleX/Y/Z  Position of the marble.
@@ -113,34 +171,56 @@ emscripten::val applyVelocityDamping(float vx, float vy, float vz,
  * @param falloffExp   Exponent for distance falloff (2.0 = inverse-square).
  * @param minDist      Minimum clamped distance to avoid singularity.
  * @param maxDist      Beyond this distance the force is zero.
+ * @param softening    Added to the falloff denominator (magnet uses 1.0).
  * @returns            Force vector {x, y, z} to apply as an impulse.
  */
 emscripten::val computeForceField(float fieldX, float fieldY, float fieldZ,
                                    float marbleX, float marbleY, float marbleZ,
                                    float strength, float falloffExp,
-                                   float minDist, float maxDist) {
+                                   float minDist, float maxDist,
+                                   float softening = 0.f) {
     emscripten::val result = emscripten::val::object();
-
-    const float dx = fieldX - marbleX;
-    const float dy = fieldY - marbleY;
-    const float dz = fieldZ - marbleZ;
-    const float dist = std::sqrt(dx * dx + dy * dy + dz * dz);
-
-    if (dist > maxDist || dist < 1e-6f) {
-        result.set("x", 0.f);
-        result.set("y", 0.f);
-        result.set("z", 0.f);
-        return result;
-    }
-
-    const float clampedDist = std::max(dist, minDist);
-    const float falloff     = std::pow(clampedDist, falloffExp);
-    const float forceMag    = strength / falloff;
-
-    result.set("x", (dx / dist) * forceMag);
-    result.set("y", (dy / dist) * forceMag);
-    result.set("z", (dz / dist) * forceMag);
+    float fx, fy, fz;
+    computeForceFieldVec(fieldX, fieldY, fieldZ,
+                         marbleX, marbleY, marbleZ,
+                         strength, falloffExp, minDist, maxDist, softening,
+                         fx, fy, fz);
+    result.set("x", fx);
+    result.set("y", fy);
+    result.set("z", fz);
     return result;
+}
+
+/**
+ * Batched force-field evaluation writing directly into a HEAPF32 buffer.
+ *
+ * Layout (all float32):
+ *   positions[i*3+0..2] = marble xyz
+ *   strengths[i]        = per-marble strength (e.g. mass * base force)
+ *   out[i*3+0..2]       = resulting force xyz
+ */
+void computeForceFieldsBatch(uintptr_t positionsPtr, uintptr_t strengthsPtr,
+                             uintptr_t outPtr, int count,
+                             float fieldX, float fieldY, float fieldZ,
+                             float falloffExp, float minDist, float maxDist,
+                             float softening) {
+    if (count <= 0) return;
+
+    float* positions = reinterpret_cast<float*>(positionsPtr);
+    float* strengths = reinterpret_cast<float*>(strengthsPtr);
+    float* out       = reinterpret_cast<float*>(outPtr);
+
+    for (int i = 0; i < count; ++i) {
+        const int base = i * 3;
+        float fx, fy, fz;
+        computeForceFieldVec(fieldX, fieldY, fieldZ,
+                             positions[base], positions[base + 1], positions[base + 2],
+                             strengths[i], falloffExp, minDist, maxDist, softening,
+                             fx, fy, fz);
+        out[base]     = fx;
+        out[base + 1] = fy;
+        out[base + 2] = fz;
+    }
 }
 
 // ── Spring / Constraint Force ─────────────────────────────────────────────────
@@ -255,8 +335,10 @@ EMSCRIPTEN_BINDINGS(marble_physics) {
     emscripten::function("vec3Normalize",          &vec3Normalize);
 
     // Physics helpers
-    emscripten::function("applyVelocityDamping",   &applyVelocityDamping);
-    emscripten::function("computeForceField",      &computeForceField);
+    emscripten::function("applyVelocityDamping",       &applyVelocityDamping);
+    emscripten::function("applyVelocityDampingBatch",  &applyVelocityDampingBatch);
+    emscripten::function("computeForceField",          &computeForceField);
+    emscripten::function("computeForceFieldsBatch",    &computeForceFieldsBatch);
     emscripten::function("computeSpringForce",     &computeSpringForce);
     emscripten::function("reflectVelocity",        &reflectVelocity);
     emscripten::function("closestPointOnSegment",  &closestPointOnSegment);

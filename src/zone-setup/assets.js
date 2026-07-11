@@ -3,6 +3,19 @@ import { CUBE_VERTICES, CUBE_INDICES } from '../cube-geometry.js';
 
 export class ZoneSetupAssets {
     async setupAssets() {
+        if (this.rendererType === 'simple-webgl') {
+            this.material = this.engine.createMaterial(new Uint8Array())
+            this.hasProceduralMaterial = false
+            this.vb = { debugShape: 'box' }
+            this.ib = { debugShape: 'box-indices' }
+            this.sphereVb = { debugShape: 'sphere' }
+            this.sphereIb = { debugShape: 'sphere-indices' }
+            this.createCueStick()
+            this.createGrappleLine()
+            console.log('[ASSETS] Simple debug renderer using lightweight geometry handles')
+            return
+        }
+
         // Load the known-good material by default. The procedural package was
         // compiled by an older matc and can abort newer Filament runtimes during
         // createMaterial(), so keep it as an explicit development opt-in.

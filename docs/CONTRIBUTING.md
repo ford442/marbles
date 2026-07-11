@@ -5,6 +5,7 @@ Thank you for your interest in contributing! This guide will help you create new
 ## Table of Contents
 
 - [Getting Started](#getting-started)
+- [Adding a Zone (Level Geometry)](#adding-a-zone-level-geometry)
 - [Creating Maps](#creating-maps)
 - [Creating Marbles](#creating-marbles)
 - [Creating Sounds](#creating-sounds)
@@ -17,6 +18,98 @@ Thank you for your interest in contributing! This guide will help you create new
 2. Create your assets in the appropriate `/assets/` subdirectory
 3. Test your assets locally
 4. Submit a pull request
+
+## Adding a Zone (Level Geometry)
+
+Playable levels are loaded from **`assets/maps/*.json`** via **`assets/manifest.json`** at boot (`src/assets/AssetRegistry.js`). Zone geometry builders live in **`src/zones/<kebab-name>.js`**, registered in **`src/zone-setup/registry.js`**.
+
+Code-only levels remain in **`src/levels.js`** as `DEV_LEVELS` and appear in the level menu only when **`?devLevels=1`** is set (for experimental maps not yet migrated to JSON).
+
+### Checklist (JSON map — preferred)
+
+1. **Create or extend a zone builder** if needed — `src/zones/my-cool-zone.js` (see factory checklist below).
+
+2. **Add a map JSON file** — copy `assets/maps/TEMPLATE.json` → `assets/maps/my_cool_run.json`, set `zones[].type` to a registered handler id (e.g. `my_cool_zone`, `floor`, `goal`).
+
+3. **Register in manifest** — add an entry under `maps` in `assets/manifest.json`:
+   ```json
+   "my_cool_run": {
+     "file": "maps/my_cool_run.json",
+     "name": "My Cool Run",
+     "difficulty": "medium"
+   }
+   ```
+
+4. **Validate** — `npm run validate:assets` (also runs in CI).
+
+5. **Play** — `npm run dev`; the map appears in the level select without editing `levels.js`.
+
+### Checklist (code-only dev level)
+
+Use only for work-in-progress zones. Add to `DEV_LEVELS` in `src/levels.js` and test with **`?devLevels=1`**.
+
+1. **Create the builder** — `src/zones/my-cool-zone.js`:
+   ```javascript
+   export function createMyCoolZone(game, offset) {
+       // Use game.createStaticBox, game.createFloorZone, zones/methods helpers, etc.
+   }
+   ```
+
+2. **Export from the barrel** — add to `src/zones/index.js`:
+   ```javascript
+   export { createMyCoolZone } from './my-cool-zone.js';
+   ```
+
+3. **Register the zone type** — add one entry to `FACTORY_ZONE_HANDLERS` in `src/zone-setup/registry.js`:
+   ```javascript
+   my_cool_zone: (game, _zone, offset) => zones.createMyCoolZone(game, offset),
+   ```
+   Use the same snake_case string you will put in `levels.js` `zone.type`.
+
+4. **Add a level** (or extend an existing one) in `src/levels.js`:
+   ```javascript
+   my_cool_run: {
+       name: 'My Cool Run',
+       description: '…',
+       zones: [
+           { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
+           { type: 'my_cool_zone', pos: { x: 0, y: 0, z: 25 } },
+           { type: 'goal', pos: { x: 0, y: 0.25, z: 70 } },
+       ],
+       spawn: { x: 0, y: 8, z: -12 },
+       goals: [{ id: 1, range: { x: [-5, 5], z: [65, 75], y: [-1, 3] } }],
+       camera: { mode: 'follow', height: 15, offset: -25 },
+   },
+   ```
+
+5. **Verify** — `npm run build` and play with `?devLevels=1`.
+
+### Migrating hard-coded levels to JSON
+
+Many legacy levels still live in `DEV_LEVELS` (`src/levels.js`). To migrate one:
+
+1. Copy its object fields into `assets/maps/<id>.json` (match an existing map like `tutorial.json`).
+2. Add `"version"`, `"id"`, and `"difficulty"` per `assets/schemas/map-schema.json`.
+3. Register the file in `assets/manifest.json`.
+4. Remove the entry from `DEV_LEVELS` (or leave it behind `?devLevels=1` until the JSON version is verified).
+5. Run `npm run validate:assets`.
+
+**Already on JSON (manifest-driven):** `tutorial`, `landing`, `jump`, `slalom`, `staircase`, `full_course`, `sandbox`, `volcano_run`.
+
+**Still code-only (dev flag):** all other entries in `DEV_LEVELS` — mushroom hop, wind tunnel, themed factory zones, etc.
+
+Zone `type` strings in JSON must match keys in `src/zone-setup/registry.js` (`ZONE_HANDLERS`).
+
+### Built-in zone types (no new file)
+
+Primitive zones (`floor`, `track`, `goal`, `slalom`, etc.) are handled by methods in `src/zones/methods/creation.js` and registered under `BUILTIN_ZONE_HANDLERS` in `registry.js`. Only add a new `src/zones/*.js` file when the geometry is non-trivial.
+
+### Do not
+
+- Add zone modules at `src/*_zone.js` (legacy layout removed)
+- Duplicate `switch` cases in multiple files — **`registry.js` is the only map**
+- Import zone factories from `zone-setup-methods.js` — use `zones/index.js` or `registry.js`
+
 
 ## Asset Structure
 
@@ -234,6 +327,40 @@ All assets are validated against JSON schemas in `assets/schemas/`:
 - `marble-schema.json` - Marble validation
 - `sound-schema.json` - Sound validation
 
+Run locally:
+
+```bash
+npm run validate:assets
+```
+
+This runs automatically in CI on every pull request.
+
+## Development checks
+
+| Script | Purpose |
+|--------|---------|
+| `npm test` | Node unit tests under `tests/` (same as `test:unit`) |
+| `npm run lint` | ESLint on `src/`, `tests/`, `scripts/` (errors fail the run) |
+| `npm run typecheck` | `tsc --noEmit` (TypeScript project sanity; JS is not type-checked) |
+| `npm run validate:assets` | JSON asset + manifest validation |
+| `npm run build` | WASM physics module + Vite production bundle |
+
+Playwright browser tests live in `tests/e2e/` and are **manual** — start `npm run dev`, then `npm run test:e2e`.
+
+### CI (GitHub Actions)
+
+Workflow: [`.github/workflows/debug_build.yml`](../.github/workflows/debug_build.yml) (`Marbles CI`)
+
+Steps on each push/PR to `main`:
+
+1. `npm ci`
+2. `npm run validate:assets`
+3. `npm run test:unit`
+4. `npm run lint`
+5. `npm run typecheck`
+6. Emscripten setup → `npm run build`
+7. Upload `dist/` and `public/wasm/marble_physics.*` artifacts
+
 ### Online Validators
 
 You can validate your JSON files using:
@@ -244,8 +371,9 @@ You can validate your JSON files using:
 
 1. Place your assets in the correct directories
 2. Update `assets/manifest.json` with your new assets
-3. Run the game and check the console for loading messages
-4. Test in-game to ensure everything works
+3. Run `npm run validate:assets`
+4. Run the game (`npm run dev`) and check the console for `[AssetRegistry]` loading messages
+5. Test in-game to ensure everything works
 
 ## Submission Guidelines
 
