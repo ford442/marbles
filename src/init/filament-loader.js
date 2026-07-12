@@ -20,7 +20,16 @@ const DEFAULT_SETTINGS = {
     controls: {
         sensitivity: 50,
         invertY: false,
-        keybinds: {}
+        keybinds: {},
+        touch: {
+            enabled: 'auto',
+            joystickSide: 'left',
+            jumpSlot: 'primary',
+            boostSlot: 'secondary',
+            cameraSensitivity: 50,
+            invertCameraY: false,
+            showControls: true,
+        },
     },
     accessibility: {
         uiScale: 100,

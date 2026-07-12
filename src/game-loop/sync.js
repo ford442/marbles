@@ -115,6 +115,14 @@ export class GameLoopSyncMethods {
         // Cache transform manager once per frame to avoid repeated WASM boundary crossings
         const tcm = this.engine.getTransformManager()
         this.cullingManager?.updateStaticBatches()
+        this.trackLodManager?.update()
+        if (this._cameraState?.eye) {
+            audio?.setListenerPosition?.(
+                this._cameraState.eye[0],
+                this._cameraState.eye[1],
+                this._cameraState.eye[2]
+            )
+        }
         this.marbleLodManager?.updateMarbles(now)
         updateMarbleMaterialTiers(this, now)
 
@@ -623,6 +631,11 @@ if (this.renderSpeedLines) {
             }
             perfCounts.renderMs = performance.now() - renderStart
             this.perfMonitor?.recordRenderTiming(perfCounts.renderMs, perfCounts.renderedFrame)
+
+            if (this.webgpuParticles?.ready && this._cameraState) {
+                const aspect = (this.canvas?.width || window.innerWidth) / (this.canvas?.height || window.innerHeight || 1)
+                this.webgpuParticles.render(this._cameraState, this.activeFov || this.currentFov || 45, aspect)
+            }
 
             this.engine.execute();
         } 

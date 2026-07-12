@@ -17,7 +17,9 @@ import { AutoQualityGovernor } from './auto-quality-governor.js';
 import { LevelEffectBudget } from './level-effect-budget.js';
 import { LightingBudgetManager } from './lighting-budget.js';
 import { AbilitySystem } from './game/systems/ability-system.js';
-import { CampaignProgress } from './game/systems/campaign-progress.js';
+import { registerServiceWorker } from './pwa/register-sw.js';
+import { GhostReplay } from './game/systems/ghost-replay.js';
+import { TrackLodManager } from './assets/track-lod-manager.js';
 
 class MarblesGame {
     constructor() {
@@ -26,12 +28,14 @@ class MarblesGame {
         // Runtime managers (Phase B: move under composed subsystems)
         this.abilitySystem = new AbilitySystem(this);
         this.campaignProgress = new CampaignProgress();
+        this.ghostReplay = new GhostReplay();
         this.hudManager = new HUDManager(this);
         this.perfMonitor = new PerfMonitor(this);
         this.autoQualityGovernor = new AutoQualityGovernor(this);
         this.levelEffectBudget = new LevelEffectBudget(this);
         this.lightingBudget = new LightingBudgetManager(this);
         this.cullingManager = new CullingManager(this);
+        this.trackLodManager = new TrackLodManager(this);
         this.marbleLodManager = new MarbleLodManager(this);
         this.effectPool = new EffectPoolManager(this);
     }
@@ -54,6 +58,8 @@ function applyLegacyMixins(targetClass) {
 }
 
 applyLegacyMixins(MarblesGame);
+
+registerServiceWorker();
 
 window.game = new MarblesGame();
 window.game.init().then(() => { window.gameReady = true; }).catch(err => {

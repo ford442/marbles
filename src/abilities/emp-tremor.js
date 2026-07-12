@@ -46,9 +46,7 @@ export class AbilityEmpTremor {
             this.awardTrickPoints('EMP Blast!', 30 * hits, '#aaddff')
         }
 
-        if (typeof audio !== 'undefined' && audio.playBomb) {
-            audio.playBomb()
-        }
+        if (audio.playAbility) audio.playAbility('emp', pos)
 
         // Spawn EMP visual effect
         this.spawnEMPEffect(pos)
@@ -123,9 +121,7 @@ export class AbilityEmpTremor {
         // Trigger camera shake
         this.tremorShakeTimer = 30
 
-        if (typeof audio !== 'undefined' && audio.playStomp) {
-            audio.playStomp()
-        }
+        if (audio.playAbility) audio.playAbility('emp', pos)
     }
 
     spawnEMPEffect(pos) {

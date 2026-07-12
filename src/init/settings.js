@@ -3,6 +3,8 @@ import { DEFAULT_SETTINGS } from './filament-loader.js';
 import { DEFAULT_MSAA_SAMPLE_COUNT, getPostFxQualityFlags, getShadowQualityConfig } from '../rendering-defaults.js';
 import { getBloomQualityConfig, getSsaoQualityConfig, getVignetteConfig, getFogQualityConfig, getEnvironmentFogPreset } from '../rendering/post-fx-presets.js';
 import { applyDynamicResolution } from '../render-resolution.js';
+import { applyMobileGraphicsDefaults, MOBILE_DEFAULTS_FLAG, resolveMobileInitQuality } from '../platform/mobile-presets.js';
+import { detectPlatformProfile } from '../rendering-defaults.js';
 import { downgradeQualityTier } from '../level-effect-budget.js';
 import { updateMarbleMaterialTiers } from '../marble-material-tier.js';
 
@@ -17,6 +19,12 @@ export class InitSettings {
                 console.log('[SETTINGS] Loaded from localStorage')
             } else {
                 this.settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
+                if (typeof localStorage !== 'undefined' && !localStorage.getItem(MOBILE_DEFAULTS_FLAG)) {
+                    if (applyMobileGraphicsDefaults(this.settings)) {
+                        localStorage.setItem(MOBILE_DEFAULTS_FLAG, '1')
+                        console.log('[SETTINGS] Applied first-run mobile graphics preset')
+                    }
+                }
                 console.log('[SETTINGS] Using default settings')
             }
         } catch (e) {
@@ -27,6 +35,7 @@ export class InitSettings {
         // Apply loaded settings
         this.applySettings()
         this.abilitySystem?.loadKeybinds(this.settings?.controls?.keybinds)
+        this.applyTouchSettings?.()
         this.abilitySystem?.init()
     }
 
@@ -42,6 +51,7 @@ export class InitSettings {
         }
 
         this.applySettings()
+        this.applyTouchSettings?.()
         this.closeSettings()
     }
 
@@ -65,6 +75,9 @@ export class InitSettings {
             Object.assign(merged.controls, saved.controls)
             if (saved.controls.keybinds) {
                 merged.controls.keybinds = { ...merged.controls.keybinds, ...saved.controls.keybinds }
+            }
+            if (saved.controls.touch) {
+                merged.controls.touch = { ...merged.controls.touch, ...saved.controls.touch }
             }
         }
         if (saved.accessibility) {

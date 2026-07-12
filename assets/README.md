@@ -14,8 +14,8 @@ This directory contains all game assets: maps, marbles, sounds, and materials.
 ```
 assets/
 ├── maps/           # Level definitions
-│   ├── TEMPLATE.json
-│   ├── tutorial.json
+├── tracks/         # GLB/GLTF course meshes
+│   ├── neon_showcase.glb
 │   └── ...
 ├── marbles/        # Marble definitions
 │   ├── TEMPLATE.json

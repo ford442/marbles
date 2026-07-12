@@ -1,0 +1,16 @@
+{
+  "id": "collision_glass",
+  "name": "Glass Collision",
+  "description": "Bright crystalline ping",
+  "version": "1.0.0",
+  "category": "sfx",
+  "files": [],
+  "synthesis": { "type": "surface_hit", "profile": "glass" },
+  "properties": {
+    "volume": 0.6,
+    "pitchMin": 0.95,
+    "pitchMax": 1.2,
+    "spatial": false
+  },
+  "trigger": { "event": "collision", "threshold": 0.8, "cooldown": 0.07 }
+}

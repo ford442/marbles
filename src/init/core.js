@@ -10,6 +10,7 @@ import {
 import { loadFilament } from './filament-loader.js';
 import { initMarblePhysicsWasm } from '../wasm-bridge.js';
 import { ParticleSystem } from '../particle-system.js';
+import { scheduleWebGPUExperiments } from '../webgpu/index.js';
 import { LightingSystem } from '../lighting-system.js';
 import { VolumetricLightsSystem } from '../rendering/volumetric-lights.js';
 import {
@@ -473,6 +474,7 @@ export class InitCore {
         }
 
         this.initMouseControls()
+        this.initTouchControls()
 
         console.log('[INIT] Initializing Rapier physics...')
         if (typeof window.updateLoadingProgress === 'function') {
@@ -599,6 +601,7 @@ export class InitCore {
                 const qualityTier = this.settings?.graphics?.quality || 'high'
                 this.particleSystem = new ParticleSystem(this.engine, this.scene, this.Filament, qualityTier)
                 this.particleSystem._game = this
+                scheduleWebGPUExperiments(this)
                 console.log('[INIT] Particle system initialized')
             } catch (e) {
                 console.error('[INIT] Particle system initialization failed:', e)
@@ -667,6 +670,9 @@ export class InitCore {
             await assetRegistry.loadAll()
             initLevelCatalog(assetRegistry)
             mergeRegistryMarbles(assetRegistry)
+            if (audio?.loadFromRegistry) {
+                await audio.loadFromRegistry(assetRegistry)
+            }
             if (this.campaignProgress) {
                 this.campaignProgress.setCatalog(LEVELS)
             }
@@ -683,6 +689,7 @@ export class InitCore {
         
         // Initialize pause menu handlers (once only)
         this.initPauseMenu()
+        this.initMultiplayerMenu()
         console.log('[INIT] Pause menu initialized')
         
         if (isEditorMode()) {

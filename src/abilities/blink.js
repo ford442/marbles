@@ -51,9 +51,7 @@ export class AbilityBlink {
         // End particle
         this.spawnBlinkParticle(newPos, color)
 
-        if (typeof audio !== 'undefined' && typeof audio.playTrick === 'function') {
-            audio.playTrick()
-        }
+        if (audio.playAbility) audio.playAbility('blink')
 
         if (typeof this.awardTrickPoints === 'function') {
              this.awardTrickPoints('Blink!', 15, '#ffcc00')

@@ -1,0 +1,16 @@
+{
+  "id": "collision_concrete",
+  "name": "Concrete Collision",
+  "description": "Dull stone/concrete thud",
+  "version": "1.0.0",
+  "category": "sfx",
+  "files": [],
+  "synthesis": { "type": "surface_hit", "profile": "concrete" },
+  "properties": {
+    "volume": 0.7,
+    "pitchMin": 0.92,
+    "pitchMax": 1.05,
+    "spatial": false
+  },
+  "trigger": { "event": "collision", "threshold": 1.0, "cooldown": 0.08 }
+}

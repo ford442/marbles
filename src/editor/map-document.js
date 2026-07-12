@@ -109,6 +109,11 @@ export function serializeMap(map) {
             if (z.size) zone.size = { ...z.size };
             if (z.color) zone.color = [...z.color];
             if (z.rotY) zone.rotY = z.rotY;
+            if (z.model) zone.model = z.model;
+            if (z.collider) zone.collider = z.collider;
+            if (z.scale !== undefined) zone.scale = z.scale;
+            if (z.materialPreset) zone.materialPreset = z.materialPreset;
+            if (z.lod) zone.lod = z.lod.map((l) => ({ model: l.model, distance: l.distance }));
             return zone;
         }),
         spawn: { ...map.spawn },

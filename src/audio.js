@@ -3,6 +3,21 @@
  * Uses Web Audio API for zero-dependency, high-performance sound generation
  */
 
+import { VoicePool, scheduleVoiceStop } from './audio/voice-pool.js';
+import { loadSoundBank, getSoundDef, resolveSynthesisProfile, soundProperties } from './audio/sound-bank.js';
+import { resolveCollisionSound } from './audio/collision-matrix.js';
+import { MusicManager } from './audio/music-manager.js';
+
+const ABILITY_SOUND_IDS = {
+    bomb: 'ability_bomb',
+    missile: 'ability_missile',
+    blink: 'ability_blink',
+    teleport: 'ability_blink',
+    emp: 'ability_bomb',
+    jump: 'ability_blink',
+    goal: 'goal_chime',
+};
+
 export class MarbleAudio {
     constructor() {
         this.ctx = null;
@@ -19,6 +34,24 @@ export class MarbleAudio {
 
         // Material type mappings for different surface sounds
         this.materialTypes = new Map();
+
+        this.voicePool = new VoicePool(28);
+        /** @type {Map<string, object> | null} */
+        this.soundDefs = null;
+        /** @type {Map<string, AudioBuffer> | null} */
+        this.soundBuffers = null;
+        this.collisionMatrix = null;
+        this.sfxGain = null;
+        this.musicGain = null;
+        this.musicManager = null;
+        this._paused = false;
+        this._focusActive = false;
+        this._savedMasterVolume = null;
+    }
+
+    /** @returns {GainNode | null} SFX output bus */
+    get sfxBus() {
+        return this.sfxGain || this.masterGain;
     }
 
     /**
@@ -65,6 +98,15 @@ export class MarbleAudio {
 
         this.masterGain.connect(this.masterFilter);
         this.masterFilter.connect(this.ctx.destination);
+
+        this.sfxGain = this.ctx.createGain();
+        this.musicGain = this.ctx.createGain();
+        this.sfxGain.gain.value = this._sfxVolume;
+        this.musicGain.gain.value = this._musicVolume;
+        this.sfxGain.connect(this.masterFilter);
+        this.musicGain.connect(this.masterFilter);
+
+        this.musicManager = new MusicManager(this.ctx, this.musicGain);
         this.enabled = true;
 
         console.log('[Audio] Audio context initialized');
@@ -76,18 +118,37 @@ export class MarbleAudio {
      */
     setFocus(active) {
         if (!this.masterFilter || !this.ctx) return;
+        this._focusActive = !!active;
 
         const t = this.ctx.currentTime;
-        // Clamp targetFreq to valid range (positive)
         const targetFreq = active ? 400 : 20000;
-
-        // Use exponential ramp for smooth frequency transition
         try {
-             this.masterFilter.frequency.setTargetAtTime(targetFreq, t, 0.1);
-        } catch(e) {
-             // Fallback if needed
-             this.masterFilter.frequency.value = targetFreq;
+            this.masterFilter.frequency.setTargetAtTime(targetFreq, t, 0.1);
+        } catch {
+            this.masterFilter.frequency.value = targetFreq;
         }
+
+        this._applySfxDuck();
+    }
+
+    /**
+     * Pause duck — lowers SFX without destroying saved master volume.
+     * @param {boolean} paused
+     */
+    setPaused(paused) {
+        this._paused = !!paused;
+        this._applySfxDuck();
+        if (this.musicManager) {
+            this.musicManager.setEnabled(!this._paused);
+        }
+    }
+
+    _applySfxDuck() {
+        if (!this.sfxGain || !this.ctx) return;
+        let mult = this._sfxVolume;
+        if (this._paused) mult *= 0.2;
+        if (this._focusActive) mult *= 0.65;
+        this.sfxGain.gain.setTargetAtTime(mult, this.ctx.currentTime, 0.08);
     }
 
     /**
@@ -132,7 +193,7 @@ export class MarbleAudio {
 
         impactGain.connect(merger, 0, 0);
         ringGain.connect(merger, 0, 1);
-        merger.connect(this.masterGain);
+        merger.connect(this.sfxBus);
 
         // === IMPACT SOUND (filtered noise burst) ===
         const bufferSize = this.ctx.sampleRate * 0.08;
@@ -225,7 +286,7 @@ export class MarbleAudio {
 
         osc.connect(filter);
         filter.connect(gain);
-        gain.connect(this.masterGain);
+        gain.connect(this.sfxBus);
 
         gain.gain.setValueAtTime(0, t);
         gain.gain.linearRampToValueAtTime(0.3, t + 0.05);
@@ -265,7 +326,7 @@ export class MarbleAudio {
 
         const t = this.ctx.currentTime;
         const gain = this.ctx.createGain();
-        gain.connect(this.masterGain);
+        gain.connect(this.sfxBus);
 
         // Material characteristics
         const materialParams = {
@@ -305,12 +366,27 @@ export class MarbleAudio {
 
     /**
      * Play goal completion sound (pleasant chime)
+     * @param {{ x: number, y: number, z: number } | null} [position]
      */
-    playGoal() {
+    playGoal(position = null) {
         if (!this.enabled || !this.ctx) return;
 
         const t = this.ctx.currentTime;
         const notes = [523.25, 659.25, 783.99]; // C major chord
+        let output = this.sfxBus;
+
+        if (position && this.ctx.createPanner) {
+            const panner = this.ctx.createPanner();
+            panner.panningModel = 'HRTF';
+            panner.distanceModel = 'inverse';
+            panner.refDistance = 2;
+            panner.maxDistance = 80;
+            panner.positionX.value = position.x;
+            panner.positionY.value = position.y;
+            panner.positionZ.value = position.z;
+            panner.connect(this.sfxBus);
+            output = panner;
+        }
 
         notes.forEach((freq, i) => {
             const osc = this.ctx.createOscillator();
@@ -320,7 +396,7 @@ export class MarbleAudio {
             osc.frequency.value = freq;
 
             osc.connect(gain);
-            gain.connect(this.masterGain);
+            gain.connect(output);
 
             const startTime = t + i * 0.05;
             gain.gain.setValueAtTime(0, startTime);
@@ -340,7 +416,7 @@ export class MarbleAudio {
 
         const t = this.ctx.currentTime;
         const gain = this.ctx.createGain();
-        gain.connect(this.masterGain);
+        gain.connect(this.sfxBus);
 
         const osc = this.ctx.createOscillator();
         osc.type = 'sine';
@@ -365,7 +441,7 @@ export class MarbleAudio {
 
         const t = this.ctx.currentTime;
         const gain = this.ctx.createGain();
-        gain.connect(this.masterGain);
+        gain.connect(this.sfxBus);
 
         // "Boing" effect using filtered saw wave
         const osc = this.ctx.createOscillator();
@@ -417,9 +493,7 @@ export class MarbleAudio {
      */
     setSFXVolume(vol) {
         this._sfxVolume = Math.max(0, Math.min(1, vol));
-        // SFX volume is applied per-sound in the future
-        // For now, it's combined with master
-        this.updateGain();
+        this._applySfxDuck();
     }
 
     /**
@@ -428,9 +502,10 @@ export class MarbleAudio {
      */
     setMusicVolume(vol) {
         this._musicVolume = Math.max(0, Math.min(1, vol));
-        // Music volume would be applied to music tracks
-        // For now, it's combined with master
-        this.updateGain();
+        if (this.musicGain && this.ctx) {
+            this.musicGain.gain.setTargetAtTime(this._musicVolume, this.ctx.currentTime, 0.05);
+        }
+        this.musicManager?.setVolume(this._musicVolume);
     }
 
     /**
@@ -461,24 +536,251 @@ export class MarbleAudio {
      * @param {string} surfaceMaterial - 'wood', 'metal', 'concrete', 'glass'
      * @param {string} id - Collision ID for cooldown
      */
-    playSurfaceHit(velocity, radius = 0.5, surfaceMaterial = 'wood', id = 'surface') {
+    /**
+     * Load sound bank + collision matrix from AssetRegistry (call after registry boot).
+     * @param {import('./assets/AssetRegistry.js').AssetRegistry} registry
+     */
+    async loadFromRegistry(registry) {
+        if (!registry) return;
+        try {
+            const bank = await loadSoundBank(registry);
+            this.soundDefs = bank.sounds;
+            this.soundBuffers = bank.buffers;
+            this.collisionMatrix = bank.matrix;
+            console.log(`[Audio] Sound bank loaded (${bank.sounds.size} defs, ${bank.buffers.size} buffers)`);
+        } catch (error) {
+            console.warn('[Audio] Sound bank load failed:', error);
+        }
+    }
+
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {number} z
+     */
+    setListenerPosition(x, y, z) {
+        if (!this.ctx?.listener?.positionX) return;
+        const t = this.ctx.currentTime;
+        this.ctx.listener.positionX.setTargetAtTime(x, t, 0.05);
+        this.ctx.listener.positionY.setTargetAtTime(y, t, 0.05);
+        this.ctx.listener.positionZ.setTargetAtTime(z, t, 0.05);
+    }
+
+    /**
+     * Material-aware collision with pitch variance from sound bank / matrix.
+     */
+    playCollision({
+        velocity,
+        radius = 0.5,
+        marbleMaterial = 'glass',
+        surfaceMaterial = 'wood',
+        id = 'collision',
+        position = null,
+    }) {
         if (!this.enabled || !this.ctx || this.muted) return;
 
-        // Cooldown - more lenient for surface hits (can be more frequent)
+        const resolved = resolveCollisionSound(this.collisionMatrix, marbleMaterial, surfaceMaterial);
+        const def = this.soundDefs ? getSoundDef(this.soundDefs, resolved.soundId) : null;
+        const props = soundProperties(def);
+        const profile = resolveSynthesisProfile(def, resolved.soundId);
+
         const now = performance.now();
         const lastPlayed = this.cooldowns.get(id) || 0;
-        if (now - lastPlayed < 80) return;
+        if (now - lastPlayed < props.cooldown * 1000) return;
+        if (velocity < props.threshold) return;
+
+        const pitch = resolved.pitchMin + Math.random() * (resolved.pitchMax - resolved.pitchMin);
+        const buffer = this.soundBuffers?.get(resolved.soundId);
+
+        if (buffer) {
+            this._playBuffer(buffer, {
+                volume: props.volume * this._sfxVolume,
+                pitch,
+                spatial: props.spatial && position,
+                position,
+                maxDistance: props.maxDistance,
+                id,
+            });
+        } else {
+            this._playSurfaceHitInternal(velocity, radius, profile, id, pitch * props.volume);
+        }
+
         this.cooldowns.set(id, now);
+    }
 
-        const normalizedVel = Math.min(Math.max(velocity, 0), 30) / 30;
-        if (normalizedVel < 0.03) return; // Very quiet threshold
+    /**
+     * Centralized ability one-shots.
+     * @param {'bomb'|'missile'|'blink'|'teleport'|'emp'|'jump'} abilityId
+     * @param {{ x: number, y: number, z: number } | null} [position]
+     */
+    playAbility(abilityId, position = null) {
+        const soundId = ABILITY_SOUND_IDS[abilityId];
+        if (!soundId) return this._playAbilityProcedural(abilityId);
 
-        // Size affects pitch
-        const sizePitchMult = 1.5 - (radius - 0.3) * (0.8 / 0.5);
+        const def = this.soundDefs ? getSoundDef(this.soundDefs, soundId) : null;
+        const props = soundProperties(def);
+        const profile = def?.synthesis?.profile;
+        const buffer = this.soundBuffers?.get(soundId);
+
+        if (buffer) {
+            this._playBuffer(buffer, {
+                volume: props.volume,
+                pitch: 1,
+                spatial: props.spatial && position,
+                position,
+                maxDistance: props.maxDistance,
+                id: `ability-${abilityId}`,
+            });
+            return;
+        }
+
+        this._playAbilityProcedural(profile || abilityId, position);
+    }
+
+    _playAbilityProcedural(kind, position) {
+        switch (kind) {
+            case 'stomp':
+            case 'bomb':
+            case 'emp':
+                this.playStomp();
+                break;
+            case 'boost':
+            case 'missile':
+                this.playBoost();
+                break;
+            case 'goal':
+                this.playGoal(position);
+                break;
+            case 'trick':
+            case 'blink':
+            case 'teleport':
+                this.playTrick();
+                break;
+            case 'jump':
+                this.playJump();
+                break;
+            default:
+                this.playBoost();
+        }
+    }
+
+    playTrick() {
+        if (!this.enabled || !this.ctx) return;
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, t);
+        osc.frequency.exponentialRampToValueAtTime(1400, t + 0.12);
+        osc.connect(gain);
+        gain.connect(this.sfxBus);
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.2 * this._sfxVolume, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+        osc.start(t);
+        osc.stop(t + 0.3);
+    }
+
+    /**
+     * @param {{ x: number, y: number, z: number }} position
+     */
+    playSpatialGoal(position) {
+        this.playGoal(position);
+    }
+
+    /**
+     * @param {string | undefined} chapter
+     */
+    setChapterMusic(chapter) {
+        if (!this.musicManager || this.muted) return;
+        this.musicManager.setVolume(this._musicVolume);
+        this.musicManager.crossfadeToChapter(chapter);
+    }
+
+    stopMusic() {
+        this.musicManager?.stop();
+    }
+
+    /**
+     * @param {AudioBuffer} buffer
+     * @param {object} opts
+     */
+    _playBuffer(buffer, opts) {
+        if (!this.voicePool.tryAcquire(opts)) return;
 
         const t = this.ctx.currentTime;
+        const source = this.ctx.createBufferSource();
+        source.buffer = buffer;
+        source.playbackRate.value = opts.pitch ?? 1;
 
-        // Material-specific parameters - tuned for distinct character
+        const gain = this.ctx.createGain();
+        gain.gain.value = opts.volume ?? 0.7;
+
+        const nodes = [source, gain];
+        let output = gain;
+
+        if (opts.spatial && opts.position && this.ctx.createPanner) {
+            const panner = this.ctx.createPanner();
+            panner.panningModel = 'HRTF';
+            panner.distanceModel = 'inverse';
+            panner.refDistance = 1;
+            panner.maxDistance = opts.maxDistance ?? 40;
+            panner.rolloffFactor = 1;
+            panner.positionX.value = opts.position.x;
+            panner.positionY.value = opts.position.y;
+            panner.positionZ.value = opts.position.z;
+            gain.connect(panner);
+            output = panner;
+            nodes.push(panner);
+        }
+
+        output.connect(this.sfxBus);
+        source.start(t);
+        const stopAt = t + buffer.duration / (opts.pitch || 1);
+        source.stop(stopAt);
+        scheduleVoiceStop(this.ctx, nodes, stopAt, () => this.voicePool.release(opts));
+    }
+
+    /**
+     * @param {number} velocity
+     * @param {number} radius
+     * @param {string} surfaceMaterial
+     * @param {string} id
+     * @param {number} [volumeScale]
+     */
+    _playSurfaceHitInternal(velocity, radius, surfaceMaterial, id, volumeScale = 1) {
+        const token = { id };
+        if (!this.voicePool.tryAcquire(token)) return;
+        try {
+            this._synthesizeSurfaceHit(velocity, radius, surfaceMaterial, volumeScale);
+        } finally {
+            setTimeout(() => this.voicePool.release(token), 350);
+        }
+    }
+
+    playSurfaceHit(velocity, radius = 0.5, surfaceMaterial = 'wood', id = 'surface') {
+        if (this.soundDefs) {
+            this.playCollision({
+                velocity,
+                radius,
+                marbleMaterial: 'glass',
+                surfaceMaterial,
+                id,
+            });
+            return;
+        }
+        this._playSurfaceHitInternal(velocity, radius, surfaceMaterial, id);
+    }
+
+    _synthesizeSurfaceHit(velocity, radius, surfaceMaterial, volumeScale = 1) {
+        if (!this.enabled || !this.ctx || this.muted) return;
+
+        const normalizedVel = Math.min(Math.max(velocity, 0), 30) / 30;
+        if (normalizedVel < 0.03) return;
+
+        const sizePitchMult = 1.5 - (radius - 0.3) * (0.8 / 0.5);
+        const t = this.ctx.currentTime;
+
         const materialParams = {
             wood: {
                 baseFreq: 450,
@@ -487,7 +789,7 @@ export class MarbleAudio {
                 noiseQ: 0.8,
                 harmonics: [1, 1.9, 2.8],
                 harmonicGains: [0.55, 0.25, 0.1],
-                waveform: 'triangle'
+                waveform: 'triangle',
             },
             metal: {
                 baseFreq: 900,
@@ -496,7 +798,7 @@ export class MarbleAudio {
                 noiseQ: 4,
                 harmonics: [1, 2.1, 3.1, 4.3, 5.5],
                 harmonicGains: [0.45, 0.35, 0.25, 0.15, 0.08],
-                waveform: 'sawtooth'
+                waveform: 'sawtooth',
             },
             concrete: {
                 baseFreq: 250,
@@ -505,7 +807,7 @@ export class MarbleAudio {
                 noiseQ: 0.4,
                 harmonics: [1, 1.4, 1.9],
                 harmonicGains: [0.35, 0.15, 0.05],
-                waveform: 'triangle'
+                waveform: 'triangle',
             },
             glass: {
                 baseFreq: 2000,
@@ -514,17 +816,25 @@ export class MarbleAudio {
                 noiseQ: 5,
                 harmonics: [1, 2.4, 4.0, 5.8],
                 harmonicGains: [0.55, 0.35, 0.2, 0.1],
-                waveform: 'sine'
-            }
+                waveform: 'sine',
+            },
+            rubber: {
+                baseFreq: 180,
+                decay: 0.12,
+                noiseFreq: 280,
+                noiseQ: 0.6,
+                harmonics: [1, 1.3],
+                harmonicGains: [0.4, 0.15],
+                waveform: 'triangle',
+            },
         };
 
         const params = materialParams[surfaceMaterial] || materialParams.wood;
         const pitch = params.baseFreq * sizePitchMult;
 
         const gain = this.ctx.createGain();
-        gain.connect(this.masterGain);
+        gain.connect(this.sfxBus);
 
-        // Impact noise (shorter and sharper than marble-to-marble)
         const noiseBuffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.05, this.ctx.sampleRate);
         const noiseData = noiseBuffer.getChannelData(0);
         for (let i = 0; i < noiseBuffer.length; i++) {
@@ -545,26 +855,19 @@ export class MarbleAudio {
         noiseGain.connect(gain);
 
         noiseGain.gain.setValueAtTime(0, t);
-        noiseGain.gain.linearRampToValueAtTime(normalizedVel * 0.5, t + 0.002);
+        noiseGain.gain.linearRampToValueAtTime(normalizedVel * 0.5 * volumeScale, t + 0.002);
         noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
 
         noise.start(t);
         noise.stop(t + 0.05);
 
-        // Ringing tones (material-specific)
         params.harmonics.forEach((ratio, i) => {
             const osc = this.ctx.createOscillator();
             const oscGain = this.ctx.createGain();
 
-            // Use material-specific waveform, but keep fundamental pure
-            if (i === 0) {
-                osc.type = 'sine'; // Fundamental always sine for clarity
-            } else {
-                osc.type = params.waveform || 'triangle';
-            }
-
+            osc.type = i === 0 ? 'sine' : (params.waveform || 'triangle');
             osc.frequency.value = pitch * ratio;
-            osc.detune.value = (Math.random() - 0.5) * 12; // Slightly less detune for cleaner sound
+            osc.detune.value = (Math.random() - 0.5) * 12;
 
             osc.connect(oscGain);
             oscGain.connect(gain);
@@ -574,7 +877,7 @@ export class MarbleAudio {
 
             oscGain.gain.setValueAtTime(0, t);
             oscGain.gain.linearRampToValueAtTime(
-                normalizedVel * params.harmonicGains[i],
+                normalizedVel * params.harmonicGains[i] * volumeScale,
                 t + attack
             );
             oscGain.gain.exponentialRampToValueAtTime(0.001, t + attack + decay);
@@ -583,9 +886,8 @@ export class MarbleAudio {
             osc.stop(t + attack + decay + 0.05);
         });
 
-        // Overall envelope
         gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(normalizedVel * 0.7, t + 0.005);
+        gain.gain.linearRampToValueAtTime(normalizedVel * 0.7 * volumeScale, t + 0.005);
         gain.gain.exponentialRampToValueAtTime(0.001, t + params.decay + 0.1);
     }
 
@@ -612,7 +914,8 @@ export class MarbleAudio {
             wood: { baseFreq: 200, freqRange: 150, q: 0.5 },
             metal: { baseFreq: 400, freqRange: 300, q: 1 },
             concrete: { baseFreq: 100, freqRange: 80, q: 0.3 },
-            glass: { baseFreq: 300, freqRange: 200, q: 0.8 }
+            glass: { baseFreq: 300, freqRange: 200, q: 0.8 },
+            rubber: { baseFreq: 140, freqRange: 90, q: 0.4 },
         };
         const params = materialParams[surfaceMaterial] || materialParams.wood;
 
@@ -644,7 +947,7 @@ export class MarbleAudio {
         // Connect graph
         noise.connect(filter);
         filter.connect(gain);
-        gain.connect(this.masterGain);
+        gain.connect(this.sfxBus);
 
         // Start silent - will be modulated by velocity
         gain.gain.setValueAtTime(0, t);
@@ -741,7 +1044,7 @@ export class MarbleAudio {
 
         const t = this.ctx.currentTime;
         const gain = this.ctx.createGain();
-        gain.connect(this.masterGain);
+        gain.connect(this.sfxBus);
 
         // 1. Heavy thud (low freq noise)
         const bufferSize = this.ctx.sampleRate * 0.2;

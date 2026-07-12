@@ -113,6 +113,9 @@ export class InitLevelMenu {
         
         // Clear current level
         this.clearLevel()
+        this.network?.disconnect()
+        this.multiplayerMode = false
+        this.touchControls?.setGameplayActive(false)
         this.currentLevel = null
         this.levelComplete = false
         this.isPaused = false

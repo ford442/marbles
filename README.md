@@ -54,6 +54,19 @@ npm run build:wasm    # requires Emscripten SDK — see wasm/README.md
 The game runs fully without the WASM binary; `src/wasm-bridge.js` falls back to
 equivalent pure-JavaScript implementations automatically.
 
+### Experimental WebGPU particles
+
+Filament stays on WebGL2. Optional WebGPU compute handles up to **8192** particles on a transparent overlay canvas.
+
+```
+npm run dev
+# open http://localhost:5173/?webgpuParticles=1
+# benchmark burst: ?webgpuParticles=1&webgpuStress=1
+```
+
+See **[docs/WEBGPU_PARTICLES.md](docs/WEBGPU_PARTICLES.md)** for architecture, flags, and fallback behavior.
+The archived C++ Dawn experiment is **not** used — see `docs/backups/experimental-wasm-renderer/ARCHIVED.md`.
+
 ## Implementation Details
 
 ### Custom C++ WASM Module

@@ -7,6 +7,7 @@ Thank you for your interest in contributing! This guide will help you create new
 - [Getting Started](#getting-started)
 - [Adding a Zone (Level Geometry)](#adding-a-zone-level-geometry)
 - [Creating Maps](#creating-maps)
+- [Art-Directed Tracks (GLB)](#art-directed-tracks-glb)
 - [Creating Marbles](#creating-marbles)
 - [Creating Sounds](#creating-sounds)
 - [Asset Validation](#asset-validation)
@@ -94,7 +95,7 @@ Many legacy levels still live in `DEV_LEVELS` (`src/levels.js`). To migrate one:
 4. Remove the entry from `DEV_LEVELS` (or leave it behind `?devLevels=1` until the JSON version is verified).
 5. Run `npm run validate:assets`.
 
-**Already on JSON (manifest-driven):** `tutorial`, `landing`, `jump`, `slalom`, `staircase`, `full_course`, `sandbox`, `volcano_run`.
+**Already on JSON (manifest-driven):** `tutorial`, `landing`, `jump`, `slalom`, `staircase`, `full_course`, `sandbox`, `volcano_run`, `neon_showcase`.
 
 **Still code-only (dev flag):** all other entries in `DEV_LEVELS` — mushroom hop, wind tunnel, themed factory zones, etc.
 
@@ -116,6 +117,7 @@ Primitive zones (`floor`, `track`, `goal`, `slalom`, etc.) are handled by method
 ```
 assets/
 ├── maps/           # Level definitions (.json)
+├── tracks/         # GLB/GLTF course meshes (collision + render)
 ├── marbles/        # Marble definitions (.json)
 ├── sounds/         # Sound definitions (.json)
 ├── materials/      # Material definitions (.json)
@@ -156,6 +158,7 @@ Maps define the 3D environment where marbles roll.
 - `slalom` - Obstacle course section
 - `staircase` - Step climbing section
 - `goal` - Victory zone
+- `model` - Imported GLB/GLTF track mesh (see [Art-Directed Tracks](#art-directed-tracks-glb))
 - `custom` - Custom zone (advanced)
 
 ### Example Map
@@ -204,6 +207,72 @@ Maps define the 3D environment where marbles roll.
   }
 }
 ```
+
+## Art-Directed Tracks (GLB)
+
+Import Blender or Godot meshes as both **Filament renderables** and **Rapier colliders** instead of stacking boxes.
+
+### Map JSON
+
+Add a zone with `type: "model"`:
+
+```json
+{
+  "type": "model",
+  "model": "tracks/neon_showcase.glb",
+  "collider": "trimesh",
+  "pos": { "x": 0, "y": 3, "z": 15 },
+  "rotY": 0,
+  "scale": 1,
+  "materialPreset": "neon",
+  "lod": [
+    { "model": "tracks/neon_showcase_lod1.glb", "distance": 45 }
+  ]
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `model` | Path relative to `assets/` (e.g. `tracks/my_track.glb`) |
+| `collider` | `trimesh` (static courses), `convexHull` (dynamic props), or `none` (render only) |
+| `materialPreset` | Optional — remap to game PBR presets; omit to keep embedded glTF textures |
+| `lod` | Optional distance-switched lower-poly models for large courses |
+
+If the file fails to load or parse, the game **falls back to the built-in box track** (`createTrackZone`) so the level stays playable.
+
+**Showcase level:** `neon_showcase` in `assets/maps/neon_showcase.json`.
+
+Regenerate placeholder meshes: `node scripts/generate-showcase-track.cjs`.
+
+### Blender export settings
+
+Use **glTF 2.0 (.glb)** — single binary preferred for tracks.
+
+1. **Scale** — Apply transforms (`Ctrl+A` → All Transforms) so 1 Blender unit = 1 game unit (meters).
+2. **Origin** — Set origin to geometry center or track start; align with the zone `pos` in JSON.
+3. **Collision mesh** — Use a single watertight mesh or merged collision shell; avoid paper-thin planes (minimum ~0.2 units thick for stable marble contact).
+4. **Normals** — Recalculate outside (`Shift+N`); trimesh colliders assume outward-facing normals.
+5. **Format** — Export: **glTF Binary (.glb)**.
+   - Include: **Mesh** (required)
+   - Optional: **Materials** (embedded), **UVs**, **Vertex Colors**
+   - Disable: **Cameras**, **Lights**, **Animations** (not used for static tracks)
+6. **Compression** — Optional **Draco** or **meshopt** for download size; test in-game after enabling (Filament gltfio decodes in WASM).
+7. **LOD** — Export separate `.glb` files per LOD level; list them in the zone `lod` array with camera distance thresholds.
+
+### Godot export
+
+Export as **glTF 2.0 (.glb)** with **+Y Up** (matches game coordinates). Merge collision meshes before export; same thickness and normal rules as Blender.
+
+### File layout
+
+```
+assets/tracks/
+├── neon_showcase.glb
+├── neon_showcase_lod1.glb
+└── your_track.glb
+```
+
+Paths in JSON omit the `assets/` prefix: `"model": "tracks/your_track.glb"`.
 
 ## Creating Marbles
 

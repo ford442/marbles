@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "default": "collision_concrete",
+  "entries": [
+    { "marble": "*", "surface": "wood", "sound": "collision_wood", "pitchMin": 0.9, "pitchMax": 1.1 },
+    { "marble": "*", "surface": "metal", "sound": "collision_metal", "pitchMin": 0.88, "pitchMax": 1.12 },
+    { "marble": "*", "surface": "concrete", "sound": "collision_concrete", "pitchMin": 0.92, "pitchMax": 1.05 },
+    { "marble": "*", "surface": "glass", "sound": "collision_glass", "pitchMin": 0.95, "pitchMax": 1.2 },
+    { "marble": "*", "surface": "rubber", "sound": "collision_rubber", "pitchMin": 0.8, "pitchMax": 1.0 },
+    { "marble": "metal", "surface": "metal", "sound": "collision_metal", "pitchMin": 0.82, "pitchMax": 1.05 },
+    { "marble": "glass", "surface": "glass", "sound": "collision_glass", "pitchMin": 1.0, "pitchMax": 1.25 }
+  ]
+}

@@ -52,11 +52,11 @@ export class AbilityMissiles {
         })
         this.dynamicBodies.add(body)
 
-        if (typeof audio !== 'undefined' && audio.playBoost) audio.playBoost()
+        if (audio.playAbility) audio.playAbility('missile', spawnPos)
     }
 
     explodeMissile(missilePos) {
-        if (audio.playStomp) audio.playStomp()
+        if (audio.playAbility) audio.playAbility('bomb', missilePos)
 
         const pos = missilePos
         const radius = 10.0

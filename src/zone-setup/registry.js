@@ -5,6 +5,7 @@
  * Factory handlers delegate to src/zones/<name>.js builders.
  */
 import * as zones from '../zones/index.js';
+import { createModelZone } from '../assets/gltf-track-loader.js';
 
 /** @typedef {(game: object, zone: object, offset: {x:number,y:number,z:number}) => void | Promise<void>} ZoneHandler */
 
@@ -19,6 +20,7 @@ const BUILTIN_ZONE_HANDLERS = {
     split: (game, _zone, offset) => game.createSplitZone(offset),
     forest: (game, _zone, offset) => game.createForestZone(offset),
     goal: (game, zone, offset) => game.createGoalZone(offset, zone.color),
+    model: (game, zone, offset) => createModelZone(game, zone, offset),
     orchard: (game, zone, _offset) => game.createOrchardZone(zone.center, zone.radius),
     spiral: (game, _zone, offset) => game.createSpiralZone(offset),
     zigzag: (game, _zone, offset) => game.createZigZagZone(offset),

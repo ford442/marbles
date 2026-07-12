@@ -6,6 +6,8 @@ import { applyInitSettings } from './settings.js';
 import { applyInitGraphics } from './graphics.js';
 import { applyInitLevelMenu } from './level-menu.js';
 import { applyInitLevelLoader } from './level-loader.js';
+import { applyInitMultiplayerMenu } from './multiplayer-menu.js';
+import { applyInitTouchControls } from './touch-init.js';
 import { applyInitCleanup } from './cleanup.js';
 
 export function applyInitMethods(targetClass) {
@@ -16,5 +18,7 @@ export function applyInitMethods(targetClass) {
     applyInitGraphics(targetClass);
     applyInitLevelMenu(targetClass);
     applyInitLevelLoader(targetClass);
+    applyInitMultiplayerMenu(targetClass);
+    applyInitTouchControls(targetClass);
     applyInitCleanup(targetClass);
 }

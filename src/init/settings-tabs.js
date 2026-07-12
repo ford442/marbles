@@ -156,6 +156,53 @@ export class InitSettingsTabs {
             })
         }
 
+        const touchEnabled = document.getElementById('setting-touch-enabled')
+        if (touchEnabled) {
+            touchEnabled.addEventListener('change', (e) => {
+                if (!this.settings.controls.touch) this.settings.controls.touch = {}
+                this.settings.controls.touch.enabled = e.target.value
+                this.applyTouchSettings?.()
+            })
+        }
+
+        const touchCamSlider = document.getElementById('setting-touch-camera')
+        const touchCamValue = document.getElementById('value-touch-camera')
+        if (touchCamSlider && touchCamValue) {
+            touchCamSlider.addEventListener('input', (e) => {
+                touchCamValue.textContent = `${e.target.value}%`
+                if (!this.settings.controls.touch) this.settings.controls.touch = {}
+                this.settings.controls.touch.cameraSensitivity = parseInt(e.target.value, 10)
+            })
+        }
+
+        const touchInvert = document.getElementById('setting-touch-invert-y')
+        if (touchInvert) {
+            touchInvert.addEventListener('change', (e) => {
+                if (!this.settings.controls.touch) this.settings.controls.touch = {}
+                this.settings.controls.touch.invertCameraY = e.target.checked
+            })
+        }
+
+        const touchJoystickSide = document.getElementById('setting-touch-joystick-side')
+        if (touchJoystickSide) {
+            touchJoystickSide.addEventListener('change', (e) => {
+                if (!this.settings.controls.touch) this.settings.controls.touch = {}
+                this.settings.controls.touch.joystickSide = e.target.value
+                this.applyTouchSettings?.()
+            })
+        }
+
+        const touchSwapButtons = document.getElementById('setting-touch-swap-buttons')
+        if (touchSwapButtons) {
+            touchSwapButtons.addEventListener('change', (e) => {
+                if (!this.settings.controls.touch) this.settings.controls.touch = {}
+                const swapped = e.target.checked
+                this.settings.controls.touch.jumpSlot = swapped ? 'secondary' : 'primary'
+                this.settings.controls.touch.boostSlot = swapped ? 'primary' : 'secondary'
+                this.applyTouchSettings?.()
+            })
+        }
+
         // Accessibility settings
         const uiScaleSlider = document.getElementById('setting-ui-scale')
         const uiScaleValue = document.getElementById('value-ui-scale')
@@ -248,6 +295,25 @@ export class InitSettingsTabs {
 
         const invertYToggle = document.getElementById('setting-invert-y')
         if (invertYToggle) invertYToggle.checked = s.controls.invertY
+
+        const touch = s.controls.touch || {}
+        const touchEnabled = document.getElementById('setting-touch-enabled')
+        if (touchEnabled) touchEnabled.value = touch.enabled || 'auto'
+
+        const touchCamSlider = document.getElementById('setting-touch-camera')
+        const touchCamValue = document.getElementById('value-touch-camera')
+        const touchCam = touch.cameraSensitivity ?? 50
+        if (touchCamSlider) touchCamSlider.value = touchCam
+        if (touchCamValue) touchCamValue.textContent = `${touchCam}%`
+
+        const touchInvert = document.getElementById('setting-touch-invert-y')
+        if (touchInvert) touchInvert.checked = touch.invertCameraY === true
+
+        const touchJoystickSide = document.getElementById('setting-touch-joystick-side')
+        if (touchJoystickSide) touchJoystickSide.value = touch.joystickSide || 'left'
+
+        const touchSwapButtons = document.getElementById('setting-touch-swap-buttons')
+        if (touchSwapButtons) touchSwapButtons.checked = touch.jumpSlot === 'secondary'
 
         // Accessibility
         const uiScaleSlider = document.getElementById('setting-ui-scale')

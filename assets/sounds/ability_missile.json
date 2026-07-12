@@ -1,0 +1,9 @@
+{
+  "id": "ability_missile",
+  "name": "Missile Launch",
+  "version": "1.0.0",
+  "category": "sfx",
+  "files": [],
+  "synthesis": { "type": "ability", "profile": "boost" },
+  "properties": { "volume": 0.75, "spatial": true, "maxDistance": 50 }
+}

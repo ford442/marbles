@@ -1,3 +1,6 @@
+import { destroyLoadedTrackModels } from '../assets/gltf-track-loader.js';
+import { audio } from '../audio.js';
+
 export class InitCleanup {
     clearLevel() {
         for (const m of this.marbles) {
@@ -20,6 +23,11 @@ export class InitCleanup {
             this.world.removeRigidBody(body)
         }
         this.staticBodies = []
+
+        destroyLoadedTrackModels(this)
+        this.trackLodManager?.reset()
+        audio?.stopMusic?.()
+        audio?.stopAllRolling?.()
 
         for (const entity of this.staticEntities) {
             this.scene.remove(entity)
@@ -52,6 +60,11 @@ export class InitCleanup {
         // Clear ambient zone particle emitters
         if (this.particleSystem) {
             this.particleSystem.clearAmbientEmitters()
+            this.particleSystem.dispose()
+        }
+        if (this.webgpuParticles) {
+            this.webgpuParticles.dispose()
+            this.webgpuParticles = null
         }
 
         for (const obj of this.dynamicObjects) {
@@ -110,6 +123,10 @@ export class InitCleanup {
             this.Filament.EntityManager.get().destroy(this.ghostLightEntity)
             this.ghostLightEntity = null
         }
+
+        this.remotePlayers?.clear()
+        this.multiplayerMode = false
+        this.touchControls?.setGameplayActive(false)
 
         if (this.portalA) this.destroyPortal(this.portalA)
         if (this.portalB) this.destroyPortal(this.portalB)

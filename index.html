@@ -3,7 +3,13 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <title>Marbles 3D</title>
     <script src="./filament.js"></script>
     <style>
@@ -18,6 +24,7 @@
             background-color: #000;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #fff;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
 
         #loading,
@@ -28,6 +35,9 @@
 
         #canvas {
             position: fixed;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
             top: 0;
             left: 0;
             width: 100vw;
@@ -48,6 +58,137 @@
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.3s ease;
+        }
+
+        /* WebGPU particle overlay (experimental — ?webgpuParticles=1) */
+        #webgpu-particles-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            z-index: 4;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        /* Touch controls (mobile / tablet) */
+        #touch-controls {
+            position: fixed;
+            inset: 0;
+            z-index: 90;
+            pointer-events: none;
+        }
+
+        #touch-controls.hidden {
+            display: none;
+        }
+
+        .touch-joystick {
+            position: absolute;
+            left: max(16px, env(safe-area-inset-left));
+            bottom: max(20px, env(safe-area-inset-bottom));
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.35);
+            border: 2px solid rgba(127, 255, 212, 0.35);
+            pointer-events: auto;
+            touch-action: none;
+        }
+
+        .touch-joystick-knob {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: rgba(127, 255, 212, 0.55);
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 12px rgba(127, 255, 212, 0.35);
+        }
+
+        .touch-actions {
+            position: absolute;
+            right: max(16px, env(safe-area-inset-right));
+            bottom: max(20px, env(safe-area-inset-bottom));
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+
+        .touch-btn {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            color: #fff;
+            font-size: 1.4rem;
+            font-weight: 700;
+            pointer-events: auto;
+            touch-action: none;
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .touch-btn-primary {
+            background: rgba(233, 69, 96, 0.55);
+            border-color: rgba(233, 69, 96, 0.8);
+        }
+
+        .touch-btn-secondary {
+            background: rgba(255, 200, 0, 0.35);
+            border-color: rgba(255, 200, 0, 0.7);
+        }
+
+        .touch-camera-zone {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 55%;
+            height: 100%;
+            pointer-events: auto;
+            touch-action: none;
+        }
+
+        #touch-controls.touch-side-right .touch-joystick {
+            left: auto;
+            right: max(16px, env(safe-area-inset-right));
+        }
+
+        #touch-controls.touch-side-right .touch-actions {
+            right: auto;
+            left: max(16px, env(safe-area-inset-left));
+        }
+
+        #touch-controls.touch-side-right .touch-camera-zone {
+            right: auto;
+            left: 0;
+        }
+
+        #landscape-hint {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 300;
+            background: rgba(0, 0, 0, 0.88);
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 24px;
+            pointer-events: none;
+        }
+
+        #landscape-hint.active {
+            display: flex;
+        }
+
+        #landscape-hint p {
+            font-size: 1.1rem;
+            color: #7fffd4;
+            max-width: 280px;
         }
 
         /* ========================================
@@ -622,6 +763,153 @@
             margin-bottom: 8px;
             width: 90%;
             max-width: 1200px;
+        }
+
+        #level-menu-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 8px;
+            width: 90%;
+            max-width: 1200px;
+        }
+
+        .level-party-btn {
+            padding: 10px 18px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 200, 0.45);
+            background: rgba(0, 255, 200, 0.12);
+            color: #7fffd4;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .level-party-btn:hover {
+            background: rgba(0, 255, 200, 0.22);
+            transform: translateY(-1px);
+        }
+
+        #multiplayer-lobby {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            z-index: 250;
+        }
+
+        #multiplayer-lobby.active {
+            display: flex;
+        }
+
+        .mp-lobby-card {
+            background: linear-gradient(145deg, #1a1a2e, #0f3460);
+            border: 2px solid rgba(0, 255, 200, 0.35);
+            border-radius: 16px;
+            padding: 28px 32px;
+            width: min(420px, 92vw);
+            color: #fff;
+        }
+
+        .mp-lobby-card h2 {
+            margin: 0 0 8px;
+            color: #7fffd4;
+        }
+
+        .mp-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin: 14px 0;
+        }
+
+        .mp-field label {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        .mp-field input,
+        .mp-field select {
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(0, 0, 0, 0.35);
+            color: #fff;
+            font-family: inherit;
+        }
+
+        .mp-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        .mp-actions button {
+            flex: 1;
+            min-width: 120px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: inherit;
+        }
+
+        #btn-create-room, #btn-join-room {
+            background: rgba(0, 255, 200, 0.2);
+            color: #7fffd4;
+            border: 1px solid rgba(0, 255, 200, 0.4);
+        }
+
+        #btn-start-race {
+            background: linear-gradient(135deg, #e94560, #c73e54);
+            color: #fff;
+        }
+
+        #btn-leave-lobby, #btn-close-lobby {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ccc;
+        }
+
+        #mp-player-list {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0 0;
+            min-height: 2.5em;
+        }
+
+        #mp-player-list li {
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        #mp-lobby-status {
+            min-height: 1.2em;
+            font-size: 0.85rem;
+            margin-top: 10px;
+        }
+
+        #mp-disconnect-banner {
+            display: none;
+            position: fixed;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(200, 40, 40, 0.9);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 8px;
+            z-index: 120;
+            font-weight: 600;
+        }
+
+        #mp-disconnect-banner.active {
+            display: block;
         }
 
         .campaign-nav {
@@ -1787,6 +2075,25 @@
             color: #e94560;
         }
 
+        .replay-share-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .replay-share-row .modal-btn {
+            flex: 1;
+            font-size: 0.85rem;
+            padding: 10px 12px;
+        }
+
+        #replay-import-status {
+            font-size: 0.8rem;
+            color: #7fffd4;
+            min-height: 1.2em;
+            margin-bottom: 8px;
+        }
+
         .modal-buttons {
             display: flex;
             gap: 12px;
@@ -2599,16 +2906,52 @@
         </div>
     </div>
 
+    <!-- Multiplayer Lobby -->
+    <div id="multiplayer-lobby">
+        <div class="mp-lobby-card">
+            <h2>🏁 Party Race</h2>
+            <p style="color:#aaa; margin:0 0 8px; font-size:0.9rem;">Arcade transform sync — each player runs local physics.</p>
+            <div class="mp-field">
+                <label for="mp-player-name">Your name</label>
+                <input id="mp-player-name" type="text" maxlength="24" placeholder="Marble Racer" />
+            </div>
+            <div class="mp-field">
+                <label for="mp-room-code">Room code</label>
+                <input id="mp-room-code" type="text" maxlength="8" placeholder="ABC123" style="text-transform:uppercase;" />
+            </div>
+            <div class="mp-field mp-host-only">
+                <label for="mp-level-select">Track (host)</label>
+                <select id="mp-level-select"></select>
+            </div>
+            <div class="mp-actions">
+                <button id="btn-create-room" type="button">Create Room</button>
+                <button id="btn-join-room" type="button">Join Room</button>
+            </div>
+            <div class="mp-actions">
+                <button id="btn-start-race" type="button" class="mp-host-only">Start Race</button>
+                <button id="btn-leave-lobby" type="button">Leave</button>
+            </div>
+            <div>
+                <strong style="font-size:0.85rem; color:#aaa;">Players</strong>
+                <ul id="mp-player-list"></ul>
+            </div>
+            <div id="mp-lobby-status"></div>
+        </div>
+    </div>
+
     <!-- Level Selection Menu -->
     <div id="level-menu">
         <h1>🎱 MARBLES 3D</h1>
         <div class="subtitle">Choose your challenge</div>
-        <div id="level-menu-toolbar"></div>
+        <div id="level-menu-toolbar">
+            <button id="btn-party-race" class="level-party-btn" type="button">🏁 Party Race</button>
+        </div>
         <div id="level-grid"></div>
     </div>
 
     <!-- Game UI -->
     <div id="ui">
+        <div id="mp-disconnect-banner">Relay disconnected — remote marbles may freeze.</div>
         <div id="level-name">Level</div>
         <div id="score">Score: 0</div>
         <div id="combo" style="display: none;">Combo: x1</div>
@@ -2760,6 +3103,7 @@
             <div class="pause-menu-buttons">
                 <button id="btn-resume" class="pause-btn">▶️ Resume</button>
                 <button id="btn-restart-pause" class="pause-btn secondary">🔄 Restart Level</button>
+                <button id="btn-import-ghost-pause" class="pause-btn secondary">👻 Import Ghost</button>
                 <button id="btn-settings" class="pause-btn secondary">⚙️ Settings</button>
                 <button id="btn-quit-menu" class="pause-btn danger">🏠 Quit to Menu</button>
             </div>
@@ -2925,6 +3269,57 @@
                         </div>
                         <p class="setting-description">Invert vertical camera movement</p>
                     </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <span>Touch Controls</span>
+                        </div>
+                        <p class="setting-description">Virtual joystick and on-screen buttons</p>
+                        <select id="setting-touch-enabled" class="settings-select">
+                            <option value="auto">Auto (mobile only)</option>
+                            <option value="on">Always on</option>
+                            <option value="off">Off</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <span>Touch Camera Sensitivity</span>
+                            <span class="setting-value" id="value-touch-camera">50%</span>
+                        </div>
+                        <input type="range" id="setting-touch-camera" class="settings-slider" min="10" max="150" value="50">
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <span>Invert Touch Camera Y</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="setting-touch-invert-y">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <span>Joystick Side</span>
+                        </div>
+                        <select id="setting-touch-joystick-side" class="settings-select">
+                            <option value="left">Left</option>
+                            <option value="right">Right</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <span>Swap Jump / Boost</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="setting-touch-swap-buttons">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <p class="setting-description">Swap primary and secondary action button positions</p>
+                    </div>
                     
                     <div class="setting-item">
                         <div class="setting-label">
@@ -3011,6 +3406,12 @@
             <div id="modal-completion-time" class="completion-time">00:00.0</div>
             <div class="time-label">Completion Time</div>
             <div id="modal-new-record" class="new-record-badge" style="display: none;">🏆 NEW GHOST RECORD!</div>
+
+            <div id="replay-share-section" class="replay-share-row" style="display: none;">
+                <button id="btn-copy-replay" class="modal-btn modal-btn-secondary" type="button">Copy Ghost Replay</button>
+                <button id="btn-import-replay" class="modal-btn modal-btn-secondary" type="button">Import Replay</button>
+            </div>
+            <div id="replay-import-status"></div>
             
             <div class="score-breakdown">
                 <div class="score-row">
@@ -3130,7 +3531,23 @@
         <div id="editor-hint">Click canvas to place · Arrow keys move selection · R rotate · Shift+drag pan · Scroll zoom</div>
     </div>
 
+    <div id="landscape-hint" aria-hidden="true">
+        <p>Rotate your device to landscape for the best marble racing experience.</p>
+    </div>
+
+    <div id="touch-controls" class="hidden" aria-hidden="true">
+        <div id="touch-joystick" class="touch-joystick" aria-label="Move">
+            <div id="touch-joystick-knob" class="touch-joystick-knob"></div>
+        </div>
+        <div class="touch-actions">
+            <button id="touch-btn-boost" class="touch-btn touch-btn-secondary" type="button" aria-label="Boost">⚡</button>
+            <button id="touch-btn-jump" class="touch-btn touch-btn-primary" type="button" aria-label="Jump">⬆</button>
+        </div>
+        <div id="touch-camera-zone" class="touch-camera-zone" aria-hidden="true"></div>
+    </div>
+
     <canvas id="canvas"></canvas>
+    <canvas id="webgpu-particles-canvas"></canvas>
     <canvas id="speedlines-canvas"></canvas>
     <script type="module" src="/src/main.js"></script>
 </body>

@@ -71,12 +71,49 @@ export class ParticleSystem {
         // Statistics
         this.stats = {
             activeCount: 0,
-            emittedThisFrame: 0
+            emittedThisFrame: 0,
+            backend: 'cpu',
         }
+        this.gpuBackend = null
     }
 
     setStressScale(scale) {
         this._stressScale = Math.max(0.2, Math.min(1, Number(scale) || 1))
+    }
+
+    /**
+     * Attach WebGPU compute backend (opt-in, non-blocking init).
+     * @param {import('./webgpu/particle-backend.js').WebGPUParticleBackend} backend
+     */
+    enableWebGPU(backend) {
+        if (!backend?.ready) return
+        this.gpuBackend = backend
+        this.stats.backend = 'webgpu'
+        this._expandPool(backend.maxParticles)
+        backend.uploadAll()
+        console.log(`[ParticleSystem] WebGPU backend enabled (${this.maxParticles} slots)`)
+    }
+
+    _expandPool(targetSize) {
+        if (targetSize <= this.maxParticles) return
+        for (let i = this.particles.length; i < targetSize; i++) {
+            this.particles.push({
+                pos: [0, 0, 0],
+                vel: [0, 0, 0],
+                life: 0,
+                maxLife: 1,
+                size: 0.2,
+                color: [1, 1, 1, 1],
+                type: 'default',
+                active: false,
+                drag: 0.8,
+                gravity: true,
+                spin: 0,
+                spinRate: 0,
+            })
+        }
+        this.maxParticles = targetSize
+        this.instanceData = new Float32Array(this.maxParticles * 8)
     }
 
     /**
@@ -186,6 +223,10 @@ export class ParticleSystem {
             this.initParticle(particle, type, pos, params)
             particle.active = true
             this.activeParticles.push(particle)
+            if (this.gpuBackend) {
+                const idx = this.particles.indexOf(particle)
+                if (idx >= 0) this.gpuBackend.markDirty(idx)
+            }
         }
          
         this.stats.emittedThisFrame += numToEmit
@@ -330,8 +371,14 @@ export class ParticleSystem {
         
         const g = [0, -9.81, 0] // gravity
         const gdt = [g[0] * deltaTime, g[1] * deltaTime, g[2] * deltaTime]
+
+        if (this.gpuBackend?.ready) {
+            this.gpuBackend.step(deltaTime)
+            this.stats.activeCount = this.activeParticles.length
+            return
+        }
         
-        // Update all active particles
+        // Update all active particles (CPU path)
         for (let i = this.activeParticles.length - 1; i >= 0; i--) {
             const p = this.activeParticles[i]
             
@@ -412,7 +459,8 @@ export class ParticleSystem {
             ...this.stats,
             poolSize: this.particles.length,
             maxParticles: this.maxParticles,
-            activeParticles: this.activeParticles.length
+            activeParticles: this.activeParticles.length,
+            webgpu: !!this.gpuBackend?.ready,
         }
     }
     
@@ -420,7 +468,8 @@ export class ParticleSystem {
      * Cleanup resources
      */
     dispose() {
-        // The Filament engine manages the VB/IB cleanup
+        this.gpuBackend?.dispose()
+        this.gpuBackend = null
         this.activeParticles = []
         this.particles = []
     }

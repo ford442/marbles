@@ -1,0 +1,61 @@
+{
+  "id": "neon_showcase",
+  "name": "Neon Showcase Track",
+  "description": "Art-directed GLB channel ramp with trimesh collision. Falls back to box track if the model is missing.",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "difficulty": "easy",
+  "chapter": "neon",
+  "environment": "neon_city",
+  "zones": [
+    {
+      "type": "floor",
+      "pos": { "x": 0, "y": -2, "z": 0 },
+      "size": { "x": 60, "y": 0.5, "z": 80 },
+      "color": [0.08, 0.06, 0.12]
+    },
+    {
+      "type": "model",
+      "model": "tracks/neon_showcase.glb",
+      "collider": "trimesh",
+      "pos": { "x": 0, "y": 3, "z": 15 },
+      "materialPreset": "neon",
+      "color": [0.2, 0.85, 1.0],
+      "lod": [
+        { "model": "tracks/neon_showcase_lod1.glb", "distance": 45 }
+      ]
+    },
+    {
+      "type": "goal",
+      "pos": { "x": 0, "y": 0.5, "z": 38 },
+      "color": [1.0, 0.84, 0.0]
+    }
+  ],
+  "spawn": { "x": 0, "y": 7, "z": -2 },
+  "goals": [
+    {
+      "id": 1,
+      "range": {
+        "x": [-2, 2],
+        "y": [0, 2],
+        "z": [36, 40]
+      }
+    }
+  ],
+  "camera": {
+    "mode": "orbit",
+    "angle": 0,
+    "height": 12,
+    "radius": 28
+  },
+  "abilities": {
+    "enabled": ["jump"]
+  },
+  "medals": {
+    "goldTime": 20,
+    "silverTime": 35,
+    "bronzeTime": 60,
+    "parTime": 28
+  },
+  "collectiblesTotal": 0
+}

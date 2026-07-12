@@ -41,7 +41,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["floor", "track", "landing", "jump", "slalom", "staircase", "goal", "custom"]
+            "enum": ["floor", "track", "landing", "jump", "slalom", "staircase", "goal", "custom", "model"]
           },
           "pos": {
             "type": "object",
@@ -69,6 +69,35 @@
           "rotY": {
             "type": "number",
             "description": "Y-axis rotation in radians (optional)"
+          },
+          "model": {
+            "type": "string",
+            "description": "GLB/GLTF path relative to assets/ (e.g. tracks/neon_01.glb)"
+          },
+          "collider": {
+            "type": "string",
+            "enum": ["trimesh", "convexHull", "none"],
+            "description": "Rapier collider type for imported mesh (default: trimesh)"
+          },
+          "scale": {
+            "type": "number",
+            "description": "Uniform scale applied to model and collider"
+          },
+          "materialPreset": {
+            "type": "string",
+            "description": "Optional PBR preset override (keeps embedded textures when omitted)"
+          },
+          "lod": {
+            "type": "array",
+            "description": "Distance-switched LOD models (furthest listed LOD swaps in at distance)",
+            "items": {
+              "type": "object",
+              "required": ["model", "distance"],
+              "properties": {
+                "model": { "type": "string" },
+                "distance": { "type": "number", "minimum": 0 }
+              }
+            }
           }
         }
       }

@@ -1,4 +1,6 @@
 import { getLevel } from '../levels/catalog.js';
+import { runWebGPUStressBurst } from '../webgpu/index.js';
+import { audio } from '../audio.js';
 
 export class InitLevelLoader {
     async loadLevel(levelId) {
@@ -18,12 +20,13 @@ export class InitLevelLoader {
         console.log('[LEVEL] Cleared previous level')
         this.perfMonitor?.resetLevel(levelId)
         this.cullingManager?.reset()
+        this.trackLodManager?.reset()
         this.marbleLodManager?.reset()
         this.effectPool?.reset()
         this.levelEffectBudget?.reset()
 
-        this.ghostRecording = []
-        this.ghostPlaybackIndex = 0
+        this.ghostReplay?.beginRecording()
+        this.ghostReplay?.resetPlayback()
 
         this.currentLevel = levelId
         this.levelNameEl.textContent = level.name
@@ -57,6 +60,8 @@ export class InitLevelLoader {
             this.setEnvironment(level.environment)
         }
 
+        audio?.setChapterMusic?.(level.chapter || level.environment)
+
         // Apply per-level color grade override when it differs from the IBL environment.
         // e.g. a level can use 'volcanic' IBL but request 'space_nebula' grading for a surreal twist.
         if (level.colorGrade && level.colorGrade !== level.environment) {
@@ -82,13 +87,15 @@ export class InitLevelLoader {
         this.effectPool?.recordLevelBaseline()
         console.log(`[LEVEL] Created ${this.marbles.length} marbles`)
 
-        if (this.bestGhosts[levelId]) {
+        if (this.ghostReplay?.loadPlayback(levelId)) {
             this.createGhostMarble()
         }
 
         this.perfMonitor?.recordLevelLoad(levelId, level)
 
         console.log('[LEVEL] Level loading complete!')
+
+        runWebGPUStressBurst(this)
 
         // Start the level entry sequence
         await this.startLevelSequence()
@@ -134,6 +141,7 @@ export class InitLevelLoader {
         // Start the level timer
         this.levelStartTime = Date.now()
         this.isPaused = false
+        this.touchControls?.setGameplayActive(true)
 
         // Animate HUD elements in
         gameUI.style.opacity = '1'

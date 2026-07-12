@@ -335,7 +335,16 @@ export class GameLogicCore {
                     this.scoreEl.textContent = 'Score: ' + this.score
 
                     if (this.score <= 5) {
-                        audio.playGoal()
+                        const goalPos = {
+                            x: (goal.range.x[0] + goal.range.x[1]) * 0.5,
+                            y: (goal.range.y[0] + goal.range.y[1]) * 0.5,
+                            z: (goal.range.z[0] + goal.range.z[1]) * 0.5,
+                        }
+                        if (audio.playAbility) {
+                            audio.playAbility('goal', goalPos)
+                        } else {
+                            audio.playGoal(goalPos)
+                        }
                     }
                     
                     // Trigger goal completion visual effect
@@ -441,8 +450,7 @@ export class GameLogicCore {
             const completionTime = (Date.now() - this.levelStartTime) / 1000
 
             let newRecord = false
-            if (!this.bestGhosts[this.currentLevel] || this.ghostRecording.length < this.bestGhosts[this.currentLevel].length) {
-                this.bestGhosts[this.currentLevel] = [...this.ghostRecording]
+            if (this.ghostReplay?.saveBestRecording(this.currentLevel, completionTime)) {
                 newRecord = true
             }
 

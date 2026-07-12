@@ -329,8 +329,8 @@ export class MarbleManagementMethods {
         this.powerbarEl.style.width = '0%'
         this.levelComplete = false
         this._rewindHead = 0; this._rewindCount = 0
-        this.ghostRecording = []
-        this.ghostPlaybackIndex = 0
+        this.ghostReplay?.beginRecording()
+        this.ghostReplay?.resetPlayback()
         this.levelStartTime = Date.now()
 
         if (this.portalA) this.destroyPortal(this.portalA)
@@ -404,7 +404,15 @@ export class MarbleManagementMethods {
                         const collisionId = `${rb.handle}-${otherBody.handle}`
                         if (!processedCollisions.has(collisionId) && speed > 2.5) {
                             processedCollisions.add(collisionId)
-                            audio.playSurfaceHit(speed, radius, material, `surface-${rb.handle}`)
+                            const marbleMat = marble.materialPresetName || 'glass'
+                            audio.playCollision({
+                                velocity: speed,
+                                radius,
+                                marbleMaterial: marbleMat,
+                                surfaceMaterial: material,
+                                id: `surface-${rb.handle}`,
+                                position: { x: pos.x, y: pos.y, z: pos.z },
+                            })
                         }
                     }
                 }

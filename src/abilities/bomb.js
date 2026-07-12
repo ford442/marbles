@@ -42,9 +42,9 @@ export class AbilityBomb {
     }
 
     explodeBomb(bomb) {
-        if (audio.playStomp) audio.playStomp()
-
         const pos = bomb.rigidBody.translation()
+        if (audio.playAbility) audio.playAbility('bomb', { x: pos.x, y: pos.y, z: pos.z })
+
         const radius = 20.0
         const force = 120.0
 

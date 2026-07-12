@@ -12,41 +12,31 @@ export class GameLoopLogic {
         // Note: gamepads are already polled once per frame in loop(); no need
         // to poll again here.
 
-        // Record Ghost
-        if (!this.levelComplete && this.levelStartTime && this.playerMarble && !this.timeStopActive) {
-            const t = this.playerMarble.rigidBody.translation()
-            const r = this.playerMarble.rigidBody.rotation()
-            this.ghostRecording.push({
-                t: { x: t.x, y: t.y, z: t.z },
-                r: { x: r.x, y: r.y, z: r.z, w: r.w },
-                s: this.playerMarble.scale
-            })
+        // Party race: relay transform sync (arcade mode, not physics-authoritative)
+        if (this.multiplayerMode) {
+            this.tickMultiplayer?.()
         }
 
-        // Playback Ghost
-        if (this.ghostEntity && this.bestGhosts[this.currentLevel] && !this.timeStopActive) {
-            const bestGhost = this.bestGhosts[this.currentLevel]
-            if (this.ghostPlaybackIndex < bestGhost.length) {
-                const frameData = bestGhost[this.ghostPlaybackIndex]
-                const tcm = this.engine.getTransformManager()
+        this.touchControls?.tick()
 
-                const mat = quaternionToMat4(frameData.t, frameData.r)
-                if (frameData.s && frameData.s !== 1.0) {
-                    const s = frameData.s
-                    mat[0] *= s; mat[1] *= s; mat[2] *= s
-                    mat[4] *= s; mat[5] *= s; mat[6] *= s
-                    mat[8] *= s; mat[9] *= s; mat[10] *= s
-                }
+        // Record / playback ghost replay (30 Hz, visual-only)
+        if (this.ghostReplay) {
+            this.ghostReplay.tickRecord(this)
+
+            const ghostFrame = this.ghostReplay.tickPlayback(this)
+            if (ghostFrame && this.ghostEntity) {
+                const tcm = this.engine.getTransformManager()
+                const rot = { x: ghostFrame.qx, y: ghostFrame.qy, z: ghostFrame.qz, w: ghostFrame.qw }
+                const pos = { x: ghostFrame.x, y: ghostFrame.y, z: ghostFrame.z }
+                const mat = quaternionToMat4(pos, rot)
                 const inst = tcm.getInstance(this.ghostEntity)
                 tcm.setTransform(inst, mat)
 
                 if (this.ghostLightEntity) {
                     const lightInst = tcm.getInstance(this.ghostLightEntity)
-                    const lightMat = quaternionToMat4(frameData.t, { x: 0, y: 0, z: 0, w: 1 })
+                    const lightMat = quaternionToMat4(pos, { x: 0, y: 0, z: 0, w: 1 })
                     tcm.setTransform(lightInst, lightMat)
                 }
-
-                this.ghostPlaybackIndex++
             }
         }
 

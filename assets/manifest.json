@@ -41,6 +41,11 @@
       "file": "maps/volcano_run.json",
       "name": "Volcano Run",
       "difficulty": "hard"
+    },
+    "neon_showcase": {
+      "file": "maps/neon_showcase.json",
+      "name": "Neon Showcase Track",
+      "difficulty": "easy"
     }
   },
   "marbles": {
@@ -70,9 +75,14 @@
     }
   },
   "sounds": {
-    "collision_metal": {
-      "file": "sounds/collision_metal.json",
-      "category": "sfx"
-    }
+    "collision_wood": { "file": "sounds/collision_wood.json", "category": "sfx" },
+    "collision_metal": { "file": "sounds/collision_metal.json", "category": "sfx" },
+    "collision_concrete": { "file": "sounds/collision_concrete.json", "category": "sfx" },
+    "collision_glass": { "file": "sounds/collision_glass.json", "category": "sfx" },
+    "collision_rubber": { "file": "sounds/collision_rubber.json", "category": "sfx" },
+    "ability_bomb": { "file": "sounds/ability_bomb.json", "category": "sfx" },
+    "ability_missile": { "file": "sounds/ability_missile.json", "category": "sfx" },
+    "ability_blink": { "file": "sounds/ability_blink.json", "category": "sfx" },
+    "goal_chime": { "file": "sounds/goal_chime.json", "category": "sfx" }
   }
 }

@@ -10,10 +10,14 @@ export const DEFAULT_GRAPHICS_QUALITY = 'medium'
  * @returns {string}
  */
 export function resolveGraphicsQualityForInit(fallback = DEFAULT_GRAPHICS_QUALITY) {
-    if (typeof localStorage === 'undefined') return fallback
+    if (typeof localStorage === 'undefined') {
+        return detectPlatformProfile().isMobile ? resolveMobileInitQuality() : fallback
+    }
     try {
         const saved = localStorage.getItem('marbles3d_settings')
-        if (!saved) return fallback
+        if (!saved) {
+            return detectPlatformProfile().isMobile ? resolveMobileInitQuality() : fallback
+        }
         const parsed = JSON.parse(saved)
         return parsed?.graphics?.quality || fallback
     } catch {

@@ -8,6 +8,59 @@ import {
 } from '../levels/campaign.js';
 
 export class GameLogicLevelComplete {
+    setupReplayShareButtons() {
+        const btnCopy = document.getElementById('btn-copy-replay')
+        const btnImport = document.getElementById('btn-import-replay')
+
+        if (btnCopy && !btnCopy.dataset.bound) {
+            btnCopy.dataset.bound = '1'
+            btnCopy.addEventListener('click', () => this.copyGhostReplay())
+        }
+
+        if (btnImport && !btnImport.dataset.bound) {
+            btnImport.dataset.bound = '1'
+            btnImport.addEventListener('click', () => this.importGhostReplay())
+        }
+    }
+
+    setReplayImportStatus(message, isError = false) {
+        const el = document.getElementById('replay-import-status')
+        if (!el) return
+        el.textContent = message
+        el.style.color = isError ? '#ff6b6b' : '#7fffd4'
+    }
+
+    async copyGhostReplay() {
+        const blob = this.ghostReplay?.exportReplay(this.currentLevel)
+        if (!blob) {
+            this.setReplayImportStatus('No ghost replay saved for this level.', true)
+            return
+        }
+
+        try {
+            await navigator.clipboard.writeText(blob)
+            this.setReplayImportStatus('Ghost replay copied to clipboard.')
+        } catch {
+            window.prompt('Copy this ghost replay:', blob)
+            this.setReplayImportStatus('Replay shown in prompt — copy manually.')
+        }
+    }
+
+    importGhostReplay() {
+        const pasted = window.prompt('Paste a ghost replay string (m3g1:...):')
+        if (!pasted?.trim()) return
+
+        try {
+            const result = this.ghostReplay.importReplay(pasted, this.currentLevel)
+            this.setReplayImportStatus(`Imported ghost for ${result.levelId}.`)
+            if (result.levelId === this.currentLevel && !this.ghostEntity) {
+                this.createGhostMarble?.()
+            }
+        } catch (e) {
+            this.setReplayImportStatus(e?.message || 'Invalid replay data.', true)
+        }
+    }
+
     showLevelCompleteModal(completionTime, newRecord) {
         const modal = document.getElementById('level-complete-modal')
         if (!modal) return
@@ -41,6 +94,14 @@ export class GameLogicLevelComplete {
         if (newRecordBadge) {
             newRecordBadge.style.display = newRecord ? 'inline-block' : 'none'
         }
+
+        const replaySection = document.getElementById('replay-share-section')
+        if (replaySection) {
+            const hasReplay = Boolean(this.ghostReplay?.exportReplay(this.currentLevel))
+            replaySection.style.display = hasReplay ? 'flex' : 'none'
+        }
+        this.setupReplayShareButtons()
+        this.setReplayImportStatus('')
 
         // Setup button handlers with smooth transitions
         const btnNext = document.getElementById('btn-next-level')

@@ -22,7 +22,11 @@ export class GameLogicCheckpoints {
         this.createCheckpointParticles(checkpoint.pos)
         this.createCheckpointRing(checkpoint.pos)
         
-        audio.playGoal()
+        if (audio.playAbility) {
+            audio.playAbility('goal', checkpoint.pos)
+        } else {
+            audio.playGoal(checkpoint.pos)
+        }
         
         marble.respawnPos = { x: checkpoint.pos.x, y: checkpoint.pos.y + 1.0, z: checkpoint.pos.z }
         
