@@ -1,6 +1,8 @@
 export const DEFAULT_SSAO_INTENSITY = 1.0
 export const DEFAULT_MSAA_SAMPLE_COUNT = 4
 
+import { resolveMobileInitQuality } from './platform/mobile-presets.js'
+
 /** Default graphics quality when settings are not yet loaded at engine init. */
 export const DEFAULT_GRAPHICS_QUALITY = 'medium'
 

@@ -23,7 +23,7 @@ Stress / benchmark burst (emits ~8000 sparks at level start):
 ## Requirements
 
 - Chrome 113+, Edge 113+, Firefox 110+, or Safari 18+ with WebGPU enabled
-- If WebGPU is unavailable or init fails, the game **falls back to the CPU `ParticleSystem`** with no blocking or errors
+- If WebGPU is unavailable, init fails, or the device is lost, the game **falls back to the CPU `ParticleSystem`** with no blocking or errors
 
 ## Architecture
 
@@ -41,10 +41,23 @@ Stress / benchmark burst (emits ~8000 sparks at level start):
 |--------|------|
 | `src/webgpu/detect.js` | Feature flag + adapter probe |
 | `src/webgpu/particle-backend.js` | WGSL integrate + billboard render |
+| `src/webgpu/shaders/particle-integrate.wgsl` | Compute pass: gravity, drag, lifetime, active flag |
+| `src/webgpu/shaders/particle-render.wgsl` | Billboard vertex/fragment overlay shader |
 | `src/webgpu/noise-texture.js` | Optional 256² FBM noise via compute |
 | `src/particle-system.js` | CPU fallback; delegates sim when GPU ready |
 
 Particle cap with WebGPU: **8192** slots (target 5k–10k at 60 FPS on mid desktop).
+
+### CPU/GPU consistency
+
+The compute shader writes an `activeFlags` buffer each frame. The backend reads it back asynchronously and reconciles `particleSystem.activeParticles`, so:
+
+- CPU-side stats and pool reuse stay accurate while the GPU simulates.
+- If the WebGPU device is lost or the backend is disabled, the game falls back to the CPU `ParticleSystem` without a burst of zombie particles.
+
+### Upload optimization
+
+Dirty particles are uploaded as coalesced contiguous ranges instead of one `writeBuffer` per particle. If more than half the pool is dirty, the backend falls back to a single bulk upload.
 
 ## wasm_renderer / C++ Dawn
 

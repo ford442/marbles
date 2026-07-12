@@ -1,6 +1,6 @@
 # WebGPU Compute Evaluation for Marbles 3D
 
-> **Status:** Phase 1 prototype implemented — see [WEBGPU_PARTICLES.md](../WEBGPU_PARTICLES.md) for usage (`?webgpuParticles=1`).
+> **Status:** Phase 1 implemented and hardened — see [WEBGPU_PARTICLES.md](../WEBGPU_PARTICLES.md) for usage (`?webgpuParticles=1`). The backend now syncs GPU death flags back to the CPU pool, batches dirty uploads, and handles device loss.
 
 This document is the original evaluation. The shipped approach matches the **dual-renderer** recommendation below: Filament WebGL2 for the scene, WebGPU for optional particle compute + overlay.
 

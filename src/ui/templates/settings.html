@@ -1,0 +1,286 @@
+<!-- Settings Panel -->
+<div id="settings-panel">
+    <div class="settings-container">
+        <div class="settings-header">
+            <h2 class="settings-title">⚙️ Settings</h2>
+            <button id="settings-close" class="settings-close-btn">×</button>
+        </div>
+        
+        <div class="settings-tabs">
+            <button class="settings-tab active" data-tab="graphics">🎨 Graphics</button>
+            <button class="settings-tab" data-tab="audio">🔊 Audio</button>
+            <button class="settings-tab" data-tab="controls">🎮 Controls</button>
+            <button class="settings-tab" data-tab="accessibility">♿ Accessibility</button>
+        </div>
+        
+        <div class="settings-content">
+            <!-- Graphics Tab -->
+            <div class="settings-section active" id="tab-graphics">
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>Quality Preset</span>
+                    </div>
+                    <p class="setting-description">Overall graphics quality level</p>
+                    <select id="setting-quality" class="settings-select">
+                        <option value="low">Low (Best Performance)</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="ultra">Ultra (Best Quality)</option>
+                    </select>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>Shadow Quality</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="setting-shadows" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <p class="setting-description">Enable dynamic shadows</p>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>Bloom Intensity</span>
+                        <span class="setting-value" id="value-bloom">50%</span>
+                    </div>
+                    <p class="setting-description">Glow effect intensity for bright areas</p>
+                    <input type="range" id="setting-bloom" class="settings-slider" min="0" max="100" value="50">
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>SSAO (Ambient Occlusion)</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="setting-ssao" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <p class="setting-description">Enhanced depth and contact shadows</p>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>Render Resolution</span>
+                        <span class="setting-value" id="value-renderscale">100%</span>
+                    </div>
+                    <p class="setting-description">Lower for more FPS, higher for a sharper image</p>
+                    <input type="range" id="setting-renderscale" class="settings-slider" min="50" max="200" step="5" value="100">
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>Target FPS</span>
+                    </div>
+                    <p class="setting-description">Auto quality governor tries to hold this frame-rate target</p>
+                    <select id="setting-target-fps" class="settings-select">
+                        <option value="30">30 FPS</option>
+                        <option value="60" selected>60 FPS</option>
+                        <option value="120">120 FPS</option>
+                        <option value="unlimited">Unlimited</option>
+                    </select>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>Performance Mode</span>
+                    </div>
+                    <p class="setting-description">Auto adapts quality under load; Locked keeps your preset; Max Performance prioritizes FPS</p>
+                    <select id="setting-performance-mode" class="settings-select">
+                        <option value="auto" selected>Auto (recommended)</option>
+                        <option value="locked">Locked Quality</option>
+                        <option value="maxPerformance">Max Performance</option>
+                    </select>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>Dynamic Resolution</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="setting-dynres" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <p class="setting-description">Automatically adjust resolution to keep framerate smooth</p>
+                </div>
+            </div>
+
+            <!-- Audio Tab -->
+            <div class="settings-section" id="tab-audio">
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>Master Volume</span>
+                        <span class="setting-value" id="value-master">80%</span>
+                    </div>
+                    <p class="setting-description">Overall game volume</p>
+                    <input type="range" id="setting-master" class="settings-slider" min="0" max="100" value="80">
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>SFX Volume</span>
+                        <span class="setting-value" id="value-sfx">70%</span>
+                    </div>
+                    <p class="setting-description">Sound effects volume</p>
+                    <input type="range" id="setting-sfx" class="settings-slider" min="0" max="100" value="70">
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>Music Volume</span>
+                        <span class="setting-value" id="value-music">50%</span>
+                    </div>
+                    <p class="setting-description">Background music volume</p>
+                    <input type="range" id="setting-music" class="settings-slider" min="0" max="100" value="50">
+                </div>
+            </div>
+            
+            <!-- Controls Tab -->
+            <div class="settings-section" id="tab-controls">
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>Mouse Sensitivity</span>
+                        <span class="setting-value" id="value-sensitivity">50%</span>
+                    </div>
+                    <p class="setting-description">Camera rotation speed</p>
+                    <input type="range" id="setting-sensitivity" class="settings-slider" min="10" max="200" value="50">
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>Invert Y-Axis</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="setting-invert-y">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <p class="setting-description">Invert vertical camera movement</p>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>Touch Controls</span>
+                    </div>
+                    <p class="setting-description">Virtual joystick and on-screen buttons</p>
+                    <select id="setting-touch-enabled" class="settings-select">
+                        <option value="auto">Auto (mobile only)</option>
+                        <option value="on">Always on</option>
+                        <option value="off">Off</option>
+                    </select>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>Touch Camera Sensitivity</span>
+                        <span class="setting-value" id="value-touch-camera">50%</span>
+                    </div>
+                    <input type="range" id="setting-touch-camera" class="settings-slider" min="10" max="150" value="50">
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>Invert Touch Camera Y</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="setting-touch-invert-y">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>Joystick Side</span>
+                    </div>
+                    <select id="setting-touch-joystick-side" class="settings-select">
+                        <option value="left">Left</option>
+                        <option value="right">Right</option>
+                    </select>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>Swap Jump / Boost</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="setting-touch-swap-buttons">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <p class="setting-description">Swap primary and secondary action button positions</p>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>Key Bindings</span>
+                    </div>
+                    <p class="setting-description">Current control scheme (read-only)</p>
+                    <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 15px; margin-top: 10px;">
+                        <div class="keybinding-row">
+                            <span class="keybinding-action">Move Forward</span>
+                            <div class="keybinding-keys"><span class="keybinding-key">W</span><span class="keybinding-key">↑</span></div>
+                        </div>
+                        <div class="keybinding-row">
+                            <span class="keybinding-action">Move Backward</span>
+                            <div class="keybinding-keys"><span class="keybinding-key">S</span><span class="keybinding-key">↓</span></div>
+                        </div>
+                        <div class="keybinding-row">
+                            <span class="keybinding-action">Move Left</span>
+                            <div class="keybinding-keys"><span class="keybinding-key">A</span><span class="keybinding-key">←</span></div>
+                        </div>
+                        <div class="keybinding-row">
+                            <span class="keybinding-action">Move Right</span>
+                            <div class="keybinding-keys"><span class="keybinding-key">D</span><span class="keybinding-key">→</span></div>
+                        </div>
+                        <div class="keybinding-row">
+                            <span class="keybinding-action">Jump</span>
+                            <div class="keybinding-keys"><span class="keybinding-key">Space</span></div>
+                        </div>
+                        <div class="keybinding-row">
+                            <span class="keybinding-action">Pause Menu</span>
+                            <div class="keybinding-keys"><span class="keybinding-key">Esc</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Accessibility Tab -->
+            <div class="settings-section" id="tab-accessibility">
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>UI Scale</span>
+                        <span class="setting-value" id="value-ui-scale">100%</span>
+                    </div>
+                    <p class="setting-description">Adjust interface element sizes</p>
+                    <input type="range" id="setting-ui-scale" class="settings-slider" min="75" max="150" value="100">
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>High Contrast Mode</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="setting-high-contrast">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <p class="setting-description">Increase contrast for better visibility</p>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>Screen Shake Intensity</span>
+                        <span class="setting-value" id="value-shake">100%</span>
+                    </div>
+                    <p class="setting-description">Camera shake effect intensity (0% to disable)</p>
+                    <input type="range" id="setting-shake" class="settings-slider" min="0" max="150" value="100">
+                </div>
+            </div>
+        </div>
+        
+        <div class="settings-footer">
+            <button id="btn-settings-back" class="settings-btn settings-btn-secondary">← Back</button>
+            <button id="btn-settings-defaults" class="settings-btn settings-btn-secondary">Reset to Defaults</button>
+            <button id="btn-settings-save" class="settings-btn settings-btn-primary">Save & Apply</button>
+        </div>
+    </div>
+</div>
+

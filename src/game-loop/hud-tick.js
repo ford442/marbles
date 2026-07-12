@@ -86,6 +86,7 @@ export class GameLoopHudTick {
                 }
         
                 if (shouldUpdateHUD && this.empBarEl) {
+                    const timeSinceEMP = now - this.lastEMPTime
                     const progress = Math.min(1.0, timeSinceEMP / this.empCooldown)
                     this.empBarEl.style.width = `${progress * 100}%`
         

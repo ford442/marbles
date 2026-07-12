@@ -1,0 +1,61 @@
+<div id="map-editor" class="menu-hidden">
+    <header>
+        <h2>🛠 Map Editor</h2>
+    </header>
+    <section>
+        <h3>Map Info</h3>
+        <label>ID <input type="text" id="editor-map-id" value="my_map"></label>
+        <label style="margin-top:6px">Name <input type="text" id="editor-map-name" value="Untitled Map"></label>
+    </section>
+    <section>
+        <h3>Tools</h3>
+        <div class="tool-row">
+            <button type="button" id="editor-tool-place">Place</button>
+            <button type="button" id="editor-tool-select">Select</button>
+            <button type="button" id="editor-tool-spawn">Spawn</button>
+            <button type="button" id="editor-tool-goal">Goal</button>
+        </div>
+        <div class="tool-row" style="margin-top:6px">
+            <button type="button" id="editor-rotate">Rotate (R)</button>
+            <button type="button" id="editor-delete">Delete</button>
+            <button type="button" id="editor-camera-toggle">Camera</button>
+        </div>
+    </section>
+    <section>
+        <h3>Stamps</h3>
+        <div id="editor-stamp-list"></div>
+    </section>
+    <section>
+        <h3>Zones</h3>
+        <div id="editor-zone-list"></div>
+    </section>
+    <section>
+        <h3>Spawn</h3>
+        <div class="field-row">
+            <label>X <input type="number" id="editor-spawn-x" step="0.5"></label>
+            <label>Y <input type="number" id="editor-spawn-y" step="0.5"></label>
+            <label>Z <input type="number" id="editor-spawn-z" step="0.5"></label>
+        </div>
+    </section>
+    <section>
+        <h3>Selection</h3>
+        <div class="field-row">
+            <label>X <input type="number" id="editor-sel-x" step="0.5"></label>
+            <label>Y <input type="number" id="editor-sel-y" step="0.5"></label>
+            <label>Z <input type="number" id="editor-sel-z" step="0.5"></label>
+        </div>
+        <label style="margin-top:6px">Rot° <input type="number" id="editor-sel-rot" step="15"></label>
+    </section>
+    <section>
+        <h3>File</h3>
+        <div class="action-row">
+            <button type="button" id="editor-export">Export JSON</button>
+            <button type="button" id="editor-save-draft">Save Draft</button>
+            <button type="button" id="editor-load-draft">Load Draft</button>
+            <button type="button" id="editor-playtest">Playtest</button>
+        </div>
+        <label style="margin-top:8px;display:block">Import <input type="file" id="editor-import" accept=".json,application/json"></label>
+        <button type="button" id="editor-exit" style="margin-top:8px;width:100%">Exit Editor</button>
+    </section>
+    <div id="editor-status">Ready</div>
+    <div id="editor-hint">Click canvas to place · Arrow keys move selection · R rotate · Shift+drag pan · Scroll zoom</div>

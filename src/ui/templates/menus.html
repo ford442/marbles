@@ -1,0 +1,77 @@
+<!-- Countdown Overlay -->
+<div id="countdown-overlay" class="countdown-overlay">
+    <div id="countdown-display" class="countdown-number">3</div>
+</div>
+
+<!-- Fade From Black Overlay -->
+<div id="fade-overlay" class="fade-from-black"></div>
+
+<!-- Pause Menu -->
+<div id="pause-menu">
+    <div class="pause-menu-container">
+        <div class="pause-menu-title">⏸️ Paused</div>
+        <div class="pause-menu-buttons">
+            <button id="btn-resume" class="pause-btn pause-btn-primary">Resume</button>
+            <button id="btn-restart" class="pause-btn">Restart Level</button>
+            <button id="btn-pause-settings" class="pause-btn">Settings</button>
+            <button id="btn-quit" class="pause-btn">Quit to Menu</button>
+        </div>
+    </div>
+</div>
+
+<!-- Multiplayer Lobby -->
+<div id="multiplayer-lobby">
+    <div class="mp-lobby-card">
+        <h2>🏁 Party Race</h2>
+        <p style="color:#aaa; margin:0 0 8px; font-size:0.9rem;">Arcade transform sync — each player runs local physics.</p>
+        <div class="mp-field">
+            <label for="mp-player-name">Your name</label>
+            <input id="mp-player-name" type="text" maxlength="24" placeholder="Marble Racer" />
+        </div>
+        <div class="mp-field">
+            <label for="mp-room-code">Room code</label>
+            <input id="mp-room-code" type="text" maxlength="8" placeholder="ABC123" style="text-transform:uppercase;" />
+        </div>
+        <div class="mp-field mp-host-only">
+            <label for="mp-level-select">Track (host)</label>
+            <select id="mp-level-select"></select>
+        </div>
+        <div class="mp-actions">
+            <button id="btn-create-room" type="button">Create Room</button>
+            <button id="btn-join-room" type="button">Join Room</button>
+        </div>
+        <div class="mp-actions">
+            <button id="btn-start-race" type="button" class="mp-host-only">Start Race</button>
+            <button id="btn-leave-lobby" type="button">Leave</button>
+        </div>
+        <div>
+            <strong style="font-size:0.85rem; color:#aaa;">Players</strong>
+            <ul id="mp-player-list"></ul>
+        </div>
+        <div id="mp-lobby-status"></div>
+    </div>
+</div>
+
+<!-- Level Selection Menu -->
+<div id="level-menu">
+    <h1>🎱 MARBLES 3D</h1>
+    <div class="subtitle">Choose your challenge</div>
+    <div id="level-menu-toolbar">
+        <button id="btn-party-race" class="level-party-btn" type="button">🏁 Party Race</button>
+    </div>
+    <div id="level-grid"></div>
+</div>
+<!-- Pause Menu -->
+<div id="pause-overlay">
+    <div class="pause-menu-panel">
+        <div class="pause-indicator">⏸️ PAUSED</div>
+        <h2 class="pause-menu-title">Game Paused</h2>
+        <div class="pause-menu-buttons">
+            <button id="btn-resume" class="pause-btn">▶️ Resume</button>
+            <button id="btn-restart-pause" class="pause-btn secondary">🔄 Restart Level</button>
+            <button id="btn-import-ghost-pause" class="pause-btn secondary">👻 Import Ghost</button>
+            <button id="btn-settings" class="pause-btn secondary">⚙️ Settings</button>
+            <button id="btn-quit-menu" class="pause-btn danger">🏠 Quit to Menu</button>
+        </div>
+    </div>
+</div>

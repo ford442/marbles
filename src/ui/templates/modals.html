@@ -1,0 +1,73 @@
+<div id="level-complete-modal">
+    <canvas id="confetti-canvas"></canvas>
+    <div class="level-complete-card">
+        <div class="level-complete-title">Level Complete!</div>
+        <div id="modal-level-name" class="level-complete-subtitle">Tutorial Ramp</div>
+        <div id="modal-medal" class="medal-display"></div>
+        <div id="modal-completion-time" class="completion-time">00:00.0</div>
+        <div class="time-label">Completion Time</div>
+        <div id="modal-new-record" class="new-record-badge" style="display: none;">🏆 NEW GHOST RECORD!</div>
+
+        <div id="replay-share-section" class="replay-share-row" style="display: none;">
+            <button id="btn-copy-replay" class="modal-btn modal-btn-secondary" type="button">Copy Ghost Replay</button>
+            <button id="btn-import-replay" class="modal-btn modal-btn-secondary" type="button">Import Replay</button>
+        </div>
+        <div id="replay-import-status"></div>
+        
+        <div class="score-breakdown">
+            <div class="score-row">
+                <span class="score-label">Base Score</span>
+                <span id="modal-base-score" class="score-value">0</span>
+            </div>
+            <div class="score-row">
+                <span class="score-label">Time Bonus</span>
+                <span id="modal-time-bonus" class="score-value">0</span>
+            </div>
+            <div class="score-row">
+                <span class="score-label">Combo Bonus</span>
+                <span id="modal-combo-bonus" class="score-value">0</span>
+            </div>
+            <div class="score-row">
+                <span class="score-label">Total Score</span>
+                <span id="modal-total-score" class="score-value">0</span>
+            </div>
+        </div>
+
+        <div class="modal-buttons">
+            <button id="btn-next-level" class="modal-btn modal-btn-primary">Next Level</button>
+            <button id="btn-retry" class="modal-btn modal-btn-secondary">Retry</button>
+            <button id="btn-main-menu" class="modal-btn modal-btn-secondary">Main Menu</button>
+        </div>
+    </div>
+</div>
+
+<!-- EMP Flash Overlay -->
+<div id="emp-flash-overlay" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(circle, rgba(200, 255, 255, 0.9) 0%, rgba(0, 255, 255, 0.4) 30%, transparent 70%);
+    pointer-events: none;
+    z-index: 50;
+    opacity: 0;
+    transition: opacity 0.1s ease-out;
+"></div>
+
+<!-- Checkpoint Flash Overlay -->
+<div id="checkpoint-flash-overlay" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(200, 255, 255, 0.5) 40%, transparent 70%);
+    pointer-events: none;
+    z-index: 49;
+    opacity: 0;
+    transition: opacity 250ms ease-out;
+<div id="landscape-hint" aria-hidden="true">
+    <p>Rotate your device to landscape for the best marble racing experience.</p>
+</div>
+

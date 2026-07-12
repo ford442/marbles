@@ -1,0 +1,279 @@
+/* Level Complete Modal Transitions */
+#level-complete-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease, backdrop-filter 0.4s ease, background 0.4s ease;
+}
+
+#level-complete-modal.active {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.level-complete-card {
+    background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border: 2px solid rgba(233, 69, 96, 0.5);
+    border-radius: 20px;
+    padding: 40px 50px;
+    max-width: 480px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(233, 69, 96, 0.2);
+    transform: scale(0.7) translateY(50px);
+    opacity: 0;
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease;
+}
+
+#level-complete-modal.active .level-complete-card {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+/* Modal Exit Animation */
+#level-complete-modal.exiting {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+}
+
+#level-complete-modal.exiting .level-complete-card {
+    transform: scale(0.9) translateY(-30px);
+    opacity: 0;
+}
+
+/* Level Complete Modal */
+#level-complete-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+#level-complete-modal.active {
+    display: flex;
+    opacity: 1;
+}
+
+.level-complete-card {
+    background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border: 2px solid rgba(233, 69, 96, 0.5);
+    border-radius: 20px;
+    padding: 40px 50px;
+    max-width: 480px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(233, 69, 96, 0.2);
+    transform: scale(0.9);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#level-complete-modal.active .level-complete-card {
+    transform: scale(1);
+}
+
+.level-complete-title {
+    color: #e94560;
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin: 0 0 10px 0;
+    text-shadow: 0 0 20px rgba(233, 69, 96, 0.5);
+}
+
+.level-complete-subtitle {
+    color: #888;
+    font-size: 1.1rem;
+    margin-bottom: 25px;
+}
+
+.medal-display {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    animation: medalPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    opacity: 0;
+    transform: scale(0);
+}
+
+@keyframes medalPop {
+    0% {
+        opacity: 0;
+        transform: scale(0) rotate(-180deg);
+    }
+    70% {
+        transform: scale(1.2) rotate(10deg);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+.completion-time {
+    font-size: 2.2rem;
+    color: #fff;
+    font-weight: bold;
+    margin-bottom: 5px;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.time-label {
+    color: #888;
+    font-size: 0.9rem;
+    margin-bottom: 25px;
+}
+
+.new-record-badge {
+    background: linear-gradient(90deg, #ffd700, #ffaa00);
+    color: #000;
+    font-weight: bold;
+    font-size: 0.85rem;
+    padding: 6px 16px;
+    border-radius: 20px;
+    display: inline-block;
+    margin-bottom: 20px;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+    50% { transform: scale(1.05); box-shadow: 0 0 20px rgba(255, 215, 0, 0.8); }
+}
+
+.score-breakdown {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 25px;
+    text-align: left;
+}
+
+.score-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 1rem;
+}
+
+.score-row:last-child {
+    margin-bottom: 0;
+    padding-top: 12px;
+    border-top: 1px solid rgba(233, 69, 96, 0.3);
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.score-label {
+    color: #aaa;
+}
+
+.score-value {
+    color: #fff;
+    font-weight: 600;
+}
+
+.score-row:last-child .score-label,
+.score-row:last-child .score-value {
+    color: #e94560;
+}
+
+.replay-share-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.replay-share-row .modal-btn {
+    flex: 1;
+    font-size: 0.85rem;
+    padding: 10px 12px;
+}
+
+#replay-import-status {
+    font-size: 0.8rem;
+    color: #7fffd4;
+    min-height: 1.2em;
+    margin-bottom: 8px;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.modal-btn {
+    padding: 14px 28px;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.modal-btn-primary {
+    background: linear-gradient(135deg, #e94560 0%, #c73e54 100%);
+    color: #fff;
+    flex: 1;
+    min-width: 120px;
+}
+
+.modal-btn-primary:hover {
+    background: linear-gradient(135deg, #f05a74 0%, #e94560 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(233, 69, 96, 0.4);
+}
+
+.modal-btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    flex: 1;
+    min-width: 100px;
+}
+
+.modal-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.modal-btn:active {
+    transform: translateY(0);
+}
+
+/* Confetti Canvas */
+#confetti-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 201;
+}
+

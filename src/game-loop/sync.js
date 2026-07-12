@@ -1,3 +1,4 @@
+import { audio } from '../audio.js';
 import { quaternionToMat4, quatFromEuler } from '../math.js';
 import {
     shouldUpdateParticle,

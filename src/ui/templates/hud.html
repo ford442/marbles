@@ -1,0 +1,145 @@
+<!-- Game UI -->
+<div id="ui">
+    <div id="mp-disconnect-banner">Relay disconnected — remote marbles may freeze.</div>
+    <div id="level-name">Level</div>
+    <div id="score">Score: 0</div>
+    <div id="combo" style="display: none;">Combo: x1</div>
+    <div id="combobar-container" style="display: none;">
+        <div id="combobar"></div>
+    </div>
+    <div id="adrenalinebar-container" style="display: none;">
+        <div id="adrenalinebar"></div>
+    </div>
+    <div id="timer">Time: 0.00s</div>
+    <div id="selected">Selected: 1</div>
+    <div id="aim">Aim: 0°</div>
+    
+    <!-- Consolidated HUD System -->
+    <div id="hud-abilities">
+        <!-- Core Mechanics (Always Visible) -->
+        <div id="hud-core">
+            <div id="powerbar-container" class="core-bar-container">
+                <div id="powerbar" class="core-bar" style="background: linear-gradient(90deg, #0f0 0%, #ff0 50%, #f00 100%);"></div>
+            </div>
+            <div id="jumpbar-container" class="core-bar-container small">
+                <div id="jumpbar" class="core-bar" style="background: linear-gradient(90deg, #00f 0%, #0ff 100%);"></div>
+            </div>
+        </div>
+        
+        <!-- Movement Abilities -->
+        <div class="hud-category movement" data-category="movement">
+            <div class="hud-category-header">
+                <span class="category-name"><span class="category-icon">🏃</span> Movement</span>
+                <span class="expand-icon">▼</span>
+            </div>
+            <div class="hud-category-content" id="movement-abilities">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+        
+        <!-- Combat Abilities -->
+        <div class="hud-category combat collapsed" data-category="combat">
+            <div class="hud-category-header">
+                <span class="category-name"><span class="category-icon">⚔️</span> Combat</span>
+                <span class="expand-icon">▼</span>
+            </div>
+            <div class="hud-category-content" id="combat-abilities">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+        
+        <!-- Utility Abilities -->
+        <div class="hud-category utility collapsed" data-category="utility">
+            <div class="hud-category-header">
+                <span class="category-name"><span class="category-icon">🛠️</span> Utility</span>
+                <span class="expand-icon">▼</span>
+            </div>
+            <div class="hud-category-content" id="utility-abilities">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tab Key Overlay - Shows All Abilities -->
+    <div id="hud-all-abilities">
+        <div class="all-abilities-category">
+            <h4>🏃 Movement</h4>
+            <div class="all-abilities-list" id="all-movement"></div>
+        </div>
+        <div class="all-abilities-category">
+            <h4>⚔️ Combat</h4>
+            <div class="all-abilities-list" id="all-combat"></div>
+        </div>
+        <div class="all-abilities-category">
+            <h4>🛠️ Utility</h4>
+            <div class="all-abilities-list" id="all-utility"></div>
+        </div>
+    </div>
+    
+    <!-- Legacy bar containers (hidden but kept for JS compatibility) -->
+    <div id="boostbar-container" class="legacy-bar-container"><div id="boostbar"></div></div>
+    <div id="dashbar-container" class="legacy-bar-container"><div id="dashbar"></div></div>
+    <div id="magnetbar-container" class="legacy-bar-container"><div id="magnetbar"></div></div>
+    <div id="focusbar-container" class="legacy-bar-container"><div id="focusbar"></div></div>
+    <div id="rewindbar-container" class="legacy-bar-container"><div id="rewindbar"></div></div>
+    <div id="gravitybar-container" class="legacy-bar-container"><div id="gravitybar"></div></div>
+    <div id="holobar-container" class="legacy-bar-container"><div id="holobar"></div></div>
+    <div id="empbar-container" class="legacy-bar-container"><div id="empbar"></div></div>
+    <div id="groundslambar-container" class="legacy-bar-container"><div id="groundslambar"></div></div>
+    <div id="bombbar-container" class="legacy-bar-container"><div id="bombbar"></div></div>
+    <div id="missilebar-container" class="legacy-bar-container"><div id="missilebar"></div></div>
+    <div id="chameleonbar-container" class="legacy-bar-container"><div id="chameleonbar"></div></div>
+    <div id="hoverbar-container" class="legacy-bar-container"><div id="hoverbar"></div></div>
+    <div id="jetpackbar-container" class="legacy-bar-container"><div id="jetpackbar"></div></div>
+    <div id="icebar-container" class="legacy-bar-container"><div id="icebar"></div></div>
+    <div id="phasebar-container" class="legacy-bar-container"><div id="phasebar"></div></div>
+    <div id="flipbar-container" class="legacy-bar-container"><div id="flipbar"></div></div>
+    <div id="blinkbar-container" class="legacy-bar-container"><div id="blinkbar"></div></div>
+    <div id="teleportbar-container" class="legacy-bar-container"><div id="teleportbar"></div></div>
+    <div id="gliderbar-container" class="legacy-bar-container"><div id="gliderbar"></div></div>
+    <div id="buildbar-container" class="legacy-bar-container"><div id="buildbar"></div></div>
+    <div id="gravitypulsebar-container" class="legacy-bar-container"><div id="gravitypulsebar"></div></div>
+    <div id="sizebar-container" class="legacy-bar-container"><div id="sizebar"></div></div>
+    <div id="vortexbar-container" class="legacy-bar-container"><div id="vortexbar"></div></div>
+    <div id="violetbar-container" class="legacy-bar-container"><div id="violetbar"></div></div>
+    <div id="blackholebar-container" class="legacy-bar-container"><div id="blackholebar"></div></div>
+    <div id="timestopbar-container" class="legacy-bar-container"><div id="timestopbar"></div></div>
+    
+    <div id="instructions">
+        <kbd>1</kbd> Ramp | <kbd>2</kbd> Floor | <kbd>3</kbd> Bouncer | <kbd>4</kbd> Portal A | <kbd>5</kbd> Portal B |
+        <kbd>WASD</kbd> / <kbd>Arrows</kbd> Move |
+        <kbd>Shift</kbd> Boost |
+        <kbd>Space</kbd> Jump (Hold) |
+        <kbd>V</kbd> Dash |
+        <kbd>F</kbd> Focus |
+        <kbd>E</kbd> / <kbd>Q</kbd> Magnet |
+        <kbd>R</kbd> Reset |
+        <kbd>Tab</kbd> All Abilities |
+        <kbd>C</kbd> Camera |
+        <kbd>M</kbd> Menu |
+        <kbd>N</kbd> Mute |
+        <kbd>[</kbd> <kbd>]</kbd> Vol |
+        <kbd>Z</kbd> Stomp |
+        <kbd>T</kbd> Rewind |
+        <kbd>B</kbd> Blink |
+        <kbd>X</kbd> Bomb |
+        <kbd>L</kbd> Missile |
+        <kbd>H</kbd> Hover |
+        <kbd>J</kbd> Jetpack |
+        <kbd>G</kbd> Frost Bridge |
+        <kbd>U</kbd> Gravity Flip |
+        <kbd>K</kbd> EMP Shockwave |
+        <kbd>P</kbd> Teleport |
+        <kbd>Y</kbd> Vortex |
+        <kbd>I</kbd> Size Shift |
+        <kbd>6</kbd> Phase Shift |
+        <kbd>O</kbd> Violet Light
+        <div id="portal-indicators" style="margin-top: 5px; font-weight: bold;">
+            Portal A <span id="portal-a-status" style="color: #444;">⚫</span> &nbsp;|&nbsp;
+            Portal B <span id="portal-b-status" style="color: #444;">⚫</span>
+        </div>
+    </div>
+    <button id="mute-btn" title="Toggle Sound">🔊</button>
+    <button id="pause-btn" title="Pause Game (Esc)">⏸️</button>
+</div>
+    <div id="active-effects" style="margin-bottom: 15px; font-weight: bold; color: #0ff; text-shadow: 1px 1px 0 #000;"></div>

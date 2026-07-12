@@ -39,6 +39,7 @@ export class ParticleSystem {
         this.particles = []
         for (let i = 0; i < this.maxParticles; i++) {
             this.particles.push({
+                _poolIndex: i,
                 pos: [0, 0, 0],
                 vel: [0, 0, 0],
                 life: 0,
@@ -98,6 +99,7 @@ export class ParticleSystem {
         if (targetSize <= this.maxParticles) return
         for (let i = this.particles.length; i < targetSize; i++) {
             this.particles.push({
+                _poolIndex: i,
                 pos: [0, 0, 0],
                 vel: [0, 0, 0],
                 life: 0,
@@ -224,8 +226,7 @@ export class ParticleSystem {
             particle.active = true
             this.activeParticles.push(particle)
             if (this.gpuBackend) {
-                const idx = this.particles.indexOf(particle)
-                if (idx >= 0) this.gpuBackend.markDirty(idx)
+                this.gpuBackend.markDirty(particle._poolIndex)
             }
         }
          

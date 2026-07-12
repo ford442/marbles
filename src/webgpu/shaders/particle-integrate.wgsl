@@ -21,6 +21,7 @@ struct SimParams {
 
 @group(0) @binding(0) var<storage, read_write> particles: array<Particle>;
 @group(0) @binding(1) var<uniform> params: SimParams;
+@group(0) @binding(2) var<storage, read_write> activeFlags: array<f32>;
 
 @compute @workgroup_size(256)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -31,6 +32,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
     var p = particles[i];
     if (p.active < 0.5) {
+        activeFlags[i] = 0.0;
         return;
     }
 
@@ -39,6 +41,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         p.active = 0.0;
         p.life = 0.0;
         particles[i] = p;
+        activeFlags[i] = 0.0;
         return;
     }
 
@@ -50,4 +53,5 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     p.vel *= dragFactor;
     p.pos += p.vel * params.deltaTime;
     particles[i] = p;
+    activeFlags[i] = p.active;
 }

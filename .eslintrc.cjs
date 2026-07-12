@@ -19,8 +19,12 @@ module.exports = {
     ],
     globals: {
         Filament: 'readonly',
+        GPUBufferUsage: 'readonly',
+        GPUMapMode: 'readonly',
+        GPUTextureUsage: 'readonly',
     },
     rules: {
+        'no-empty': ['error', { allowEmptyCatch: true }],
         'no-unused-vars': 'off',
         '@typescript-eslint/no-unused-vars': 'warn',
         'no-console': 'off',

@@ -24,6 +24,10 @@ export class WebGPUParticleBackend {
         this.stats = { activeCount: 0, backend: 'webgpu' };
         this._dirtyIndices = new Set();
         this._cpuScratch = new Float32Array(this.maxParticles * 16);
+        this._readbackPending = false;
+        this._pendingDispose = false;
+        this._resizePending = false;
+        this._resizeHandler = null;
     }
 
     async init() {
@@ -45,7 +49,18 @@ export class WebGPUParticleBackend {
             return false;
         }
 
-        this.device = await adapter.requestDevice();
+        try {
+            this.device = await adapter.requestDevice();
+        } catch (deviceError) {
+            console.warn('[WebGPU] requestDevice failed:', deviceError);
+            return false;
+        }
+
+        this.device.lost.then((info) => {
+            console.warn(`[WebGPU] device lost: ${info.reason}`, info.message);
+            this.dispose();
+        });
+
         this.context = this.canvas.getContext('webgpu');
         if (!this.context) {
             console.warn('[WebGPU] could not acquire webgpu context');
@@ -58,6 +73,16 @@ export class WebGPUParticleBackend {
         this.particleBuffer = this.device.createBuffer({
             size: this.maxParticles * PARTICLE_STRIDE,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        });
+
+        this.activeBuffer = this.device.createBuffer({
+            size: this.maxParticles * 4,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+        });
+
+        this.readbackBuffer = this.device.createBuffer({
+            size: this.maxParticles * 4,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
         });
 
         this.simParamsBuffer = this.device.createBuffer({
@@ -107,6 +132,7 @@ export class WebGPUParticleBackend {
             entries: [
                 { binding: 0, resource: { buffer: this.particleBuffer } },
                 { binding: 1, resource: { buffer: this.simParamsBuffer } },
+                { binding: 2, resource: { buffer: this.activeBuffer } },
             ],
         });
 
@@ -118,7 +144,8 @@ export class WebGPUParticleBackend {
             ],
         });
 
-        window.addEventListener('resize', () => this._resize());
+        this._resizeHandler = () => this._scheduleResize();
+        window.addEventListener('resize', this._resizeHandler);
         this.ready = true;
         window.webgpuParticlesReady = true;
         console.log(`[WebGPU] Particle backend ready (${this.maxParticles} slots)`);
@@ -141,6 +168,15 @@ export class WebGPUParticleBackend {
         });
     }
 
+    _scheduleResize() {
+        if (this._resizePending) return;
+        this._resizePending = true;
+        requestAnimationFrame(() => {
+            this._resizePending = false;
+            this._resize();
+        });
+    }
+
     /**
      * @param {number} index
      */
@@ -150,21 +186,47 @@ export class WebGPUParticleBackend {
 
     uploadDirty() {
         if (!this.ready || this._dirtyIndices.size === 0) return;
-        for (const index of this._dirtyIndices) {
-            const particle = this.particleSystem.particles[index];
-            if (!particle) continue;
-            packParticle(particle, index * PARTICLE_STRIDE, this._cpuScratch);
+
+        const pool = this.particleSystem.particles;
+        const dirtyCount = this._dirtyIndices.size;
+        const cap = Math.min(pool.length, this.maxParticles);
+
+        // If most of the pool changed, a single bulk upload is cheaper than ranges.
+        if (dirtyCount > cap * 0.5) {
+            this.uploadAll();
+            return;
         }
-        for (const index of this._dirtyIndices) {
-            const byteOffset = index * PARTICLE_STRIDE;
+
+        const sorted = Array.from(this._dirtyIndices).sort((a, b) => a - b);
+        let rangeStart = sorted[0];
+
+        for (let i = 1; i <= sorted.length; i++) {
+            const atEnd = i === sorted.length;
+            const contiguous = !atEnd && sorted[i] === sorted[i - 1] + 1;
+
+            if (contiguous) continue;
+
+            const rangeEnd = sorted[i - 1];
+            for (let j = rangeStart; j <= rangeEnd; j++) {
+                const particle = pool[j];
+                if (particle) {
+                    packParticle(particle, j * PARTICLE_STRIDE, this._cpuScratch);
+                }
+            }
+
+            const byteOffset = rangeStart * PARTICLE_STRIDE;
+            const byteSize = (rangeEnd - rangeStart + 1) * PARTICLE_STRIDE;
             this.device.queue.writeBuffer(
                 this.particleBuffer,
                 byteOffset,
                 this._cpuScratch.buffer,
                 byteOffset,
-                PARTICLE_STRIDE
+                byteSize
             );
+
+            if (!atEnd) rangeStart = sorted[i];
         }
+
         this._dirtyIndices.clear();
     }
 
@@ -200,9 +262,45 @@ export class WebGPUParticleBackend {
         pass.setBindGroup(0, this.computeBindGroup);
         pass.dispatchWorkgroups(Math.ceil(this.maxParticles / 256));
         pass.end();
+
+        encoder.copyBufferToBuffer(this.activeBuffer, 0, this.readbackBuffer, 0, this.readbackBuffer.size);
         this.device.queue.submit([encoder.finish()]);
 
-        this.stats.activeCount = this.particleSystem.activeParticles.length;
+        this._scheduleReadback();
+    }
+
+    _scheduleReadback() {
+        if (this._readbackPending) return;
+        this._readbackPending = true;
+
+        this.readbackBuffer.mapAsync(GPUMapMode.READ)
+            .then(() => {
+                this._readbackPending = false;
+                if (!this.ready || !this.particleSystem) {
+                    try { this.readbackBuffer.unmap(); } catch {}
+                    if (this._pendingDispose) this._destroyResources();
+                    return;
+                }
+
+                const flags = new Float32Array(this.readbackBuffer.getMappedRange());
+                const active = this.particleSystem.activeParticles;
+                for (let i = active.length - 1; i >= 0; i--) {
+                    const p = active[i];
+                    if (!p || flags[p._poolIndex] < 0.5) {
+                        if (p) p.active = false;
+                        active.splice(i, 1);
+                    }
+                }
+                this.stats.activeCount = active.length;
+                this.readbackBuffer.unmap();
+
+                if (this._pendingDispose) this._destroyResources();
+            })
+            .catch((err) => {
+                this._readbackPending = false;
+                console.warn('[WebGPU] active-flag readback failed:', err);
+                if (this._pendingDispose) this._destroyResources();
+            });
     }
 
     /**
@@ -247,11 +345,30 @@ export class WebGPUParticleBackend {
     dispose() {
         this.ready = false;
         window.webgpuParticlesReady = false;
-        this.particleBuffer?.destroy();
-        this.simParamsBuffer?.destroy();
-        this.cameraBuffer?.destroy();
-        this.device?.destroy();
+
+        if (this._resizeHandler) {
+            window.removeEventListener('resize', this._resizeHandler);
+            this._resizeHandler = null;
+        }
+
         if (this.canvas) this.canvas.style.opacity = '0';
+
+        if (this._readbackPending) {
+            this._pendingDispose = true;
+            return;
+        }
+
+        this._destroyResources();
+    }
+
+    _destroyResources() {
+        try { this.particleBuffer?.destroy(); } catch {}
+        try { this.activeBuffer?.destroy(); } catch {}
+        try { this.readbackBuffer?.destroy(); } catch {}
+        try { this.simParamsBuffer?.destroy(); } catch {}
+        try { this.cameraBuffer?.destroy(); } catch {}
+        try { this.device?.destroy(); } catch {}
+        this.device = null;
     }
 }
 

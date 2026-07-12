@@ -1,3 +1,8 @@
+import './styles/index.css';
+import { mountShell } from './ui/mount-shell.js';
+
+mountShell();
+
 import { createGameState, bindGameState } from './game/state/index.js';
 import { applyZoneMethods } from './zones/methods/index.js';
 import { applyInputMethods } from './input-methods.js';
@@ -18,6 +23,7 @@ import { LevelEffectBudget } from './level-effect-budget.js';
 import { LightingBudgetManager } from './lighting-budget.js';
 import { AbilitySystem } from './game/systems/ability-system.js';
 import { registerServiceWorker } from './pwa/register-sw.js';
+import { CampaignProgress } from './game/systems/campaign-progress.js';
 import { GhostReplay } from './game/systems/ghost-replay.js';
 import { TrackLodManager } from './assets/track-lod-manager.js';
 

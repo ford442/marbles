@@ -145,6 +145,70 @@ function quaternionToMat4(position, quaternion) {
 - WASM support  
 - Cross-Origin isolation for SharedArrayBuffer (COOP/COEP headers configured in Vite)
 
+## Production Deploy
+
+### Build
+
+`npm run build` runs `npm run build:wasm` first, then Vite. The WASM artifacts are copied into `public/wasm/` by `wasm/build.sh` and emitted into `dist/wasm/` by the build. `public/wasm/` is gitignored, so a clean checkout **must** run `npm run build` (or `npm run build:wasm`) before deploy.
+
+### Cross-origin isolation headers
+
+SharedArrayBuffer requires:
+
+```
+Cross-Origin-Embedder-Policy: require-corp
+Cross-Origin-Opener-Policy: same-origin
+```
+
+`vite dev` and `vite preview` set these automatically. For static hosts, add them at the server/CDN layer.
+
+**nginx**
+
+```nginx
+location / {
+    add_header Cross-Origin-Embedder-Policy "require-corp" always;
+    add_header Cross-Origin-Opener-Policy "same-origin" always;
+    try_files $uri $uri/ /index.html;
+}
+```
+
+**Cloudflare Pages**
+
+Add to `_headers` in the publish directory:
+
+```
+/*
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Opener-Policy: same-origin
+```
+
+**Note:** `require-corp` blocks cross-origin resources that do not send `Cross-Origin-Resource-Policy` (or use `crossorigin` attributes). Self-hosted Filament/WASM assets under the same origin are unaffected.
+
+### Cache-Control strategy
+
+| Asset type | Example | Cache policy |
+|---|---|---|
+| Hashed JS/CSS | `dist/assets/index-BJvUM3Bn.js` | `public, max-age=31536000, immutable` |
+| Unhashed WASM | `dist/wasm/marble_physics.wasm` | `public, max-age=3600` or version with query/hash |
+| Filament WASM | `dist/filament.wasm` | `public, max-age=3600` or version with query/hash |
+| HTML | `dist/index.html` | `no-cache` |
+
+Because `marble_physics.js` and `filament.wasm` keep stable filenames, either:
+
+1. Bust the cache on each deploy (e.g., append `?v=<git-sha>` in the loader), or
+2. Configure your CDN to invalidate `/wasm/*` and `/*.wasm` on every deploy.
+
+Vite handles hashed JS/CSS automatically; do **not** set long cache headers on `index.html`.
+
+### Deploy checklist
+
+- [ ] `npm run build` completed successfully (includes `build:wasm`)
+- [ ] `dist/wasm/marble_physics.js` and `dist/wasm/marble_physics.wasm` exist
+- [ ] COOP/COEP headers are present on the live origin
+- [ ] `index.html` is served with `Cache-Control: no-cache` or short TTL
+- [ ] WASM/assets have an explicit cache invalidation strategy
+- [ ] Verify `/wasm/marble_physics.wasm` returns HTTP 200 and `application/wasm`
+
 ## Notes
 
 - Filament uses a UMD/WASM loading pattern which may require additional configuration in some environments

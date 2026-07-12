@@ -8,7 +8,7 @@ export const WEBGPU_PARTICLE_CAP = 8192;
 export function isWebGPUParticlesRequested() {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
-    return params.get('webgpuParticles') === '1' || params.has('webgpuParticles');
+    return params.get('webgpuParticles') === '1';
 }
 
 /**
@@ -17,7 +17,7 @@ export function isWebGPUParticlesRequested() {
 export function isWebGPUNoiseRequested() {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
-    return params.get('webgpuNoise') === '1' || params.has('webgpuNoise');
+    return params.get('webgpuNoise') === '1';
 }
 
 /**
