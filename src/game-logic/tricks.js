@@ -72,10 +72,9 @@ export class GameLogicTricks {
         }
         if (this.combobarContainerEl) this.combobarContainerEl.style.display = 'block'
 
-        this.score += points * this.combo
-        if (this.scoreEl) this.scoreEl.textContent = 'Score: ' + this.score
+        this.bankedTrickScore = (this.bankedTrickScore || 0) + points
 
-        this.showTrickMessage(message + ` +${points * this.combo}`, color)
+        this.showTrickMessage(message + ` +${points}`, color)
     }
 
     showTrickMessage(text, color) {

@@ -164,8 +164,7 @@ export class GameLoopDynamics {
                                     this.triggerCollectionEffect(collectionPos, scoreValue, collectibleType)
                                 }
         
-                                this.score += 10 * this.combo
-                                this.scoreEl.textContent = 'Score: ' + this.score
+                                this.bankedTrickScore = (this.bankedTrickScore || 0) + 10
                                 this.collectiblesCollected = (this.collectiblesCollected || 0) + 1
                                 this.scene.remove(c.entity)
                                 this.engine.destroyEntity(c.entity)
@@ -201,7 +200,18 @@ export class GameLoopDynamics {
                     comboTimeElapsed = 0
                 }
                 if (comboTimeElapsed > this.maxComboTime && this.combo > 1) {
+                    if (this.bankedTrickScore > 0) {
+                        const finalComboScore = this.bankedTrickScore * this.combo
+                        this.score += finalComboScore
+                        if (this.scoreEl) this.scoreEl.textContent = 'Score: ' + this.score
+
+                        if (typeof this.showTrickMessage === 'function') {
+                            this.showTrickMessage(`Combo Landed! +${finalComboScore}`, '#00ff00')
+                        }
+                    }
+
                     this.combo = 1
+                    this.bankedTrickScore = 0
                     if (this.comboEl) {
                         this.comboEl.style.display = 'none'
                         this.comboEl.textContent = `Combo: x${this.combo}`
