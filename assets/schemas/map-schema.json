@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Marble Game Map Schema",
-  "description": "Schema for defining marble game levels/maps",
+  "description": "Schema for defining marble game levels/maps. Zone type strings must match keys in src/zone-setup/registry.js (ZONE_HANDLERS).",
   "type": "object",
   "required": ["id", "name", "version", "zones", "spawn", "goals"],
   "properties": {
@@ -29,20 +29,46 @@
     },
     "difficulty": {
       "type": "string",
-      "enum": ["easy", "medium", "hard", "expert"],
+      "enum": ["easy", "medium", "hard", "expert", "extreme"],
       "description": "Difficulty level"
     },
-    "zones": {
+    "chapter": {
+      "type": "string",
+      "enum": ["tutorial", "classic", "neon", "extreme", "expert"],
+      "description": "Campaign chapter override"
+    },
+    "nightMode": {
+      "type": "boolean",
+      "description": "Enable night lighting preset"
+    },
+    "backgroundColor": {
       "type": "array",
-      "description": "List of zones/areas in the map",
+      "description": "RGBA clear color [r, g, b, a]",
+      "items": { "type": "number", "minimum": 0, "maximum": 1 },
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "environment": {
+      "type": "string",
+      "enum": ["default", "space_nebula", "ice", "volcanic", "neon_city", "underwater"],
+      "description": "Environment preset key (see src/rendering/environment.js)"
+    },
+    "colorGrade": {
+      "type": "string",
+      "description": "Optional color grading preset override"
+    },
+    "behaviors": {
+      "type": "array",
+      "description": "Named per-level behavior module ids (src/game/level-behaviors/)",
+      "items": { "type": "string", "pattern": "^[a-z0-9_-]+$" }
+    },
+    "checkpoints": {
+      "type": "array",
+      "description": "Checkpoint definitions for respawn progression",
       "items": {
         "type": "object",
-        "required": ["type", "pos"],
         "properties": {
-          "type": {
-            "type": "string",
-            "enum": ["floor", "track", "landing", "jump", "slalom", "staircase", "goal", "custom"]
-          },
+          "id": { "type": "integer" },
           "pos": {
             "type": "object",
             "required": ["x", "y", "z"],
@@ -52,22 +78,21 @@
               "z": { "type": "number" }
             }
           },
-          "size": {
+          "range": {
             "type": "object",
             "properties": {
-              "x": { "type": "number" },
-              "y": { "type": "number" },
-              "z": { "type": "number" }
+              "x": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+              "y": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+              "z": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
             }
-          },
-          "color": {
-            "type": "array",
-            "items": { "type": "number", "minimum": 0, "maximum": 1 },
-            "minItems": 3,
-            "maxItems": 3
           }
         }
       }
+    },
+    "zones": {
+      "type": "array",
+      "description": "List of zones/areas in the map",
+      "items": { "$ref": "#/definitions/zone" }
     },
     "spawn": {
       "type": "object",
@@ -100,11 +125,152 @@
     "camera": {
       "type": "object",
       "properties": {
-        "mode": { "type": "string", "enum": ["orbit", "follow"] },
+        "mode": { "type": "string", "enum": ["orbit", "follow", "action", "fpv", "topdown", "cinematic", "side-scroller", "drone"] },
         "angle": { "type": "number" },
         "height": { "type": "number" },
         "radius": { "type": "number" },
         "offset": { "type": "number" }
+      }
+    },
+    "abilities": {
+      "type": "object",
+      "description": "Per-level ability subset. Omit to allow all registered abilities.",
+      "properties": {
+        "enabled": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Whitelist of ability ids (e.g. tutorial uses [\"jump\"])"
+        },
+        "disabled": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Blacklist of ability ids"
+        }
+      }
+    },
+    "medals": {
+      "type": "object",
+      "description": "Time thresholds (seconds) for gold/silver/bronze medals and par display",
+      "properties": {
+        "goldTime": { "type": "number", "description": "Finish at or below for gold" },
+        "silverTime": { "type": "number", "description": "Finish at or below for silver" },
+        "bronzeTime": { "type": "number", "description": "Finish at or below for bronze" },
+        "parTime": { "type": "number", "description": "Designer par time for HUD/reference" }
+      }
+    },
+    "collectiblesTotal": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total collectible pickups in the level (for completion %)"
+    },
+    "music": {
+      "type": "string",
+      "description": "Optional music track id (future audio pipeline)"
+    },
+    "ambientSounds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Optional ambient sound ids"
+    }
+  },
+  "definitions": {
+    "zone": {
+      "type": "object",
+      "required": ["type", "pos"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$",
+          "description": "Registered zone handler id (see zone-setup/registry.js ZONE_HANDLERS)"
+        },
+        "pos": {
+          "type": "object",
+          "required": ["x", "y", "z"],
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "z": { "type": "number" }
+          }
+        },
+        "size": {
+          "type": "object",
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "z": { "type": "number" }
+          }
+        },
+        "color": {
+          "type": "array",
+          "items": { "type": "number", "minimum": 0, "maximum": 1 },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "rotY": {
+          "type": "number",
+          "description": "Y-axis rotation in radians (optional)"
+        },
+        "friction": { "type": "number", "minimum": 0, "maximum": 1 },
+        "restitution": { "type": "number", "minimum": 0, "maximum": 1 },
+        "slope": { "type": "number" },
+        "boostForce": { "type": "number", "minimum": 0 },
+        "model": {
+          "type": "string",
+          "description": "GLB/GLTF path relative to assets/ (e.g. tracks/neon_01.glb)"
+        },
+        "collider": {
+          "type": "string",
+          "enum": ["trimesh", "convexHull", "none"],
+          "description": "Rapier collider type for imported mesh (default: trimesh)"
+        },
+        "scale": {
+          "type": "number",
+          "description": "Uniform scale applied to model and collider"
+        },
+        "materialPreset": {
+          "type": "string",
+          "description": "Optional PBR preset override (keeps embedded textures when omitted)"
+        },
+        "lod": {
+          "type": "array",
+          "description": "Distance-switched LOD models (furthest listed LOD swaps in at distance)",
+          "items": {
+            "type": "object",
+            "required": ["model", "distance"],
+            "properties": {
+              "model": { "type": "string" },
+              "distance": { "type": "number", "minimum": 0 }
+            }
+          }
+        },
+        "kinematic": {
+          "type": "object",
+          "description": "Moving platform parameters (declarative stamp)",
+          "properties": {
+            "axis": { "type": "string", "enum": ["horizontal", "vertical", "circular"] },
+            "amplitude": { "type": "number", "minimum": 0 },
+            "speed": { "type": "number", "minimum": 0 },
+            "phase": { "type": "number" }
+          }
+        },
+        "collectible": {
+          "type": "object",
+          "properties": {
+            "kind": { "type": "string" },
+            "value": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "grappleAnchor": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "radius": { "type": "number", "minimum": 0 }
+          }
+        },
+        "checkpoint": {
+          "type": "integer",
+          "description": "Checkpoint id when type is checkpoint"
+        }
       }
     }
   }

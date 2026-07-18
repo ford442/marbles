@@ -1,3 +1,5 @@
+import { decorateGalaxySpiral } from './methods/decorations.js';
+
 export function createGalaxySpiralZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
@@ -74,4 +76,6 @@ export function createGalaxySpiralZone(game, offset) {
         [0.8, 0.8, 0.9],
         'metal'
     );
+
+    decorateGalaxySpiral(game, offset);
 }

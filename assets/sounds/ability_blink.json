@@ -1,0 +1,9 @@
+{
+  "id": "ability_blink",
+  "name": "Blink / Teleport",
+  "version": "1.0.0",
+  "category": "sfx",
+  "files": [],
+  "synthesis": { "type": "ability", "profile": "trick" },
+  "properties": { "volume": 0.65, "spatial": false }
+}

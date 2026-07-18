@@ -88,6 +88,29 @@ export class InitSettingsTabs {
             })
         }
 
+        const targetFpsSelect = document.getElementById('setting-target-fps')
+        if (targetFpsSelect) {
+            targetFpsSelect.addEventListener('change', (e) => {
+                if (this.settings) {
+                    const val = e.target.value
+                    this.settings.graphics.targetFps = val === 'unlimited' ? 'unlimited' : parseInt(val, 10)
+                }
+            })
+        }
+
+        const perfModeSelect = document.getElementById('setting-performance-mode')
+        if (perfModeSelect) {
+            perfModeSelect.addEventListener('change', (e) => {
+                if (this.settings) {
+                    this.settings.graphics.performanceMode = e.target.value
+                    if (e.target.value === 'locked') {
+                        this.autoQualityGovernor?.reset()
+                    }
+                    this.applySettings()
+                }
+            })
+        }
+
         // Audio settings
         const masterSlider = document.getElementById('setting-master')
         const masterValue = document.getElementById('value-master')
@@ -133,6 +156,53 @@ export class InitSettingsTabs {
             })
         }
 
+        const touchEnabled = document.getElementById('setting-touch-enabled')
+        if (touchEnabled) {
+            touchEnabled.addEventListener('change', (e) => {
+                if (!this.settings.controls.touch) this.settings.controls.touch = {}
+                this.settings.controls.touch.enabled = e.target.value
+                this.applyTouchSettings?.()
+            })
+        }
+
+        const touchCamSlider = document.getElementById('setting-touch-camera')
+        const touchCamValue = document.getElementById('value-touch-camera')
+        if (touchCamSlider && touchCamValue) {
+            touchCamSlider.addEventListener('input', (e) => {
+                touchCamValue.textContent = `${e.target.value}%`
+                if (!this.settings.controls.touch) this.settings.controls.touch = {}
+                this.settings.controls.touch.cameraSensitivity = parseInt(e.target.value, 10)
+            })
+        }
+
+        const touchInvert = document.getElementById('setting-touch-invert-y')
+        if (touchInvert) {
+            touchInvert.addEventListener('change', (e) => {
+                if (!this.settings.controls.touch) this.settings.controls.touch = {}
+                this.settings.controls.touch.invertCameraY = e.target.checked
+            })
+        }
+
+        const touchJoystickSide = document.getElementById('setting-touch-joystick-side')
+        if (touchJoystickSide) {
+            touchJoystickSide.addEventListener('change', (e) => {
+                if (!this.settings.controls.touch) this.settings.controls.touch = {}
+                this.settings.controls.touch.joystickSide = e.target.value
+                this.applyTouchSettings?.()
+            })
+        }
+
+        const touchSwapButtons = document.getElementById('setting-touch-swap-buttons')
+        if (touchSwapButtons) {
+            touchSwapButtons.addEventListener('change', (e) => {
+                if (!this.settings.controls.touch) this.settings.controls.touch = {}
+                const swapped = e.target.checked
+                this.settings.controls.touch.jumpSlot = swapped ? 'secondary' : 'primary'
+                this.settings.controls.touch.boostSlot = swapped ? 'primary' : 'secondary'
+                this.applyTouchSettings?.()
+            })
+        }
+
         // Accessibility settings
         const uiScaleSlider = document.getElementById('setting-ui-scale')
         const uiScaleValue = document.getElementById('value-ui-scale')
@@ -158,6 +228,28 @@ export class InitSettingsTabs {
             shakeSlider.addEventListener('input', (e) => {
                 shakeValue.textContent = `${e.target.value}%`
                 if (this.settings) this.settings.accessibility.screenShake = parseInt(e.target.value)
+            })
+        }
+
+        const cloudOptIn = document.getElementById('setting-cloud-opt-in')
+        if (cloudOptIn) {
+            cloudOptIn.addEventListener('change', (e) => {
+                void import('../game/network/cloud-client.js').then((m) => {
+                    m.setCloudOptIn(e.target.checked)
+                    if (e.target.checked) {
+                        m.scheduleQueueFlush()
+                        this.cloudClient?.pullAndMergeCampaign()
+                    }
+                })
+            })
+        }
+
+        const cloudDisplayName = document.getElementById('setting-cloud-display-name')
+        if (cloudDisplayName) {
+            cloudDisplayName.addEventListener('change', (e) => {
+                void import('../game/network/cloud-client.js').then((m) => {
+                    m.setDisplayName(e.target.value)
+                })
             })
         }
     }
@@ -191,6 +283,16 @@ export class InitSettingsTabs {
         const dynResToggle = document.getElementById('setting-dynres')
         if (dynResToggle) dynResToggle.checked = s.graphics.dynamicResolution !== false
 
+        const targetFpsSelect = document.getElementById('setting-target-fps')
+        if (targetFpsSelect) {
+            targetFpsSelect.value = String(s.graphics.targetFps ?? 60)
+        }
+
+        const perfModeSelect = document.getElementById('setting-performance-mode')
+        if (perfModeSelect) {
+            perfModeSelect.value = s.graphics.performanceMode || 'auto'
+        }
+
         // Audio
         const masterSlider = document.getElementById('setting-master')
         const masterValue = document.getElementById('value-master')
@@ -216,6 +318,25 @@ export class InitSettingsTabs {
         const invertYToggle = document.getElementById('setting-invert-y')
         if (invertYToggle) invertYToggle.checked = s.controls.invertY
 
+        const touch = s.controls.touch || {}
+        const touchEnabled = document.getElementById('setting-touch-enabled')
+        if (touchEnabled) touchEnabled.value = touch.enabled || 'auto'
+
+        const touchCamSlider = document.getElementById('setting-touch-camera')
+        const touchCamValue = document.getElementById('value-touch-camera')
+        const touchCam = touch.cameraSensitivity ?? 50
+        if (touchCamSlider) touchCamSlider.value = touchCam
+        if (touchCamValue) touchCamValue.textContent = `${touchCam}%`
+
+        const touchInvert = document.getElementById('setting-touch-invert-y')
+        if (touchInvert) touchInvert.checked = touch.invertCameraY === true
+
+        const touchJoystickSide = document.getElementById('setting-touch-joystick-side')
+        if (touchJoystickSide) touchJoystickSide.value = touch.joystickSide || 'left'
+
+        const touchSwapButtons = document.getElementById('setting-touch-swap-buttons')
+        if (touchSwapButtons) touchSwapButtons.checked = touch.jumpSlot === 'secondary'
+
         // Accessibility
         const uiScaleSlider = document.getElementById('setting-ui-scale')
         const uiScaleValue = document.getElementById('value-ui-scale')
@@ -229,6 +350,14 @@ export class InitSettingsTabs {
         const shakeValue = document.getElementById('value-shake')
         if (shakeSlider) shakeSlider.value = s.accessibility.screenShake
         if (shakeValue) shakeValue.textContent = `${s.accessibility.screenShake}%`
+
+        void import('../game/network/cloud-client.js').then((m) => {
+            const cloudOptIn = document.getElementById('setting-cloud-opt-in')
+            if (cloudOptIn) cloudOptIn.checked = m.getCloudOptIn()
+
+            const cloudDisplayName = document.getElementById('setting-cloud-display-name')
+            if (cloudDisplayName) cloudDisplayName.value = m.getDisplayName()
+        })
     }
 }
 

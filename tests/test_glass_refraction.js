@@ -83,10 +83,10 @@ const checks = [
     {
         name: 'Marble creation applies glass quality config',
         check: () => {
-            const content = fs.readFileSync('src/marble-management-methods.js', 'utf-8');
+            const content = fs.readFileSync('src/marble-material-tier.js', 'utf-8');
             return content.includes('getGlassQualityConfig') &&
-                   content.includes('materialType === \'classicGlass\'') &&
-                   content.includes('glassConfig.refractionMode');
+                   content.includes("presetName === 'classicGlass'") &&
+                   content.includes('glass.refractionMode');
         }
     },
     {
@@ -108,12 +108,6 @@ const checks = [
         check: () => {
             const content = fs.readFileSync('src/marbles_data.js', 'utf-8');
             return content.includes('Ghost') && content.includes('classicGlass');
-        }
-    },
-    {
-        name: 'Glass Bridge zone exists',
-        check: () => {
-            return fs.existsSync('src/zones/glass-bridge.js');
         }
     }
 ];

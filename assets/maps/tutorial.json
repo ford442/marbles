@@ -39,5 +39,15 @@
     "radius": 25
   },
   "music": "ambient_calm",
-  "ambientSounds": ["wind_light", "birds"]
+  "ambientSounds": ["wind_light", "birds"],
+  "abilities": {
+    "enabled": ["jump"]
+  },
+  "medals": {
+    "goldTime": 25,
+    "silverTime": 45,
+    "bronzeTime": 90,
+    "parTime": 35
+  },
+  "collectiblesTotal": 0
 }

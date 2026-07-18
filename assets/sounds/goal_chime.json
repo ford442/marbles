@@ -1,0 +1,9 @@
+{
+  "id": "goal_chime",
+  "name": "Goal Chime",
+  "version": "1.0.0",
+  "category": "sfx",
+  "files": [],
+  "synthesis": { "type": "ability", "profile": "goal" },
+  "properties": { "volume": 0.8, "spatial": true, "maxDistance": 80 }
+}

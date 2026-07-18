@@ -1,427 +1,364 @@
 import RAPIER from '@dimforge/rapier3d-compat';
+import { audio } from '../audio.js';
+import { quaternionToMat4, quatFromEuler } from '../math.js';
+import { getLevel } from '../levels/catalog.js';
+import { getMarblePhysics, FORCE_BATCH_THRESHOLD, PhysicsBatchBuffers } from '../wasm-bridge.js';
 import { getDofConfig } from '../rendering/post-fx-presets.js';
-import { LEVELS } from '../levels.js';
-
-const DOF_CAMERA_MODES = new Set(['cinematic', 'follow', 'action'])
-const DOF_UPDATE_THRESHOLD = 1.0
+import {
+    getCachedTransformInstance,
+    transformChanged,
+    scaledTransform,
+    setColor3IfChanged,
+    DOF_CAMERA_MODES,
+    DOF_UPDATE_THRESHOLD,
+} from './helpers.js';
 
 export class GameLoopCamera {
-    updateCamera(now, frameDeltaSec) {
-        const rotSpeed = 0.02
-        const zoomSpeed = 0.5
-        const FOV_CHANGE_THRESHOLD = 0.25
-        const ASPECT_CHANGE_THRESHOLD = 0.001
-
-        if (this.view && (!DOF_CAMERA_MODES.has(this.cameraMode) || !this.currentLevel) && this._dofEnabled === true) {
-            try { this.view.setDepthOfFieldOptions({ enabled: false }) } catch (e) { /* not supported */ }
-            this._dofEnabled = false
-            this._dofFocusDistance = null
-        }
-
-        if ((this.cameraMode === 'follow' || this.cameraMode === 'action' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown' || this.cameraMode === 'cinematic' || this.cameraMode === 'side-scroller' || this.cameraMode === 'drone') && this.currentLevel) {
-            const level = LEVELS[this.currentLevel]
-            const target = this.playerMarble || this.getLeader()
-            if (target) {
-                const t = target.rigidBody.translation()
-                const v = target.rigidBody.linvel()
-                const speed = Math.hypot(v.x, v.y, v.z)
-
-                if (this.cameraMode === 'follow' || this.cameraMode === 'action') {
-                    // Dynamic Distance Scaling
-                    let targetDist = this.baseCamDist + (speed * 0.1)
-                    if (this.activeEffects.speed && Date.now() < this.activeEffects.speed) {
-                        targetDist *= 1.5
-                    }
-                    // Action camera gets lower and closer when fast
-                    if (this.cameraMode === 'action') {
-                        targetDist = Math.max(3.0, this.baseCamDist - (speed * 0.05))
-                    }
-                    this.currentCamDist += (targetDist - this.currentCamDist) * 0.05
-
-                    // Predictive Look-Ahead
-                    let lookAheadFactor = speed * 0.1
-                    if (this.cameraMode === 'action') {
-                        lookAheadFactor = Math.min(speed * 0.3, 15.0) // Look further ahead in action mode
-                    }
-
-                    const targetLookPos = {
-                        x: t.x + (v.x * lookAheadFactor),
-                        y: t.y,
-                        z: t.z + (v.z * lookAheadFactor)
-                    }
-
-                    // Calculate ideal eye position
-                    let idealEye = {
-                        x: t.x - Math.sin(this.aimYaw) * Math.cos(this.pitchAngle) * this.currentCamDist,
-                        y: t.y + Math.sin(this.pitchAngle) * this.currentCamDist + 1.0, // slight vertical offset
-                        z: t.z - Math.cos(this.aimYaw) * Math.cos(this.pitchAngle) * this.currentCamDist
-                    }
-
-                    // Camera Collision Avoidance
-                    if (this.world && typeof RAPIER !== 'undefined') {
-                        const rayOrigin = { x: t.x, y: t.y + 0.5, z: t.z } // slightly above marble center
-                        const dx = idealEye.x - rayOrigin.x
-                        const dy = idealEye.y - rayOrigin.y
-                        const dz = idealEye.z - rayOrigin.z
-                        const distToEye = Math.hypot(dx, dy, dz)
-
-                        if (distToEye > 0.001) {
-                            const dir = { x: dx / distToEye, y: dy / distToEye, z: dz / distToEye }
-                            const ray = new RAPIER.Ray(rayOrigin, dir)
-                            const maxDist = distToEye + 0.5
-
-                            const hit = this.world.castRay(ray, maxDist, true)
-                            if (hit) {
-                                const otherBody = hit.collider.parent()
-                                if (!otherBody || (otherBody.handle !== target.rigidBody.handle && !hit.collider.isSensor())) {
-                                    const safeDist = hit.toi - 0.5
-                                    if (safeDist > 0) {
-                                        idealEye.x = rayOrigin.x + dir.x * safeDist
-                                        idealEye.y = rayOrigin.y + dir.y * safeDist
-                                        idealEye.z = rayOrigin.z + dir.z * safeDist
+    updateCamera(now, shouldUpdateHUD, frameDeltaSec, FOV_CHANGE_THRESHOLD, ASPECT_CHANGE_THRESHOLD) {
+                if (this.view && (!DOF_CAMERA_MODES.has(this.cameraMode) || !this.currentLevel) && this._dofEnabled === true) {
+                    try { this.view.setDepthOfFieldOptions({ enabled: false }) } catch (e) { /* not supported */ }
+                    this._dofEnabled = false
+                    this._dofFocusDistance = null
+                }
+        
+                if ((this.cameraMode === 'follow' || this.cameraMode === 'action' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown' || this.cameraMode === 'cinematic' || this.cameraMode === 'side-scroller' || this.cameraMode === 'drone') && this.currentLevel) {
+                    const level = getLevel(this.currentLevel)
+                    const target = this.playerMarble || this.getLeader()
+                    if (target) {
+                        const t = target.rigidBody.translation()
+                        if (this.cameraMode === 'follow' || this.cameraMode === 'action') {
+                            const height = level?.camera?.height || 10
+        
+                            const linvel = target.rigidBody.linvel()
+                            const speed = Math.hypot(linvel.x, linvel.z)
+        
+                            // Dynamic Distance Scaling
+                            const baseDist = this.followDist || 20
+                            let dist = baseDist + Math.min(speed * 0.5, 15.0)
+        
+                            let currentHeight = height;
+                            if (this.cameraMode === 'action') {
+                                // Action camera gets lower and closer when fast
+                                const speedFactor = Math.min(speed / 30.0, 1.0)
+                                currentHeight = height * (1.0 - speedFactor * 0.6)
+                                dist = baseDist * (1.0 - speedFactor * 0.3)
+                            }
+        
+                            // Predictive Look-Ahead
+                            let lookAheadFactor = Math.min(speed * 0.15, 8.0)
+                            if (this.cameraMode === 'action') {
+                                lookAheadFactor = Math.min(speed * 0.3, 15.0) // Look further ahead in action mode
+                            }
+                            const normVx = speed > 0.1 ? linvel.x / speed : 0
+                            const normVz = speed > 0.1 ? linvel.z / speed : 0
+                            const idealLookAtX = t.x + normVx * lookAheadFactor
+                            const idealLookAtY = t.y
+                            const idealLookAtZ = t.z + normVz * lookAheadFactor
+        
+                            // Calculate ideal eye position
+                            let idealEyeX = t.x - Math.sin(this.aimYaw) * dist
+                            let idealEyeY = t.y + currentHeight
+                            let idealEyeZ = t.z - Math.cos(this.aimYaw) * dist
+        
+                            // Camera Collision Avoidance
+                            if (this.world && typeof RAPIER !== 'undefined') {
+                                const dx = idealEyeX - t.x
+                                const dy = idealEyeY - t.y
+                                const dz = idealEyeZ - t.z
+                                const distToEye = Math.hypot(dx, dy, dz)
+                                const rayDir = { x: dx / distToEye, y: dy / distToEye, z: dz / distToEye }
+        
+                                const r = target.scale * 0.5 || 0.5
+                                const startDist = r + 0.1
+                                const rayOrigin = {
+                                    x: t.x + rayDir.x * startDist,
+                                    y: t.y + rayDir.y * startDist,
+                                    z: t.z + rayDir.z * startDist
+                                }
+        
+                                const ray = new RAPIER.Ray(rayOrigin, rayDir)
+        
+                                const maxRayDist = Math.max(0.01, distToEye - startDist)
+                                const hit = this.world.castRay(ray, maxRayDist, false)
+                                if (hit) {
+                                    const otherBody = hit.collider.parent()
+                                    if (!otherBody || (otherBody.handle !== target.rigidBody.handle && !hit.collider.isSensor())) {
+                                        const safeDist = hit.toi - 0.2
+                                        if (safeDist > 0) {
+                                            idealEyeX = rayOrigin.x + rayDir.x * safeDist
+                                            idealEyeY = rayOrigin.y + rayDir.y * safeDist
+                                            idealEyeZ = rayOrigin.z + rayDir.z * safeDist
+                                        } else {
+                                            idealEyeX = rayOrigin.x
+                                            idealEyeY = rayOrigin.y
+                                            idealEyeZ = rayOrigin.z
+                                        }
                                     }
                                 }
                             }
-                        }
-                    }
-
-                    // Smoothly interpolate (Lerp) towards ideal positions
-                    if (!this.cameraFollowPos) {
-                        this.cameraFollowPos = { ...idealEye }
-                        this.cameraLookPos = { ...targetLookPos }
-                    } else {
-                        const lerpFactorPos = 0.1
-                        const lerpFactorLook = 0.15
-
-                        this.cameraFollowPos.x += (idealEye.x - this.cameraFollowPos.x) * lerpFactorPos
-                        this.cameraFollowPos.y += (idealEye.y - this.cameraFollowPos.y) * lerpFactorPos
-                        this.cameraFollowPos.z += (idealEye.z - this.cameraFollowPos.z) * lerpFactorPos
-
-                        this.cameraLookPos.x += (targetLookPos.x - this.cameraLookPos.x) * lerpFactorLook
-                        this.cameraLookPos.y += (targetLookPos.y - this.cameraLookPos.y) * lerpFactorLook
-                        this.cameraLookPos.z += (targetLookPos.z - this.cameraLookPos.z) * lerpFactorLook
-                    }
-
-                    const upVector = [0, 1, 0]
-
-                    if (this.isWallRiding && this.currentWallNormal) {
-                        // Smoothly tilt the camera up-vector towards the wall normal
-                        upVector[0] = this.currentWallNormal.x * 0.5
-                        upVector[1] = 1.0 // Bias towards world up
-                        upVector[2] = this.currentWallNormal.z * 0.5
-
-                        // Normalize
-                        const len = Math.hypot(upVector[0], upVector[1], upVector[2])
-                        upVector[0] /= len
-                        upVector[1] /= len
-                        upVector[2] /= len
-                    }
-
-                    this.camera.lookAt(
-                        [this.cameraFollowPos.x + this.cameraShake.x, this.cameraFollowPos.y + this.cameraShake.y, this.cameraFollowPos.z + this.cameraShake.z],
-                        [this.cameraLookPos.x, this.cameraLookPos.y, this.cameraLookPos.z],
-                        upVector
-                    )
-
-                    // Dynamic FOV scaling based on speed
-                    if (this.view && this.camera && this.Filament) {
-                        const baseFov = this.cameraMode === 'action' ? 70 : 60
-                        const maxFov = this.cameraMode === 'action' ? 100 : 85
-                        const fovIncrease = Math.min(speed * 0.8, maxFov - baseFov)
-                        const targetFov = baseFov + fovIncrease
-
-                        this.currentFov += (targetFov - this.currentFov) * 0.1
-
-                        const aspect = window.innerWidth / window.innerHeight
-                        const fovChanged = Math.abs(this.currentFov - this.lastFov) > FOV_CHANGE_THRESHOLD
-                        const aspectChanged = Math.abs(aspect - this.lastAspect) > ASPECT_CHANGE_THRESHOLD
-
-                        if (fovChanged || aspectChanged) {
-                            this.camera.setProjectionFov(
-                                this.currentFov,
-                                aspect,
-                                0.1,
-                                1000.0,
-                                this.Filament.Camera$Fov.VERTICAL
-                            )
-                            this.lastFov = this.currentFov
-                            this.lastAspect = aspect
-                        }
-                    }
-
-                    // DoF for follow/action modes — subtle focus on the marble; only on high/ultra
-                    if (this.view) {
-                        const gfxLvl = this.getGraphicsLevel()
-                        const dofOpts = getDofConfig(gfxLvl, this.cameraMode)
-
-                        if (dofOpts) {
-                            const dx = this.cameraFollowPos.x - t.x
-                            const dy = this.cameraFollowPos.y - t.y
-                            const dz = this.cameraFollowPos.z - t.z
-                            const newFocusDist = Math.hypot(dx, dy, dz)
-
-                            const shouldUpdateDof = !this._dofEnabled ||
-                                                    this._dofFocusDistance === null ||
-                                                    Math.abs(newFocusDist - this._dofFocusDistance) > DOF_UPDATE_THRESHOLD
-
-                            if (shouldUpdateDof) {
-                                try {
-                                    this.view.setDepthOfFieldOptions({
-                                        enabled: true,
-                                        focusDistance: newFocusDist,
-                                        ...dofOpts
-                                    })
-                                    this._dofEnabled = true
-                                    this._dofFocusDistance = newFocusDist
-                                } catch (e) {
-                                    /* not supported */
+        
+                            if (!this.cameraFollowPos) {
+                                this.cameraFollowPos = { x: idealEyeX, y: idealEyeY, z: idealEyeZ }
+                                this.cameraFollowLookAt = { x: idealLookAtX, y: idealLookAtY, z: idealLookAtZ }
+                            } else {
+                                // Smoothly interpolate (Lerp) towards ideal positions
+                                const lerpFactorPos = 0.1
+                                const lerpFactorLook = 0.2
+                                this.cameraFollowPos.x += (idealEyeX - this.cameraFollowPos.x) * lerpFactorPos
+                                this.cameraFollowPos.y += (idealEyeY - this.cameraFollowPos.y) * lerpFactorPos
+                                this.cameraFollowPos.z += (idealEyeZ - this.cameraFollowPos.z) * lerpFactorPos
+        
+                                this.cameraFollowLookAt.x += (idealLookAtX - this.cameraFollowLookAt.x) * lerpFactorLook
+                                this.cameraFollowLookAt.y += (idealLookAtY - this.cameraFollowLookAt.y) * lerpFactorLook
+                                this.cameraFollowLookAt.z += (idealLookAtZ - this.cameraFollowLookAt.z) * lerpFactorLook
+                            }
+        
+                            const eyeX = this.cameraFollowPos.x + this.cameraShake.x
+                            const eyeY = this.cameraFollowPos.y + this.cameraShake.y
+                            const eyeZ = this.cameraFollowPos.z + this.cameraShake.z
+        
+                            let upVector = [0, 1, 0]
+                            if (this.isWallRiding && this.currentWallNormal) {
+                                upVector = [this.currentWallNormal.x * 0.5, 1, this.currentWallNormal.z * 0.5]
+                            }
+        
+                            this.camera.lookAt([eyeX, eyeY, eyeZ], [this.cameraFollowLookAt.x, this.cameraFollowLookAt.y, this.cameraFollowLookAt.z], upVector)
+                            this._cameraState = { eye: [eyeX, eyeY, eyeZ], target: [this.cameraFollowLookAt.x, this.cameraFollowLookAt.y, this.cameraFollowLookAt.z] }
+        
+                            // Dynamic FOV scaling based on speed
+                            const baseFov = this.currentFov || 45
+                            const targetFov = baseFov + Math.min(speed * 0.5, 20.0)
+                            this.activeFov = this.activeFov || baseFov
+                            this.activeFov += (targetFov - this.activeFov) * 0.1
+        
+                            if (this.view && this.camera && this.Filament) {
+                                const width = this.canvas.width;
+                                const height = this.canvas.height;
+                                const aspect = width / height;
+                                const CameraFov = this.Filament?.['Camera$Fov'];
+                                const fovMode = CameraFov ? CameraFov.VERTICAL : 0;
+                                const fovChanged = this._lastSetFov === undefined || Math.abs(this.activeFov - this._lastSetFov) > FOV_CHANGE_THRESHOLD;
+                                const aspectChanged = this._lastSetProjectionAspect === undefined || Math.abs(aspect - this._lastSetProjectionAspect) > ASPECT_CHANGE_THRESHOLD;
+                                if (fovChanged || aspectChanged) {
+                                    this.camera.setProjectionFov(this.activeFov, aspect, 0.1, 1000.0, fovMode);
+                                    this._lastSetFov = this.activeFov
+                                    this._lastSetProjectionAspect = aspect
                                 }
                             }
-                        } else if (this._dofEnabled) {
-                            try { this.view.setDepthOfFieldOptions({ enabled: false }) } catch (e) { /* not supported */ }
-                            this._dofEnabled = false
-                            this._dofFocusDistance = null
-                        }
-                    }
-
-                } else if (this.cameraMode === 'fpv') {
-                    const upVector = [0, 1, 0]
-
-                    if (this.isWallRiding && this.currentWallNormal) {
-                        upVector[0] = this.currentWallNormal.x * 0.5
-                        upVector[1] = 1.0
-                        upVector[2] = this.currentWallNormal.z * 0.5
-
-                        const len = Math.hypot(upVector[0], upVector[1], upVector[2])
-                        upVector[0] /= len
-                        upVector[1] /= len
-                        upVector[2] /= len
-                    }
-
-                    const eye = [t.x, t.y + 0.25, t.z]
-                    const lookAtPos = [
-                        t.x + Math.sin(this.aimYaw) * Math.cos(this.pitchAngle),
-                        t.y + 0.25 + Math.sin(this.pitchAngle),
-                        t.z + Math.cos(this.aimYaw) * Math.cos(this.pitchAngle)
-                    ]
-                    this.camera.lookAt(eye, lookAtPos, upVector)
-
-                    if (this.view) {
-                        const shouldUpdateDof = !this._dofEnabled || this._dofFocusDistance !== 5.0
-                        if (shouldUpdateDof) {
-                            const gfxLvl = this.getGraphicsLevel()
-                            if (gfxLvl === 'ultra' || gfxLvl === 'high') {
-                                const dofOpts = getDofConfig(gfxLvl, 'fpv')
+        
+                            // DoF for follow/action modes — subtle focus on the marble; only on high/ultra
+                            if (this.view) {
+                                const graphicsQuality = this.settings?.graphics?.quality || 'medium'
+                                const dofOpts = getDofConfig(this.cameraMode, graphicsQuality, dist)
                                 if (dofOpts) {
-                                    try {
-                                        this.view.setDepthOfFieldOptions({
-                                            enabled: true,
-                                            focusDistance: 5.0, // Fixed focus slightly ahead
-                                            ...dofOpts
-                                        })
-                                        this._dofEnabled = true
-                                        this._dofFocusDistance = 5.0
-                                    } catch(e) {}
+                                    // _dofEnabled starts undefined; !== true is intentional so the first
+                                    // frame always initialises DoF, then subsequent frames only update when
+                                    // the focus distance has shifted by more than DOF_UPDATE_THRESHOLD.
+                                    const shouldUpdateDof = this._dofEnabled !== true || Math.abs((this._dofFocusDistance || 0) - dist) > DOF_UPDATE_THRESHOLD
+                                    if (shouldUpdateDof) {
+                                        try {
+                                            this.view.setDepthOfFieldOptions(dofOpts)
+                                            this._dofEnabled = true
+                                            this._dofFocusDistance = dist
+                                        } catch (e) { /* DoF not supported */ }
+                                    }
                                 }
                             }
-                        }
-                    }
-                } else if (this.cameraMode === 'topdown') {
-                    this.camera.lookAt(
-                        [t.x, t.y + 30, t.z],
-                        [t.x, t.y, t.z],
-                        [0, 0, -1]
-                    )
-                } else if (this.cameraMode === 'cinematic') {
-                    const now = Date.now() / 1000
-                    const radius = 15
-                    const height = 10
-                    const cx = t.x + Math.cos(now * 0.5) * radius
-                    const cz = t.z + Math.sin(now * 0.5) * radius
-
-                    this.camera.lookAt(
-                        [cx, t.y + height, cz],
-                        [t.x, t.y, t.z],
-                        [0, 1, 0]
-                    )
-
-                    if (this.view) {
-                        const dx = cx - t.x
-                        const dy = height
-                        const dz = cz - t.z
-                        const focusDist = Math.hypot(dx, dy, dz)
-
-                        const shouldUpdateDof = !this._dofEnabled ||
-                                                this._dofFocusDistance === null ||
-                                                Math.abs(focusDist - this._dofFocusDistance) > DOF_UPDATE_THRESHOLD
-
-                        if (shouldUpdateDof) {
-                            const gfxLvl = this.getGraphicsLevel()
-                            const dofOpts = getDofConfig(gfxLvl, 'cinematic')
-                            if (dofOpts) {
-                                try {
-                                    this.view.setDepthOfFieldOptions({
-                                        enabled: true,
-                                        focusDistance: focusDist,
-                                        ...dofOpts
-                                    })
-                                    this._dofEnabled = true
-                                    this._dofFocusDistance = focusDist
-                                } catch(e) {}
+                        } else if (this.cameraMode === 'fpv') {
+                            const r = target.scale * 0.5 || 0.5
+                            const eyeX = t.x + this.cameraShake.x
+                            const eyeY = t.y + r + 0.1 + this.cameraShake.y
+                            const eyeZ = t.z + this.cameraShake.z
+        
+                            const cosP = Math.cos(this.pitchAngle)
+                            const sinP = Math.sin(this.pitchAngle)
+                            const dirX = Math.sin(this.aimYaw) * cosP
+                            const dirY = sinP
+                            const dirZ = Math.cos(this.aimYaw) * cosP
+        
+                            let upVector = [0, 1, 0]
+                            if (this.isWallRiding && this.currentWallNormal) {
+                                upVector = [this.currentWallNormal.x * 0.5, 1, this.currentWallNormal.z * 0.5]
                             }
+        
+                            this.camera.lookAt([eyeX, eyeY, eyeZ], [eyeX + dirX, eyeY + dirY, eyeZ + dirZ], upVector)
+                            this._cameraState = { eye: [eyeX, eyeY, eyeZ], target: [eyeX + dirX, eyeY + dirY, eyeZ + dirZ] }
+                        } else if (this.cameraMode === 'topdown') {
+                            this.camera.lookAt([t.x + this.cameraShake.x, t.y + 40 + this.cameraShake.y, t.z + this.cameraShake.z], [t.x, t.y, t.z], [0, 0, -1])
+                            this._cameraState = { eye: [t.x + this.cameraShake.x, t.y + 40 + this.cameraShake.y, t.z + this.cameraShake.z], target: [t.x, t.y, t.z] }
+                        } else if (this.cameraMode === 'cinematic') {
+                            // Slowly orbit around the target
+                            const cinematicAngle = now * 0.0005
+                            const dist = 25
+                            const height = 15
+                            const eyeX = t.x + Math.sin(cinematicAngle) * dist + this.cameraShake.x
+                            const eyeY = t.y + height + this.cameraShake.y
+                            const eyeZ = t.z + Math.cos(cinematicAngle) * dist + this.cameraShake.z
+                            this.camera.lookAt([eyeX, eyeY, eyeZ], [t.x, t.y, t.z], [0, 1, 0])
+                            this._cameraState = { eye: [eyeX, eyeY, eyeZ], target: [t.x, t.y, t.z] }
+        
+                            // Depth of Field: focus on the marble for cinematic separation
+                            if (this.view) {
+                                const shouldUpdateDof = this._dofEnabled !== true || this._dofFocusDistance !== dist
+                                if (shouldUpdateDof) {
+                                    try {
+                                        const graphicsQuality = this.settings?.graphics?.quality || 'medium'
+                                        const dofOpts = getDofConfig('cinematic', graphicsQuality, dist)
+                                        if (dofOpts) {
+                                            this.view.setDepthOfFieldOptions(dofOpts)
+                                            this._dofEnabled = true
+                                            this._dofFocusDistance = dist
+                                        }
+                                    } catch (e) { /* DoF not supported, skip */ }
+                                }
+                            }
+                        } else if (this.cameraMode === 'side-scroller') {
+                            const dist = 30
+                            const height = 5
+                            const eyeX = t.x + dist + this.cameraShake.x
+                            const eyeY = t.y + height + this.cameraShake.y
+                            const eyeZ = t.z + this.cameraShake.z
+                            this.camera.lookAt([eyeX, eyeY, eyeZ], [t.x, t.y, t.z], [0, 1, 0])
+                            this._cameraState = { eye: [eyeX, eyeY, eyeZ], target: [t.x, t.y, t.z] }
+                        } else if (this.cameraMode === 'drone') {
+                            const dist = this.droneDist || 25.0
+        
+                            const cosP = Math.cos(this.pitchAngle)
+                            const sinP = Math.sin(this.pitchAngle)
+                            const dirX = Math.sin(this.aimYaw) * cosP
+                            const dirY = sinP
+                            const dirZ = Math.cos(this.aimYaw) * cosP
+        
+                            let idealEyeX = t.x - dirX * dist
+                            let idealEyeY = t.y - dirY * dist
+                            let idealEyeZ = t.z - dirZ * dist
+        
+                            // Collision Avoidance using Rapier Raycast
+                            if (this.world && typeof RAPIER !== 'undefined') {
+                                const dx = idealEyeX - t.x
+                                const dy = idealEyeY - t.y
+                                const dz = idealEyeZ - t.z
+                                const distToEye = Math.hypot(dx, dy, dz)
+                                const rayDir = { x: dx / distToEye, y: dy / distToEye, z: dz / distToEye }
+        
+                                const r = target.scale * 0.5 || 0.5
+                                const startDist = r + 0.1
+                                const rayOrigin = {
+                                    x: t.x + rayDir.x * startDist,
+                                    y: t.y + rayDir.y * startDist,
+                                    z: t.z + rayDir.z * startDist
+                                }
+        
+                                const ray = new RAPIER.Ray(rayOrigin, rayDir)
+        
+                                const maxRayDist = Math.max(0.01, distToEye - startDist)
+                                const hit = this.world.castRay(ray, maxRayDist, false)
+                                if (hit) {
+                                    const otherBody = hit.collider.parent()
+                                    if (!otherBody || (otherBody.handle !== target.rigidBody.handle && !hit.collider.isSensor())) {
+                                        const safeDist = hit.toi - 0.2
+                                        if (safeDist > 0) {
+                                            idealEyeX = rayOrigin.x + rayDir.x * safeDist
+                                            idealEyeY = rayOrigin.y + rayDir.y * safeDist
+                                            idealEyeZ = rayOrigin.z + rayDir.z * safeDist
+                                        } else {
+                                            idealEyeX = rayOrigin.x
+                                            idealEyeY = rayOrigin.y
+                                            idealEyeZ = rayOrigin.z
+                                        }
+                                    }
+                                }
+                            }
+        
+                            if (!this.cameraFollowPos) {
+                                this.cameraFollowPos = { x: idealEyeX, y: idealEyeY, z: idealEyeZ }
+                                this.cameraFollowLookAt = { x: t.x, y: t.y, z: t.z }
+                            } else {
+                                const lerpFactorPos = 0.08
+                                const lerpFactorLook = 0.15
+                                this.cameraFollowPos.x += (idealEyeX - this.cameraFollowPos.x) * lerpFactorPos
+                                this.cameraFollowPos.y += (idealEyeY - this.cameraFollowPos.y) * lerpFactorPos
+                                this.cameraFollowPos.z += (idealEyeZ - this.cameraFollowPos.z) * lerpFactorPos
+        
+                                this.cameraFollowLookAt.x += (t.x - this.cameraFollowLookAt.x) * lerpFactorLook
+                                this.cameraFollowLookAt.y += (t.y - this.cameraFollowLookAt.y) * lerpFactorLook
+                                this.cameraFollowLookAt.z += (t.z - this.cameraFollowLookAt.z) * lerpFactorLook
+                            }
+        
+                            const eyeX = this.cameraFollowPos.x + this.cameraShake.x
+                            const eyeY = this.cameraFollowPos.y + this.cameraShake.y
+                            const eyeZ = this.cameraFollowPos.z + this.cameraShake.z
+        
+                            let upVector = [0, 1, 0]
+                            if (this.isWallRiding && this.currentWallNormal) {
+                                upVector = [this.currentWallNormal.x * 0.5, 1, this.currentWallNormal.z * 0.5]
+                            }
+        
+                            this.camera.lookAt([eyeX, eyeY, eyeZ], [this.cameraFollowLookAt.x, this.cameraFollowLookAt.y, this.cameraFollowLookAt.z], upVector)
+                            this._cameraState = { eye: [eyeX, eyeY, eyeZ], target: [this.cameraFollowLookAt.x, this.cameraFollowLookAt.y, this.cameraFollowLookAt.z] }
                         }
                     }
-                } else if (this.cameraMode === 'side-scroller') {
-                    this.camera.lookAt(
-                        [t.x + 20, t.y + 5, t.z], // Offset along X
-                        [t.x, t.y, t.z],          // Look at marble
-                        [0, 1, 0]
-                    )
-                } else if (this.cameraMode === 'drone') {
-                    const targetLookPos = { x: t.x, y: t.y, z: t.z }
-                    let idealEye = {
-                        x: t.x - Math.sin(this.aimYaw) * Math.cos(this.pitchAngle) * this.droneDist,
-                        y: t.y + Math.sin(this.pitchAngle) * this.droneDist,
-                        z: t.z - Math.cos(this.aimYaw) * Math.cos(this.pitchAngle) * this.droneDist
+                } else {
+                    const target = this.playerMarble || this.getLeader();
+                    let targetX = 0, targetY = 0, targetZ = 0;
+                    let targetBodyHandle = -1;
+        
+                    if (target && target.rigidBody) {
+                        const t = target.rigidBody.translation();
+                        targetX = t.x;
+                        targetY = t.y;
+                        targetZ = t.z;
+                        targetBodyHandle = target.rigidBody.handle;
                     }
-
+        
+                    let idealEyeX = targetX + this.camRadius * Math.sin(this.camAngle);
+                    let idealEyeY = targetY + this.camHeight;
+                    let idealEyeZ = targetZ + this.camRadius * Math.cos(this.camAngle);
+        
                     if (this.world && typeof RAPIER !== 'undefined') {
-                        const rayOrigin = { x: t.x, y: t.y, z: t.z }
-                        const dx = idealEye.x - rayOrigin.x
-                        const dy = idealEye.y - rayOrigin.y
-                        const dz = idealEye.z - rayOrigin.z
-                        const distToEye = Math.hypot(dx, dy, dz)
-
+                        const dx = idealEyeX - targetX;
+                        const dy = idealEyeY - targetY;
+                        const dz = idealEyeZ - targetZ;
+                        const distToEye = Math.hypot(dx, dy, dz);
+        
                         if (distToEye > 0.001) {
-                            const dir = { x: dx / distToEye, y: dy / distToEye, z: dz / distToEye }
-                            const ray = new RAPIER.Ray(rayOrigin, dir)
-
-                            const hit = this.world.castRay(ray, distToEye, true)
+                            const rayDir = { x: dx / distToEye, y: dy / distToEye, z: dz / distToEye };
+                            const r = target ? (target.scale * 0.5 || 0.5) : 0.5;
+                            const startDist = r + 0.1;
+                            const rayOrigin = {
+                                x: targetX + rayDir.x * startDist,
+                                y: targetY + rayDir.y * startDist,
+                                z: targetZ + rayDir.z * startDist
+                            };
+        
+                            const maxRayDist = Math.max(0.01, distToEye - startDist);
+                            const ray = new RAPIER.Ray(rayOrigin, rayDir);
+                            const hit = this.world.castRay(ray, maxRayDist, false);
+        
                             if (hit) {
-                                const otherBody = hit.collider.parent()
-                                if (!otherBody || (otherBody.handle !== target.rigidBody.handle && !hit.collider.isSensor())) {
-                                    const safeDist = hit.toi - 0.5
+                                const otherBody = hit.collider.parent();
+                                if (!otherBody || (otherBody.handle !== targetBodyHandle && !hit.collider.isSensor())) {
+                                    const safeDist = hit.toi - 0.2;
                                     if (safeDist > 0) {
-                                        idealEye.x = rayOrigin.x + dir.x * safeDist
-                                        idealEye.y = rayOrigin.y + dir.y * safeDist
-                                        idealEye.z = rayOrigin.z + dir.z * safeDist
+                                        idealEyeX = rayOrigin.x + rayDir.x * safeDist;
+                                        idealEyeY = rayOrigin.y + rayDir.y * safeDist;
+                                        idealEyeZ = rayOrigin.z + rayDir.z * safeDist;
+                                    } else {
+                                        idealEyeX = rayOrigin.x;
+                                        idealEyeY = rayOrigin.y;
+                                        idealEyeZ = rayOrigin.z;
                                     }
                                 }
                             }
                         }
                     }
-
-                    if (!this.cameraFollowPos) {
-                        this.cameraFollowPos = { ...idealEye }
-                        this.cameraLookPos = { ...targetLookPos }
-                    } else {
-                        const lerpFactor = 0.05
-                        this.cameraFollowPos.x += (idealEye.x - this.cameraFollowPos.x) * lerpFactor
-                        this.cameraFollowPos.y += (idealEye.y - this.cameraFollowPos.y) * lerpFactor
-                        this.cameraFollowPos.z += (idealEye.z - this.cameraFollowPos.z) * lerpFactor
-
-                        this.cameraLookPos.x += (targetLookPos.x - this.cameraLookPos.x) * lerpFactor
-                        this.cameraLookPos.y += (targetLookPos.y - this.cameraLookPos.y) * lerpFactor
-                        this.cameraLookPos.z += (targetLookPos.z - this.cameraLookPos.z) * lerpFactor
-                    }
-
-                    const upVector = [0, 1, 0]
-                    if (this.isWallRiding && this.currentWallNormal) {
-                        upVector[0] = this.currentWallNormal.x * 0.5
-                        upVector[1] = 1.0
-                        upVector[2] = this.currentWallNormal.z * 0.5
-                        const len = Math.hypot(upVector[0], upVector[1], upVector[2])
-                        upVector[0] /= len
-                        upVector[1] /= len
-                        upVector[2] /= len
-                    }
-
-                    this.camera.lookAt(
-                        [this.cameraFollowPos.x + this.cameraShake.x, this.cameraFollowPos.y + this.cameraShake.y, this.cameraFollowPos.z + this.cameraShake.z],
-                        [this.cameraLookPos.x, this.cameraLookPos.y, this.cameraLookPos.z],
-                        upVector
-                    )
+        
+                    const eyeX = idealEyeX + this.cameraShake.x;
+                    const eyeY = idealEyeY + this.cameraShake.y;
+                    const eyeZ = idealEyeZ + this.cameraShake.z;
+                    this.camera.lookAt([eyeX, eyeY, eyeZ], [targetX, targetY, targetZ], [0, 1, 0]);
+                    this._cameraState = { eye: [eyeX, eyeY, eyeZ], target: [targetX, targetY, targetZ] };
                 }
-            }
-        } else if (this.isLockedOn && this.lockOnTarget) {
-            const target = this.lockOnTarget;
-            if (target && target.rigidBody && this.playerMarble) {
-                const t = target.rigidBody.translation();
-                const pt = this.playerMarble.rigidBody.translation();
-
-                // Calculate direction from player to target
-                const dxTarget = t.x - pt.x;
-                const dzTarget = t.z - pt.z;
-
-                // Update aimYaw to gradually face target
-                const targetYaw = Math.atan2(dxTarget, dzTarget);
-
-                // Smoothly rotate camera towards target
-                let yawDiff = targetYaw - this.aimYaw;
-                while (yawDiff > Math.PI) yawDiff -= Math.PI * 2;
-                while (yawDiff < -Math.PI) yawDiff += Math.PI * 2;
-                this.aimYaw += yawDiff * 0.1;
-
-                let idealEye = {
-                    x: pt.x - Math.sin(this.aimYaw) * Math.cos(this.pitchAngle) * this.currentCamDist,
-                    y: pt.y + Math.sin(this.pitchAngle) * this.currentCamDist + 1.0,
-                    z: pt.z - Math.cos(this.aimYaw) * Math.cos(this.pitchAngle) * this.currentCamDist
-                };
-
-                // Camera Collision Avoidance (same logic as follow mode)
-                if (this.world && typeof RAPIER !== 'undefined') {
-                    const rayOrigin = { x: pt.x, y: pt.y + 0.5, z: pt.z };
-                    const dx = idealEye.x - rayOrigin.x;
-                    const dy = idealEye.y - rayOrigin.y;
-                    const dz = idealEye.z - rayOrigin.z;
-                    const distToEye = Math.hypot(dx, dy, dz);
-
-                    if (distToEye > 0.001) {
-                        const dir = { x: dx / distToEye, y: dy / distToEye, z: dz / distToEye };
-                        const ray = new RAPIER.Ray(rayOrigin, dir);
-                        const maxDist = distToEye + 0.5;
-                        const targetBodyHandle = target.rigidBody.handle;
-
-                        const hit = this.world.castRay(ray, maxDist, true);
-                        if (hit) {
-                            const otherBody = hit.collider.parent();
-                            if (!otherBody || (otherBody.handle !== targetBodyHandle && !hit.collider.isSensor())) {
-                                const safeDist = hit.toi - 0.5;
-                                if (safeDist > 0) {
-                                    idealEye.x = rayOrigin.x + dir.x * safeDist;
-                                    idealEye.y = rayOrigin.y + dir.y * safeDist;
-                                    idealEye.z = rayOrigin.z + dir.z * safeDist;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (!this.cameraFollowPos) {
-                    this.cameraFollowPos = { ...idealEye };
-                    this.cameraLookPos = { x: t.x, y: t.y, z: t.z };
-                } else {
-                    this.cameraFollowPos.x += (idealEye.x - this.cameraFollowPos.x) * 0.1;
-                    this.cameraFollowPos.y += (idealEye.y - this.cameraFollowPos.y) * 0.1;
-                    this.cameraFollowPos.z += (idealEye.z - this.cameraFollowPos.z) * 0.1;
-
-                    // Interpolate lock-on look pos between player and target
-                    const lookX = pt.x + (t.x - pt.x) * 0.5;
-                    const lookY = pt.y + (t.y - pt.y) * 0.5 + 1.0;
-                    const lookZ = pt.z + (t.z - pt.z) * 0.5;
-
-                    this.cameraLookPos.x += (lookX - this.cameraLookPos.x) * 0.15;
-                    this.cameraLookPos.y += (lookY - this.cameraLookPos.y) * 0.15;
-                    this.cameraLookPos.z += (lookZ - this.cameraLookPos.z) * 0.15;
-                }
-
-                this.camera.lookAt(
-                    [this.cameraFollowPos.x, this.cameraFollowPos.y, this.cameraFollowPos.z],
-                    [this.cameraLookPos.x, this.cameraLookPos.y, this.cameraLookPos.z],
-                    [0, 1, 0]
-                );
-            }
-        }
     }
 }
 

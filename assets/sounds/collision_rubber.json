@@ -1,0 +1,16 @@
+{
+  "id": "collision_rubber",
+  "name": "Rubber Collision",
+  "description": "Muted bounce pad impact",
+  "version": "1.0.0",
+  "category": "sfx",
+  "files": [],
+  "synthesis": { "type": "surface_hit", "profile": "rubber" },
+  "properties": {
+    "volume": 0.55,
+    "pitchMin": 0.8,
+    "pitchMax": 1.0,
+    "spatial": false
+  },
+  "trigger": { "event": "collision", "threshold": 1.2, "cooldown": 0.1 }
+}

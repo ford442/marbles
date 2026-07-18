@@ -3,6 +3,10 @@ import { DEFAULT_SETTINGS } from './filament-loader.js';
 import { DEFAULT_MSAA_SAMPLE_COUNT, getPostFxQualityFlags, getShadowQualityConfig } from '../rendering-defaults.js';
 import { getBloomQualityConfig, getSsaoQualityConfig, getVignetteConfig, getFogQualityConfig, getEnvironmentFogPreset } from '../rendering/post-fx-presets.js';
 import { applyDynamicResolution } from '../render-resolution.js';
+import { applyMobileGraphicsDefaults, MOBILE_DEFAULTS_FLAG, resolveMobileInitQuality } from '../platform/mobile-presets.js';
+import { detectPlatformProfile } from '../rendering-defaults.js';
+import { downgradeQualityTier } from '../level-effect-budget.js';
+import { updateMarbleMaterialTiers } from '../marble-material-tier.js';
 
 export class InitSettings {
     loadSettings() {
@@ -15,6 +19,12 @@ export class InitSettings {
                 console.log('[SETTINGS] Loaded from localStorage')
             } else {
                 this.settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
+                if (typeof localStorage !== 'undefined' && !localStorage.getItem(MOBILE_DEFAULTS_FLAG)) {
+                    if (applyMobileGraphicsDefaults(this.settings)) {
+                        localStorage.setItem(MOBILE_DEFAULTS_FLAG, '1')
+                        console.log('[SETTINGS] Applied first-run mobile graphics preset')
+                    }
+                }
                 console.log('[SETTINGS] Using default settings')
             }
         } catch (e) {
@@ -24,10 +34,16 @@ export class InitSettings {
 
         // Apply loaded settings
         this.applySettings()
+        this.abilitySystem?.loadKeybinds(this.settings?.controls?.keybinds)
+        this.applyTouchSettings?.()
+        this.abilitySystem?.init()
     }
 
     saveSettings() {
         try {
+            if (this.abilitySystem) {
+                this.settings.controls.keybinds = this.abilitySystem.exportKeybinds()
+            }
             localStorage.setItem('marbles3d_settings', JSON.stringify(this.settings))
             console.log('[SETTINGS] Saved to localStorage')
         } catch (e) {
@@ -35,6 +51,7 @@ export class InitSettings {
         }
 
         this.applySettings()
+        this.applyTouchSettings?.()
         this.closeSettings()
     }
 
@@ -56,6 +73,12 @@ export class InitSettings {
         }
         if (saved.controls) {
             Object.assign(merged.controls, saved.controls)
+            if (saved.controls.keybinds) {
+                merged.controls.keybinds = { ...merged.controls.keybinds, ...saved.controls.keybinds }
+            }
+            if (saved.controls.touch) {
+                merged.controls.touch = { ...merged.controls.touch, ...saved.controls.touch }
+            }
         }
         if (saved.accessibility) {
             Object.assign(merged.accessibility, saved.accessibility)
@@ -91,6 +114,11 @@ export class InitSettings {
         // Apply graphics settings
         this.applyGraphicsSettings()
 
+        const perfMode = s.graphics?.performanceMode || 'auto'
+        if (perfMode === 'locked') {
+            this.autoQualityGovernor?.reset()
+        }
+
         console.log('[SETTINGS] Applied settings')
     }
 
@@ -111,14 +139,21 @@ export class InitSettings {
     }
 
     applyGraphicsSettings() {
-        // Graphics settings would be applied here
-        // These would affect Filament renderer settings
-        const s = this.settings.graphics
+        const base = this.settings.graphics
+        const runtime = this._runtimeGraphicsOverrides || {}
+        const s = { ...base, ...runtime }
+        const baseQuality = base.quality || 'medium'
+        let quality = baseQuality
+        if (runtime.shadowTierDowngrade) {
+            quality = downgradeQualityTier(baseQuality, runtime.shadowTierDowngrade)
+        }
+        if (runtime.effectiveQuality) {
+            quality = runtime.effectiveQuality
+        }
 
-        // Control shadows on the Filament sun light
+        const shadowsEnabled = s.shadows !== false && !runtime.shadowsDisabled
+
         if (this.sunLight && this.engine && this.scene) {
-            const shadowsEnabled = s.shadows !== false
-
             // Destroy and recreate the sun light since Filament LightManager
             // doesn't have a runtime setCastShadows() method
             this.scene.remove(this.sunLight)
@@ -143,7 +178,8 @@ export class InitSettings {
 
         // Dynamic resolution (FPS protection) — toggled live on the active view
         if (this.view) {
-            applyDynamicResolution(this.view, this.Filament, s.dynamicResolution)
+            const minScale = runtime.dynamicMinScale ?? 0.5
+            applyDynamicResolution(this.view, this.Filament, s.dynamicResolution, { minScale })
         }
 
         // Render scale — re-size the canvas backing store. resize() reads the
@@ -159,7 +195,6 @@ export class InitSettings {
         // Live bloom update — strength is user-adjustable; other params are quality-tiered
         if (this.view && s.bloom !== undefined) {
             try {
-                const quality = s.quality || 'medium'
                 const bloomConfig = getBloomQualityConfig(quality, this.Filament)
                 bloomConfig.enabled = s.bloom > 0
                 // s.bloom is 0–100 (user slider); 50 is the nominal default.
@@ -176,8 +211,8 @@ export class InitSettings {
         // Live SSAO toggle — wired directly to the active Filament view
         if (this.view && s.ssao !== undefined) {
             try {
-                const quality = s.quality || 'medium'
-                this.view.setAmbientOcclusionOptions(getSsaoQualityConfig(quality, this.Filament, s.ssao !== false))
+                const ssaoOn = s.ssao !== false && !runtime.ssaoDisabled
+                this.view.setAmbientOcclusionOptions(getSsaoQualityConfig(quality, this.Filament, ssaoOn))
             } catch (e) {
                 console.warn('[SETTINGS] SSAO live update failed:', e)
             }
@@ -188,8 +223,12 @@ export class InitSettings {
         // medium: TAA on, motion blur/SSR off
         // high/ultra: TAA on, motion blur/SSR on
         if (this.view) {
-            const quality = s.quality || 'medium'
-            const { taaEnabled, heavyFxEnabled } = getPostFxQualityFlags(quality)
+            const { taaEnabled, heavyFxEnabled: tierHeavyFx } = getPostFxQualityFlags(quality)
+            const heavyFxEnabled = tierHeavyFx && !runtime.heavyFxDisabled
+
+            if (runtime.volumetricDisabled && this.volumetricLights) {
+                this.volumetricLights.setQuality('low')
+            }
 
             try {
                 this.view.setMultiSampleAntiAliasingOptions({ enabled: !taaEnabled, sampleCount: DEFAULT_MSAA_SAMPLE_COUNT })
@@ -239,7 +278,7 @@ export class InitSettings {
 
             // Shadow quality — updated whenever the quality tier or shadow toggle changes.
             // Only apply shadow options when shadows are enabled.
-            if (s.shadows !== false) {
+            if (shadowsEnabled) {
                 const { shadowOptions, vsmOptions, softOptions } = getShadowQualityConfig(quality)
                 if (typeof this.view.setShadowOptions === 'function') {
                     try {
@@ -286,6 +325,12 @@ export class InitSettings {
                 console.warn('[SETTINGS] Fog live update failed:', e);
             }
         }
+
+        if (typeof this.updateActiveMarbleLight === 'function') {
+            this.updateActiveMarbleLight()
+        }
+        this.lightingBudget?.update()
+        updateMarbleMaterialTiers(this, performance.now())
     }
 }
 

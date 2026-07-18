@@ -168,7 +168,7 @@ export class AbilityConstructs {
             }
 
             // Simple normal approximation - assume the closest cardinal direction or just upright if Y is steep
-            let normal = { x: 0, y: 1, z: 0 }
+            const normal = { x: 0, y: 1, z: 0 }
 
             // Check world wall normal logic (or just simple bounce direction based on hit position relative to collider center)
             const otherBody = hit.collider.parent()
@@ -269,44 +269,13 @@ export class AbilityConstructs {
     }
 
     spawnJetpackExhaust(pos, linvel) {
-        const entity = this.Filament.EntityManager.get().create()
-        const matInstance = this.material.createInstance()
-        // Bright orange/yellow core
-        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 0.6, 0.0])
-        matInstance.setFloatParameter('roughness', 0.8)
-
-        const halfExtents = { x: 0.1, y: 0.1, z: 0.1 }
-
-        this.Filament.RenderableManager.Builder(1)
-            .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
-            .material(0, matInstance)
-            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
-            .receiveShadows(true)
-            .castShadows(true)
-            .build(this.engine, entity)
-
-        const tcm = this.engine.getTransformManager()
-        const inst = tcm.getInstance(entity)
-        const mat = quaternionToMat4(pos, { x: 0, y: 0, z: 0, w: 1 })
-
-        const sx = halfExtents.x * 2;
-        const sy = halfExtents.y * 2;
-        const sz = halfExtents.z * 2;
-
-        mat[0] *= sx; mat[1] *= sx; mat[2] *= sx;
-        mat[4] *= sy; mat[5] *= sy; mat[6] *= sy;
-        mat[8] *= sz; mat[9] *= sz; mat[10] *= sz;
-
-        tcm.setTransform(inst, mat)
-        this.scene.addEntity(entity)
-
-        this.visualParticles.push({
-            entity: entity,
-            matInstance: matInstance,
+        this.effectPool?.spawnVisualParticle({
+            color: [1.0, 0.6, 0.0],
+            roughness: 0.8,
             spawnTime: Date.now(),
             pos: { x: pos.x, y: pos.y, z: pos.z },
             vel: { x: -linvel.x * 0.1 + (Math.random() - 0.5) * 2, y: -linvel.y * 0.1 - 2.0, z: -linvel.z * 0.1 + (Math.random() - 0.5) * 2 },
-            duration: 500, // ms
+            duration: 500,
             scale: 1.0
         })
     }
@@ -368,9 +337,11 @@ export class AbilityConstructs {
         this.lastHoloTime = now
         const pos = this.playerMarble.rigidBody.translation()
 
-        // Spawn platform slightly below the marble
         const spawnPos = { x: pos.x, y: pos.y - 1.2, z: pos.z }
         const halfExtents = { x: 3, y: 0.2, z: 3 }
+
+        const slot = this.effectPool?.acquireHoloPlatform()
+        if (!slot) return
 
         const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(spawnPos.x, spawnPos.y, spawnPos.z)
         const body = this.world.createRigidBody(bodyDesc)
@@ -379,21 +350,8 @@ export class AbilityConstructs {
             .setRestitution(0.3)
         this.world.createCollider(colliderDesc, body)
 
-        const entity = this.Filament.EntityManager.get().create()
-        const matInstance = this.material.createInstance()
-        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.0, 1.0, 1.0])
-        matInstance.setFloatParameter('roughness', 0.1)
-
-        this.Filament.RenderableManager.Builder(1)
-            .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
-            .material(0, matInstance)
-            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
-            .receiveShadows(true)
-            .castShadows(true)
-            .build(this.engine, entity)
-
         const tcm = this.engine.getTransformManager()
-        const inst = tcm.getInstance(entity)
+        const inst = tcm.getInstance(slot.entity)
         const mat = quaternionToMat4(spawnPos, { x: 0, y: 0, z: 0, w: 1 })
 
         const sx = halfExtents.x * 2;
@@ -405,12 +363,12 @@ export class AbilityConstructs {
         mat[8] *= sz; mat[9] *= sz; mat[10] *= sz;
 
         tcm.setTransform(inst, mat)
-        this.scene.addEntity(entity)
 
         this.temporaryPlatforms.push({
-            entity: entity,
+            entity: slot.entity,
             rigidBody: body,
-            matInstance: matInstance,
+            matInstance: slot.matInstance,
+            _poolSlot: slot,
             spawnTime: now
         })
     }

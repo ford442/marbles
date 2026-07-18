@@ -1,249 +1,200 @@
 /**
- * Asset Registry - Manages loading and registration of game assets
- * 
- * This module provides a centralized system for:
- * - Loading map definitions from assets/maps/
- * - Loading marble definitions from assets/marbles/
- * - Loading sound definitions from assets/sounds/
- * - Validating assets against schemas
+ * Central loader for JSON game assets declared in assets/manifest.json.
  */
 
-class AssetRegistry {
+const REQUIRED_MAP_FIELDS = ['id', 'name', 'version', 'zones', 'spawn', 'goals'];
+const REQUIRED_MARBLE_FIELDS = ['id', 'name', 'version', 'appearance', 'physics'];
+const REQUIRED_SOUND_FIELDS = ['id', 'name', 'version', 'files'];
+
+export class AssetRegistry {
   constructor() {
+    this.manifest = null;
     this.maps = new Map();
     this.marbles = new Map();
     this.sounds = new Map();
-    this.materials = new Map();
     this.loaded = false;
+    this.loadErrors = [];
   }
 
-  /**
-   * Load all assets from the assets directory
-   */
   async loadAll() {
-    console.log('[AssetRegistry] Loading all assets...');
-    
+    console.log('[AssetRegistry] Loading manifest...');
+    this.loadErrors = [];
+
+    const manifest = await this.fetchJson('assets/manifest.json');
+    if (!manifest) {
+      throw new Error('[AssetRegistry] Failed to load assets/manifest.json');
+    }
+
+    this.manifest = manifest;
+
     await Promise.all([
-      this.loadMaps(),
-      this.loadMarbles(),
-      this.loadSounds()
+      this.loadManifestSection(manifest.maps, 'map', this.maps, REQUIRED_MAP_FIELDS),
+      this.loadManifestSection(manifest.marbles, 'marble', this.marbles, REQUIRED_MARBLE_FIELDS),
+      this.loadManifestSection(manifest.sounds, 'sound', this.sounds, REQUIRED_SOUND_FIELDS),
     ]);
-    
+
     this.loaded = true;
-    console.log('[AssetRegistry] All assets loaded');
+    console.log('[AssetRegistry] Assets loaded');
     console.log(`  - Maps: ${this.maps.size}`);
     console.log(`  - Marbles: ${this.marbles.size}`);
     console.log(`  - Sounds: ${this.sounds.size}`);
-  }
 
-  /**
-   * Load all map definitions from assets/maps/
-   */
-  async loadMaps() {
-    try {
-      // In a real implementation, this would scan the directory
-      // For now, we'll load known maps
-      const mapFiles = [
-        'tutorial.json',
-        'volcano_run.json'
-      ];
-
-      for (const file of mapFiles) {
-        try {
-          const response = await fetch(`assets/maps/${file}`);
-          if (response.ok) {
-            const map = await response.json();
-            if (this.validateMap(map)) {
-              this.maps.set(map.id, map);
-              console.log(`[AssetRegistry] Loaded map: ${map.id}`);
-            }
-          }
-        } catch (e) {
-          console.warn(`[AssetRegistry] Failed to load map ${file}:`, e);
-        }
-      }
-    } catch (e) {
-      console.error('[AssetRegistry] Error loading maps:', e);
+    if (this.loadErrors.length > 0) {
+      console.warn('[AssetRegistry] Load warnings:', this.loadErrors);
     }
   }
 
-  /**
-   * Load all marble definitions from assets/marbles/
-   */
-  async loadMarbles() {
-    try {
-      const marbleFiles = [
-        'classic_red.json',
-        'volcanic_magma.json',
-        'shadow_ninja.json',
-        'cosmic_nebula.json'
-      ];
+  async loadManifestSection(section, label, store, requiredFields) {
+    if (!section || typeof section !== 'object') return;
 
-      for (const file of marbleFiles) {
-        try {
-          const response = await fetch(`assets/marbles/${file}`);
-          if (response.ok) {
-            const marble = await response.json();
-            if (this.validateMarble(marble)) {
-              this.marbles.set(marble.id, marble);
-              console.log(`[AssetRegistry] Loaded marble: ${marble.id}`);
-            }
-          }
-        } catch (e) {
-          console.warn(`[AssetRegistry] Failed to load marble ${file}:`, e);
-        }
+    for (const [entryId, entry] of Object.entries(section)) {
+      const filePath = entry?.file;
+      if (!filePath) {
+        this.loadErrors.push(`${label} "${entryId}": missing file path in manifest`);
+        continue;
       }
-    } catch (e) {
-      console.error('[AssetRegistry] Error loading marbles:', e);
+
+      const url = filePath.startsWith('assets/') ? filePath : `assets/${filePath}`;
+      const asset = await this.fetchJson(url);
+      if (!asset) {
+        this.loadErrors.push(`${label} "${entryId}": failed to fetch ${url}`);
+        continue;
+      }
+
+      if (asset.id && asset.id !== entryId) {
+        console.warn(
+          `[AssetRegistry] ${label} manifest id "${entryId}" differs from asset id "${asset.id}"`
+        );
+      }
+
+      if (!this.validateRequired(asset, requiredFields, label, entryId)) {
+        continue;
+      }
+
+      const id = asset.id || entryId;
+      store.set(id, { ...asset, _manifestMeta: entry });
+      console.log(`[AssetRegistry] Loaded ${label}: ${id}`);
     }
   }
 
-  /**
-   * Load all sound definitions from assets/sounds/
-   */
-  async loadSounds() {
-    try {
-      const soundFiles = [
-        'collision_metal.json'
-      ];
-
-      for (const file of soundFiles) {
-        try {
-          const response = await fetch(`assets/sounds/${file}`);
-          if (response.ok) {
-            const sound = await response.json();
-            if (this.validateSound(sound)) {
-              this.sounds.set(sound.id, sound);
-              console.log(`[AssetRegistry] Loaded sound: ${sound.id}`);
-            }
-          }
-        } catch (e) {
-          console.warn(`[AssetRegistry] Failed to load sound ${file}:`, e);
-        }
-      }
-    } catch (e) {
-      console.error('[AssetRegistry] Error loading sounds:', e);
-    }
-  }
-
-  /**
-   * Validate a map definition
-   */
-  validateMap(map) {
-    const required = ['id', 'name', 'version', 'zones', 'spawn', 'goals'];
-    for (const field of required) {
-      if (!(field in map)) {
-        console.warn(`[AssetRegistry] Map missing required field: ${field}`);
+  validateRequired(asset, requiredFields, label, entryId) {
+    for (const field of requiredFields) {
+      if (!(field in asset)) {
+        this.loadErrors.push(`${label} "${entryId}": missing required field "${field}"`);
         return false;
       }
     }
     return true;
   }
 
-  /**
-   * Validate a marble definition
-   */
-  validateMarble(marble) {
-    const required = ['id', 'name', 'version', 'appearance', 'physics'];
-    for (const field of required) {
-      if (!(field in marble)) {
-        console.warn(`[AssetRegistry] Marble missing required field: ${field}`);
-        return false;
+  async fetchJson(url) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        console.warn(`[AssetRegistry] HTTP ${response.status} for ${url}`);
+        return null;
       }
+      return await response.json();
+    } catch (error) {
+      console.warn(`[AssetRegistry] Failed to fetch ${url}:`, error);
+      return null;
     }
-    return true;
   }
 
-  /**
-   * Validate a sound definition
-   */
-  validateSound(sound) {
-    const required = ['id', 'name', 'version', 'files'];
-    for (const field of required) {
-      if (!(field in sound)) {
-        console.warn(`[AssetRegistry] Sound missing required field: ${field}`);
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Get a map by ID
-   */
   getMap(id) {
     return this.maps.get(id);
   }
 
-  /**
-   * Get all maps
-   */
   getAllMaps() {
-    return Array.from(this.maps.values());
+    if (!this.manifest?.maps) {
+      return Array.from(this.maps.values());
+    }
+
+    const ordered = [];
+    for (const id of Object.keys(this.manifest.maps)) {
+      const map = this.maps.get(id);
+      if (map) ordered.push(map);
+    }
+    return ordered;
   }
 
-  /**
-   * Get a marble by ID
-   */
   getMarble(id) {
     return this.marbles.get(id);
   }
 
-  /**
-   * Get all marbles
-   */
   getAllMarbles() {
     return Array.from(this.marbles.values());
   }
 
-  /**
-   * Get a sound by ID
-   */
   getSound(id) {
     return this.sounds.get(id);
   }
 
-  /**
-   * Get all sounds
-   */
   getAllSounds() {
     return Array.from(this.sounds.values());
   }
 
-  /**
-   * Convert a map definition to the game's level format
-   */
   convertMapToLevel(mapDef) {
     return {
       name: mapDef.name,
-      description: mapDef.description,
+      description: mapDef.description || '',
+      difficulty: mapDef.difficulty,
       zones: mapDef.zones,
       spawn: mapDef.spawn,
       goals: mapDef.goals,
-      camera: mapDef.camera || { mode: 'orbit', angle: 0, height: 10, radius: 25 }
+      checkpoints: mapDef.checkpoints,
+      camera: mapDef.camera || { mode: 'orbit', angle: 0, height: 10, radius: 25 },
+      nightMode: mapDef.nightMode,
+      backgroundColor: mapDef.backgroundColor,
+      environment: mapDef.environment,
+      colorGrade: mapDef.colorGrade,
+      abilities: mapDef.abilities,
+      medals: mapDef.medals,
+      collectiblesTotal: mapDef.collectiblesTotal,
+      chapter: mapDef.chapter,
+      behaviors: mapDef.behaviors,
+      source: 'json',
     };
   }
 
-  /**
-   * Convert a marble definition to the game's marble format
-   */
   convertMarbleToGameFormat(marbleDef) {
-    return {
-      color: [
-        marbleDef.appearance.color.r,
-        marbleDef.appearance.color.g,
-        marbleDef.appearance.color.b
-      ],
-      radius: marbleDef.physics.radius,
-      friction: marbleDef.physics.friction,
-      restitution: marbleDef.physics.restitution,
-      density: marbleDef.physics.density,
-      roughness: marbleDef.appearance.roughness,
-      metallic: marbleDef.appearance.metallic
+    const appearance = marbleDef.appearance || {};
+    const physics = marbleDef.physics || {};
+    const color = appearance.color || { r: 0.5, g: 0.5, b: 0.5 };
+    const emissive = appearance.emissive;
+
+    const info = {
+      id: marbleDef.id,
+      name: marbleDef.name,
+      color: [color.r, color.g, color.b],
+      offset: { x: 0, y: 0, z: 0 },
+      radius: physics.radius ?? 0.5,
+      friction: physics.friction,
+      restitution: physics.restitution,
+      density: physics.density,
+      roughness: appearance.roughness,
+      metallic: appearance.metallic,
+      linearDamping: physics.linearDamping,
+      angularDamping: physics.angularDamping,
+      gravityScale: physics.gravityScale,
+      clearCoat: appearance.clearCoat,
+      clearCoatRoughness: appearance.clearCoatRoughness,
+      source: 'json',
     };
+
+    if (emissive) {
+      info.emissive = true;
+      info.lightColor = [emissive.r, emissive.g, emissive.b];
+      info.lightIntensity = (emissive.intensity ?? 1) * 10000;
+    }
+
+    if (appearance.materialType) {
+      info.materialType = appearance.materialType;
+    }
+
+    return info;
   }
 }
 
-// Singleton instance
 export const assetRegistry = new AssetRegistry();
 export default assetRegistry;

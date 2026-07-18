@@ -1,5 +1,6 @@
 import { quatFromEuler, quaternionToMat4 } from '../../math.js';
 import { materialPresets } from '../../material-system.js';
+import { decorateSpiralTrack } from './decorations.js';
 
 /**
  * Zone creation methods
@@ -219,13 +220,14 @@ export const creationMethods = {
         );
     },
 
-    createFloorZone(offset, size) {
+    createFloorZone(offset, size, rotY, color) {
         const sz = size || { x: 50, y: 0.5, z: 50 };
+        const q = rotY ? quatFromEuler(rotY, 0, 0) : { x: 0, y: 0, z: 0, w: 1 };
         this.createStaticBox(
             { x: offset.x, y: offset.y, z: offset.z },
-            { x: 0, y: 0, z: 0, w: 1 },
+            q,
             { x: sz.x / 2, y: sz.y / 2, z: sz.z / 2 },
-            [0.3, 0.3, 0.3],
+            color || [0.3, 0.3, 0.3],
             'concrete'
         );
     },
@@ -308,6 +310,8 @@ export const creationMethods = {
              [0.8, 0.8, 0.2],
              'metal'
         );
+
+        decorateSpiralTrack(this, offset);
     },
 
     createBlockZone(offset) {
@@ -976,5 +980,90 @@ export const creationMethods = {
         [[1.2, 0.5, 1.2], [-1.2, 0.5, -1.2], [1.2, -0.5, -1.2], [-1.2, -0.5, 1.2], [0, 2, 0], [0.8, 1, 0], [-0.8, 1, 0], [0, 1, 0.8]].forEach(([px, py, pz]) => {
             this.createStaticBox({ x: x + px, y: canopyY + py, z: z + pz }, { x: 0, y: 0, z: 0, w: 1 }, { x: 0.25, y: 0.35, z: 0.25 }, fruitColor);
         });
-    }
+    },
+
+    /**
+     * @param {{ x: number, y: number, z: number }} offset
+     * @param {{ kind?: string, value?: number }} [collectible]
+     */
+    createCollectiblePickup(offset, collectible = {}) {
+        const kind = collectible.kind || 'coin';
+        const value = collectible.value ?? 50;
+        const pos = { x: offset.x, y: offset.y + 1, z: offset.z };
+
+        const colors = {
+            coin: [1.0, 0.84, 0.0],
+            gem: [0.0, 0.8, 1.0],
+            star: [1.0, 0.9, 0.2],
+        };
+        const color = colors[kind] || colors.coin;
+
+        const entity = this.Filament.EntityManager.get().create();
+        const matInstance = this.material.createInstance();
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color);
+        matInstance.setFloatParameter('roughness', 0.15);
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
+            .receiveShadows(true)
+            .castShadows(true)
+            .build(this.engine, entity);
+
+        this.scene.addEntity(entity);
+
+        const tcm = this.engine.getTransformManager();
+        const inst = tcm.getInstance(entity);
+        const mat = quaternionToMat4(pos, { x: 0, y: 0, z: 0, w: 1 });
+        const s = 0.5;
+        mat[0] *= s; mat[1] *= s; mat[2] *= s;
+        mat[4] *= s; mat[5] *= s; mat[6] *= s;
+        mat[8] *= s; mat[9] *= s; mat[10] *= s;
+        tcm.setTransform(inst, mat);
+
+        if (!this.collectibles) this.collectibles = [];
+        this.collectibles.push({
+            entity,
+            pos,
+            baseY: pos.y,
+            type: kind,
+            value,
+        });
+    },
+
+    /**
+     * @param {{ x: number, y: number, z: number }} offset
+     * @param {{ id?: string, radius?: number }} [anchor]
+     */
+    createGrappleAnchorZone(offset, anchor = {}) {
+        const pos = { x: offset.x, y: offset.y + 1.5, z: offset.z };
+        const radius = anchor.radius ?? 12;
+        const id = anchor.id || `anchor_${this.grappleAnchors?.length ?? 0}`;
+
+        const entity = this.Filament.EntityManager.get().create();
+        const matInstance = this.material.createInstance();
+        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.0, 1.0, 1.0]);
+        matInstance.setFloatParameter('roughness', 0.2);
+
+        this.Filament.RenderableManager.Builder(1)
+            .boundingBox({ center: [0, 0, 0], halfExtent: [0.6, 0.6, 0.6] })
+            .material(0, matInstance)
+            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
+            .build(this.engine, entity);
+
+        this.scene.addEntity(entity);
+
+        const tcm = this.engine.getTransformManager();
+        const inst = tcm.getInstance(entity);
+        const mat = quaternionToMat4(pos, { x: 0, y: 0, z: 0, w: 1 });
+        const s = 0.6;
+        mat[0] *= s; mat[1] *= s; mat[2] *= s;
+        mat[4] *= s; mat[5] *= s; mat[6] *= s;
+        mat[8] *= s; mat[9] *= s; mat[10] *= s;
+        tcm.setTransform(inst, mat);
+
+        if (!this.grappleAnchors) this.grappleAnchors = [];
+        this.grappleAnchors.push({ id, pos, radius, entity });
+    },
 };

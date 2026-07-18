@@ -1,10 +1,14 @@
 import RAPIER from '@dimforge/rapier3d-compat';
+import { audio } from '../audio.js';
+
+import { getMarblePhysics } from '../wasm-bridge.js';
 
 export class ZoneSetupGrapple {
     createGrappleLine() {
         this.grappleEntity = this.Filament.EntityManager.get().create()
         const grappleColor = [0.0, 1.0, 1.0]
         const matInstance = this.material.createInstance()
+        this.grappleMatInstance = matInstance
         matInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, grappleColor)
         matInstance.setFloatParameter('roughness', 0.2)
         if (this.hasProceduralMaterial) {
@@ -123,6 +127,7 @@ export class ZoneSetupGrapple {
 
         this.isGrappling = false
         this.grappleTarget = null
+        this.isGrappleZipping = false
 
         if (this.grappleInst) {
             const tcm = this.engine.getTransformManager()
@@ -154,34 +159,55 @@ export class ZoneSetupGrapple {
         // Apply Spring/Pendulum force instead of constant pull
         const restLength = this.grappleRestLength || 10.0
 
-        if (dist > restLength) {
-            const stiffness = 15.0
-            const damping = 2.0
+        if (this.isGrappleZipping) {
+            // Powerfully pull marble towards target and quickly reel in
+            const zipForce = 150.0
+            rb.applyImpulse({
+                x: dirX * zipForce * 0.016,
+                y: dirY * zipForce * 0.016,
+                z: dirZ * zipForce * 0.016
+            }, true)
+            this.grappleRestLength = Math.max(1.0, this.grappleRestLength - 0.5)
+        } else {
+            if (dist > restLength) {
+                const stiffness = 15.0
+                const damping = 2.0
+                const vel = rb.linvel()
+                const physics = getMarblePhysics()
+                const force = physics.computeSpringForce(
+                    pos.x, pos.y, pos.z,
+                    target.x, target.y, target.z,
+                    restLength, stiffness, damping,
+                    vel.x, vel.y, vel.z
+                )
+                const totalForce = force.x * dirX + force.y * dirY + force.z * dirZ
 
-            const springForce = (dist - restLength) * stiffness
-
-            const vel = rb.linvel()
-            const velAlongString = vel.x * dirX + vel.y * dirY + vel.z * dirZ
-            const dampingForce = -velAlongString * damping
-
-            const totalForce = springForce + dampingForce
-
-            if (totalForce > 0) {
-                rb.applyImpulse({
-                    x: dirX * totalForce * 0.016, // scale by rough dt
-                    y: dirY * totalForce * 0.016,
-                    z: dirZ * totalForce * 0.016
-                }, true)
+                if (totalForce > 0) {
+                    const dt = 0.016
+                    rb.applyImpulse({
+                        x: force.x * dt,
+                        y: force.y * dt,
+                        z: force.z * dt
+                    }, true)
+                }
             }
-        }
 
-        // Counter-gravity when swinging
-        if (dirY > 0 && dist > restLength) {
-            rb.applyImpulse({ x: 0, y: 0.5, z: 0 }, true)
+            // Counter-gravity when swinging
+            if (dirY > 0 && dist > restLength) {
+                rb.applyImpulse({ x: 0, y: 0.5, z: 0 }, true)
+            }
         }
 
         // Visuals
         if (this.grappleInst) {
+            if (this.grappleMatInstance) {
+                if (this.isGrappleZipping) {
+                    this.grappleMatInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, [1.0, 0.0, 0.0])
+                } else {
+                    this.grappleMatInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, [0.0, 1.0, 1.0])
+                }
+            }
+
             let ux = 0, uy = 1, uz = 0
             if (Math.abs(dirY) > 0.99) {
                 ux = 1; uy = 0; uz = 0
@@ -193,9 +219,9 @@ export class ZoneSetupGrapple {
             const rLen = Math.hypot(rx, ry, rz)
             rx /= rLen; ry /= rLen; rz /= rLen
 
-            let newUx = dirY * rz - dirZ * ry
-            let newUy = dirZ * rx - dirX * rz
-            let newUz = dirX * ry - dirY * rx
+            const newUx = dirY * rz - dirZ * ry
+            const newUy = dirZ * rx - dirX * rz
+            const newUz = dirX * ry - dirY * rx
 
             const thick = 0.05
 

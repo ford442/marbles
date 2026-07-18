@@ -389,3 +389,53 @@ All enhancements use standard WebGL2 features. Requires:
 - Floating point textures
 - Multiple render targets (for shadows)
 
+## WebGL2 context attributes (Filament + simple debug renderer)
+
+Filament’s JS bindings call `canvas.getContext('webgl2', options)` inside `Engine.create(canvas, options)`. Marbles centralizes those attributes in **`src/rendering-defaults.js`**.
+
+| Export | Purpose |
+|---|---|
+| `getWebGLContextOptions(quality, platform?)` | Tier + platform matrix for Filament |
+| `getSimpleDebugWebGLContextOptions(quality)` | Same matrix + `preserveDrawingBuffer: true` for `?renderer=simple` |
+| `resolveWebGLContextOptions({ quality, forSimpleDebug })` | Saved settings quality + dev URL overrides |
+| `resolveGraphicsQualityForInit()` | Reads `localStorage` before `loadSettings()` so init matches saved tier |
+| `applyDevWebGLContextOverrides(options)` | Dev-only query-param overrides |
+
+### Quality tier matrix
+
+| Tier | `powerPreference` | `alpha` | `desynchronized` | Notes |
+|------|-------------------|---------|------------------|-------|
+| low | `low-power` | false | false | Max compatibility / battery |
+| medium, high | `high-performance` | false | true on desktop non-Safari | Input-latency experiment |
+| ultra | `high-performance` | false | false | Stability first |
+
+All tiers set **`antialias: false`** on the canvas context. Anti-aliasing is applied at the **Filament View** layer only:
+
+- **TAA** — `view.setTemporalAntiAliasingOptions()` when quality ≠ low (`getPostFxQualityFlags`)
+- **MSAA** — `view.setMultiSampleAntiAliasingOptions({ enabled: !taaEnabled, sampleCount: 4 })` when TAA is off
+
+Enabling browser/context MSAA (`antialias: true`) would stack with View MSAA and waste fill rate.
+
+### Init wiring
+
+- **Filament path** — `src/init/core.js` passes `resolveWebGLContextOptions()` into `Filament.Engine.create(canvas, options)` and stores the result on `game.webglContextOptions`.
+- **Simple debug path** — `installSimpleDebugBackend()` in `src/rendering/simple-debug-renderer.js` uses `getSimpleDebugWebGLContextOptions()` (includes `preserveDrawingBuffer` for screenshots/readback).
+
+Context attributes are fixed at engine creation; changing the quality tier in settings does **not** recreate the WebGL context (reload required).
+
+### Dev-only URL overrides
+
+Append to the URL to experiment (not exposed in the settings UI):
+
+| Param | Maps to |
+|-------|---------|
+| `?glPowerPreference=low-power\|high-performance\|default` | `powerPreference` |
+| `?glDesynchronized=0\|1` | `desynchronized` |
+| `?glAlpha=0\|1` | `alpha` |
+| `?glPreserveDrawingBuffer=0\|1` | `preserveDrawingBuffer` |
+| `?glAntialias=0\|1` | `antialias` (avoid unless testing double-AA) |
+| `?glFailIfMajorPerformanceCaveat=0\|1` | `failIfMajorPerformanceCaveat` |
+| `?glXrCompatible=0\|1` | `xrCompatible` |
+
+Inspect at runtime: `window.game.webglContextOptions`
+

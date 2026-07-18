@@ -123,6 +123,9 @@ export class CullingManager {
 
     setEntityVisible(entity, visible, key = entity) {
         if (!this.enabled || !this.game.scene || !entity) return
+        if (this.game.lightingBudget && !this.game.lightingBudget.isBudgetActive(entity)) {
+            visible = false
+        }
         const stateKey = `entity:${key}`
         const state = this.states.get(stateKey) || { inScene: true }
         if (state.inScene === visible) return

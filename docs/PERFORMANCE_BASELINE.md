@@ -16,6 +16,7 @@ Open one of these URLs:
 - `/?renderer=filament&fps=1` for the visible FPS overlay.
 - `/?renderer=simple&perf=1` to compare the shared physics state through the simplified WebGL2 renderer.
 - Add `?staticBatch=0` or `?noStaticBatch` to disable static-box batching for A/B comparisons.
+- Add `?wasmPhysics=0` to force MarblePhysics JS fallbacks (WASM loads by default when built).
 - Add `?culling=0`, `?noCulling`, or `?noCull` to disable CPU-side visual culling for A/B comparisons.
 
 Press `F2` to toggle the overlay. The setting is persisted in `localStorage` under `marbles.perfOverlay`.
@@ -95,12 +96,100 @@ For A/B captures, compare `/?renderer=filament&perf=1` with `/?renderer=filament
 
 ## Likely Culprits
 
-- The sync path in `src/game-loop-sync-methods.js` updates all marbles every frame through `TransformManager.getInstance()` and `setTransform()`.
+- `src/game-loop/sync.js` updates all marbles every frame through `TransformManager.getInstance()` and `setTransform()`.
 - Visual particles add per-frame JS updates and transform writes; sampled complex zones reached roughly 60-150 active visual particles.
 - Dynamic objects and temporary/moving platforms add additional physics bodies and transform writes, especially in `space_station`.
-- `src/game-loop/core.js` performs per-frame collectible hover, power-up spin, moving platform, and active effect transforms.
+- `src/game-loop/render.js` performs per-frame collectible hover, power-up spin, moving platform, and active effect transforms.
 - Lights and animated lights are most visible in neon/lava zones. Filament draw-call counts are not exposed here, so `drawCallsProxy` is a pressure estimate based on renderable objects, particles, and active particle counts.
 
 ## Next Baseline Pass
 
 Run the same route on a normal browser/GPU with `?renderer=filament&perf=1`, sample each hot level for 10-20 seconds after loading, and paste `window.perfMonitor.getLevelSummary()` into this report. Use `?renderer=simple&perf=1` when isolating physics/update costs from Filament material and lighting complexity.
+
+## MarblePhysics WASM
+
+### Enablement
+
+WASM loads automatically when `public/wasm/marble_physics.wasm` is present (CI/prod builds). No query flag is required. Use `?wasmPhysics=0` to force pure-JS fallbacks for A/B comparisons. The perf overlay reports the active backend on the `physics:` line.
+
+### Batch routing
+
+| Entity count | Backend when WASM loaded |
+| --- | --- |
+| `< FORCE_BATCH_THRESHOLD` (8) | Scalar (HEAP out-param on WASM path) |
+| `8 … 199` | JS batch (`jsFallback.computeForceFieldsBatch`) |
+| `≥ WASM_HEAP_BATCH_MIN` (200) | WASM HEAPF32 batch |
+
+### Node micro-benchmark
+
+Force-field application (black-hole style: inverse-linear falloff, `falloffExp=1`, `minDist=0.5`, `maxDist=25`). Average milliseconds per simulated frame over 200 iterations after 50 warmup iterations.
+
+Run:
+
+```bash
+node scripts/benchmark-wasm-bridge.mjs          # JS scalar vs JS batch
+node scripts/benchmark-wasm-bridge.mjs --wasm   # includes WASM HEAPF32 batch path
+npm run build:wasm                              # required before --wasm
+node tests/test_wasm_bridge.js                  # JS fallback parity
+node tests/test_wasm_bridge_wasm.js             # WASM vs JS (skips if binary absent)
+```
+
+Captured on 2026-07-11 (Node v24.5.0, `/root/marbles` dev host):
+
+| Entities | Scalar JS (ms) | Batch JS (ms) | JS batch speedup | Batch WASM (ms) | WASM vs scalar |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 50 | 0.017 | 0.010 | 1.66× | 0.042 | 0.40× |
+| 200 | 0.023 | 0.027 | 0.86× | 0.010 | 2.40× |
+| 1000 | 0.144 | 0.139 | 1.03× | 0.049 | 2.95× |
+
+Notes:
+
+- WASM HEAP batch pays a fixed copy + `_malloc` setup cost; hybrid routing keeps mid-size batches on JS until `WASM_HEAP_BATCH_MIN` (200).
+- Scalar WASM uses `*Out` HEAP writers instead of Embind `{x,y,z}` objects for magnet/black-hole paths with ≤8 targets.
+- Local dev without emsdk continues to use JS fallbacks silently (`npm run build:wasm` skips gracefully when Emscripten is absent).
+- Shared test vectors live in `tests/test_wasm_bridge.js` and `tests/test_wasm_bridge_wasm.js`.
+
+### Frame-time A/B (ability-heavy levels)
+
+Compare WASM vs JS on real hardware (SwiftShader headless timing is not representative):
+
+1. `/?renderer=filament&perf=1` — play 15s on `gravity_well_run` (black holes) and a magnet-active level; record `window.perfMonitor.getLevelSummary().p50FrameMs`.
+2. Repeat with `?wasmPhysics=0`.
+3. Confirm overlay shows `physics: wasm` vs `physics: js-fallback`.
+
+Expected signal: modest p50 improvement on levels with many simultaneous force-field targets (70 marbles + black holes/magnet), not on geometry-only levels.
+
+## Physics worker A/B (Rapier offload)
+
+Opt in with `?physicsWorker=1` on the **tutorial** level (spike). Requires COOP/COEP (`vite.config.js` / production CDN). Compare against `?physicsWorker=0` on the same level.
+
+Suggested route (isolates physics from Filament):
+
+```text
+/?renderer=simple&perf=1&physicsWorker=0   # main-thread Rapier
+/?renderer=simple&perf=1&physicsWorker=1   # worker @ 120 Hz (override ?physicsHz=60)
+```
+
+After 10–20 s of play, record:
+
+```javascript
+window.perfMonitor.getLevelSummary()
+// latestSyncWork.physicsStepMs — worker: read from SAB (near 0 on main wait)
+// latestSyncWork.mainThreadPhysicsWaitMs — main-thread stall waiting on worker
+// latestMetrics.rapierBackend — 'worker' | 'main'
+```
+
+Also sample body-pressure and particle-heavy levels (`space_station`, `lava_tubes_run`) on **main-thread** baseline; worker path is tutorial-only until expanded.
+
+**Expected:** main-thread `physicsStepMs` drops when Rapier runs in the worker; marble transform sync in `sync.js` remains on the main thread and is unchanged.
+
+See [architecture/physics-worker.md](./architecture/physics-worker.md).
+
+### quaternionToMat4Batch — go/no-go (2026-07-18)
+
+**Decision: skip.** `src/math.ts` already reuses a shared `_mat4Pool` per synchronous call. The marble sync loop in `src/game-loop/sync.js` interleaves Rapier `translation()`/`rotation()` reads with Filament `setTransform()` writes; a WASM batch would still require copying ~70 quaternions + positions into HEAP and copying 16×N matrices back before `setTransform`. Node force-field benchmarks show HEAP copy overhead dominates below ~200 entities; the same pattern applies here. Revisit only if sync-phase profiling on GPU shows quat→mat4 as >10% of sync ms **and** a prototype batch beats JS after copy costs.
+
+### Spring / segment batch kernels
+
+- `computeSpringForcesBatch` and `closestPointsOnSegmentBatch` ship with JS fallbacks + WASM HEAP paths (same hybrid threshold as force fields).
+- Grapple uses scalar `computeSpringForce` via `src/zone-setup/grapple.js` (single spring per frame; batch not warranted yet).

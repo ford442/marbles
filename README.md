@@ -12,22 +12,33 @@ A 3D marble roller game using Google Filament (WASM) and Rapier3D-Compat for phy
 - **Transform System**: Helper function to convert quaternion rotations to 4x4 transformation matrices
 - **Game Loop**: Synchronized physics stepping and rendering
 
-## Project Structure
+## Project status
 
-```
-marbles/
-├── index.html          # Main HTML file
-├── package.json        # Dependencies and scripts
-├── vite.config.js      # Vite configuration with CORS headers
-├── wasm/               # C++ WebAssembly physics module (Emscripten)
-│   ├── marble_physics.cpp   # C++ source with Embind exports
-│   ├── CMakeLists.txt       # Emscripten build config
-│   ├── build.sh             # Build script → public/wasm/
-│   └── README.md            # Build instructions
-└── src/
-    ├── main.js         # Main game logic
-    └── wasm-bridge.js  # JS façade for the WASM module (+ pure-JS fallbacks)
-```
+See **[docs/CURRENT_STATE.md](docs/CURRENT_STATE.md)** for the full health dashboard. Snapshot:
+
+| Area | Status | Link |
+|------|--------|------|
+| Shipped levels | 14 JSON maps via manifest | [level-pipeline.md](docs/architecture/level-pipeline.md) |
+| Dev levels | ~58 via `?devLevels=1` | same |
+| Phase A | Game loop consolidated in `src/game-loop/` | [architecture README](docs/architecture/README.md) |
+| Phase B | Started — `PhysicsWorld`, `InputSystem`, `MarbleRegistry` | same |
+| Phase C | In progress — pilot `.ts` systems + `@ts-check` state | [language-strategy.md](docs/architecture/language-strategy.md) |
+| Multiplayer | Party relay optional | [multiplayer.md](docs/multiplayer.md) |
+| Backend | Optional cloud sync (not required to play) | [backend/README.md](backend/README.md) |
+| CI | Assets + unit + lint + typecheck + WASM build | [.github/workflows/debug_build.yml](.github/workflows/debug_build.yml) |
+| E2E | Optional smoke job (`continue-on-error`) | [tests/e2e/smoke.cjs](tests/e2e/smoke.cjs) |
+
+Active repo layout: **[docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)**.
+
+### Documentation
+
+- [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md) — health checklist and migration status
+- [docs/architecture/README.md](docs/architecture/README.md) — Phase A/B/C ADR and ownership map
+- [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) — assets, zones, validation
+- [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) — runtime entry graph
+- [LIGHTING_SYSTEM_GUIDE.md](LIGHTING_SYSTEM_GUIDE.md) — zone lighting API
+- [PARTICLE_INTEGRATION_GUIDE.md](PARTICLE_INTEGRATION_GUIDE.md) — CPU particle system
+- [docs/backups/](docs/backups/README.md) — archived code (intentional; not runtime)
 
 ## Setup
 
@@ -53,6 +64,19 @@ npm run build:wasm    # requires Emscripten SDK — see wasm/README.md
 
 The game runs fully without the WASM binary; `src/wasm-bridge.js` falls back to
 equivalent pure-JavaScript implementations automatically.
+
+### Experimental WebGPU particles
+
+Filament stays on WebGL2. Optional WebGPU compute handles up to **8192** particles on a transparent overlay canvas.
+
+```
+npm run dev
+# open http://localhost:5173/?webgpuParticles=1
+# benchmark burst: ?webgpuParticles=1&webgpuStress=1
+```
+
+See **[docs/WEBGPU_PARTICLES.md](docs/WEBGPU_PARTICLES.md)** for architecture, flags, and fallback behavior.
+The archived C++ Dawn experiment is **not** used — see `docs/backups/experimental-wasm-renderer/ARCHIVED.md`.
 
 ## Implementation Details
 
@@ -121,16 +145,90 @@ function quaternionToMat4(position, quaternion) {
 
 ## Dependencies
 
-- **vite**: ^7.3.1 - Build tool and dev server
-- **filament**: ^1.51.5 - Google's physically based rendering engine
-- **@dimforge/rapier3d-compat**: ^0.13.0 - Physics engine
-- **Emscripten** (dev, optional) - Compiles `wasm/marble_physics.cpp` to WASM
+### Runtime (game bundle)
+
+| Package | Role |
+|---------|------|
+| `filament` | WebGL2 renderer (WASM UMD) |
+| `@dimforge/rapier3d-compat` | Physics simulation |
+
+The game intentionally does **not** use three.js or React in the shipped bundle. See [docs/architecture/language-strategy.md](docs/architecture/language-strategy.md).
+
+### Dev / build
+
+- **vite**: ^7.3.1 — build tool and dev server
+- **playwright**, **eslint**, **typescript**, etc. — see `package.json` devDependencies
+- **Emscripten** (optional) — compiles `wasm/marble_physics.cpp` to WASM
 
 ## Browser Requirements
 
 - WebGL2 support
 - WASM support  
 - Cross-Origin isolation for SharedArrayBuffer (COOP/COEP headers configured in Vite)
+
+## Production Deploy
+
+### Build
+
+`npm run build` runs `npm run build:wasm` first, then Vite. The WASM artifacts are copied into `public/wasm/` by `wasm/build.sh` and emitted into `dist/wasm/` by the build. `public/wasm/` is gitignored, so a clean checkout **must** run `npm run build` (or `npm run build:wasm`) before deploy.
+
+### Cross-origin isolation headers
+
+SharedArrayBuffer requires:
+
+```
+Cross-Origin-Embedder-Policy: require-corp
+Cross-Origin-Opener-Policy: same-origin
+```
+
+`vite dev` and `vite preview` set these automatically. For static hosts, add them at the server/CDN layer.
+
+**nginx**
+
+```nginx
+location / {
+    add_header Cross-Origin-Embedder-Policy "require-corp" always;
+    add_header Cross-Origin-Opener-Policy "same-origin" always;
+    try_files $uri $uri/ /index.html;
+}
+```
+
+**Cloudflare Pages**
+
+Add to `_headers` in the publish directory:
+
+```
+/*
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Opener-Policy: same-origin
+```
+
+**Note:** `require-corp` blocks cross-origin resources that do not send `Cross-Origin-Resource-Policy` (or use `crossorigin` attributes). Self-hosted Filament/WASM assets under the same origin are unaffected.
+
+### Cache-Control strategy
+
+| Asset type | Example | Cache policy |
+|---|---|---|
+| Hashed JS/CSS | `dist/assets/index-BJvUM3Bn.js` | `public, max-age=31536000, immutable` |
+| Unhashed WASM | `dist/wasm/marble_physics.wasm` | `public, max-age=3600` or version with query/hash |
+| Filament WASM | `dist/filament.wasm` | `public, max-age=3600` or version with query/hash |
+| HTML | `dist/index.html` | `no-cache` |
+
+Because `marble_physics.js` and `filament.wasm` keep stable filenames, either:
+
+1. Bust the cache on each deploy (e.g., append `?v=<git-sha>` in the loader), or
+2. Configure your CDN to invalidate `/wasm/*` and `/*.wasm` on every deploy.
+
+Vite handles hashed JS/CSS automatically; do **not** set long cache headers on `index.html`.
+
+### Deploy checklist
+
+- [ ] `npm run build` completed successfully (includes `build:wasm`)
+- [ ] `dist/wasm/marble_physics.js` and `dist/wasm/marble_physics.wasm` exist
+- [ ] COOP/COEP headers are present on the live origin
+- [ ] `index.html` is served with `Cache-Control: no-cache` or short TTL
+- [ ] WASM/assets have an explicit cache invalidation strategy
+- [ ] Verify `/wasm/marble_physics.wasm` returns HTTP 200 and `application/wasm`
 
 ## Notes
 

@@ -5,7 +5,7 @@ export class AbilityMissiles {
     spawnMissile() {
         const now = Date.now()
         if (this.lastMissileTime !== 0 && now - this.lastMissileTime < this.missileCooldown) return
-        this.lastMissileTime = now
+        if (!this.effectPool?.budget.canSpawnProjectile('missile')) return
 
         const pos = this.playerMarble.rigidBody.translation()
 
@@ -21,6 +21,10 @@ export class AbilityMissiles {
             z: pos.z + dirZ * 1.5
         }
 
+        const slot = this.effectPool.acquireProjectile('missile', spawnPos)
+        if (!slot) return
+        this.lastMissileTime = now
+
         const missileSpeed = 40.0
 
         const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
@@ -35,44 +39,24 @@ export class AbilityMissiles {
             .setDensity(0.5)
         this.world.createCollider(colliderDesc, body)
 
-        const entity = this.Filament.EntityManager.get().create()
-        const matInstance = this.material.createInstance()
-        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 0.5, 0.0])
-        matInstance.setFloatParameter('roughness', 0.2)
-
-        this.Filament.RenderableManager.Builder(1)
-            .boundingBox({ center: [0, 0, 0], halfExtent: [0.2, 0.2, 0.2] })
-            .material(0, matInstance)
-            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb)
-            .receiveShadows(true)
-            .castShadows(true)
-            .build(this.engine, entity)
-
-        this.scene.addEntity(entity)
-
-        const lightEntity = this.Filament.EntityManager.get().create()
-        this.Filament.LightManager.Builder(this.Filament.LightManager$Type.POINT)
-            .color([1.0, 0.5, 0.0])
-            .intensity(20000.0)
-            .falloff(5.0)
-            .build(this.engine, lightEntity)
-        this.scene.addEntity(lightEntity)
+        this.effectPool.bindProjectileLight(slot, body)
 
         this.activeMissiles.push({
-            entity: entity,
+            entity: slot.entity,
             rigidBody: body,
-            matInstance: matInstance,
-            lightEntity: lightEntity,
+            matInstance: slot.matInstance,
+            lightEntity: slot.lightEntity,
+            _poolSlot: slot,
             spawnTime: now,
             duration: 3000
         })
         this.dynamicBodies.add(body)
 
-        if (typeof audio !== 'undefined' && audio.playBoost) audio.playBoost()
+        if (audio.playAbility) audio.playAbility('missile', spawnPos)
     }
 
     explodeMissile(missilePos) {
-        if (audio.playStomp) audio.playStomp()
+        if (audio.playAbility) audio.playAbility('bomb', missilePos)
 
         const pos = missilePos
         const radius = 10.0
@@ -93,7 +77,7 @@ export class AbilityMissiles {
 
                 body.applyImpulse({
                     x: nx * force * factor,
-                    y: (ny * 0.5 + 0.5) * force * factor, // Always bias upward
+                    y: (ny * 0.5 + 0.5) * force * factor,
                     z: nz * force * factor
                 }, true)
             }

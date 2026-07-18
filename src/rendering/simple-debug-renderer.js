@@ -1,3 +1,9 @@
+import {
+    getSimpleDebugWebGLContextOptions,
+    resolveGraphicsQualityForInit,
+    resolveWebGLContextOptions,
+} from '../rendering-defaults.js'
+
 const SIMPLE_RENDERER_VALUES = new Set(['simple', 'debug', 'webgl', 'webgl2', 'fallback'])
 
 function setRuntimeRendererGlobals(type, reason = '') {
@@ -359,7 +365,7 @@ function makeFilamentAdapter(backend) {
 
     return {
         EntityManager: { get: () => entityManager },
-        Engine: { create: () => new SimpleEngine(backend) },
+        Engine: { create: (_canvas, _options) => new SimpleEngine(backend) },
         RenderableManager: {
             Builder: () => new SimpleBuilder((_engine, entity, record) => backend.registerRenderable(entity, record))
         },
@@ -392,13 +398,16 @@ function makeFilamentAdapter(backend) {
 }
 
 export class SimpleDebugRenderer {
-    constructor(canvas, game) {
+    constructor(canvas, game, contextOptions = null) {
         this.canvas = canvas
         this.game = game
         this.records = new Map()
         this.transforms = new Map()
         this.lights = new Map()
-        this.gl = canvas.getContext('webgl2', { alpha: false, antialias: false, preserveDrawingBuffer: true })
+        this.contextOptions = contextOptions ?? getSimpleDebugWebGLContextOptions(
+            resolveGraphicsQualityForInit()
+        )
+        this.gl = canvas.getContext('webgl2', this.contextOptions)
         if (!this.gl) {
             throw new Error('WebGL2 is not available for the simple debug renderer')
         }
@@ -646,10 +655,17 @@ export class SimpleDebugRenderer {
 }
 
 export function installSimpleDebugBackend(game, reason = '') {
-    const backend = new SimpleDebugRenderer(game.canvas, game)
+    const glOptions = resolveWebGLContextOptions({
+        quality: resolveGraphicsQualityForInit(game.settings?.graphics?.quality),
+        forSimpleDebug: true,
+    })
+    game.webglContextOptions = glOptions
+    console.log('[INIT] Simple debug WebGL context options:', glOptions)
+
+    const backend = new SimpleDebugRenderer(game.canvas, game, glOptions)
     game.simpleDebugRenderer = backend
     game.Filament = makeFilamentAdapter(backend)
-    game.engine = game.Filament.Engine.create(game.canvas)
+    game.engine = game.Filament.Engine.create(game.canvas, glOptions)
     game.scene = game.engine.createScene()
     game.swapChain = game.engine.createSwapChain()
     game.renderer = game.engine.createRenderer()

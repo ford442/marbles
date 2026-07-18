@@ -1,5 +1,7 @@
 # Marbles 3D Game - Agent Guide
 
+> **Superseded for agent ops** by root [AGENTS.md](../AGENTS.md). This file is a historical reference only — many sections describe archived React/sequencer surfaces and outdated project layout.
+
 This document provides essential information for AI coding agents working on the Marbles 3D project.
 
 ## Project Overview
@@ -8,11 +10,11 @@ This document provides essential information for AI coding agents working on the
 - **Physics Simulation**: Rapier3D-Compat for realistic physics (gravity: -9.81 m/s²)
 - **3D Rendering**: Google Filament (WASM) for high-performance WebGL2 rendering
 - **Build System**: Vite for development and production builds
-- **UI Layer**: React/TSX components for the sequencer and importer modals
+- **UI Layer**: Vanilla HTML HUD (`index.html`, `hud-manager.js`); React stack archived under `docs/backups/orphan-react-stack/`
 - **Backend**: Python FastAPI with Google Cloud Storage integration
-- **WASM Renderer**: Optional C++ WebGPU renderer (`wasm_renderer/`) built with Emscripten
+- **WASM physics helpers**: C++ numeric kernels (`wasm/`) — see `docs/architecture/language-strategy.md`
 
-The game features approximately 40 levels with diverse zones, obstacles, scoring goals, checkpoints, collectibles, power-ups, and 50+ marble types with unique physics properties.
+The game features **14 manifest JSON levels** in normal play (plus ~58 dev-only entries with `?devLevels=1`), diverse zones, scoring goals, checkpoints, collectibles, power-ups, and marble types defined in `assets/marbles/`.
 
 ## Technology Stack
 
@@ -66,7 +68,8 @@ marbles/
 │   ├── material-presets.js        # Material preset definitions
 │   ├── gpu-instancing.js          # GPU instancing utilities
 │   ├── gpu-particles.js           # GPU particle system
-│   ├── levels.js           # ~40 declarative level definitions
+│   ├── levels/catalog.js   # Runtime catalog (manifest JSON + optional DEV_LEVELS)
+│   ├── levels.js           # Dev-only level definitions (?devLevels=1)
 │   ├── math.js             # quaternionToMat4 helper
 │   ├── sphere.js           # UV sphere generator with TBN frames
 │   ├── cube-geometry.js    # Cube vertex/index buffers
@@ -93,11 +96,10 @@ marbles/
 │   └── services/           # Business logic (index, sync)
 ├── universal/              # Standalone utilities
 │   └── app_storage_manager.py # Monolithic FastAPI duplicate (legacy)
-├── wasm_renderer/          # C++ WebGPU renderer (Emscripten + CMake)
-│   ├── CMakeLists.txt
-│   ├── build.sh
-│   ├── main.cpp
-│   └── README.md
+├── docs/backups/
+│   ├── orphan-react-stack/     # Archived React sequencer / importers (non-runtime)
+│   └── experimental-wasm-renderer/  # Archived WebGPU experiment (non-runtime)
+├── wasm/                   # MarblePhysics C++ helpers (Emscripten → public/wasm/)
 ├── assets/                 # Game assets
 │   ├── maps/               # Level definitions
 │   ├── marbles/            # Marble definitions
@@ -162,7 +164,8 @@ The `MarblesGame` constructor initializes a monolithic state object with ~300 li
 
 ### Level & Zone System
 
-- **Levels** are defined declaratively in `src/levels.js` as objects with `name`, `description`, `zones[]`, `spawn`, `goals[]`, `checkpoints[]`, and `camera` settings.
+- **Production levels** live in `assets/maps/*.json` + `assets/manifest.json`, loaded via `src/levels/catalog.js`.
+- **Dev levels** remain in `src/levels.js` (`DEV_LEVELS`) for WIP content when `?devLevels=1`.
 - **Zones** are created via `ZoneSetupMethods.createZone(zone)`, which dispatches through a large `switch` statement to either:
   - Methods on `this` (e.g., `this.createFloorZone()`)
   - Standalone factory functions imported from `src/zones/*.js` or legacy zone files
@@ -318,14 +321,11 @@ The project includes a `.devcontainer/` configuration for GitHub Codespaces:
 - **Desktop**: VNC access via port 6080
 - **Forwarded ports**: 3000, 5173, 6080, 8080
 
-### WASM Renderer (`wasm_renderer/`)
+### MarblePhysics WASM (`wasm/`)
 
-An optional C++ WebGPU rendering backend:
-- Built with **CMake** and **Emscripten**
-- Supports WGSL compute shaders, ping-pong textures, uniform buffer management
-- Output: `wasm_renderer_test.js` + `wasm_renderer_test.wasm`
-- Toggle between JS and WASM renderers at runtime
-- Requires Chrome/Edge 113+ for WebGPU support
+Custom C++ helpers for batched float kernels (force fields, damping). Built with Emscripten; consumed via `src/wasm-bridge.js`. See `docs/architecture/language-strategy.md` for when to add C++ vs JS.
+
+Archived WebGPU renderer: `docs/backups/experimental-wasm-renderer/` (not on the game runtime path).
 
 ## Common Issues & Troubleshooting
 
@@ -337,7 +337,8 @@ An optional C++ WebGPU rendering backend:
 
 ## File Modification Guidelines
 
-- **Adding new level zones**: Add a level definition to `src/levels.js`, and either add a method to `ZoneSetupMethods` or create a standalone factory in `src/zones/`
+- **Adding new campaign levels**: Create `assets/maps/<id>.json`, register in `manifest.json`, use zone `type` stamps from `registry.js`. See `docs/CONTRIBUTING.md` and `docs/architecture/level-pipeline.md`.
+- **Adding dev/WIP levels**: Optional entry in `src/levels.js` behind `?devLevels=1`.
 - **Adding marble types**: Extend the marble data in `src/marbles_data.js` or `marble-management-methods.js`
 - **Modifying physics**: Use Rapier APIs via `RAPIER.*` namespace after `RAPIER.init()`
 - **Modifying rendering**: Use Filament APIs via `this.Filament.*` after initialization

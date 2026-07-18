@@ -44,6 +44,8 @@ if(EMSCRIPTEN)
         -sELIMINATE_DUPLICATE_FUNCTIONS=1
         -sWASM_BIGINT=1
         -sALLOW_TABLE_GROWTH=1
+        -sEXPORTED_FUNCTIONS=['_malloc','_free']
+        -sEXPORTED_RUNTIME_METHODS=['HEAPF32']
 
         # Optional extra aggressive flags (uncomment & test):
         # -sAGGRESSIVE_VARIABLE_ELIMINATION=1

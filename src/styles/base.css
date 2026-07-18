@@ -1,0 +1,95 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #000;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #fff;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+#loading,
+#level-menu,
+#pause-menu {
+    color: #fff;
+}
+
+#canvas {
+    position: fixed;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+    z-index: 0;
+}
+
+/* Speed Lines Canvas - overlay for motion blur effect */
+#speedlines-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+/* WebGPU particle overlay (experimental — ?webgpuParticles=1) */
+#webgpu-particles-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+    z-index: 4;
+    pointer-events: none;
+    opacity: 0;
+}
+
+/* Touch controls (mobile / tablet) */
+/* Scrollbar for level grid */
+#level-grid::-webkit-scrollbar {
+    width: 8px;
+}
+
+#level-grid::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+#level-grid::-webkit-scrollbar-thumb {
+    background: rgba(233, 69, 96, 0.5);
+    border-radius: 4px;
+}
+
+#level-grid::-webkit-scrollbar-thumb:hover {
+    background: rgba(233, 69, 96, 0.8);
+}
+
+/* Debug overlay */
+#debug-overlay {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #0f0;
+    font-family: monospace;
+    font-size: 12px;
+    padding: 10px;
+    border-radius: 4px;
+    z-index: 1000;
+    pointer-events: none;
+}
+

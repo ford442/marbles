@@ -1,0 +1,16 @@
+{
+  "id": "collision_wood",
+  "name": "Wood Collision",
+  "description": "Warm wooden track impact",
+  "version": "1.0.0",
+  "category": "sfx",
+  "files": [],
+  "synthesis": { "type": "surface_hit", "profile": "wood" },
+  "properties": {
+    "volume": 0.65,
+    "pitchMin": 0.9,
+    "pitchMax": 1.1,
+    "spatial": false
+  },
+  "trigger": { "event": "collision", "threshold": 1.0, "cooldown": 0.08 }
+}

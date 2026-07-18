@@ -1,5 +1,13 @@
+import { destroyLoadedTrackModels } from '../assets/gltf-track-loader.js';
+import { audio } from '../audio.js';
+import { unloadLevelBehaviors } from '../game/level-behaviors/index.js';
+import { clearRemoteAbilityFx } from '../game/network/ability-sync.js';
+import { resetDesyncIndicator } from '../game/network/desync-indicator.js';
+
 export class InitCleanup {
     clearLevel() {
+        unloadLevelBehaviors(this);
+        this.physicsBackend?.resetWorld?.();
         for (const m of this.marbles) {
             this.world.removeRigidBody(m.rigidBody)
             this.scene.remove(m.entity)
@@ -7,6 +15,7 @@ export class InitCleanup {
             this.engine.destroyEntity(m.entity)
         }
         if (this.activeMarbleLightEntity) {
+            this.lightingBudget?.unregister(this.activeMarbleLightEntity)
             this.scene.remove(this.activeMarbleLightEntity)
             this.engine.destroyEntity(this.activeMarbleLightEntity)
             this.Filament.EntityManager.get().destroy(this.activeMarbleLightEntity)
@@ -20,6 +29,11 @@ export class InitCleanup {
         }
         this.staticBodies = []
 
+        destroyLoadedTrackModels(this)
+        this.trackLodManager?.reset()
+        audio?.stopMusic?.()
+        audio?.stopAllRolling?.()
+
         for (const entity of this.staticEntities) {
             this.scene.remove(entity)
             this.engine.destroyEntity(entity)
@@ -32,10 +46,13 @@ export class InitCleanup {
             this.staticBatchResources = []
         }
         if (this._staticBoxBatchGroups) this._staticBoxBatchGroups.clear()
+        if (this._decorativeBatchGroups) this._decorativeBatchGroups.clear()
         this.staticBatchStats = { groups: 0, boxes: 0, collapsedEntities: 0 }
         this.cullingManager?.reset()
-        
-        // Clear animated lights from zone
+        this.marbleLodManager?.reset()
+        this.effectPool?.reset()
+        this.levelEffectBudget?.reset()
+        this.lightingBudget?.reset()
         if (this.lightingSystem) {
             this.lightingSystem.clearAnimatedLights()
         }
@@ -48,6 +65,11 @@ export class InitCleanup {
         // Clear ambient zone particle emitters
         if (this.particleSystem) {
             this.particleSystem.clearAmbientEmitters()
+            this.particleSystem.dispose()
+        }
+        if (this.webgpuParticles) {
+            this.webgpuParticles.dispose()
+            this.webgpuParticles = null
         }
 
         for (const obj of this.dynamicObjects) {
@@ -68,6 +90,14 @@ export class InitCleanup {
             this.engine.destroyEntity(c.entity)
         }
         this.collectibles = []
+
+        if (this.grappleAnchors) {
+            for (const a of this.grappleAnchors) {
+                this.scene.remove(a.entity)
+                this.engine.destroyEntity(a.entity)
+            }
+        }
+        this.grappleAnchors = []
 
         for (const p of this.powerUps) {
             this.world.removeRigidBody(p.rigidBody)
@@ -107,6 +137,15 @@ export class InitCleanup {
             this.ghostLightEntity = null
         }
 
+        this.remotePlayers?.clear()
+        this.multiplayerMode = false
+        this.hostAuthorityMode = false
+        this.hostSim?.reset?.()
+        this.clientPrediction?.reset?.()
+        clearRemoteAbilityFx?.(this)
+        resetDesyncIndicator?.(this)
+        this.touchControls?.setGameplayActive(false)
+
         if (this.portalA) this.destroyPortal(this.portalA)
         if (this.portalB) this.destroyPortal(this.portalB)
         this.portalA = null
@@ -114,77 +153,7 @@ export class InitCleanup {
         document.getElementById('portal-a-status').style.color = '#444'
         document.getElementById('portal-b-status').style.color = '#444'
 
-        if (this.temporaryPlatforms) {
-            for (const p of this.temporaryPlatforms) {
-                this.world.removeRigidBody(p.rigidBody)
-                this.scene.remove(p.entity)
-                if (p.matInstance) this.engine.destroyMaterialInstance(p.matInstance)
-                this.engine.destroyEntity(p.entity)
-                this.Filament.EntityManager.get().destroy(p.entity)
-            }
-            this.temporaryPlatforms = []
-        }
-
-        if (this.visualParticles) {
-            for (const p of this.visualParticles) {
-                this.scene.remove(p.entity)
-                if (p.matInstance) this.engine.destroyMaterialInstance(p.matInstance)
-                this.engine.destroyEntity(p.entity)
-                this.Filament.EntityManager.get().destroy(p.entity)
-            }
-            this.visualParticles = []
-        }
-
-        if (this.activeMissiles) {
-            for (const m of this.activeMissiles) {
-                this.world.removeRigidBody(m.rigidBody)
-                this.scene.remove(m.entity)
-                if (m.matInstance) this.engine.destroyMaterialInstance(m.matInstance)
-                this.engine.destroyEntity(m.entity)
-                this.Filament.EntityManager.get().destroy(m.entity)
-
-                if (m.lightEntity) {
-                    this.scene.remove(m.lightEntity)
-                    this.engine.destroyEntity(m.lightEntity)
-                    this.Filament.EntityManager.get().destroy(m.lightEntity)
-                }
-            }
-            this.activeMissiles = []
-        }
-
-        if (this.activeBombs) {
-            for (const b of this.activeBombs) {
-                this.world.removeRigidBody(b.rigidBody)
-                this.scene.remove(b.entity)
-                if (b.matInstance) this.engine.destroyMaterialInstance(b.matInstance)
-                this.engine.destroyEntity(b.entity)
-                this.Filament.EntityManager.get().destroy(b.entity)
-
-                if (b.lightEntity) {
-                    this.scene.remove(b.lightEntity)
-                    this.engine.destroyEntity(b.lightEntity)
-                    this.Filament.EntityManager.get().destroy(b.lightEntity)
-                }
-            }
-            this.activeBombs = []
-        }
-
-        if (this.activeBlackHoles) {
-            for (const bh of this.activeBlackHoles) {
-                this.world.removeRigidBody(bh.rigidBody)
-                this.scene.remove(bh.entity)
-                if (bh.matInstance) this.engine.destroyMaterialInstance(bh.matInstance)
-                this.engine.destroyEntity(bh.entity)
-                this.Filament.EntityManager.get().destroy(bh.entity)
-
-                if (bh.lightEntity) {
-                    this.scene.remove(bh.lightEntity)
-                    this.engine.destroyEntity(bh.lightEntity)
-                    this.Filament.EntityManager.get().destroy(bh.lightEntity)
-                }
-            }
-            this.activeBlackHoles = []
-        }
+        this.effectPool?.drainAllActiveVisuals()
 
         this.adrenaline = 0
         if (this.nearMisses) this.nearMisses.clear()

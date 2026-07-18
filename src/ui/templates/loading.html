@@ -1,0 +1,45 @@
+<div id="loading">
+    <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading Marbles 3D...</div>
+        <div class="loading-status">Initializing</div>
+        <div class="loading-progress-container">
+            <div class="loading-progress-bar"></div>
+        </div>
+        <div class="loading-percentage">0%</div>
+        <button id="loading-retry-btn" style="display:none;" onclick="window.location.reload()">🔄 Retry</button>
+    </div>
+</div>
+<script>
+    // Global loading progress function
+    window.updateLoadingProgress = function(percent, message) {
+        const loading = document.getElementById('loading');
+        const progressBar = loading?.querySelector('.loading-progress-bar');
+        const percentage = loading?.querySelector('.loading-percentage');
+        const status = loading?.querySelector('.loading-status');
+        
+        if (progressBar) {
+            progressBar.style.width = percent + '%';
+        }
+        if (percentage) {
+            percentage.textContent = Math.round(percent) + '%';
+        }
+        if (status && message) {
+            status.textContent = message;
+            status.style.color = '#e94560';
+            setTimeout(() => {
+                if (status) status.style.color = '#888';
+            }, 300);
+        }
+    };
+
+    window.hideLoadingScreen = function() {
+        const loading = document.getElementById('loading');
+        if (loading) {
+            loading.classList.add('hidden');
+            setTimeout(() => {
+                loading.style.display = 'none';
+            }, 500);
+        }
+    };
+</script>

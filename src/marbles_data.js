@@ -1,14 +1,24 @@
-import { marbleDraft } from './marble_draft.js';
+/** Premium marbles (formerly marble_draft.js); inlined to keep src/ free of draft modules. */
+const premiumMarbles = [
+    { name: "Celestial Pearl", color: [0.95, 0.9, 1.0], offset: { x: 0.0, y: 5, z: 0 }, radius: 0.65, density: 1.2, restitution: 0.95, gravityScale: 0.8, friction: 0.05, roughness: 0.1, emissive: true, lightIntensity: 45000.0, lightColor: [0.8, 0.9, 1.0] },
+    { name: "Celestial Orb", color: [0.3, 0.7, 1.0], offset: { x: 0.0, y: 5, z: 0 }, radius: 0.6, density: 1.5, restitution: 0.8, gravityScale: 0.8, friction: 0.1, roughness: 0.05, emissive: true, lightIntensity: 30000.0, lightColor: [0.5, 0.0, 1.0] },
+    { name: "Abyssal Eye", color: [0.1, 0.0, 0.2], offset: { x: 0.0, y: 5, z: 0 }, radius: 0.55, density: 5.0, restitution: 0.2, gravityScale: 1.5, friction: 0.8, roughness: 0.0, emissive: true, lightIntensity: 60000.0, lightColor: [0.3, 0.0, 0.8] },
+    { name: "Void Walker", color: [0.1, 0.1, 0.1], offset: { x: 0.0, y: 5, z: 5 }, radius: 0.5, density: 0.5, restitution: 0.8, gravityScale: 0.3, friction: 0.1, roughness: 0.9, emissive: true, lightIntensity: 20000.0, lightColor: [0.5, 0.0, 1.0] },
+    { name: "Astral Jumper", color: [0.0, 0.5, 1.0], offset: { x: 0.0, y: 5, z: 10 }, radius: 0.5, density: 1.0, restitution: 1.5, gravityScale: 0.4, friction: 0.1, roughness: 0.0, emissive: true, lightIntensity: 35000.0, lightColor: [0.0, 0.5, 1.0] },
+    { name: "Hypernova Glass", color: [1.0, 0.2, 0.6], offset: { x: 0.0, y: 5, z: 15 }, radius: 0.75, density: 15.0, restitution: 1.8, gravityScale: 1.0, friction: 0.0, roughness: 0.0, clearCoat: 1.0, clearCoatRoughness: 0.0, materialType: "glass", emissive: true, lightIntensity: 80000.0, lightColor: [1.0, 0.3, 0.8] },
+    { name: "Neon Juggernaut", color: [0.0, 1.0, 0.5], offset: { x: 0.0, y: 5, z: 20 }, radius: 0.9, density: 25.0, restitution: 2.2, gravityScale: 1.0, friction: 0.0, roughness: 0.0, clearCoat: 1.0, clearCoatRoughness: 0.0, materialType: "glass", emissive: true, lightIntensity: 90000.0, lightColor: [0.0, 1.0, 0.5] },
+];
+
 export const marblesInfo = [
-    ...marbleDraft,
-    { name: "Ghost", color: [0.9, 1.0, 1.0], offset: { x: 0.0, y: 5.0, z: 0.0 }, radius: 0.5, density: 0.1, gravityScale: 0.2, friction: 0.05, emissive: true, lightIntensity: 10000.0, lightColor: [0.9, 1.0, 1.0], materialType: "classicGlass" },
+    ...premiumMarbles,
+    { name: "Ghost", color: [0.9, 1.0, 1.0], offset: { x: 0.0, y: 5.0, z: 0.0 }, radius: 0.5, density: 0.1, gravityScale: 0.2, friction: 0.05, emissive: true, lightIntensity: 10000.0, lightColor: [0.9, 1.0, 1.0], materialType: "classicGlass", thickness: 0.25, fresnelStrength: 0.75, chromaticDispersion: 1.1 },
     { name: "Red Standard", color: [1.0, 0.0, 0.0], offset: { x: -1.0, y: 0, z: 0 }, roughness: 0.4 },
     { name: "Blue Standard", color: [0.0, 0.0, 1.0], offset: { x: 1.0, y: 0, z: 0 }, roughness: 0.4 },
     { name: "Green Bouncy", color: [0.2, 1.0, 0.2], offset: { x: -2.5, y: 4, z: 0 }, radius: 0.4, friction: 0.1, restitution: 0.8, roughness: 0.2 },
-    { name: "Purple Heavy", color: [0.6, 0.1, 0.8], offset: { x: 0.0, y: 2, z: 2 }, radius: 0.75, restitution: 1.2, roughness: 0.3 },
+    { name: "Purple Heavy", color: [0.6, 0.1, 0.8], offset: { x: 0.0, y: 2, z: 2 }, radius: 0.75, restitution: 1.2, roughness: 0.3, materialType: "stoneVein", bumpScale: 0.14, bumpFrequency: 22 },
     { name: "Gold Heavy", color: [1.0, 0.84, 0.0], offset: { x: 2.5, y: 2, z: 2 }, radius: 0.6, restitution: 0.2, density: 3.0, roughness: 0.15, clearCoat: 1.0, clearCoatRoughness: 0.0, emissive: true, lightIntensity: 8000.0, lightColor: [1.0, 0.8, 0.3], materialType: "polishedMarble" },
     { name: "Cyan Slick", color: [0.0, 0.8, 1.0], offset: { x: -2.0, y: 2, z: 2 }, radius: 0.5, friction: 0.05, restitution: 0.5, roughness: 0.05, emissive: true, lightIntensity: 12000.0, lightColor: [0.0, 0.7, 1.0] },
-    { name: "Volcanic Magma", color: [1.0, 0.25, 0.0], offset: { x: 3.5, y: 3, z: 0 }, radius: 0.55, friction: 0.15, restitution: 1.5, density: 0.8, emissive: true, lightIntensity: 25000.0, lightColor: [1.0, 0.3, 0.0], materialType: "volcanicMagma" },
+    { name: "Volcanic Magma", color: [1.0, 0.25, 0.0], offset: { x: 3.5, y: 3, z: 0 }, radius: 0.55, friction: 0.15, restitution: 1.5, density: 0.8, emissive: true, lightIntensity: 25000.0, lightColor: [1.0, 0.3, 0.0], materialType: "volcanicMagma", bumpScale: 0.18, bumpFrequency: 18, heatIntensity: 1.4, crackGlow: 1.0 },
     { name: "Shadow Ninja", color: [0.15, 0.05, 0.25], offset: { x: -3.5, y: 3, z: 0 }, radius: 0.45, friction: 0.02, restitution: 0.3, density: 1.2, materialType: "shadowNinja" },
     { name: "Cosmic Nebula", color: [0.3, 0.9, 0.7], offset: { x: 0.0, y: 5, z: -2 }, radius: 0.65, friction: 0.08, restitution: 0.7, density: 1.5, emissive: true, lightIntensity: 15000.0, lightColor: [0.3, 0.9, 0.7], materialType: "quantumCrystal" },
     { name: "Void Heavy", color: [0.1, 0.05, 0.2], offset: { x: 2.0, y: 5, z: -2 }, radius: 0.7, friction: 1.0, restitution: 0.1, density: 4.0, materialType: "shadowNinja" },
@@ -21,11 +31,11 @@ export const marblesInfo = [
     { name: "Mercury", color: [0.7, 0.7, 0.7], offset: { x: -5.0, y: 3, z: 4 }, radius: 0.55, density: 5.0, friction: 0.05, restitution: 0.2, roughness: 0.05, emissive: true, lightIntensity: 8000.0, lightColor: [0.8, 0.85, 0.95], materialType: "shinyMetal" },
     { name: "Neutron Star", color: [0.9, 0.9, 1.0], offset: { x: 0.0, y: 3, z: 6 }, radius: 0.3, density: 50.0, friction: 0.5, restitution: 0.1, roughness: 0.1, emissive: true, lightIntensity: 20000.0, lightColor: [0.8, 0.9, 1.0], materialType: "shinyMetal" },
     { name: "Balloon", color: [1.0, 0.4, 0.7], offset: { x: 2.0, y: 3, z: 6 }, radius: 0.5, density: 0.05, friction: 0.3, restitution: 0.9, roughness: 0.8 },
-    { name: "Plasma", color: [0.9, 0.2, 0.9], offset: { x: -2.0, y: 3, z: 6 }, radius: 0.6, density: 0.2, friction: 0.0, restitution: 1.1, emissive: true, lightIntensity: 35000.0, lightColor: [0.9, 0.2, 0.9], materialType: "neonGlow" },
+    { name: "Plasma", color: [0.9, 0.2, 0.9], offset: { x: -2.0, y: 3, z: 6 }, radius: 0.6, density: 0.2, friction: 0.0, restitution: 1.1, emissive: true, lightIntensity: 35000.0, lightColor: [0.9, 0.2, 0.9], materialType: "neonGlow", iridescenceScale: 0.85, sparkleDensity: 0.6 },
     { name: "Zero G", color: [0.8, 1.0, 1.0], offset: { x: 5.0, y: 5, z: 2 }, radius: 0.5, gravityScale: 0.1, friction: 0.1, restitution: 0.9, density: 0.1, roughness: 0.05 },
     { name: "Meteor", color: [0.4, 0.1, 0.0], offset: { x: -5.0, y: 5, z: 2 }, radius: 0.6, gravityScale: 3.0, density: 5.0, friction: 0.5, restitution: 0.2, roughness: 0.8 },
     { name: "Pinball", color: [0.75, 0.75, 0.8], offset: { x: 0.0, y: 5, z: -4 }, radius: 0.4, density: 8.0, friction: 0.1, restitution: 0.7, roughness: 0.05 },
-    { name: "Obsidian", color: [0.05, 0.05, 0.05], offset: { x: 2.0, y: 5, z: -4 }, radius: 0.5, density: 4.0, friction: 0.1, restitution: 0.1, materialType: "obsidianMetal" },
+    { name: "Obsidian", color: [0.05, 0.05, 0.05], offset: { x: 2.0, y: 5, z: -4 }, radius: 0.5, density: 4.0, friction: 0.1, restitution: 0.1, materialType: "obsidianMetal", bumpScale: 0.045, grainScale: 12, scratchesIntensity: 0.42, anisotropy: 0.8 },
     { name: "Digital Cube", color: [0.0, 1.0, 0.5], offset: { x: -2.0, y: 5, z: -4 }, radius: 0.5, geometry: 'cube', density: 2.0, friction: 0.5, restitution: 0.3, emissive: true, lightIntensity: 10000.0, lightColor: [0.0, 1.0, 0.5], materialType: "neonGlow" },
     { name: "Slime", color: [0.4, 0.8, 0.0], offset: { x: -2.0, y: 3, z: 8 }, radius: 0.5, density: 1.5, friction: 2.0, restitution: 0.0, roughness: 0.8, linearDamping: 0.5, angularDamping: 0.5 },
     { name: "Feather", color: [1.0, 1.0, 0.9], offset: { x: 2.0, y: 3, z: 8 }, radius: 0.4, density: 0.1, gravityScale: 0.2, linearDamping: 3.0, angularDamping: 3.0, friction: 0.5, restitution: 0.2, roughness: 0.7 },
@@ -65,5 +75,26 @@ export const marblesInfo = [
     { name: "Celestial Juggernaut", color: [0.9, 1.0, 0.8], offset: { x: 34.0, y: 5, z: 0 }, radius: 0.95, density: 150.0, friction: 0.0, restitution: 2.2, clearCoat: 1.0, clearCoatRoughness: 0.0, emissive: true, lightIntensity: 95000.0, lightColor: [0.9, 1.0, 0.8], materialType: "glass" },
     { name: "Galactic Titan", color: [0.8, 0.2, 1.0], offset: { x: 36.0, y: 5, z: 0 }, radius: 1.0, density: 200.0, friction: 0.0, restitution: 2.5, clearCoat: 1.0, clearCoatRoughness: 0.0, emissive: true, lightIntensity: 100000.0, lightColor: [0.8, 0.2, 1.0], materialType: "glass" },
     { name: "Quantum Leviathan", color: [0.0, 1.0, 0.5], offset: { x: 38.0, y: 5, z: 0 }, radius: 1.5, density: 300.0, friction: 0.0, restitution: 2.0, clearCoat: 1.0, clearCoatRoughness: 0.0, emissive: true, lightIntensity: 150000.0, lightColor: [0.0, 1.0, 0.5], materialType: "glass" },
-    { name: "Quantum Obliterator", color: [0.1, 0.9, 1.0], offset: { x: 40.0, y: 5, z: 0 }, radius: 2.0, density: 500.0, friction: 0.0, restitution: 3.0, clearCoat: 1.0, clearCoatRoughness: 0.0, emissive: true, lightIntensity: 200000.0, lightColor: [0.1, 0.9, 1.0], materialType: "glass" }
+    { name: "Quantum Obliterator", color: [0.1, 0.9, 1.0], offset: { x: 40.0, y: 5, z: 0 }, radius: 2.0, density: 500.0, friction: 0.0, restitution: 3.0, clearCoat: 1.0, clearCoatRoughness: 0.0, emissive: true, lightIntensity: 200000.0, lightColor: [0.1, 0.9, 1.0], materialType: "glass" },
+    { name: "Celestial Singularity", color: [0.8, 0.1, 0.9], offset: { x: 42.0, y: 5, z: 0 }, radius: 2.5, density: 1000.0, friction: 0.0, restitution: 3.5, clearCoat: 1.0, clearCoatRoughness: 0.0, emissive: true, lightIntensity: 300000.0, lightColor: [0.8, 0.1, 0.9], materialType: "glass" },
+    { name: "Astral Behemoth", color: [1.0, 0.8, 0.2], offset: { x: 44.0, y: 5, z: 0 }, radius: 1.8, density: 400.0, friction: 0.0, restitution: 2.8, clearCoat: 1.0, clearCoatRoughness: 0.0, emissive: true, lightIntensity: 250000.0, lightColor: [1.0, 0.8, 0.2], materialType: "glass" },
+    { name: "Aetherium Catalyst", color: [0.3, 1.0, 0.8], offset: { x: 46.0, y: 5, z: 0 }, radius: 1.2, density: 200.0, friction: 0.0, restitution: 3.5, clearCoat: 1.0, clearCoatRoughness: 0.0, emissive: true, lightIntensity: 180000.0, lightColor: [0.3, 1.0, 0.8], materialType: "glass" }
 ];
+
+/** Append manifest marbles that are not already represented in the hard-coded roster. */
+export function mergeRegistryMarbles(registry) {
+    let slot = 0;
+    for (const marbleDef of registry.getAllMarbles()) {
+        const converted = registry.convertMarbleToGameFormat(marbleDef);
+        if (marblesInfo.some((m) => m.id === converted.id || m.name === converted.name)) {
+            continue;
+        }
+        converted.offset = {
+            x: (slot % 6) * 1.5 - 3.75,
+            y: 0,
+            z: Math.floor(slot / 6) * 2,
+        };
+        marblesInfo.push(converted);
+        slot++;
+    }
+}

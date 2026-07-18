@@ -29,6 +29,7 @@ export class InitGraphics {
             .position([0, 8, -12])
             .intensity(1200.0)
             .falloff(25.0)
+            .castShadows(false)
             .build(this.engine, this.fillLight);
         this.scene.addEntity(this.fillLight);
 
@@ -38,6 +39,7 @@ export class InitGraphics {
             .position([-15, 5, 8])
             .intensity(600.0)
             .falloff(30.0)
+            .castShadows(false)
             .build(this.engine, this.backLight);
         this.scene.addEntity(this.backLight);
 

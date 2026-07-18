@@ -1,0 +1,9 @@
+{
+  "id": "ability_bomb",
+  "name": "Bomb Detonation",
+  "version": "1.0.0",
+  "category": "sfx",
+  "files": [],
+  "synthesis": { "type": "ability", "profile": "stomp" },
+  "properties": { "volume": 0.85, "spatial": true, "maxDistance": 60 }
+}

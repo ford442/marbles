@@ -4,9 +4,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .config import ALLOWED_ORIGINS
+from .config import ALLOWED_ORIGINS, ENABLE_LEGACY_MUSIC_API
 from .client import get_gcs_client, gcs_client, bucket
-from .cache import cache
 from .io import shutdown_executor
 from .routes import (
     admin_router,
@@ -16,6 +15,7 @@ from .routes import (
     shaders_router,
     storage_router,
     health_router,
+    marbles_router,
 )
 
 
@@ -35,7 +35,12 @@ async def lifespan(app: FastAPI):
 
 
 # Create FastAPI app
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    title="Marbles Storage API",
+    description="Marbles 3D cloud progress and ghost leaderboards. "
+    "Legacy music/sequencer routes are optional (ENABLE_LEGACY_MUSIC_API).",
+)
 
 # --- CORS ---
 app.add_middleware(
@@ -50,23 +55,17 @@ app.add_middleware(
 # Health & Home
 app.include_router(health_router)
 
-# Admin routes
-app.include_router(admin_router)
+# Marbles game cloud API (primary product surface)
+app.include_router(marbles_router)
 
-# Song routes
-app.include_router(songs_router)
-
-# Sample routes
-app.include_router(samples_router)
-
-# Music routes
-app.include_router(music_router)
-
-# Shader routes
-app.include_router(shaders_router)
-
-# Storage listing routes
-app.include_router(storage_router)
+if ENABLE_LEGACY_MUSIC_API:
+    # Archived sequencer / music tool routes
+    app.include_router(admin_router)
+    app.include_router(songs_router)
+    app.include_router(samples_router)
+    app.include_router(music_router)
+    app.include_router(shaders_router)
+    app.include_router(storage_router)
 
 
 if __name__ == "__main__":

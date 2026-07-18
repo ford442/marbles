@@ -1,35 +1,123 @@
-import { LEVELS } from '../levels.js';
+import { getLevel, getOrderedLevelIds } from '../levels/catalog.js';
 import { getRenderDimensions } from '../render-resolution.js';
+import {
+    computeMedal,
+    formatRunTime,
+    getMedalThresholds,
+    medalEmoji,
+} from '../levels/campaign.js';
+import { getApiUrl } from '../game/network/cloud-client.js';
 
 export class GameLogicLevelComplete {
+    setupReplayShareButtons() {
+        const btnCopy = document.getElementById('btn-copy-replay')
+        const btnImport = document.getElementById('btn-import-replay')
+        const btnRaceLeader = document.getElementById('btn-race-leader-ghost')
+
+        if (btnCopy && !btnCopy.dataset.bound) {
+            btnCopy.dataset.bound = '1'
+            btnCopy.addEventListener('click', () => this.copyGhostReplay())
+        }
+
+        if (btnImport && !btnImport.dataset.bound) {
+            btnImport.dataset.bound = '1'
+            btnImport.addEventListener('click', () => this.importGhostReplay())
+        }
+
+        if (btnRaceLeader && !btnRaceLeader.dataset.bound) {
+            btnRaceLeader.dataset.bound = '1'
+            btnRaceLeader.addEventListener('click', () => this.queueLeaderboardGhost())
+        }
+    }
+
+    queueLeaderboardGhost() {
+        const ghostId = this._leaderboardTopGhostId
+        if (!ghostId) return
+        this._pendingLeaderboardGhostId = ghostId
+        this.setReplayImportStatus('Leaderboard ghost queued — press Retry to race it.')
+    }
+
+    async refreshLeaderboardSection(levelId) {
+        const section = document.getElementById('leaderboard-section')
+        const list = document.getElementById('leaderboard-list')
+        const btnRace = document.getElementById('btn-race-leader-ghost')
+        if (!section || !list || !getApiUrl()) {
+            if (section) section.style.display = 'none'
+            return
+        }
+
+        section.style.display = 'block'
+        list.innerHTML = '<li>Loading leaderboard…</li>'
+        if (btnRace) btnRace.style.display = 'none'
+        this._leaderboardTopGhostId = null
+
+        const entries = await this.cloudClient?.fetchLeaderboard(levelId) || []
+        if (!entries.length) {
+            list.innerHTML = '<li>No global times yet.</li>'
+            return
+        }
+
+        list.innerHTML = entries.map((e) => (
+            `<li>#${e.rank} ${e.displayName} — ${formatRunTime(e.bestTime)}</li>`
+        )).join('')
+
+        const top = entries[0]
+        if (top?.ghostId && btnRace) {
+            this._leaderboardTopGhostId = top.ghostId
+            btnRace.style.display = 'inline-block'
+        }
+    }
+
+    setReplayImportStatus(message, isError = false) {
+        const el = document.getElementById('replay-import-status')
+        if (!el) return
+        el.textContent = message
+        el.style.color = isError ? '#ff6b6b' : '#7fffd4'
+    }
+
+    async copyGhostReplay() {
+        const blob = this.ghostReplay?.exportReplay(this.currentLevel)
+        if (!blob) {
+            this.setReplayImportStatus('No ghost replay saved for this level.', true)
+            return
+        }
+
+        try {
+            await navigator.clipboard.writeText(blob)
+            this.setReplayImportStatus('Ghost replay copied to clipboard.')
+        } catch {
+            window.prompt('Copy this ghost replay:', blob)
+            this.setReplayImportStatus('Replay shown in prompt — copy manually.')
+        }
+    }
+
+    importGhostReplay() {
+        const pasted = window.prompt('Paste a ghost replay string (m3g1:...):')
+        if (!pasted?.trim()) return
+
+        try {
+            const result = this.ghostReplay.importReplay(pasted, this.currentLevel)
+            this.setReplayImportStatus(`Imported ghost for ${result.levelId}.`)
+            if (result.levelId === this.currentLevel && !this.ghostEntity) {
+                this.createGhostMarble?.()
+            }
+        } catch (e) {
+            this.setReplayImportStatus(e?.message || 'Invalid replay data.', true)
+        }
+    }
+
     showLevelCompleteModal(completionTime, newRecord) {
         const modal = document.getElementById('level-complete-modal')
         if (!modal) return
 
-        const level = LEVELS[this.currentLevel]
+        const level = getLevel(this.currentLevel)
         const levelName = level?.name || this.currentLevel
+        const thresholds = getMedalThresholds(level)
 
-        // Format time as MM:SS.ms
-        const minutes = Math.floor(completionTime / 60)
-        const seconds = Math.floor(completionTime % 60)
-        const milliseconds = Math.floor((completionTime % 1) * 10)
-        const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds}`
+        const formattedTime = formatRunTime(completionTime)
 
-        // Determine medal based on time
-        let medal = ''
-        let medalEmoji = ''
-        if (completionTime < 30) {
-            medal = 'gold'
-            medalEmoji = '🥇'
-        } else if (completionTime < 60) {
-            medal = 'silver'
-            medalEmoji = '🥈'
-        } else if (completionTime < 120) {
-            medal = 'bronze'
-            medalEmoji = '🥉'
-        } else {
-            medalEmoji = '⭐'
-        }
+        const medal = computeMedal(completionTime, thresholds)
+        const medalEmojiStr = medalEmoji(medal)
 
         // Calculate score breakdown
         const baseScore = this.score || 0
@@ -41,7 +129,7 @@ export class GameLogicLevelComplete {
         // Update modal content
         document.getElementById('modal-level-name').textContent = levelName
         document.getElementById('modal-completion-time').textContent = formattedTime
-        document.getElementById('modal-medal').textContent = medalEmoji
+        document.getElementById('modal-medal').textContent = medalEmojiStr
         document.getElementById('modal-base-score').textContent = baseScore.toLocaleString()
         document.getElementById('modal-time-bonus').textContent = `+${timeBonus.toLocaleString()}`
         document.getElementById('modal-combo-bonus').textContent = `+${comboBonus.toLocaleString()}`
@@ -52,13 +140,22 @@ export class GameLogicLevelComplete {
             newRecordBadge.style.display = newRecord ? 'inline-block' : 'none'
         }
 
+        const replaySection = document.getElementById('replay-share-section')
+        if (replaySection) {
+            const hasReplay = Boolean(this.ghostReplay?.exportReplay(this.currentLevel))
+            replaySection.style.display = hasReplay ? 'flex' : 'none'
+        }
+        this.setupReplayShareButtons()
+        this.setReplayImportStatus('')
+        void this.refreshLeaderboardSection(this.currentLevel)
+
         // Setup button handlers with smooth transitions
         const btnNext = document.getElementById('btn-next-level')
         const btnRetry = document.getElementById('btn-retry')
         const btnMenu = document.getElementById('btn-main-menu')
 
         // Get ordered list of level IDs
-        const levelIds = Object.keys(LEVELS)
+        const levelIds = getOrderedLevelIds()
         const currentIndex = levelIds.indexOf(this.currentLevel)
         const nextLevelId = levelIds[currentIndex + 1]
 

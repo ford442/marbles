@@ -4,7 +4,7 @@
   "description": "A sphere containing the birth of stars. Gas clouds swirl in cosmic dance while newborn suns ignite within holographic depths.",
   "version": "5.0.0",
   "author": "Marble Game Team - Visual Overhaul",
-  "rarity": "mythic",
+  "rarity": "legendary",
   "appearance": {
     "color": {"r": 0.3, "g": 0.1, "b": 0.5},
     "roughness": 0.15,

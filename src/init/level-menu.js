@@ -1,4 +1,5 @@
-import { LEVELS } from '../levels.js';
+import { LEVELS, getOrderedLevelIds, isDevLevelsEnabled } from '../levels/catalog.js';
+import { CampaignMenu } from '../levels/campaign-menu.js';
 
 export class InitLevelMenu {
     showLevelSelection() {
@@ -24,26 +25,57 @@ export class InitLevelMenu {
         
         levelGrid.innerHTML = ''
 
-        // Create level cards with stagger animation
-        Object.entries(LEVELS).forEach(([id, level], index) => {
-            const card = document.createElement('div')
-            card.className = 'level-card card-stagger'
-            card.innerHTML = `
-                <h3>${level.name}</h3>
-                <p>${level.description}</p>
-                <span class="goals">${level.goals.length} Goal${level.goals.length !== 1 ? 's' : ''}</span>
-            `
-            card.addEventListener('click', () => this.hideLevelSelection(() => this.loadLevel(id)))
-            levelGrid.appendChild(card)
+        const toolbar = document.getElementById('level-menu-toolbar')
+        if (toolbar) toolbar.innerHTML = ''
 
-            // Trigger stagger animation with delay
-            setTimeout(() => {
-                card.classList.add('animate')
-            }, 50 + (index * 50)) // 50ms base delay + 50ms stagger per card
-        })
+        const devMode = isDevLevelsEnabled()
+
+        if (devMode && toolbar) {
+            const devBanner = document.createElement('p')
+            devBanner.className = 'level-dev-banner'
+            devBanner.textContent = 'Dev levels enabled (?devLevels=1) — includes code-only maps'
+            toolbar.appendChild(devBanner)
+        }
+
+        if (toolbar) {
+            const editorLink = document.createElement('a')
+            editorLink.className = 'level-editor-link'
+            editorLink.href = '?editor=1'
+            editorLink.textContent = '🛠 Open Map Editor'
+            toolbar.appendChild(editorLink)
+        }
+
+        if (this.campaignProgress) {
+            if (!this.campaignMenu) {
+                this.campaignMenu = new CampaignMenu(this.campaignProgress)
+            }
+            this.campaignProgress.setCatalog(LEVELS)
+            this.campaignMenu.render(levelGrid, (id) => this.hideLevelSelection(() => this.loadLevel(id)))
+        } else {
+            this._renderFlatLevelList(levelGrid)
+        }
 
         // Set up menu camera position (distant overview)
         this.setMenuCamera()
+    }
+
+    _renderFlatLevelList(levelGrid) {
+        const levelIds = getOrderedLevelIds()
+        levelIds.forEach((id, index) => {
+            const level = LEVELS[id]
+            const card = document.createElement('div')
+            card.className = 'level-card card-stagger'
+            const difficulty = level.difficulty ? `<span class="difficulty">${level.difficulty}</span>` : ''
+            const sourceTag = level.source === 'code' ? '<span class="dev-tag">dev</span>' : ''
+            card.innerHTML = `
+                <h3>${level.name}${sourceTag}</h3>
+                <p>${level.description || ''}</p>
+                <span class="goals">${level.goals.length} Goal${level.goals.length !== 1 ? 's' : ''} ${difficulty}</span>
+            `
+            card.addEventListener('click', () => this.hideLevelSelection(() => this.loadLevel(id)))
+            levelGrid.appendChild(card)
+            setTimeout(() => card.classList.add('animate'), 50 + index * 50)
+        })
     }
 
     hideLevelSelection(callback) {
@@ -72,10 +104,18 @@ export class InitLevelMenu {
     }
 
     returnToMenu() {
+        if (this.mapEditor?.isPlaytesting) {
+            this.mapEditor.exitPlaytest()
+            return
+        }
+
         const gameUI = document.getElementById('ui')
         
         // Clear current level
         this.clearLevel()
+        this.network?.disconnect()
+        this.multiplayerMode = false
+        this.touchControls?.setGameplayActive(false)
         this.currentLevel = null
         this.levelComplete = false
         this.isPaused = false

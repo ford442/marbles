@@ -24,6 +24,11 @@ export class LightingSystem {
         
         // Animation quality gating
         this.quality = 'high'
+        this._animationsEnabled = true
+        /** @type {(entity:number)=>boolean} */
+        this.isLightActive = () => true
+        /** @type {(entity:number)=>boolean} */
+        this.isAnimateAllowed = () => true
     }
     
     /**
@@ -88,6 +93,10 @@ export class LightingSystem {
         }
     }
     
+    setAnimationsEnabled(enabled) {
+        this._animationsEnabled = enabled !== false
+    }
+
     /**
      * Register an animated light
      * @param {entity} light - Filament light entity
@@ -123,6 +132,7 @@ export class LightingSystem {
      * @param {number} deltaTime - Frame time in seconds
      */
     update(deltaTime) {
+        if (!this._animationsEnabled) return
         this.time += deltaTime
         
         if (this.animatedLights.length === 0) return
@@ -131,12 +141,15 @@ export class LightingSystem {
         
         for (const entry of this.animatedLights) {
             const {light, behavior, params, baseColor, baseIntensity} = entry
+
+            if (!this.isLightActive(light)) continue
+            if (!this.isAnimateAllowed(light)) continue
             
             try {
                 const inst = lm.getInstance(light)
                 if (!inst) continue
                 
-                let color = [...baseColor]
+                const color = [...baseColor]
                 let intensity = baseIntensity
                 
                 // Apply behavior-specific animation

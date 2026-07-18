@@ -28,7 +28,7 @@ elif command -v emcmake &>/dev/null; then
     : # Already on PATH — nothing to source
 else
     echo "⚠️  Emscripten not found; skipping optional MarblePhysics WASM build."
-    echo "    The browser will use the JavaScript physics fallbacks unless ?wasmPhysics=1 is explicitly enabled."
+    echo "    The browser will use JavaScript physics fallbacks when the WASM binary is absent."
     exit 0
 fi
 

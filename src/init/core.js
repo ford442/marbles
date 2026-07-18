@@ -1,9 +1,20 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
-import { LEVELS } from '../levels.js';
+import { assetRegistry } from '../assets/AssetRegistry.js';
+import { initLevelCatalog, LEVELS } from '../levels/catalog.js';
+import { mergeRegistryMarbles } from '../marbles_data.js';
+import {
+    resolveWebGLContextOptions,
+    resolveGraphicsQualityForInit,
+} from '../rendering-defaults.js';
 import { loadFilament } from './filament-loader.js';
 import { initMarblePhysicsWasm } from '../wasm-bridge.js';
+import {
+    activatePhysicsBackendForLevel,
+    createPhysicsBackend,
+} from '../game/systems/physics-backend.js';
 import { ParticleSystem } from '../particle-system.js';
+import { scheduleWebGPUExperiments } from '../webgpu/index.js';
 import { LightingSystem } from '../lighting-system.js';
 import { VolumetricLightsSystem } from '../rendering/volumetric-lights.js';
 import {
@@ -13,6 +24,7 @@ import {
     setRuntimeRendererGlobals,
 } from '../rendering/simple-debug-renderer.js';
 import { getRenderDimensions, applyDynamicResolution } from '../render-resolution.js';
+import { isEditorMode, bootMapEditor } from '../editor/index.js';
 
 export class InitCore {
     async init() {
@@ -63,6 +75,7 @@ export class InitCore {
             if (this.isPaused) return
 
             if (e.code === 'Space' && !this.keys['Space']) {
+                if (!this.abilitySystem?.isEnabled('jump')) return
                 if (this.playerMarble) {
                     if (this.isGrounded(this.playerMarble)) {
                         this.isChargingJump = true
@@ -123,6 +136,11 @@ export class InitCore {
                 }
             }
             this.keys[e.code] = true
+
+            if (this.abilitySystem?.handleKeyDown(e.code)) {
+                return
+            }
+
             if (e.code === 'KeyC') {
                 const modes = ['orbit', 'follow', 'action', 'fpv', 'topdown', 'cinematic', 'side-scroller', 'drone']
                 const idx = modes.indexOf(this.cameraMode)
@@ -138,9 +156,6 @@ export class InitCore {
                 this.magnetMode = 'repel'
                 this.magnetActive = true
                 if (this.hudManager) this.hudManager.markAbilityUsed('magnet')
-            }
-            if (e.code === 'KeyB' && this.playerMarble) {
-                this.triggerBlink()
             }
             if (e.code === 'KeyH' && this.playerMarble) {
                 this.hoverActive = true
@@ -234,19 +249,12 @@ export class InitCore {
                     this.timeStopSavedStates.clear()
                 }
             }
-            if (e.code === 'Digit9' && this.playerMarble) {
-                this.spawnBlackHole()
-            }
-            if (e.code === 'KeyX' && this.playerMarble) {
-                this.spawnBomb()
-            }
+
             if (e.code === 'KeyO' && this.playerMarble) {
                 this.violetActive = true
                 if (this.hudManager) this.hudManager.markAbilityUsed('violet')
             }
-            if (e.code === 'KeyL' && this.playerMarble) {
-                this.spawnMissile()
-            }
+
             if (e.code === 'KeyT') {
                 this.isRewinding = true
                 if (this.hudManager) this.hudManager.markAbilityUsed('rewind')
@@ -474,6 +482,9 @@ export class InitCore {
                     this.playerMarble.rigidBody.applyImpulse({ x: 0, y: force * gravityDir, z: 0 }, true)
                     audio.playJump()
                     this.jumpCount = 1
+                    if (this.multiplayerMode && this.network?.room) {
+                        this.network.sendAbility('jump', this.jumpCharge);
+                    }
                 }
                 this.isChargingJump = false
                 this.jumpCharge = 0
@@ -501,6 +512,7 @@ export class InitCore {
         }
 
         this.initMouseControls()
+        this.initTouchControls()
 
         console.log('[INIT] Initializing Rapier physics...')
         if (typeof window.updateLoadingProgress === 'function') {
@@ -511,8 +523,15 @@ export class InitCore {
             window.updateLoadingProgress(15, 'Physics engine ready')
         }
         const gravity = { x: 0.0, y: -9.81, z: 0.0 }
-        this.world = new RAPIER.World(gravity)
-        console.log('[INIT] Physics initialized')
+        this.physicsWorld.init(gravity)
+        this.physicsGravity = gravity
+        this.mainPhysicsBackend = null
+        this.workerPhysicsBackend = null
+        await createPhysicsBackend(this, {
+            gravity,
+            editorMode: isEditorMode(),
+        })
+        console.log(`[INIT] Physics initialized (rapier: ${this.physicsBackend?.getMode?.() || 'main'})`)
         if (typeof window.updateLoadingProgress === 'function') {
             window.updateLoadingProgress(20, 'Physics initialized')
         }
@@ -566,7 +585,12 @@ export class InitCore {
                 }
 
                 try {
-                    this.engine = this.Filament.Engine.create(this.canvas)
+                    const glOptions = resolveWebGLContextOptions({
+                        quality: resolveGraphicsQualityForInit(),
+                    })
+                    this.webglContextOptions = glOptions
+                    console.log('[INIT] WebGL context options:', glOptions)
+                    this.engine = this.Filament.Engine.create(this.canvas, glOptions)
                     this.scene = this.engine.createScene()
                     this.swapChain = this.engine.createSwapChain()
                     this.renderer = this.engine.createRenderer()
@@ -611,6 +635,7 @@ export class InitCore {
             window.updateLoadingProgress(55, 'Loading materials and assets...')
         }
         await this.setupAssets()
+        this.effectPool?.prewarm()
         console.log('[INIT] Assets loaded')
         if (typeof window.updateLoadingProgress === 'function') {
             window.updateLoadingProgress(70, 'Assets loaded')
@@ -620,6 +645,8 @@ export class InitCore {
             try {
                 const qualityTier = this.settings?.graphics?.quality || 'high'
                 this.particleSystem = new ParticleSystem(this.engine, this.scene, this.Filament, qualityTier)
+                this.particleSystem._game = this
+                scheduleWebGPUExperiments(this)
                 console.log('[INIT] Particle system initialized')
             } catch (e) {
                 console.error('[INIT] Particle system initialization failed:', e)
@@ -641,6 +668,8 @@ export class InitCore {
                 this.lightingSystem = new LightingSystem(this.engine, this.scene, this.Filament)
                 this.lightingSystem.registerLights(this.sunLight, this.fillLight, this.backLight)
                 this.lightingSystem.setQuality(qualityTier)
+                this.lightingSystem.isLightActive = (entity) => this.lightingBudget?.isBudgetActive(entity) ?? true
+                this.lightingSystem.isAnimateAllowed = (entity) => this.lightingBudget?.isAnimateAllowed(entity) ?? true
                 console.log('[INIT] Lighting system initialized')
             } catch (e) {
                 console.error('[INIT] Lighting system initialization failed:', e)
@@ -679,15 +708,45 @@ export class InitCore {
         }
 
         if (typeof window.updateLoadingProgress === 'function') {
-            window.updateLoadingProgress(95, 'Preparing level menu...')
+            window.updateLoadingProgress(95, 'Loading game assets...')
+        }
+
+        try {
+            await assetRegistry.loadAll()
+            initLevelCatalog(assetRegistry)
+            mergeRegistryMarbles(assetRegistry)
+            if (audio?.loadFromRegistry) {
+                await audio.loadFromRegistry(assetRegistry)
+            }
+            if (this.campaignProgress) {
+                this.campaignProgress.setCatalog(LEVELS)
+            }
+            if (this.cloudClient?.enabled) {
+                void this.cloudClient.pullAndMergeCampaign()
+            }
+            console.log('[INIT] Asset registry loaded')
+        } catch (assetError) {
+            console.error('[INIT] Asset registry failed:', assetError)
+            this._showInitError('Failed to load game assets. Check assets/manifest.json.')
+            return
+        }
+
+        if (typeof window.updateLoadingProgress === 'function') {
+            window.updateLoadingProgress(96, 'Preparing level menu...')
         }
         
         // Initialize pause menu handlers (once only)
         this.initPauseMenu()
+        this.initMultiplayerMenu()
         console.log('[INIT] Pause menu initialized')
         
-        this.showLevelSelection()
-        console.log('[INIT] Level menu displayed')
+        if (isEditorMode()) {
+            console.log('[INIT] Editor mode — launching map editor')
+            await bootMapEditor(this)
+        } else {
+            this.showLevelSelection()
+            console.log('[INIT] Level menu displayed')
+        }
 
         if (typeof window.updateLoadingProgress === 'function') {
             window.updateLoadingProgress(100, 'Ready!')

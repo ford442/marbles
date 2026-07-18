@@ -1,4 +1,3 @@
-import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../../audio.js';
 
 /**
@@ -8,13 +7,18 @@ import { audio } from '../../audio.js';
 
 export const physicsMethods = {
     createKinematicBox(pos, halfExtents, color, type, center, amplitude) {
-        const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
-            .setTranslation(pos.x, pos.y, pos.z);
-        const body = this.world.createRigidBody(bodyDesc);
+        const budget = this.levelEffectBudget
+        if (budget && !budget.canAllocate('kinematicMovers')) {
+            return
+        }
+        if (budget) budget.allocate('kinematicMovers')
 
-        const colliderDesc = RAPIER.ColliderDesc.cuboid(halfExtents.x, halfExtents.y, halfExtents.z)
-            .setFriction(1.0);
-        this.world.createCollider(colliderDesc, body);
+        const body = this.physicsWorld._createSimBody(
+            'kinematic',
+            pos,
+            { x: 0, y: 0, z: 0, w: 1 },
+            { type: 'cuboid', halfExtents, friction: 1.0 },
+        );
 
         audio.registerBodyMaterial(body, 'metal');
 
@@ -46,13 +50,12 @@ export const physicsMethods = {
     },
 
     createPowerUp(pos, type) {
-        const bodyDesc = RAPIER.RigidBodyDesc.fixed()
-            .setTranslation(pos.x, pos.y, pos.z);
-        const body = this.world.createRigidBody(bodyDesc);
-
-        const colliderDesc = RAPIER.ColliderDesc.ball(0.5)
-            .setSensor(true);
-        this.world.createCollider(colliderDesc, body);
+        const body = this.physicsWorld._createSimBody(
+            'fixed',
+            pos,
+            { x: 0, y: 0, z: 0, w: 1 },
+            { type: 'sensor_ball', radius: 0.5 },
+        );
 
         const entity = this.Filament.EntityManager.get().create();
         const matInstance = this.material.createInstance();

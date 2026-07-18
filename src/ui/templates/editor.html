@@ -1,0 +1,157 @@
+<div id="map-editor" class="menu-hidden">
+    <header>
+        <h2>🛠 Map Editor</h2>
+    </header>
+    <section>
+        <h3>Map Info</h3>
+        <label>ID <input type="text" id="editor-map-id" value="my_map"></label>
+        <label style="margin-top:6px">Name <input type="text" id="editor-map-name" value="Untitled Map"></label>
+    </section>
+    <section>
+        <h3>Tools</h3>
+        <div class="tool-row">
+            <button type="button" id="editor-tool-place">Place</button>
+            <button type="button" id="editor-tool-select">Select</button>
+            <button type="button" id="editor-tool-spawn">Spawn</button>
+            <button type="button" id="editor-tool-goal">Goal</button>
+        </div>
+        <div class="tool-row" style="margin-top:6px">
+            <button type="button" id="editor-undo">Undo</button>
+            <button type="button" id="editor-redo">Redo</button>
+            <button type="button" id="editor-rotate">Rotate (R)</button>
+            <button type="button" id="editor-delete">Delete</button>
+        </div>
+        <div class="tool-row" style="margin-top:6px">
+            <button type="button" id="editor-camera-toggle">Camera</button>
+        </div>
+    </section>
+    <section>
+        <h3>Snap</h3>
+        <label class="editor-checkbox-row">
+            <input type="checkbox" id="editor-snap-enabled" checked> Grid snap
+        </label>
+        <label style="margin-top:6px;display:block">Grid
+            <select id="editor-snap-grid">
+                <option value="0.5">0.5</option>
+                <option value="1" selected>1</option>
+                <option value="2">2</option>
+            </select>
+        </label>
+        <label style="margin-top:6px;display:block">Rotation
+            <select id="editor-snap-rot">
+                <option value="0">Off</option>
+                <option value="15" selected>15°</option>
+                <option value="45">45°</option>
+            </select>
+        </label>
+    </section>
+    <section>
+        <h3>Stamps</h3>
+        <div id="editor-stamp-list"></div>
+    </section>
+    <section>
+        <h3>Zones</h3>
+        <div id="editor-zone-list"></div>
+    </section>
+    <section>
+        <h3>Spawn</h3>
+        <div class="field-row">
+            <label>X <input type="number" id="editor-spawn-x" step="0.5"></label>
+            <label>Y <input type="number" id="editor-spawn-y" step="0.5"></label>
+            <label>Z <input type="number" id="editor-spawn-z" step="0.5"></label>
+        </div>
+    </section>
+    <section>
+        <h3>Selection</h3>
+        <div class="field-row">
+            <label>X <input type="number" id="editor-sel-x" step="0.5"></label>
+            <label>Y <input type="number" id="editor-sel-y" step="0.5"></label>
+            <label>Z <input type="number" id="editor-sel-z" step="0.5"></label>
+        </div>
+        <label style="margin-top:6px">Rot° <input type="number" id="editor-sel-rot" step="15"></label>
+    </section>
+    <section id="editor-inspector-section">
+        <h3>Inspector</h3>
+        <div id="editor-inspector-map" class="editor-inspector-panel">
+            <label>Difficulty
+                <select id="editor-meta-difficulty">
+                    <option value="easy">easy</option>
+                    <option value="medium">medium</option>
+                    <option value="hard">hard</option>
+                    <option value="expert">expert</option>
+                    <option value="extreme">extreme</option>
+                </select>
+            </label>
+            <label style="margin-top:6px;display:block">Chapter
+                <select id="editor-meta-chapter">
+                    <option value="">—</option>
+                    <option value="tutorial">tutorial</option>
+                    <option value="classic">classic</option>
+                    <option value="neon">neon</option>
+                    <option value="extreme">extreme</option>
+                    <option value="expert">expert</option>
+                </select>
+            </label>
+            <label style="margin-top:6px;display:block">Collectibles total
+                <input type="number" id="editor-meta-collectibles" min="0" step="1">
+            </label>
+            <div class="editor-medals-grid">
+                <label>Gold <input type="number" id="editor-medal-gold" min="0" step="1"></label>
+                <label>Silver <input type="number" id="editor-medal-silver" min="0" step="1"></label>
+                <label>Bronze <input type="number" id="editor-medal-bronze" min="0" step="1"></label>
+                <label>Par <input type="number" id="editor-medal-par" min="0" step="1"></label>
+            </div>
+        </div>
+        <div id="editor-inspector-zone" class="editor-inspector-panel menu-hidden">
+            <label>Size X <input type="number" id="editor-insp-size-x" step="0.5"></label>
+            <label style="margin-top:4px;display:block">Size Y <input type="number" id="editor-insp-size-y" step="0.5"></label>
+            <label style="margin-top:4px;display:block">Size Z <input type="number" id="editor-insp-size-z" step="0.5"></label>
+            <label style="margin-top:6px;display:block">Collider
+                <select id="editor-insp-collider">
+                    <option value="trimesh">trimesh</option>
+                    <option value="convexHull">convexHull</option>
+                    <option value="none">none</option>
+                </select>
+            </label>
+            <label style="margin-top:4px;display:block">Scale <input type="number" id="editor-insp-scale" step="0.1" min="0.1"></label>
+            <label style="margin-top:4px;display:block">Material preset <input type="text" id="editor-insp-material"></label>
+            <label style="margin-top:4px;display:block">Collectible kind
+                <select id="editor-insp-collectible-kind">
+                    <option value="coin">coin</option>
+                    <option value="gem">gem</option>
+                    <option value="star">star</option>
+                </select>
+            </label>
+            <label style="margin-top:4px;display:block">Collectible value <input type="number" id="editor-insp-collectible-value" min="0"></label>
+            <label style="margin-top:4px;display:block">Grapple id <input type="text" id="editor-insp-grapple-id"></label>
+            <label style="margin-top:4px;display:block">Grapple radius <input type="number" id="editor-insp-grapple-radius" min="1"></label>
+            <fieldset class="editor-kinematic-fieldset">
+                <legend>Kinematic</legend>
+                <label>Axis
+                    <select id="editor-insp-kin-axis">
+                        <option value="horizontal">horizontal</option>
+                        <option value="vertical">vertical</option>
+                        <option value="circular">circular</option>
+                    </select>
+                </label>
+                <label style="margin-top:4px;display:block">Amplitude <input type="number" id="editor-insp-kin-amp" min="0" step="0.5"></label>
+                <label style="margin-top:4px;display:block">Speed <input type="number" id="editor-insp-kin-speed" min="0" step="0.1"></label>
+                <label style="margin-top:4px;display:block">Phase <input type="number" id="editor-insp-kin-phase" step="0.1"></label>
+            </fieldset>
+        </div>
+    </section>
+    <section>
+        <h3>File</h3>
+        <div class="action-row">
+            <button type="button" id="editor-export">Export JSON</button>
+            <button type="button" id="editor-workshop">Workshop ZIP</button>
+            <button type="button" id="editor-save-draft">Save Draft</button>
+            <button type="button" id="editor-load-draft">Load Draft</button>
+            <button type="button" id="editor-playtest">Playtest</button>
+        </div>
+        <label style="margin-top:8px;display:block">Import <input type="file" id="editor-import" accept=".json,application/json"></label>
+        <button type="button" id="editor-exit" style="margin-top:8px;width:100%">Exit Editor</button>
+    </section>
+    <div id="editor-status">Ready</div>
+    <div id="editor-hint">Click place · Shift+click multi-select · Ctrl+Z undo · M return from playtest</div>
+</div>

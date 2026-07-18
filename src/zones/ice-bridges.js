@@ -1,5 +1,6 @@
 import { quatFromEuler } from '../math.js';
 import { createZoneLight } from './methods/visuals.js';
+import { decorateIceBridges } from './methods/decorations.js';
 
 export function createIceBridgesZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
@@ -75,4 +76,6 @@ export function createIceBridgesZone(game, offset) {
     createZoneLight(game, 'POINT',
         { x: offset.x + 5, y: offset.y + 6, z: bridgeStartZ + 35 },
         [0.5, 0.8, 1.0], 55000.0, 24.0);
+
+    decorateIceBridges(game, offset);
 }

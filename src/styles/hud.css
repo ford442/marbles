@@ -1,0 +1,895 @@
+/* Game UI */
+#ui {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    width: 200px;
+    color: white;
+    pointer-events: none;
+    user-select: none;
+    display: none;
+    z-index: 10;
+}
+
+#level-name {
+    font-size: 20px;
+    font-weight: bold;
+    color: #e94560;
+    margin-bottom: 5px;
+    text-shadow: 2px 2px 0px #000;
+}
+
+#score {
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    text-shadow: 2px 2px 0px #000;
+}
+
+#combo {
+    font-size: 24px;
+    font-weight: bold;
+    color: #ff00ff;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 0px #000;
+    transition: transform 0.1s;
+}
+
+#combobar-container {
+    width: 200px;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    margin-top: -5px;
+}
+
+#combobar {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #ff00ff 0%, #00ffff 100%);
+    transition: width 0.1s linear;
+}
+
+#timer {
+    font-size: 24px;
+    font-weight: bold;
+    color: #0ff;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 0px #000;
+}
+
+#selected {
+    font-size: 16px;
+    color: #0f0;
+    margin-bottom: 5px;
+    text-shadow: 1px 1px 0px #000;
+}
+
+#aim {
+    font-size: 16px;
+    color: #ff0;
+    margin-bottom: 10px;
+    text-shadow: 1px 1px 0px #000;
+}
+
+#powerbar-container {
+    width: 200px;
+    height: 20px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+#powerbar {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #0f0 0%, #ff0 50%, #f00 100%);
+    transition: width 0.05s;
+}
+
+#jumpbar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#jumpbar {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #00f 0%, #0ff 100%);
+    transition: width 0.05s;
+}
+
+#boostbar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#boostbar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #f0f 0%, #0ff 100%);
+    transition: width 0.05s, background-color 0.2s;
+}
+
+#dashbar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#dashbar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ff8c00 0%, #ffff00 100%);
+    transition: width 0.05s, background-color 0.2s;
+}
+
+#magnetbar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#magnetbar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #00ffff 0%, #ff00ff 100%);
+    transition: width 0.1s;
+}
+
+#focusbar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#focusbar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #7b00ff 0%, #0000ff 100%);
+    transition: width 0.1s;
+}
+
+#rewindbar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#rewindbar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ff0000 0%, #ff4500 100%);
+    transition: width 0.1s;
+}
+
+#gravitybar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#gravitybar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ffff00 0%, #ffcc00 100%);
+    transition: width 0.1s;
+}
+
+#holobar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#holobar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #00ffff 0%, #0088ff 100%);
+    transition: width 0.1s;
+}
+
+#hoverbar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#hoverbar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ffffff 0%, #00ffcc 100%);
+    transition: width 0.1s;
+}
+
+#jetpackbar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#jetpackbar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ffaa00 0%, #ffff00 100%);
+    transition: width 0.1s;
+}
+
+#icebar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#icebar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #00ffff 0%, #ffffff 100%);
+    transition: width 0.1s;
+}
+
+#phasebar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#phasebar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #aa00ff 0%, #ff00ff 100%);
+    transition: width 0.1s;
+}
+
+#flipbar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#flipbar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ff00ff 0%, #ffffff 100%);
+    transition: width 0.1s;
+}
+
+#empbar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    margin-bottom: 5px;
+    overflow: visible;
+    display: none;
+    position: relative;
+}
+
+#empbar-container::after {
+    content: "EMP Shockwave (K)";
+    position: absolute;
+    left: 5px;
+    top: -15px;
+    font-size: 10px;
+    color: #fff;
+    text-shadow: 1px 1px 0 #000;
+}
+
+#empbar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #aaffff 0%, #00ccff 100%);
+    transition: width 0.1s;
+}
+
+#groundslambar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    margin-bottom: 5px;
+    overflow: visible;
+    display: none;
+    position: relative;
+}
+
+#groundslambar-container::after {
+    content: "Ground Slam (Digit0)";
+    position: absolute;
+    left: 5px;
+    top: -15px;
+    font-size: 10px;
+    color: #fff;
+    text-shadow: 1px 1px 0 #000;
+}
+
+#groundslambar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #8b4513 0%, #cd853f 100%);
+    transition: width 0.1s;
+}
+
+#bombbar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#bombbar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ff4500 0%, #ff0000 100%);
+    transition: width 0.1s;
+}
+
+#missilebar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#missilebar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ff8c00 0%, #ff0000 100%);
+    transition: width 0.1s;
+}
+
+#gravitypulsebar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+    display: none;
+}
+
+#gravitypulsebar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ffff00 0%, #ffffff 100%);
+    transition: width 0.1s;
+}
+
+#sizebar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#sizebar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ffff00 0%, #ff8800 100%);
+    transition: width 0.1s;
+}
+
+#buildbar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#buildbar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #32cd32 0%, #00ff00 100%);
+    transition: width 0.1s;
+}
+
+#missilebar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#missilebar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ff8800 0%, #ffff00 100%);
+    transition: width 0.1s;
+}
+
+#vortexbar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#vortexbar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ff00ff 0%, #00ffff 100%);
+    transition: width 0.1s;
+}
+
+#blackholebar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#blackholebar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #1a0033 0%, #4b0082 100%);
+    transition: width 0.1s;
+}
+
+
+#blinkbar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+    display: none;
+}
+
+#blinkbar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ffcc00 0%, #ffffff 100%);
+    transition: width 0.1s;
+}
+
+#teleportbar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+}
+
+#teleportbar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #9900ff 0%, #cc00ff 100%);
+    transition: width 0.1s;
+}
+
+#violetbar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+    display: none;
+}
+
+#violetbar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #8a2be2 0%, #ee82ee 100%);
+    transition: width 0.1s;
+}
+
+#timestopbar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+    display: none;
+}
+
+#timestopbar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ffffff 0%, #bbbbbb 100%);
+    transition: width 0.1s;
+}
+
+#gliderbar-container {
+    width: 200px;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    margin-top: -5px;
+    display: none;
+}
+
+#gliderbar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #00ff88 0%, #aaffaa 100%);
+    transition: width 0.1s;
+}
+
+#instructions {
+    font-size: 14px;
+    opacity: 0.9;
+    text-shadow: 1px 1px 0px #000;
+    line-height: 1.6;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+#instructions kbd {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+/* Consolidated HUD System */
+#hud-abilities {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    width: 280px;
+    z-index: 10;
+}
+
+.hud-category {
+    margin-bottom: 8px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.hud-category-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+    user-select: none;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: background 0.2s;
+}
+
+.hud-category-header:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.hud-category-header .category-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hud-category-header .category-icon {
+    font-size: 14px;
+}
+
+.hud-category-header .expand-icon {
+    font-size: 10px;
+    transition: transform 0.2s;
+}
+
+.hud-category.collapsed .expand-icon {
+    transform: rotate(-90deg);
+}
+
+.hud-category-content {
+    padding: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.hud-category.collapsed .hud-category-content {
+    display: none;
+}
+
+/* Core bars (always visible) */
+#hud-core {
+    margin-bottom: 10px;
+}
+
+.core-bar-container {
+    width: 100%;
+    height: 20px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.core-bar-container.small {
+    height: 10px;
+    border-width: 1px;
+    border-radius: 5px;
+}
+
+.core-bar {
+    width: 0%;
+    height: 100%;
+    transition: width 0.05s;
+}
+
+/* Circular ability indicators */
+.ability-icon {
+    width: 36px;
+    height: 36px;
+    position: relative;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    cursor: help;
+    transition: all 0.2s ease;
+}
+
+.ability-icon.active {
+    border-color: #fff;
+    box-shadow: 0 0 10px currentColor;
+}
+
+.ability-icon.cooldown {
+    opacity: 0.7;
+}
+
+.ability-icon.ready {
+    animation: pulse-ready 1s ease-in-out infinite;
+}
+
+@keyframes pulse-ready {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.ability-cooldown-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: conic-gradient(transparent var(--cooldown-angle, 0deg), rgba(0,0,0,0.7) var(--cooldown-angle, 0deg));
+    pointer-events: none;
+}
+
+.ability-key {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    font-size: 9px;
+    font-weight: bold;
+    padding: 1px 4px;
+    border-radius: 3px;
+    border: 1px solid rgba(255,255,255,0.3);
+}
+
+.ability-tooltip {
+    position: absolute;
+    bottom: 45px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 100;
+}
+
+.ability-icon:hover .ability-tooltip {
+    opacity: 1;
+}
+
+/* Tab key overlay - shows all abilities */
+#hud-all-abilities {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.9);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 16px;
+    padding: 20px;
+    display: none;
+    flex-wrap: wrap;
+    gap: 15px;
+    max-width: 600px;
+    z-index: 50;
+    backdrop-filter: blur(10px);
+}
+
+#hud-all-abilities.visible {
+    display: flex;
+}
+
+.all-abilities-category {
+    min-width: 150px;
+}
+
+.all-abilities-category h4 {
+    margin: 0 0 10px 0;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #aaa;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+    padding-bottom: 5px;
+}
+
+.all-abilities-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Category-specific colors */
+.hud-category.movement .hud-category-header { color: #00ffff; }
+.hud-category.combat .hud-category-header { color: #ff4444; }
+.hud-category.utility .hud-category-header { color: #ffaa00; }
+
+/* Legacy bar containers - kept for compatibility but hidden by default */
+.legacy-bar-container {
+    display: none !important;
+}
+
+#mute-btn {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 20px;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#mute-btn:hover {
+    background: rgba(233, 69, 96, 0.3);
+    border-color: rgba(233, 69, 96, 0.8);
+    transform: scale(1.1);
+}
+
+#mute-btn.muted {
+    opacity: 0.5;
+}
+

@@ -28,6 +28,15 @@ export class InitPauseMenu {
             btnRestartPause.addEventListener('click', () => this.restartCurrentLevel())
         }
 
+        const btnImportGhost = document.getElementById('btn-import-ghost-pause')
+        if (btnImportGhost) {
+            btnImportGhost.addEventListener('click', () => {
+                if (typeof this.importGhostReplay === 'function') {
+                    this.importGhostReplay()
+                }
+            })
+        }
+
         // Settings button
         const btnSettings = document.getElementById('btn-settings')
         if (btnSettings) {
@@ -111,10 +120,9 @@ export class InitPauseMenu {
             document.exitPointerLock()
         }
 
-        // Mute/lower audio
-        if (audio && audio.setMasterVolume) {
-            const currentVolume = this.settings?.audio?.master ?? 80
-            audio.setMasterVolume(currentVolume * 0.3 / 100) // Lower to 30% while paused
+        // Duck SFX while paused (preserves saved master volume)
+        if (audio?.setPaused) {
+            audio.setPaused(true)
         }
 
         console.log('[PAUSE] Game paused')
@@ -136,9 +144,9 @@ export class InitPauseMenu {
             canvas.classList.remove('paused')
         }
 
-        // Restore audio volume
-        if (audio && audio.setMasterVolume && this.settings) {
-            audio.setMasterVolume(this.settings.audio.master / 100)
+        // Restore audio ducking
+        if (audio?.setPaused) {
+            audio.setPaused(false)
         }
 
         // Re-acquire pointer lock if in game

@@ -8,7 +8,9 @@ const DEFAULT_SETTINGS = {
         bloom: 50,
         ssao: true,
         renderScale: 1.0,
-        dynamicResolution: true
+        dynamicResolution: true,
+        targetFps: 60,
+        performanceMode: 'auto',
     },
     audio: {
         master: 80,
@@ -17,7 +19,17 @@ const DEFAULT_SETTINGS = {
     },
     controls: {
         sensitivity: 50,
-        invertY: false
+        invertY: false,
+        keybinds: {},
+        touch: {
+            enabled: 'auto',
+            joystickSide: 'left',
+            jumpSlot: 'primary',
+            boostSlot: 'secondary',
+            cameraSensitivity: 50,
+            invertCameraY: false,
+            showControls: true,
+        },
     },
     accessibility: {
         uiScale: 100,
