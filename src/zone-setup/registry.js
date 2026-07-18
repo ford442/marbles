@@ -90,6 +90,7 @@ const FACTORY_ZONE_HANDLERS = {
     abyssal_trench: (game, _zone, offset) => zones.createAbyssalTrenchZone(game, offset),
     void_station: (game, _zone, offset) => zones.createVoidStationZone(game, offset),
     storm_peak: (game, _zone, offset) => zones.createStormPeakZone(game, offset),
+    neon_pipeline: (game, _zone, offset) => zones.createNeonPipelineZone(game, offset),
     stellar_forge: (game, _zone, offset) => zones.createStellarForgeZone(game, offset),
 };
 

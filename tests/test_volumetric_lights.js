@@ -33,7 +33,7 @@ global.window = {
     addEventListener: () => {}
 }
 
-import('/root/marbles/src/rendering/volumetric-lights.js').then(mod => {
+import('/app/src/rendering/volumetric-lights.js').then(mod => {
     const { VolumetricLightsSystem, getVolumetricConfig } = mod
 
     let passed = 0
