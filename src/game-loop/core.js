@@ -180,6 +180,23 @@ export class GameLoopRenderCore {
             }
         }
 
+        // Stomp charge visual feedback
+        if (this.isChargingStomp && this.playerMarble) {
+            const chargeDuration = now - this.stompChargeTime
+            const chargeRatio = Math.min(1.0, chargeDuration / 1500.0) // 1.5 seconds to max visual effect
+
+            const rcm = this.engine.getRenderableManager()
+            const inst = rcm.getInstance(this.playerMarble.entity)
+            if (inst) {
+                // Pulse cyan to white
+                const pulse = Math.sin(now * 0.02) * 0.5 + 0.5
+                const r = chargeRatio * (0.5 + pulse * 0.5)
+                const g = 1.0
+                const b = 1.0
+                rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [r, g, b])
+            }
+        }
+
         if (shouldUpdateHUD && this.dashBarEl) {
             if (this.isChargingDash) {
                 // Increment charge - roughly 1.5 seconds to fully charge

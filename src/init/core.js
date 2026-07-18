@@ -168,16 +168,20 @@ export class InitCore {
                 }
             }
             if (e.code === 'KeyZ' && this.playerMarble && !this.isGrounded(this.playerMarble)) {
-                this.isStomping = true
-                this.stompStartTime = Date.now()
-                const gravityDir = this.playerMarble.rigidBody.gravityScale() < 0 ? 1 : -1
-                this.playerMarble.rigidBody.setLinvel({ x: 0, y: 60.0 * gravityDir, z: 0 }, true)
+                this.isChargingStomp = true
+                this.stompChargeTime = Date.now()
+                this.stompStartAltitude = this.playerMarble.rigidBody.translation().y
 
-                const rcm = this.engine.getRenderableManager()
-                const inst = rcm.getInstance(this.playerMarble.entity)
-                rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 0.0, 0.0])
+                this.stompOldGravity = this.playerMarble.rigidBody.gravityScale()
+                if (this.playerMarble.color) {
+                    this.stompOldColor = [...this.playerMarble.color]
+                }
 
-                audio.playBoost()
+                // Suspend gravity and zero velocity for "hang time" wind-up
+                this.playerMarble.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true)
+                this.playerMarble.rigidBody.setGravityScale(0, true)
+
+                if (audio.playBoost) audio.playBoost()
             }
             if (e.code === 'Digit0' && this.playerMarble) {
                 if (typeof this.fireTremor === 'function') {
@@ -428,6 +432,33 @@ export class InitCore {
                 this.isChargingDash = false
                 this.dashCharge = 0
                 if (this.dashBarEl) this.dashBarEl.style.boxShadow = 'none'
+            }
+            if (e.code === 'KeyZ') {
+                if (this.isChargingStomp && this.playerMarble) {
+                    this.isChargingStomp = false
+                    this.isStomping = true
+                    this.stompReleaseTime = Date.now()
+
+                    // Restore gravity
+                    const grav = this.stompOldGravity !== undefined ? this.stompOldGravity : (this.playerMarble.baseGravityScale || 1.0)
+                    this.playerMarble.rigidBody.setGravityScale(grav, true)
+
+                    // Apply massive downward force scaling with charge time
+                    const chargeDuration = Date.now() - this.stompChargeTime
+                    const force = 50.0 + Math.min(150.0, chargeDuration * 0.1) // Max charge cap
+                    const gravityDir = grav < 0 ? 1 : -1
+
+                    this.playerMarble.rigidBody.setLinvel({ x: 0, y: force * gravityDir, z: 0 }, true)
+
+                    // Restore original color
+                    if (this.stompOldColor) {
+                        const rcm = this.engine.getRenderableManager()
+                        const inst = rcm.getInstance(this.playerMarble.entity)
+                        if (inst) {
+                            rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, this.stompOldColor)
+                        }
+                    }
+                }
             }
             if (e.code === 'KeyE' || e.code === 'KeyQ') {
                 this.magnetActive = false

@@ -94,11 +94,9 @@ export class GameLoopMethods {
             const shake = this.cameraShake
             if (this.adrenaline > 20 && shakeMultiplier > 0) {
                 const shakeIntensity = (this.adrenaline - 20) / 80.0 * 0.5 * shakeMultiplier
-                shake.x = (Math.random() - 0.5) * shakeIntensity
-                shake.y = (Math.random() - 0.5) * shakeIntensity
-                shake.z = (Math.random() - 0.5) * shakeIntensity
-            } else {
-                shake.x = 0; shake.y = 0; shake.z = 0
+                shake.x += (Math.random() - 0.5) * shakeIntensity
+                shake.y += (Math.random() - 0.5) * shakeIntensity
+                shake.z += (Math.random() - 0.5) * shakeIntensity
             }
 
             // Add Tremor Camera Shake
@@ -109,6 +107,11 @@ export class GameLoopMethods {
                 this.cameraShake.z += (Math.random() - 0.5) * tremorIntensity
                 this.tremorShakeTimer--
             }
+
+            // Stomp camera shake decay
+            this.cameraShake.x *= 0.9
+            this.cameraShake.y *= 0.9
+            this.cameraShake.z *= 0.9
 
             // Update Projection FOV each frame
             if (this.camera && this.view && this.Filament && this.Filament.Camera$Fov) {

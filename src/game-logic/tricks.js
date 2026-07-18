@@ -72,10 +72,19 @@ export class GameLogicTricks {
             spawnTime: Date.now(),
             pos: { x: center.x, y: center.y - 0.4, z: center.z },
             vel: { x: 0, y: 0, z: 0 }, // It expands rather than moves
-            duration: 500,
+            duration: 500 * (multiplier * 0.5),
             scale: 1.0,
-            isRing: true // Custom flag to animate differently
+            isEMPRing: true, // Use the existing EMP expanding ring logic
+            startRadius: 0.1,
+            maxRadius: radius
         })
+
+        // Trigger camera shake proportional to impact
+        if (!this.cameraShake) this.cameraShake = { x: 0, y: 0, z: 0 }
+        const shakeIntensity = multiplier * 2.0
+        this.cameraShake.x += (Math.random() - 0.5) * shakeIntensity
+        this.cameraShake.y += (Math.random() - 0.5) * shakeIntensity
+        this.cameraShake.z += (Math.random() - 0.5) * shakeIntensity
     }
 
     awardTrickPoints(message, points, color) {

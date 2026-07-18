@@ -118,7 +118,7 @@ export class GameLoopCamera {
                     }
 
                     this.camera.lookAt(
-                        [this.cameraFollowPos.x, this.cameraFollowPos.y, this.cameraFollowPos.z],
+                        [this.cameraFollowPos.x + this.cameraShake.x, this.cameraFollowPos.y + this.cameraShake.y, this.cameraFollowPos.z + this.cameraShake.z],
                         [this.cameraLookPos.x, this.cameraLookPos.y, this.cameraLookPos.z],
                         upVector
                     )
@@ -337,7 +337,7 @@ export class GameLoopCamera {
                     }
 
                     this.camera.lookAt(
-                        [this.cameraFollowPos.x, this.cameraFollowPos.y, this.cameraFollowPos.z],
+                        [this.cameraFollowPos.x + this.cameraShake.x, this.cameraFollowPos.y + this.cameraShake.y, this.cameraFollowPos.z + this.cameraShake.z],
                         [this.cameraLookPos.x, this.cameraLookPos.y, this.cameraLookPos.z],
                         upVector
                     )
