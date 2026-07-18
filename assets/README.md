@@ -4,7 +4,7 @@ This directory contains all game assets: maps, marbles, sounds, and materials.
 
 ## Quick Links
 
-- [Contributing Guide](../CONTRIBUTING.md) - How to create and submit assets
+- [Contributing Guide](../docs/CONTRIBUTING.md) - How to create and submit assets
 - [Map Template](maps/TEMPLATE.json) - Start creating a map
 - [Marble Template](marbles/TEMPLATE.json) - Start creating a marble
 - [Sound Template](sounds/TEMPLATE.json) - Start creating a sound

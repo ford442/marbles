@@ -1,4 +1,7 @@
+// @ts-check
 /** Physics bodies, world objects, grapple, magnet, trick tracking. */
+
+/** @returns {import('../../types/game-state.js').PhysicsState} */
 export function createPhysicsState() {
     return {
         marbles: [],
@@ -35,6 +38,7 @@ export function createPhysicsState() {
         magnetPower: 1.0,
         magnetActive: false,
         magnetMode: null,
+        grappleAnchors: [],
         isGrappling: false,
         grappleTarget: null,
         grappleEntity: null,

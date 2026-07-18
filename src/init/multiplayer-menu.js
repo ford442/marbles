@@ -1,19 +1,39 @@
 import { NetworkClient } from '../game/network/network-client.js';
 import { RemotePlayers } from '../game/network/remote-players.js';
 import { generateRoomCode } from '../game/network/protocol.js';
-import { LEVELS } from '../levels/catalog.js';
+import { LEVELS, isDevLevelsEnabled } from '../levels/catalog.js';
+import { tickRemoteAbilityFx, clearRemoteAbilityFx } from '../game/network/ability-sync.js';
+import { updateDesyncIndicator, resetDesyncIndicator } from '../game/network/desync-indicator.js';
+import { HostSim } from '../game/network/host-sim.js';
+import { ClientPrediction } from '../game/network/client-prediction.js';
+
+function hostAuthorityEnabledFromUrl() {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    return params.get('hostAuth') === '1' || params.has('hostAuth');
+}
 
 export class InitMultiplayerMenu {
     initMultiplayerMenu() {
         this.multiplayerMode = false;
+        this.hostAuthorityMode = false;
         this.remotePlayers = new RemotePlayers(this);
         this.network = new NetworkClient(this);
+        this.hostSim = new HostSim(this);
+        this.clientPrediction = new ClientPrediction(this);
 
         this.network.onRoomUpdate = (players) => this._renderLobbyPlayers(players);
-        this.network.onStarting = (levelId) => {
+        this.network.onStarting = (levelId, hostId, startAtMs, seed) => {
             this.multiplayerMode = true;
+            this.hostAuthorityMode = hostAuthorityEnabledFromUrl();
             this._hideMultiplayerLobby(() => {
-                this.hideLevelSelection(() => this.loadLevel(levelId));
+                this.hideLevelSelection(() => {
+                    this.loadLevel(levelId, { startAtMs, seed }).then(() => {
+                        if (this.hostAuthorityMode) {
+                            this._initHostAuthority(hostId);
+                        }
+                    });
+                });
             });
         };
         this.network.onDisconnected = () => {
@@ -44,6 +64,18 @@ export class InitMultiplayerMenu {
         if (btnClose) btnClose.addEventListener('click', () => this._leaveLobby());
     }
 
+    _initHostAuthority(hostId) {
+        if (this.network.isHost) {
+            const spawn = this.currentLevel
+                ? (LEVELS[this.currentLevel]?.spawn || { x: 0, y: 8, z: -12 })
+                : { x: 0, y: 8, z: -12 };
+            this.hostSim.init(this.network.players, spawn);
+        } else {
+            this.clientPrediction.init(this.network.playerId);
+        }
+        void hostId;
+    }
+
     showMultiplayerLobby() {
         const overlay = document.getElementById('multiplayer-lobby');
         if (!overlay) return;
@@ -58,7 +90,7 @@ export class InitMultiplayerMenu {
         const levelSelect = document.getElementById('mp-level-select');
         if (levelSelect && levelSelect.options.length === 0) {
             for (const [id, level] of Object.entries(LEVELS)) {
-                if (level.source === 'code' && !location.search.includes('devLevels=1')) continue;
+                if (level.source === 'code' && !isDevLevelsEnabled()) continue;
                 const opt = document.createElement('option');
                 opt.value = id;
                 opt.textContent = level.name;
@@ -132,6 +164,11 @@ export class InitMultiplayerMenu {
     _leaveLobby() {
         this.network.disconnect();
         this.multiplayerMode = false;
+        this.hostAuthorityMode = false;
+        this.hostSim?.reset();
+        this.clientPrediction?.reset();
+        clearRemoteAbilityFx(this);
+        resetDesyncIndicator(this);
         this._hideMultiplayerLobby();
         this._setLobbyStatus('');
     }
@@ -177,7 +214,18 @@ export class InitMultiplayerMenu {
     tickMultiplayer(now = Date.now()) {
         if (!this.multiplayerMode || !this.network?.room) return;
 
-        this.network.tickSendState(now);
+        if (this.hostAuthorityMode) {
+            if (this.network.isHost) {
+                this.hostSim?.tick(now);
+            } else {
+                this.clientPrediction?.recordInput(now);
+                this.clientPrediction?.reconcileFromNetwork(now);
+            }
+            this.network.tickSendInput(now);
+        } else {
+            this.network.tickSendState(now);
+            this.network.tickSendInput(now);
+        }
 
         if (!this.network.playerId) return;
         this.remotePlayers.syncRoster(this.network.players, this.network.playerId);
@@ -189,6 +237,9 @@ export class InitMultiplayerMenu {
                 this.remotePlayers.updatePlayer(player.id, frame);
             }
         }
+
+        tickRemoteAbilityFx(this, now);
+        updateDesyncIndicator(this, now);
     }
 }
 

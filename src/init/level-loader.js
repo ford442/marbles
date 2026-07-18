@@ -1,9 +1,10 @@
 import { getLevel } from '../levels/catalog.js';
 import { runWebGPUStressBurst } from '../webgpu/index.js';
 import { audio } from '../audio.js';
+import { loadLevelBehaviors } from '../game/level-behaviors/index.js';
 
 export class InitLevelLoader {
-    async loadLevel(levelId) {
+    async loadLevel(levelId, options = {}) {
         if (!window.__FILAMENT_FULLY_READY__ || !this.engine || !this.vb || !this.ib) {
             console.error('loadLevel called too early');
             return false;
@@ -18,6 +19,8 @@ export class InitLevelLoader {
 
         this.clearLevel()
         console.log('[LEVEL] Cleared previous level')
+        const rapierMode = await activatePhysicsBackendForLevel(this, levelId)
+        console.log(`[LEVEL] Physics backend: ${rapierMode}`)
         this.perfMonitor?.resetLevel(levelId)
         this.cullingManager?.reset()
         this.trackLodManager?.reset()
@@ -79,16 +82,29 @@ export class InitLevelLoader {
         for (const zone of level.zones) {
             await this.createZone(zone)
         }
+        loadLevelBehaviors(this, level.behaviors || [], { level, levelId })
         this.flushStaticBatches?.()
         console.log(`[LEVEL] Created ${this.staticEntities.length} static entities`)
 
         console.log(`[LEVEL] Spawning marbles at ${JSON.stringify(level.spawn)}...`)
         this.createMarbles(level.spawn)
+        if (this.physicsBackend?.isWorkerMode?.()) {
+            await this.physicsBackend.commitWorldBuild()
+        }
         this.effectPool?.recordLevelBaseline()
         console.log(`[LEVEL] Created ${this.marbles.length} marbles`)
 
         if (this.ghostReplay?.loadPlayback(levelId)) {
             this.createGhostMarble()
+        }
+
+        if (this._pendingLeaderboardGhostId && this.cloudClient) {
+            const ghostId = this._pendingLeaderboardGhostId
+            this._pendingLeaderboardGhostId = null
+            const loaded = await this.cloudClient.loadLeaderboardGhost(ghostId, levelId)
+            if (loaded && this.ghostReplay?.playbackFrames?.length) {
+                this.createGhostMarble()
+            }
         }
 
         this.perfMonitor?.recordLevelLoad(levelId, level)
@@ -98,10 +114,14 @@ export class InitLevelLoader {
         runWebGPUStressBurst(this)
 
         // Start the level entry sequence
-        await this.startLevelSequence()
+        await this.startLevelSequence(options)
     }
 
-    async startLevelSequence() {
+    async startLevelSequence(options = {}) {
+        const { startAtMs, seed } = options;
+        if (seed !== undefined && this.network) {
+            this.network.raceSeed = seed;
+        }
         const gameUI = document.getElementById('ui')
         const fadeOverlay = document.getElementById('fade-overlay')
         const countdownOverlay = document.getElementById('countdown-overlay')
@@ -123,25 +143,42 @@ export class InitLevelLoader {
         // Show countdown
         countdownOverlay.classList.add('active')
 
-        // 3-2-1 countdown
-        const numbers = ['3', '2', '1']
-        for (const num of numbers) {
-            countdownDisplay.className = 'countdown-number'
-            countdownDisplay.textContent = num
-            // Force reflow to restart animation
-            void countdownDisplay.offsetWidth
-            countdownDisplay.className = 'countdown-number'
-            await this.delay(800)
+        if (startAtMs) {
+            this.isPaused = true;
+            const steps = [
+                { at: startAtMs - 2400, text: '3', className: 'countdown-number' },
+                { at: startAtMs - 1600, text: '2', className: 'countdown-number' },
+                { at: startAtMs - 800, text: '1', className: 'countdown-number' },
+                { at: startAtMs, text: 'GO!', className: 'countdown-go' },
+            ];
+
+            for (const step of steps) {
+                await this._waitUntil(step.at);
+                countdownDisplay.className = step.className;
+                countdownDisplay.textContent = step.text;
+                void countdownDisplay.offsetWidth;
+                countdownDisplay.className = step.className;
+            }
+
+            this.levelStartTime = startAtMs;
+            this.isPaused = false;
+        } else {
+            const numbers = ['3', '2', '1'];
+            for (const num of numbers) {
+                countdownDisplay.className = 'countdown-number';
+                countdownDisplay.textContent = num;
+                void countdownDisplay.offsetWidth;
+                countdownDisplay.className = 'countdown-number';
+                await this.delay(800);
+            }
+
+            countdownDisplay.className = 'countdown-go';
+            countdownDisplay.textContent = 'GO!';
+            this.levelStartTime = Date.now();
+            this.isPaused = false;
         }
 
-        // GO!
-        countdownDisplay.className = 'countdown-go'
-        countdownDisplay.textContent = 'GO!'
-        
-        // Start the level timer
-        this.levelStartTime = Date.now()
-        this.isPaused = false
-        this.touchControls?.setGameplayActive(true)
+        this.touchControls?.setGameplayActive(true);
 
         // Animate HUD elements in
         gameUI.style.opacity = '1'
@@ -185,6 +222,12 @@ export class InitLevelLoader {
 
     delay(ms) {
         return new Promise(resolve => setTimeout(resolve, ms))
+    }
+
+    _waitUntil(targetMs) {
+        const delayMs = targetMs - Date.now();
+        if (delayMs <= 0) return Promise.resolve();
+        return this.delay(delayMs);
     }
 
     createGhostMarble() {

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Lightweight WebSocket relay for Marbles 3D party races (Phase 1).
- * Arcade transform sync only — no authoritative physics.
+ * Lightweight WebSocket relay for Marbles 3D party races.
+ * Phase 2: ability + input forwarding, synced start, protocol v2 gate.
  *
  * Usage: node server/relay.mjs [--port 8787]
  */
@@ -11,12 +11,18 @@ import { randomUUID } from 'node:crypto';
 import { WebSocketServer } from 'ws';
 import {
     MSG,
+    PROTOCOL_VERSION,
     MAX_PLAYERS_PER_ROOM,
     MAX_MESSAGE_BYTES,
     STATE_RATE_HZ,
+    ABILITY_RATE_HZ,
+    INPUT_RATE_HZ,
+    COUNTDOWN_MS,
     parseJsonMessage,
     validateClientMessage,
     serializeMessage,
+    hashRoomCode,
+    isSupportedProtocolVersion,
 } from '../src/game/network/protocol.js';
 
 const port = Number(process.argv.find((a, i, arr) => arr[i - 1] === '--port') || process.env.MARBLES_RELAY_PORT || 8787);
@@ -29,8 +35,14 @@ const clients = new WeakMap();
 
 /** @type {WeakMap<import('ws').WebSocket, number>} */
 const lastStateSentAt = new WeakMap();
+/** @type {WeakMap<import('ws').WebSocket, number>} */
+const lastAbilitySentAt = new WeakMap();
+/** @type {WeakMap<import('ws').WebSocket, number>} */
+const lastInputSentAt = new WeakMap();
 
 const stateMinIntervalMs = 1000 / STATE_RATE_HZ;
+const abilityMinIntervalMs = 1000 / ABILITY_RATE_HZ;
+const inputMinIntervalMs = 1000 / INPUT_RATE_HZ;
 
 function send(ws, payload) {
     if (ws.readyState === ws.OPEN) {
@@ -86,6 +98,11 @@ function leaveRoom(ws) {
 }
 
 function handleJoin(ws, data) {
+    if (!isSupportedProtocolVersion(data.protocolVersion)) {
+        sendError(ws, 'PROTOCOL_MISMATCH', `Protocol v${PROTOCOL_VERSION} required`);
+        return;
+    }
+
     leaveRoom(ws);
 
     const roomCode = data.room;
@@ -112,7 +129,7 @@ function handleJoin(ws, data) {
         playerId,
         isHost,
         players: roomPlayers(roomCode),
-        protocolVersion: 1,
+        protocolVersion: PROTOCOL_VERSION,
     });
 
     broadcast(roomCode, {
@@ -132,14 +149,16 @@ function handleState(ws, data) {
 
     const now = Date.now();
     const last = lastStateSentAt.get(ws) || 0;
-    if (now - last < stateMinIntervalMs - 2) {
+    if (!meta.isHost && now - last < stateMinIntervalMs - 2) {
         return;
     }
-    lastStateSentAt.set(ws, now);
+    if (!meta.isHost) {
+        lastStateSentAt.set(ws, now);
+    }
 
     broadcast(meta.room, {
         type: MSG.STATE,
-        playerId: meta.playerId,
+        playerId: data.playerId || meta.playerId,
         t: data.t,
         x: data.x,
         y: data.y,
@@ -149,6 +168,61 @@ function handleState(ws, data) {
         qz: data.qz,
         qw: data.qw,
         seq: data.seq,
+    }, ws);
+}
+
+function handleAbility(ws, data) {
+    const meta = clients.get(ws);
+    if (!meta) {
+        sendError(ws, 'NOT_IN_ROOM', 'Join a room before sending ability');
+        return;
+    }
+
+    const now = Date.now();
+    const last = lastAbilitySentAt.get(ws) || 0;
+    if (now - last < abilityMinIntervalMs - 2) {
+        return;
+    }
+    lastAbilitySentAt.set(ws, now);
+
+    broadcast(meta.room, {
+        type: MSG.ABILITY,
+        playerId: meta.playerId,
+        id: data.id,
+        t: data.t,
+        seq: data.seq,
+        ox: data.ox,
+        oy: data.oy,
+        oz: data.oz,
+        dx: data.dx,
+        dy: data.dy,
+        dz: data.dz,
+        ...(data.charge !== undefined ? { charge: data.charge } : {}),
+    }, ws);
+}
+
+function handleInput(ws, data) {
+    const meta = clients.get(ws);
+    if (!meta) {
+        sendError(ws, 'NOT_IN_ROOM', 'Join a room before sending input');
+        return;
+    }
+
+    const now = Date.now();
+    const last = lastInputSentAt.get(ws) || 0;
+    if (now - last < inputMinIntervalMs - 2) {
+        return;
+    }
+    lastInputSentAt.set(ws, now);
+
+    broadcast(meta.room, {
+        type: MSG.INPUT,
+        playerId: meta.playerId,
+        t: data.t,
+        seq: data.seq,
+        bits: data.bits,
+        yaw: data.yaw,
+        pitch: data.pitch,
     }, ws);
 }
 
@@ -163,10 +237,15 @@ function handleStart(ws, data) {
         return;
     }
 
+    const startAtMs = Date.now() + COUNTDOWN_MS;
+
     broadcast(meta.room, {
         type: MSG.STARTING,
         levelId: data.levelId,
         hostId: meta.playerId,
+        startAtMs,
+        seed: hashRoomCode(meta.room),
+        protocolVersion: PROTOCOL_VERSION,
     });
 }
 
@@ -204,6 +283,12 @@ wss.on('connection', (ws) => {
             case MSG.STATE:
                 handleState(ws, msg);
                 break;
+            case MSG.ABILITY:
+                handleAbility(ws, msg);
+                break;
+            case MSG.INPUT:
+                handleInput(ws, msg);
+                break;
             case MSG.START:
                 handleStart(ws, msg);
                 break;
@@ -220,5 +305,5 @@ wss.on('connection', (ws) => {
 });
 
 httpServer.listen(port, () => {
-    console.log(`[RELAY] Marbles 3D party relay listening on ws://0.0.0.0:${port}`);
+    console.log(`[RELAY] Marbles 3D party relay listening on ws://0.0.0.0:${port} (protocol v${PROTOCOL_VERSION})`);
 });

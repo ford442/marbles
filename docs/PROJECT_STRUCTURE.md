@@ -28,12 +28,13 @@ Everything under `src/` that ships in `npm run build` must be reachable from `sr
 | Loop | `game-loop/` (`loop.js`, `logic.js`, `render.js`, `sync.js`, …) |
 | Rendering | `material-system.js`, `rendering/`, `lighting-system.js`, `particle-system.js` |
 | HUD / perf | `hud-manager.js`, `perf-monitor.js`, `culling-manager.js`, `auto-quality-governor.js` |
-| Levels | `levels.js` |
+| Levels | `levels/catalog.js`, `assets/manifest.json`, `assets/maps/*.json`; dev-only `levels.js` |
 | WASM helpers | `wasm-bridge.js` → `public/wasm/marble_physics.{js,wasm}` |
 
 ### Zone loading pattern
 
-- **Level definitions**: `src/levels.js` lists zone `type` strings per level (~70 playable keys; not loaded from JSON maps).
+- **Production levels**: `assets/manifest.json` → `AssetRegistry` → `src/levels/catalog.js` (**14 shipped**; see [architecture/level-pipeline.md](architecture/level-pipeline.md)).
+- **Dev-only levels**: `src/levels.js` (`DEV_LEVELS`, ~58 entries) merged when `?devLevels=1` or `?dev=1` (~68 unique ids total with dev flag).
 - **Registration**: `src/zone-setup/registry.js` maps each `zone.type` to a handler (single source of truth).
 - **Dispatch**: `src/zone-setup/core.js` calls `dispatchZone()` — no duplicate switch statements.
 - **Factories**: `src/zones/<kebab-name>.js` export `create*Zone(game, offset)`; barrel re-export in `src/zones/index.js`.

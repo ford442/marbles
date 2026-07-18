@@ -209,16 +209,19 @@ export class GameLoopFrameInput {
                             }, true)
                         }
                     } else {
+                        if (!this._forceBatchBuffers) this._forceBatchBuffers = new PhysicsBatchBuffers(16)
+                        const scalarBuf = this._forceBatchBuffers.forces
                         for (const { body, pos: bt } of targets) {
-                            const force = physics.computeForceField(
+                            physics.computeForceFieldInto(
+                                scalarBuf,
                                 pt.x, pt.y, pt.z,
                                 bt.x, bt.y, bt.z,
                                 forceStrength, 2.0, 0.5, range, 1.0
                             )
                             body.applyImpulse({
-                                x: force.x * repelSign,
-                                y: force.y * repelSign,
-                                z: force.z * repelSign
+                                x: scalarBuf[0] * repelSign,
+                                y: scalarBuf[1] * repelSign,
+                                z: scalarBuf[2] * repelSign
                             }, true)
                         }
                     }

@@ -152,6 +152,7 @@ export class AssetRegistry {
       medals: mapDef.medals,
       collectiblesTotal: mapDef.collectiblesTotal,
       chapter: mapDef.chapter,
+      behaviors: mapDef.behaviors,
       source: 'json',
     };
   }

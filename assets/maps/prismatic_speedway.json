@@ -1,0 +1,34 @@
+{
+  "id": "prismatic_speedway",
+  "name": "Prismatic Speedway",
+  "description": "A high-speed neon track with low-friction ice, huge jumps, and moving prisms.",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "difficulty": "hard",
+  "chapter": "neon",
+  "environment": "neon_city",
+  "nightMode": true,
+  "backgroundColor": [0.01, 0.0, 0.05, 1.0],
+  "zones": [
+    { "type": "prismatic_speedway", "pos": { "x": 0, "y": 0, "z": 0 } },
+    { "type": "goal", "pos": { "x": 0, "y": -5, "z": 130 } }
+  ],
+  "spawn": { "x": 0, "y": 5, "z": -5 },
+  "goals": [
+    {
+      "id": 1,
+      "range": {
+        "x": [-5, 5],
+        "y": [-10, 0],
+        "z": [125, 135]
+      }
+    }
+  ],
+  "camera": { "mode": "follow", "height": 15, "offset": -25 },
+  "medals": {
+    "goldTime": 60,
+    "silverTime": 120,
+    "bronzeTime": 240,
+    "parTime": 100
+  }
+}

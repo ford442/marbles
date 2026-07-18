@@ -1,5 +1,6 @@
 import { EditorCamera } from './camera.js';
 import {
+    MapDocument,
     createEmptyMap,
     downloadMapJson,
     loadDraft,
@@ -9,12 +10,37 @@ import {
     syncGoalsFromZones,
     parseMapJson,
 } from './map-document.js';
+import {
+    cmdDeleteZones,
+    cmdMoveZones,
+    cmdPlaceZone,
+    cmdReplaceMap,
+    cmdRotateZones,
+    cmdSetSpawn,
+    cmdUpdateMapMeta,
+    cmdUpdateZoneProps,
+} from './map-commands.js';
+import { savePlaytestSession, restorePlaytestSession } from './editor-session.js';
 import { validateMap } from './map-validator.js';
-import { createZoneFromStamp, EDITOR_STAMPS, STAMP_BY_ID } from './stamps.js';
+import {
+    createZoneFromStamp,
+    EDITOR_BUILTIN_STAMPS,
+    EDITOR_FACTORY_STAMPS,
+    EDITOR_GAMEPLAY_STAMPS,
+    EDITOR_MODEL_STAMPS,
+    STAMP_BY_ID,
+} from './stamps.js';
+import {
+    loadSnapSettings,
+    rotationStepRad,
+    saveSnapSettings,
+    snapPosition,
+    snapRotation,
+    snapScalar,
+} from './snap.js';
+import { downloadWorkshopZip } from './workshop-export.js';
 import { registerCustomLevel } from '../levels/catalog.js';
-import { quatFromEuler, quaternionToMat4 } from '../math.js';
-
-const ROTATE_STEP = Math.PI / 12;
+import { quaternionToMat4 } from '../math.js';
 
 export class MapEditor {
     /** @param {object} game */
@@ -22,14 +48,22 @@ export class MapEditor {
         this.game = game;
         this.isActive = false;
         this.isPlaytesting = false;
-        this.map = createEmptyMap();
+        this.doc = new MapDocument(createEmptyMap());
         this.tool = 'place';
         this.activeStampId = 'floor';
-        this.selectedIndex = -1;
+        /** @type {number[]} */
+        this.selectedIndices = [];
         this.camera = new EditorCamera(game);
         this.spawnMarkerEntity = null;
         this._boundHandlers = null;
+        this.snap = loadSnapSettings();
+        this._movePendingDelta = null;
+        this._moveRebuildTimer = null;
         this.ui = {};
+    }
+
+    get map() {
+        return this.doc.map;
     }
 
     async start() {
@@ -40,6 +74,15 @@ export class MapEditor {
         this._showPanel();
         await this.rebuildPreview();
         this._syncUi();
+    }
+
+    _afterMutation() {
+        this._syncUi();
+    }
+
+    _execute(command) {
+        this.doc.execute(command);
+        this._afterMutation();
     }
 
     async rebuildPreview() {
@@ -67,6 +110,8 @@ export class MapEditor {
             return;
         }
 
+        savePlaytestSession(this);
+
         registerCustomLevel({ ...payload, id: PLAYTEST_LEVEL_ID, name: `${this.map.name} (Playtest)` });
 
         this.isPlaytesting = true;
@@ -83,8 +128,12 @@ export class MapEditor {
         this.game.currentLevel = null;
         this.game.isPaused = false;
         document.getElementById('ui').style.display = 'none';
+
+        restorePlaytestSession(this);
+
         this._showPanel();
         await this.rebuildPreview();
+        this._syncUi();
         this._setStatus('Back in editor');
     }
 
@@ -100,6 +149,18 @@ export class MapEditor {
         this._setStatus('Map exported');
     }
 
+    async exportWorkshop() {
+        syncGoalsFromZones(this.map);
+        const payload = serializeMap(this.map);
+        const result = validateMap(payload);
+        if (!result.valid) {
+            this._setStatus(`Workshop export failed: ${result.errors[0]}`, true);
+            return;
+        }
+        await downloadWorkshopZip(payload);
+        this._setStatus('Workshop ZIP downloaded');
+    }
+
     saveDraftToStorage() {
         syncGoalsFromZones(this.map);
         saveDraft(this.map);
@@ -112,10 +173,9 @@ export class MapEditor {
             this._setStatus('No draft found', true);
             return;
         }
-        this.map = draft;
-        this.selectedIndex = -1;
+        this._execute(cmdReplaceMap(this.map, draft));
+        this.selectedIndices = [];
         await this.rebuildPreview();
-        this._syncUi();
         this._setStatus('Draft loaded');
     }
 
@@ -123,11 +183,11 @@ export class MapEditor {
         const reader = new FileReader();
         reader.onload = async () => {
             try {
-                this.map = parseMapJson(/** @type {string} */ (reader.result));
-                syncGoalsFromZones(this.map);
-                this.selectedIndex = -1;
+                const imported = parseMapJson(/** @type {string} */ (reader.result));
+                syncGoalsFromZones(imported);
+                this._execute(cmdReplaceMap(this.map, imported));
+                this.selectedIndices = [];
                 await this.rebuildPreview();
-                this._syncUi();
                 this._setStatus(`Loaded ${file.name}`);
             } catch (err) {
                 this._setStatus(`Import failed: ${err.message}`, true);
@@ -136,92 +196,137 @@ export class MapEditor {
         reader.readAsText(file);
     }
 
+    undo() {
+        if (this.doc.undo()) {
+            this.rebuildPreview();
+            this._afterMutation();
+            this._setStatus('Undo');
+        }
+    }
+
+    redo() {
+        if (this.doc.redo()) {
+            this.rebuildPreview();
+            this._afterMutation();
+            this._setStatus('Redo');
+        }
+    }
+
     tick() {
         this.camera.apply();
         this._handleHeldKeys();
     }
 
-    /** @param {number} index */
-    selectZone(index) {
-        this.selectedIndex = index;
+    /** @param {number} index @param {MouseEvent} [e] */
+    selectZone(index, e) {
+        if (index < 0) {
+            this.selectedIndices = [];
+        } else if (e?.shiftKey) {
+            const set = new Set(this.selectedIndices);
+            if (set.has(index)) set.delete(index);
+            else set.add(index);
+            this.selectedIndices = [...set].sort((a, b) => a - b);
+        } else if (e?.ctrlKey || e?.metaKey) {
+            const set = new Set(this.selectedIndices);
+            set.add(index);
+            this.selectedIndices = [...set].sort((a, b) => a - b);
+        } else {
+            this.selectedIndices = [index];
+        }
         this.tool = 'select';
         this._syncUi();
     }
 
     deleteSelected() {
-        if (this.selectedIndex < 0) return;
-        this.map.zones.splice(this.selectedIndex, 1);
-        this.selectedIndex = -1;
-        syncGoalsFromZones(this.map);
+        if (!this.selectedIndices.length) return;
+        this._execute(cmdDeleteZones(this.map, this.selectedIndices));
+        this.selectedIndices = [];
         this.rebuildPreview();
-        this._syncUi();
     }
 
     rotateSelected() {
-        const zone = this.map.zones[this.selectedIndex];
-        if (!zone) return;
-        zone.rotY = ((zone.rotY || 0) + ROTATE_STEP) % (Math.PI * 2);
+        if (!this.selectedIndices.length) return;
+        const step = rotationStepRad(this.snap.rotationDeg);
+        this._execute(cmdRotateZones(this.map, this.selectedIndices, step));
         this.rebuildPreview();
-        this._syncUi();
     }
 
     /**
      * @param {{ x: number, y: number, z: number }} pos
      */
     async placeAt(pos) {
+        const snapped = snapPosition(pos, this.snap.gridSize, this.snap.enabled);
+
         if (this.tool === 'spawn') {
-            this.map.spawn = { x: pos.x, y: Math.max(2, pos.y + 2), z: pos.z };
+            const spawn = {
+                x: snapped.x,
+                y: Math.max(2, snapped.y + 2),
+                z: snapped.z,
+            };
+            this._execute(cmdSetSpawn(this.map, spawn));
             this._updateSpawnMarker();
-            this._syncUi();
             return;
         }
 
         if (this.tool === 'goal') {
             const stamp = STAMP_BY_ID.goal;
-            const zone = createZoneFromStamp(stamp, { x: pos.x, y: 0.25, z: pos.z });
-            this.map.zones.push(zone);
-            syncGoalsFromZones(this.map);
+            const zone = createZoneFromStamp(stamp, { x: snapped.x, y: 0.25, z: snapped.z });
+            this._execute(cmdPlaceZone(this.map, zone));
             await this.rebuildPreview();
+            this.selectedIndices = [this.map.zones.length - 1];
             this._syncUi();
             return;
         }
 
         const stamp = STAMP_BY_ID[this.activeStampId] || STAMP_BY_ID.floor;
-        const zone = createZoneFromStamp(stamp, pos);
+        const zone = createZoneFromStamp(stamp, snapped);
         if (stamp.type === 'floor') {
-            zone.pos.y = pos.y + (zone.size?.y || 0.5) / 2 - 0.25;
+            zone.pos.y = snapped.y + (zone.size?.y || 0.5) / 2 - 0.25;
         }
-        this.map.zones.push(zone);
-        this.selectedIndex = this.map.zones.length - 1;
-        if (stamp.type === 'goal') syncGoalsFromZones(this.map);
+        if (stamp.type === 'checkpoint') {
+            zone.pos.y = snapped.y + (zone.size?.y || 0.2) / 2;
+        }
+        this._execute(cmdPlaceZone(this.map, zone));
+        this.selectedIndices = [this.map.zones.length - 1];
         await this.rebuildPreview();
         this._syncUi();
     }
 
     _handleHeldKeys() {
-        if (this.tool !== 'select' || this.selectedIndex < 0) return;
-        const zone = this.map.zones[this.selectedIndex];
-        if (!zone) return;
+        if (this.tool !== 'select' || !this.selectedIndices.length) return;
 
         const keys = this.game.keys || {};
         let moved = false;
         const step = keys['ShiftLeft'] || keys['ShiftRight'] ? 2 : 0.5;
-        if (keys['ArrowLeft'] || keys['KeyA']) { zone.pos.x -= step; moved = true; }
-        if (keys['ArrowRight'] || keys['KeyD']) { zone.pos.x += step; moved = true; }
-        if (keys['ArrowUp'] || keys['KeyW']) { zone.pos.z -= step; moved = true; }
-        if (keys['ArrowDown'] || keys['KeyS']) { zone.pos.z += step; moved = true; }
-        if (keys['PageUp'] || keys['KeyQ']) { zone.pos.y += step; moved = true; }
-        if (keys['PageDown'] || keys['KeyE']) { zone.pos.y -= step; moved = true; }
+        const delta = { x: 0, y: 0, z: 0 };
+        if (keys['ArrowLeft'] || keys['KeyA']) { delta.x -= step; moved = true; }
+        if (keys['ArrowRight'] || keys['KeyD']) { delta.x += step; moved = true; }
+        if (keys['ArrowUp'] || keys['KeyW']) { delta.z -= step; moved = true; }
+        if (keys['ArrowDown'] || keys['KeyS']) { delta.z += step; moved = true; }
+        if (keys['PageUp'] || keys['KeyQ']) { delta.y += step; moved = true; }
+        if (keys['PageDown'] || keys['KeyE']) { delta.y -= step; moved = true; }
 
-        if (moved) {
-            if (zone.type === 'goal') syncGoalsFromZones(this.map);
-            if (!this._moveRebuildTimer) {
-                this._moveRebuildTimer = setTimeout(async () => {
-                    this._moveRebuildTimer = null;
-                    await this.rebuildPreview();
-                    this._syncUi();
-                }, 80);
-            }
+        if (!moved) {
+            this._movePendingDelta = null;
+            return;
+        }
+
+        if (this.snap.enabled) {
+            delta.x = snapScalar(delta.x, this.snap.gridSize, true);
+            delta.y = snapScalar(delta.y, this.snap.gridSize, true);
+            delta.z = snapScalar(delta.z, this.snap.gridSize, true);
+        }
+
+        this._movePendingDelta = delta;
+        if (!this._moveRebuildTimer) {
+            this._moveRebuildTimer = setTimeout(async () => {
+                const d = this._movePendingDelta;
+                this._movePendingDelta = null;
+                this._moveRebuildTimer = null;
+                if (!d) return;
+                this._execute(cmdMoveZones(this.map, this.selectedIndices, d));
+                await this.rebuildPreview();
+            }, 80);
         }
     }
 
@@ -236,6 +341,13 @@ export class MapEditor {
             stampList: document.getElementById('editor-stamp-list'),
             mapId: document.getElementById('editor-map-id'),
             mapName: document.getElementById('editor-map-name'),
+            undoBtn: document.getElementById('editor-undo'),
+            redoBtn: document.getElementById('editor-redo'),
+            snapEnabled: document.getElementById('editor-snap-enabled'),
+            snapGrid: document.getElementById('editor-snap-grid'),
+            snapRot: document.getElementById('editor-snap-rot'),
+            inspectorMap: document.getElementById('editor-inspector-map'),
+            inspectorZone: document.getElementById('editor-inspector-zone'),
             spawnFields: {
                 x: document.getElementById('editor-spawn-x'),
                 y: document.getElementById('editor-spawn-y'),
@@ -247,23 +359,78 @@ export class MapEditor {
                 z: document.getElementById('editor-sel-z'),
                 rot: document.getElementById('editor-sel-rot'),
             },
+            meta: {
+                difficulty: document.getElementById('editor-meta-difficulty'),
+                chapter: document.getElementById('editor-meta-chapter'),
+                collectibles: document.getElementById('editor-meta-collectibles'),
+                gold: document.getElementById('editor-medal-gold'),
+                silver: document.getElementById('editor-medal-silver'),
+                bronze: document.getElementById('editor-medal-bronze'),
+                par: document.getElementById('editor-medal-par'),
+            },
+            insp: {
+                sizeX: document.getElementById('editor-insp-size-x'),
+                sizeY: document.getElementById('editor-insp-size-y'),
+                sizeZ: document.getElementById('editor-insp-size-z'),
+                collider: document.getElementById('editor-insp-collider'),
+                scale: document.getElementById('editor-insp-scale'),
+                material: document.getElementById('editor-insp-material'),
+                colKind: document.getElementById('editor-insp-collectible-kind'),
+                colValue: document.getElementById('editor-insp-collectible-value'),
+                grappleId: document.getElementById('editor-insp-grapple-id'),
+                grappleRadius: document.getElementById('editor-insp-grapple-radius'),
+                kinAxis: document.getElementById('editor-insp-kin-axis'),
+                kinAmp: document.getElementById('editor-insp-kin-amp'),
+                kinSpeed: document.getElementById('editor-insp-kin-speed'),
+                kinPhase: document.getElementById('editor-insp-kin-phase'),
+            },
         };
 
         if (this.ui.stampList && !this.ui.stampList.childElementCount) {
-            for (const stamp of EDITOR_STAMPS) {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'editor-stamp-btn';
-                btn.dataset.stampId = stamp.id;
-                btn.textContent = `${stamp.icon} ${stamp.label}`;
-                btn.addEventListener('click', () => {
-                    this.activeStampId = stamp.id;
-                    this.tool = 'place';
-                    this._highlightStampButtons();
-                    this._setStatus(`Place: ${stamp.label}`);
-                });
-                this.ui.stampList.appendChild(btn);
-            }
+            const appendStampGroup = (label, stamps) => {
+                const heading = document.createElement('div');
+                heading.className = 'editor-stamp-group-label';
+                heading.textContent = label;
+                this.ui.stampList.appendChild(heading);
+                for (const stamp of stamps) {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'editor-stamp-btn';
+                    btn.dataset.stampId = stamp.id;
+                    btn.textContent = `${stamp.icon} ${stamp.label}`;
+                    btn.addEventListener('click', () => {
+                        this.activeStampId = stamp.id;
+                        this.tool = 'place';
+                        this._highlightStampButtons();
+                        this._setStatus(`Place: ${stamp.label}`);
+                    });
+                    this.ui.stampList.appendChild(btn);
+                }
+            };
+
+            appendStampGroup('Built-in', EDITOR_BUILTIN_STAMPS);
+            appendStampGroup('Gameplay', EDITOR_GAMEPLAY_STAMPS);
+            appendStampGroup('GLB tracks', EDITOR_MODEL_STAMPS);
+            appendStampGroup('Factory zones', EDITOR_FACTORY_STAMPS);
+        }
+
+        if (this.ui.snapEnabled) {
+            this.ui.snapEnabled.checked = this.snap.enabled;
+            this.ui.snapGrid.value = String(this.snap.gridSize);
+            this.ui.snapRot.value = String(this.snap.rotationDeg);
+            this.ui.snapEnabled.addEventListener('change', () => {
+                this.snap.enabled = this.ui.snapEnabled.checked;
+                saveSnapSettings(this.snap);
+            });
+            this.ui.snapGrid.addEventListener('change', () => {
+                this.snap.gridSize = parseFloat(this.ui.snapGrid.value) || 1;
+                saveSnapSettings(this.snap);
+            });
+            this.ui.snapRot.addEventListener('change', () => {
+                const v = parseInt(this.ui.snapRot.value, 10);
+                this.snap.rotationDeg = /** @type {0|15|45} */ ([0, 15, 45].includes(v) ? v : 15);
+                saveSnapSettings(this.snap);
+            });
         }
 
         document.getElementById('editor-tool-place')?.addEventListener('click', () => {
@@ -282,9 +449,12 @@ export class MapEditor {
             this.tool = 'goal';
             this._setStatus('Click canvas to place goal');
         });
+        this.ui.undoBtn?.addEventListener('click', () => this.undo());
+        this.ui.redoBtn?.addEventListener('click', () => this.redo());
         document.getElementById('editor-rotate')?.addEventListener('click', () => this.rotateSelected());
         document.getElementById('editor-delete')?.addEventListener('click', () => this.deleteSelected());
         document.getElementById('editor-export')?.addEventListener('click', () => this.exportJson());
+        document.getElementById('editor-workshop')?.addEventListener('click', () => this.exportWorkshop());
         document.getElementById('editor-save-draft')?.addEventListener('click', () => this.saveDraftToStorage());
         document.getElementById('editor-load-draft')?.addEventListener('click', () => this.loadDraftFromStorage());
         document.getElementById('editor-playtest')?.addEventListener('click', () => this.playtest());
@@ -304,7 +474,7 @@ export class MapEditor {
             el?.addEventListener('change', () => {
                 const value = parseFloat(el.value);
                 if (!Number.isNaN(value)) {
-                    this.map.spawn[axis] = value;
+                    this._execute(cmdSetSpawn(this.map, { ...this.map.spawn, [axis]: value }));
                     this._updateSpawnMarker();
                 }
             });
@@ -313,35 +483,123 @@ export class MapEditor {
         for (const [axis, el] of Object.entries(this.ui.selectionFields)) {
             if (axis === 'rot') {
                 el?.addEventListener('change', () => {
-                    const zone = this.map.zones[this.selectedIndex];
+                    const idx = this.selectedIndices[0];
+                    const zone = this.map.zones[idx];
                     if (!zone) return;
                     const deg = parseFloat(el.value);
-                    if (!Number.isNaN(deg)) {
-                        zone.rotY = (deg * Math.PI) / 180;
-                        this.rebuildPreview();
-                    }
+                    if (Number.isNaN(deg)) return;
+                    let rad = (deg * Math.PI) / 180;
+                    rad = snapRotation(rad, this.snap.rotationDeg, this.snap.enabled);
+                    this._execute(cmdUpdateZoneProps(this.map, idx, { rotY: rad }));
+                    this.rebuildPreview();
                 });
                 continue;
             }
             el?.addEventListener('change', () => {
-                const zone = this.map.zones[this.selectedIndex];
+                const idx = this.selectedIndices[0];
+                const zone = this.map.zones[idx];
                 if (!zone) return;
                 const value = parseFloat(el.value);
-                if (!Number.isNaN(value)) {
-                    zone.pos[axis] = value;
-                    if (zone.type === 'goal') syncGoalsFromZones(this.map);
-                    this.rebuildPreview();
-                }
+                if (Number.isNaN(value)) return;
+                const pos = { ...zone.pos, [axis]: value };
+                const snapped = snapPosition(pos, this.snap.gridSize, this.snap.enabled);
+                this._execute(cmdUpdateZoneProps(this.map, idx, { pos: snapped }));
+                this.rebuildPreview();
             });
         }
 
         this.ui.mapId?.addEventListener('change', () => {
-            this.map.id = this.ui.mapId.value.trim().replace(/[^a-z0-9_]/gi, '_').toLowerCase() || 'my_map';
+            const id = this.ui.mapId.value.trim().replace(/[^a-z0-9_]/gi, '_').toLowerCase() || 'my_map';
+            this._execute(cmdUpdateMapMeta(this.map, { id }));
             this.ui.mapId.value = this.map.id;
         });
         this.ui.mapName?.addEventListener('change', () => {
-            this.map.name = this.ui.mapName.value.trim() || 'Untitled Map';
+            this._execute(cmdUpdateMapMeta(this.map, { name: this.ui.mapName.value.trim() || 'Untitled Map' }));
         });
+
+        this._bindMetaInspector();
+        this._bindZoneInspector();
+    }
+
+    _bindMetaInspector() {
+        const applyMeta = () => {
+            const medals = {
+                goldTime: parseFloat(this.ui.meta.gold?.value),
+                silverTime: parseFloat(this.ui.meta.silver?.value),
+                bronzeTime: parseFloat(this.ui.meta.bronze?.value),
+                parTime: parseFloat(this.ui.meta.par?.value),
+            };
+            const meta = {
+                difficulty: this.ui.meta.difficulty?.value,
+                chapter: this.ui.meta.chapter?.value || undefined,
+                collectiblesTotal: parseInt(this.ui.meta.collectibles?.value, 10),
+                medals: Object.fromEntries(
+                    Object.entries(medals).filter(([, v]) => !Number.isNaN(v))
+                ),
+            };
+            this._execute(cmdUpdateMapMeta(this.map, meta));
+        };
+
+        for (const el of Object.values(this.ui.meta)) {
+            el?.addEventListener('change', applyMeta);
+        }
+    }
+
+    _bindZoneInspector() {
+        const applyZone = () => {
+            const idx = this.selectedIndices[0];
+            if (idx === undefined) return;
+            const zone = this.map.zones[idx];
+            if (!zone) return;
+            const props = {};
+
+            const sx = parseFloat(this.ui.insp.sizeX?.value);
+            const sy = parseFloat(this.ui.insp.sizeY?.value);
+            const sz = parseFloat(this.ui.insp.sizeZ?.value);
+            if (!Number.isNaN(sx) && !Number.isNaN(sy) && !Number.isNaN(sz)) {
+                props.size = { x: sx, y: sy, z: sz };
+            }
+
+            if (zone.type === 'model') {
+                if (this.ui.insp.collider?.value) props.collider = this.ui.insp.collider.value;
+                const scale = parseFloat(this.ui.insp.scale?.value);
+                if (!Number.isNaN(scale)) props.scale = scale;
+                if (this.ui.insp.material?.value) props.materialPreset = this.ui.insp.material.value;
+            }
+
+            if (zone.type === 'collectible') {
+                props.collectible = {
+                    kind: this.ui.insp.colKind?.value || 'coin',
+                    value: parseInt(this.ui.insp.colValue?.value, 10) || 50,
+                };
+            }
+
+            if (zone.type === 'grapple_anchor') {
+                props.grappleAnchor = {
+                    id: this.ui.insp.grappleId?.value || 'a1',
+                    radius: parseFloat(this.ui.insp.grappleRadius?.value) || 12,
+                };
+            }
+
+            const amp = parseFloat(this.ui.insp.kinAmp?.value);
+            const speed = parseFloat(this.ui.insp.kinSpeed?.value);
+            const phase = parseFloat(this.ui.insp.kinPhase?.value);
+            if (!Number.isNaN(amp) || !Number.isNaN(speed)) {
+                props.kinematic = {
+                    axis: this.ui.insp.kinAxis?.value || 'horizontal',
+                    amplitude: amp || 0,
+                    speed: speed || 0,
+                    phase: phase || 0,
+                };
+            }
+
+            this._execute(cmdUpdateZoneProps(this.map, idx, props));
+            this.rebuildPreview();
+        };
+
+        for (const el of Object.values(this.ui.insp)) {
+            el?.addEventListener('change', applyZone);
+        }
     }
 
     _bindInput() {
@@ -354,7 +612,7 @@ export class MapEditor {
             const pos = this.camera.screenToWorld(e.clientX, e.clientY, canvas, 0);
             if (this.tool === 'select') {
                 const hit = this._pickZoneIndex(pos);
-                this.selectZone(hit);
+                this.selectZone(hit, e);
                 return;
             }
             await this.placeAt(pos);
@@ -366,6 +624,16 @@ export class MapEditor {
         const onWheel = (e) => this.camera.onWheel(e);
         const onKeyDown = (e) => {
             if (!this.isActive || this.isPlaytesting) return;
+            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ' && !e.shiftKey) {
+                e.preventDefault();
+                this.undo();
+                return;
+            }
+            if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey))) {
+                e.preventDefault();
+                this.redo();
+                return;
+            }
             if (e.code === 'Delete' || e.code === 'Backspace') {
                 e.preventDefault();
                 this.deleteSelected();
@@ -439,7 +707,8 @@ export class MapEditor {
         if (this.ui.spawnFields.y) this.ui.spawnFields.y.value = String(this.map.spawn.y);
         if (this.ui.spawnFields.z) this.ui.spawnFields.z.value = String(this.map.spawn.z);
 
-        const zone = this.map.zones[this.selectedIndex];
+        const primaryIdx = this.selectedIndices[0];
+        const zone = primaryIdx !== undefined ? this.map.zones[primaryIdx] : null;
         const sel = this.ui.selectionFields;
         if (sel.x) sel.x.value = zone ? String(zone.pos.x) : '';
         if (sel.y) sel.y.value = zone ? String(zone.pos.y) : '';
@@ -450,14 +719,50 @@ export class MapEditor {
                 : '0';
         }
 
+        if (this.ui.undoBtn) this.ui.undoBtn.disabled = !this.doc.canUndo();
+        if (this.ui.redoBtn) this.ui.redoBtn.disabled = !this.doc.canRedo();
+
+        const showZoneInspector = zone && this.selectedIndices.length === 1;
+        this.ui.inspectorMap?.classList.toggle('menu-hidden', showZoneInspector);
+        this.ui.inspectorZone?.classList.toggle('menu-hidden', !showZoneInspector);
+
+        if (this.ui.meta.difficulty) this.ui.meta.difficulty.value = this.map.difficulty || 'easy';
+        if (this.ui.meta.chapter) this.ui.meta.chapter.value = this.map.chapter || '';
+        if (this.ui.meta.collectibles) {
+            this.ui.meta.collectibles.value = String(this.map.collectiblesTotal ?? 0);
+        }
+        const medals = this.map.medals || {};
+        if (this.ui.meta.gold) this.ui.meta.gold.value = medals.goldTime ?? '';
+        if (this.ui.meta.silver) this.ui.meta.silver.value = medals.silverTime ?? '';
+        if (this.ui.meta.bronze) this.ui.meta.bronze.value = medals.bronzeTime ?? '';
+        if (this.ui.meta.par) this.ui.meta.par.value = medals.parTime ?? '';
+
+        if (showZoneInspector && zone) {
+            const insp = this.ui.insp;
+            if (insp.sizeX) insp.sizeX.value = zone.size?.x ?? '';
+            if (insp.sizeY) insp.sizeY.value = zone.size?.y ?? '';
+            if (insp.sizeZ) insp.sizeZ.value = zone.size?.z ?? '';
+            if (insp.collider) insp.collider.value = zone.collider || 'trimesh';
+            if (insp.scale) insp.scale.value = zone.scale ?? 1;
+            if (insp.material) insp.material.value = zone.materialPreset || '';
+            if (insp.colKind) insp.colKind.value = zone.collectible?.kind || 'coin';
+            if (insp.colValue) insp.colValue.value = zone.collectible?.value ?? 50;
+            if (insp.grappleId) insp.grappleId.value = zone.grappleAnchor?.id || '';
+            if (insp.grappleRadius) insp.grappleRadius.value = zone.grappleAnchor?.radius ?? 12;
+            if (insp.kinAxis) insp.kinAxis.value = zone.kinematic?.axis || 'horizontal';
+            if (insp.kinAmp) insp.kinAmp.value = zone.kinematic?.amplitude ?? '';
+            if (insp.kinSpeed) insp.kinSpeed.value = zone.kinematic?.speed ?? '';
+            if (insp.kinPhase) insp.kinPhase.value = zone.kinematic?.phase ?? '';
+        }
+
         if (this.ui.zoneList) {
             this.ui.zoneList.innerHTML = '';
             this.map.zones.forEach((z, i) => {
                 const item = document.createElement('button');
                 item.type = 'button';
-                item.className = 'editor-zone-item' + (i === this.selectedIndex ? ' selected' : '');
+                item.className = 'editor-zone-item' + (this.selectedIndices.includes(i) ? ' selected' : '');
                 item.textContent = `${i + 1}. ${z.type} (${z.pos.x.toFixed(1)}, ${z.pos.y.toFixed(1)}, ${z.pos.z.toFixed(1)})`;
-                item.addEventListener('click', () => this.selectZone(i));
+                item.addEventListener('click', (ev) => this.selectZone(i, ev));
                 this.ui.zoneList.appendChild(item);
             });
         }

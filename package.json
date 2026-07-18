@@ -14,6 +14,7 @@
     "test": "npm run test:unit",
     "test:unit": "node scripts/run-unit-tests.mjs",
     "test:e2e": "node tests/e2e/test_missile.cjs",
+    "test:e2e:smoke": "node tests/e2e/smoke.cjs",
     "lint": "eslint src tests scripts --ext .js,.cjs,.mjs --ignore-pattern tests/e2e --quiet",
     "typecheck": "tsc --noEmit"
   },

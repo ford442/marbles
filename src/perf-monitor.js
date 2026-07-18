@@ -1,4 +1,6 @@
 import { AutoQualityGovernor } from './auto-quality-governor.js'
+import { getPhysicsBackend } from './wasm-bridge.js'
+import { getRapierBackendMode } from './game/systems/physics-backend.js'
 
 const PERF_URL_FLAGS = ['fps', 'perf', 'debugPerf']
 const FRAME_BUDGET_60HZ = 16.67
@@ -45,6 +47,12 @@ export class PerfMonitor {
         this.createOverlay()
         this.setOverlayVisible(this.enabled)
         this.attachControls()
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('marbles:physics-backend', () => {
+                if (this.enabled) this.updateOverlay(performance.now())
+            })
+        }
 
         window.perfMonitor = this
     }
@@ -255,6 +263,10 @@ export class PerfMonitor {
             levelBudget: budgetStats,
             levelBudgetExceeded: game.levelEffectBudget?.exceeded || {},
             fancyPresetCount: game._fancyPresetCount ?? 0,
+            physicsBackend: getPhysicsBackend(),
+            rapierBackend: getRapierBackendMode(game),
+            physicsStepMs: game.physicsBackend?.lastStepMs ?? 0,
+            mainThreadPhysicsWaitMs: game.physicsBackend?.lastWaitMs ?? 0,
         }
     }
 
@@ -304,6 +316,8 @@ export class PerfMonitor {
         this.textEl.textContent = [
             `${summary.avgFps.toFixed(1)} fps  ${summary.p95FrameMs.toFixed(1)}ms p95`,
             `level: ${metrics.levelId || '-'}`,
+            `rapier: ${metrics.rapierBackend || 'main'}  kernels: ${metrics.physicsBackend || 'js-fallback'}`,
+            `phys: ${summary.latestSyncWork?.physicsStepMs?.toFixed?.(2) ?? '-'}ms step  wait: ${summary.latestSyncWork?.mainThreadPhysicsWaitMs?.toFixed?.(2) ?? '-'}ms`,
             gov.enabled ? `autoQuality: step ${gov.autoQualityStep}${gov.lastStepLabel ? ` — ${gov.lastStepLabel}` : ''} (${gov.state})` : `perf mode: ${gov.performanceMode || 'locked'}`,
             `entities: ${metrics.staticEntities} static, ${metrics.renderablesProxy} renderable proxy`,
             `batches: ${metrics.staticBatchGroups} groups, ${metrics.staticBatchedBoxes} boxes, ${metrics.decorativeInstances || 0} greebles`,

@@ -103,6 +103,11 @@ export class GhostReplay {
         };
         this.save();
         this.loadPlayback(levelId);
+
+        void import('../network/cloud-client.js').then((m) => {
+            m.scheduleGhostUpload?.(levelId, blob, completionTime);
+        }).catch(() => {});
+
         return true;
     }
 

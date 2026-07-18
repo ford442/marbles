@@ -15,12 +15,13 @@ Phased migration from mixin-assembled `MarblesGame` toward composable subsystems
 | Game logic | `src/game-logic/` | `game-logic-methods.js` | Thin re-export only |
 | Abilities | `src/abilities/` + `src/game/systems/ability-system.js` | `ability-methods.js` | Registry pattern — see [abilities.md](./abilities.md) |
 | Game loop | `src/game-loop/` | `game-loop-*.js` at `src/` root | **Phase A complete** — single folder |
-| Input | `src/input-methods.js` | — | Phase B → `InputSystem` |
-| Physics factory | `src/physics-factory-methods.js` | — | Phase B → `PhysicsWorld` |
-| Marble spawn | `src/marble-management-methods.js` | — | Phase B → `MarbleRegistry` |
+| Input | `src/game/systems/input-system.js` | `input-methods.js` | Phase B — `InputSystem` ✅ |
+| Physics factory | `src/game/systems/physics-world.js` | `physics-factory-methods.js` | Phase B — `PhysicsWorld` ✅ |
+| Physics worker | `src/game/physics-worker/` + `physics-backend.js` | — | Tutorial spike — see [physics-worker.md](./physics-worker.md) |
+| Marble spawn | `src/game/systems/marble-registry.js` | `marble-management-methods.js` | Phase B — `MarbleRegistry` ✅ |
 | Render sync | `src/game-loop/sync.js` | — | Part of `RenderPipeline` in Phase B |
 | HUD | `src/hud-manager.js` + `hud` state | — | Phase B → `HudController` |
-| Levels catalog | `src/levels.js` + `src/levels/campaign.js` | — | Chapter progression — see [campaign.md](./campaign.md) |
+| Levels catalog | `assets/manifest.json` + `src/levels/catalog.js` | `src/levels.js` (dev only) | JSON production path — see [level-pipeline.md](./level-pipeline.md); chapters — [campaign.md](./campaign.md) |
 | Map editor | `src/editor/` | — | `?editor=1` — see [map-editor.md](./map-editor.md) |
 
 ### `src/game-loop/` layout (canonical)
@@ -57,15 +58,17 @@ Root `game-loop-*-methods.js` shims were **removed** July 2026.
 
 - [x] Constructor state grouped in `src/game/state/*`
 - [x] `bindGameState()` mirrors onto `this.*` for existing mixins
-- [ ] Extract `PhysicsWorld`, `RenderPipeline`, `InputSystem`, `AbilitySystem`, `HudController`, `LevelLoader` as classes that receive `game` or state slices
-- [ ] Replace `apply*Methods` with explicit delegation from `MarblesGame`
+- [x] Extract `PhysicsWorld`, `InputSystem`, `MarbleRegistry` as composed classes (`main.js` delegates; mixin apply removed for these three)
+- [ ] Extract `RenderPipeline`, `HudController`, `LevelLoader` as classes that receive `game` or state slices
+- [ ] Replace remaining `apply*Methods` with explicit delegation from `MarblesGame`
 
-### Phase C — TypeScript (started)
+### Phase C — TypeScript (in progress)
 
 - [x] Pilot: `src/math.ts` + `src/types/geometry.ts` (imported via `math.js` shim)
-- [x] Selective `checkJs` on pilot paths — see [language-strategy.md](./language-strategy.md)
-- [ ] Add JSDoc + `@ts-check` on `wasm-bridge.js`, `game/state/`
-- [ ] Migrate `game/systems/` and level catalog types
+- [x] `@ts-check` on `wasm-bridge.js` + `src/game/state/*` with `types/game-state.ts`
+- [x] Pure systems → `.ts`: `ability-cooldown`, `trick-scoring`, `campaign-progress`, `replay-codec` (`.js` shims)
+- [ ] Add `src/levels/catalog.js` + `src/types/map.ts` + `src/abilities/registry.js` to `include`
+- [ ] Widen to remaining pure `game/systems/*` modules
 - [ ] Widen `tsconfig` `include` as each slice passes `npm run typecheck`
 
 ## Language & archived code
@@ -93,7 +96,7 @@ Pure modules under `src/game/systems/` are runnable from Node:
 node tests/test_game_systems.js
 ```
 
-Examples: `ability-cooldown.js`, `trick-scoring.js`. Expand this set as logic is extracted from mixins.
+Examples: `ability-cooldown.js`, `trick-scoring.js`, `physics-world-pure.js`, `input-target-lock.js`. Expand this set as logic is extracted from mixins.
 
 ## Cross-cutting coupling today
 
@@ -106,5 +109,7 @@ Mixins communicate via implicit `this.*` on `MarblesGame`. Prefer:
 ## Related docs
 
 - [language-strategy.md](./language-strategy.md) — language boundaries, C++ rules, archived React/WebGPU
+- [physics-worker.md](./physics-worker.md) — SharedArrayBuffer physics worker (120 Hz spike)
+- [level-pipeline.md](./level-pipeline.md) — JSON vs code level inventory and migration policy
 - [PROJECT_STRUCTURE.md](../PROJECT_STRUCTURE.md) — repo layout and entry graph
 - [CONTRIBUTING.md](../CONTRIBUTING.md) — adding zones and content

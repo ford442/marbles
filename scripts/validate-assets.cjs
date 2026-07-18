@@ -13,10 +13,33 @@ const fs = require('fs');
 const path = require('path');
 
 const ASSETS_DIR = path.join(__dirname, '..', 'assets');
+const ROOT = path.join(__dirname, '..');
+
+function loadZoneHandlers() {
+  const handlersPath = path.join(ASSETS_DIR, 'schemas', 'zone-handlers.json');
+  if (!fs.existsSync(handlersPath)) {
+    require('./sync-zone-handlers.cjs');
+  }
+  const data = JSON.parse(fs.readFileSync(handlersPath, 'utf8'));
+  return new Set(data.handlers || []);
+}
+
+function getManifestMapIds() {
+  const manifest = loadJSON(path.join(ASSETS_DIR, 'manifest.json'));
+  if (manifest.error) return new Set();
+  return new Set(Object.keys(manifest.maps || {}));
+}
+
+function resolveSchemaRef(schema, ref) {
+  if (!ref || !ref.startsWith('#/definitions/')) return null;
+  const name = ref.replace('#/definitions/', '');
+  return schema.definitions?.[name] || null;
+}
 
 // Simple JSON schema validator
-function validateAgainstSchema(data, schema, assetPath) {
+function validateAgainstSchema(data, schema, assetPath, rootSchema = schema) {
   const errors = [];
+  const activeSchema = rootSchema || schema;
 
   // Check required fields
   if (schema.required) {
@@ -32,7 +55,7 @@ function validateAgainstSchema(data, schema, assetPath) {
     for (const [key, propSchema] of Object.entries(schema.properties)) {
       if (key in data) {
         const value = data[key];
-        
+
         // Type checking
         if (propSchema.type) {
           const actualType = Array.isArray(value) ? 'array' : typeof value;
@@ -69,22 +92,69 @@ function validateAgainstSchema(data, schema, assetPath) {
         }
 
         // Array items checking
-        if (propSchema.type === 'array' && propSchema.items && Array.isArray(value)) {
+        if (propSchema.type === 'array' && Array.isArray(value)) {
           if (propSchema.minItems && value.length < propSchema.minItems) {
             errors.push(`Field '${key}' should have at least ${propSchema.minItems} items`);
           }
           if (propSchema.maxItems && value.length > propSchema.maxItems) {
             errors.push(`Field '${key}' should have at most ${propSchema.maxItems} items`);
           }
+          let itemSchema = propSchema.items;
+          if (itemSchema?.$ref) {
+            itemSchema = resolveSchemaRef(activeSchema, itemSchema.$ref);
+          }
+          if (itemSchema) {
+            value.forEach((item, index) => {
+              if (typeof item === 'object' && item !== null) {
+                const nested = validateAgainstSchema(
+                  item,
+                  itemSchema,
+                  `${assetPath}.${key}[${index}]`,
+                  activeSchema
+                );
+                errors.push(...nested);
+              }
+            });
+          }
         }
 
         // Nested object validation
-        if (propSchema.type === 'object' && propSchema.properties && typeof value === 'object') {
-          const nestedErrors = validateAgainstSchema(value, propSchema, `${assetPath}.${key}`);
+        if (propSchema.type === 'object' && propSchema.properties && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          const nestedErrors = validateAgainstSchema(value, propSchema, `${assetPath}.${key}`, activeSchema);
           errors.push(...nestedErrors);
         }
       }
     }
+  }
+
+  return errors;
+}
+
+function validateMapZoneHandlers(data, file, zoneHandlers, manifestIds, results) {
+  const errors = [];
+  const warnings = [];
+  const inManifest = data.id && manifestIds.has(data.id);
+  const zones = data.zones || [];
+
+  for (let i = 0; i < zones.length; i++) {
+    const zoneType = zones[i]?.type;
+    if (!zoneType) continue;
+    if (!zoneHandlers.has(zoneType)) {
+      const msg = `zones[${i}] unknown type "${zoneType}" (not in ZONE_HANDLERS)`;
+      if (inManifest) {
+        errors.push(msg);
+      } else {
+        warnings.push(msg);
+      }
+    }
+  }
+
+  if (inManifest && !data.chapter && !data.difficulty) {
+    errors.push('manifest map should set chapter and/or difficulty for campaign assignment');
+  }
+
+  for (const w of warnings) {
+    console.log(`      ⚠️  ${w}`);
   }
 
   return errors;
@@ -168,6 +238,10 @@ function validateAssets() {
     sound: loadJSON(path.join(ASSETS_DIR, 'schemas', 'sound-schema.json'))
   };
 
+  const zoneHandlers = loadZoneHandlers();
+  const manifestMapIds = getManifestMapIds();
+  console.log(`📦 Zone handlers: ${zoneHandlers.size} registered\n`);
+
   const results = {
     valid: 0,
     invalid: 0,
@@ -190,7 +264,8 @@ function validateAssets() {
       continue;
     }
 
-    const errors = validateAgainstSchema(data, schemas.map, file);
+    const errors = validateAgainstSchema(data, schemas.map, file, schemas.map);
+    errors.push(...validateMapZoneHandlers(data, file, zoneHandlers, manifestMapIds, results));
     if (errors.length === 0) {
       console.log(`  ✅ ${file} - ${data.name || 'Unnamed'}`);
       results.valid++;

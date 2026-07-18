@@ -1,4 +1,3 @@
-import { spaceStationLevel } from './zones/space-station.js';
 import { skateParkLevel } from './zones/skate-park.js';
 import { pinballLevel } from './zones/pinball-zone.js';
 import { canyonRunLevel } from './zones/canyon-run.js';
@@ -519,21 +518,7 @@ export const DEV_LEVELS = {
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: false
     },
-    neon_grid_run: {
-        name: 'Neon Grid Run',
-        description: 'Navigate the glowing neon grid and avoid moving walls!',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'neon_grid', pos: { x: 0, y: 0, z: 25 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-5, 5], z: [80, 90], y: [-2, 5] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 }
-    },
-    ice_bridges_run: {
+    desert_ruins_run: {
         name: 'Ice Bridges Run',
         description: 'Cross the slippery, spinning ice bridges!',
         zones: [
@@ -743,22 +728,6 @@ export const DEV_LEVELS = {
         spawn: { x: 0, y: 5, z: -5 },
         goals: [
             { id: 1, range: { x: [-5, 5], z: [115, 125], y: [-25, -15] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 },
-        nightMode: true,
-        backgroundColor: [0.01, 0.0, 0.05, 1.0],
-        environment: 'neon_city'
-    },
-    prismatic_speedway_run: {
-        name: 'Prismatic Speedway',
-        description: 'A high-speed neon track with low-friction ice, huge jumps, and moving prisms.',
-        zones: [
-            { type: 'prismatic_speedway', pos: { x: 0, y: 0, z: 0 } },
-            { type: 'goal', pos: { x: 0, y: -5, z: 130 } }
-        ],
-        spawn: { x: 0, y: 5, z: -5 },
-        goals: [
-            { id: 1, range: { x: [-5, 5], z: [125, 135], y: [-10, 0] } }
         ],
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: true,

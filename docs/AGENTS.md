@@ -1,5 +1,7 @@
 # Marbles 3D Game - Agent Guide
 
+> **Superseded for agent ops** by root [AGENTS.md](../AGENTS.md). This file is a historical reference only — many sections describe archived React/sequencer surfaces and outdated project layout.
+
 This document provides essential information for AI coding agents working on the Marbles 3D project.
 
 ## Project Overview
@@ -12,7 +14,7 @@ This document provides essential information for AI coding agents working on the
 - **Backend**: Python FastAPI with Google Cloud Storage integration
 - **WASM physics helpers**: C++ numeric kernels (`wasm/`) — see `docs/architecture/language-strategy.md`
 
-The game features approximately 40 levels with diverse zones, obstacles, scoring goals, checkpoints, collectibles, power-ups, and 50+ marble types with unique physics properties.
+The game features **14 manifest JSON levels** in normal play (plus ~58 dev-only entries with `?devLevels=1`), diverse zones, scoring goals, checkpoints, collectibles, power-ups, and marble types defined in `assets/marbles/`.
 
 ## Technology Stack
 
@@ -66,7 +68,8 @@ marbles/
 │   ├── material-presets.js        # Material preset definitions
 │   ├── gpu-instancing.js          # GPU instancing utilities
 │   ├── gpu-particles.js           # GPU particle system
-│   ├── levels.js           # ~40 declarative level definitions
+│   ├── levels/catalog.js   # Runtime catalog (manifest JSON + optional DEV_LEVELS)
+│   ├── levels.js           # Dev-only level definitions (?devLevels=1)
 │   ├── math.js             # quaternionToMat4 helper
 │   ├── sphere.js           # UV sphere generator with TBN frames
 │   ├── cube-geometry.js    # Cube vertex/index buffers
@@ -161,7 +164,8 @@ The `MarblesGame` constructor initializes a monolithic state object with ~300 li
 
 ### Level & Zone System
 
-- **Levels** are defined declaratively in `src/levels.js` as objects with `name`, `description`, `zones[]`, `spawn`, `goals[]`, `checkpoints[]`, and `camera` settings.
+- **Production levels** live in `assets/maps/*.json` + `assets/manifest.json`, loaded via `src/levels/catalog.js`.
+- **Dev levels** remain in `src/levels.js` (`DEV_LEVELS`) for WIP content when `?devLevels=1`.
 - **Zones** are created via `ZoneSetupMethods.createZone(zone)`, which dispatches through a large `switch` statement to either:
   - Methods on `this` (e.g., `this.createFloorZone()`)
   - Standalone factory functions imported from `src/zones/*.js` or legacy zone files
@@ -333,7 +337,8 @@ Archived WebGPU renderer: `docs/backups/experimental-wasm-renderer/` (not on the
 
 ## File Modification Guidelines
 
-- **Adding new level zones**: Add a level definition to `src/levels.js`, and either add a method to `ZoneSetupMethods` or create a standalone factory in `src/zones/`
+- **Adding new campaign levels**: Create `assets/maps/<id>.json`, register in `manifest.json`, use zone `type` stamps from `registry.js`. See `docs/CONTRIBUTING.md` and `docs/architecture/level-pipeline.md`.
+- **Adding dev/WIP levels**: Optional entry in `src/levels.js` behind `?devLevels=1`.
 - **Adding marble types**: Extend the marble data in `src/marbles_data.js` or `marble-management-methods.js`
 - **Modifying physics**: Use Rapier APIs via `RAPIER.*` namespace after `RAPIER.init()`
 - **Modifying rendering**: Use Filament APIs via `this.Filament.*` after initialization

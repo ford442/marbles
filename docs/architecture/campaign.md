@@ -65,6 +65,12 @@ Optional `chapter` string overrides auto-assignment.
 
 After completing any Tutorial chapter level, a **Free Play** toggle appears — unlocks all chapters for sandbox replay without affecting saved medals.
 
+## Cloud sync (opt-in)
+
+When `VITE_MARBLES_API_URL` is set and the player enables **Settings → Cloud**, campaign progress syncs via `PUT/GET /v1/marbles/progress/{deviceId}`. Local `localStorage` remains authoritative for offline play; cloud merges best times, medals, and unlocks on pull.
+
+Ghost personal bests can upload to global leaderboards (`POST /v1/marbles/ghosts`). See `backend/README.md` and `src/game/network/cloud-client.js`.
+
 ## Modules
 
 | Path | Role |

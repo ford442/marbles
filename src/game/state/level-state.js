@@ -1,4 +1,7 @@
+// @ts-check
 /** Level progress, goals, checkpoints, ghost replay. */
+
+/** @returns {import('../../types/game-state.js').LevelState} */
 export function createLevelState() {
     return {
         currentLevel: null,

@@ -1,4 +1,7 @@
+// @ts-check
 /** Camera pose, modes, FOV, shake, lock-on. */
+
+/** @returns {import('../../types/game-state.js').CameraState} */
 export function createCameraState() {
     return {
         camAngle: 0,

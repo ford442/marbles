@@ -1,3 +1,4 @@
+// @ts-check
 import { createPhysicsState } from './physics-state.js';
 import { createAbilityState } from './ability-state.js';
 import { createLevelState } from './level-state.js';
@@ -7,27 +8,30 @@ import { createHudState } from './hud-state.js';
 import { createRenderState } from './render-state.js';
 
 /**
- * @param {{ canvas?: HTMLCanvasElement | null, doc?: Document }} [options]
+ * @param {import('../../types/game-state.js').CreateGameStateOptions} [options]
+ * @returns {import('../../types/game-state.js').GameState}
  */
 export function createGameState(options = {}) {
     const doc = options.doc ?? (typeof document !== 'undefined' ? document : null);
 
     return {
-        canvas: options.canvas ?? doc?.getElementById('canvas') ?? null,
+        canvas: options.canvas ?? (/** @type {HTMLCanvasElement | null} */ (
+            doc?.getElementById('canvas') ?? null
+        )),
         physics: createPhysicsState(),
-        abilities: createAbilityState(doc),
+        abilities: createAbilityState(doc ?? undefined),
         level: createLevelState(),
         camera: createCameraState(),
         input: createInputState(),
-        hud: createHudState(doc),
+        hud: createHudState(doc ?? undefined),
         render: createRenderState(),
     };
 }
 
 /**
  * Attach grouped state to MarblesGame and mirror fields onto `this.*` for mixin compatibility.
- * @param {object} game
- * @param {ReturnType<typeof createGameState>} state
+ * @param {Record<string, unknown>} game
+ * @param {import('../../types/game-state.js').GameState} state
  */
 export function bindGameState(game, state) {
     game.state = state;

@@ -1,6 +1,8 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
 
+import { getMarblePhysics } from '../wasm-bridge.js';
+
 export class ZoneSetupGrapple {
     createGrappleLine() {
         this.grappleEntity = this.Filament.EntityManager.get().create()
@@ -170,20 +172,22 @@ export class ZoneSetupGrapple {
             if (dist > restLength) {
                 const stiffness = 15.0
                 const damping = 2.0
-
-                const springForce = (dist - restLength) * stiffness
-
                 const vel = rb.linvel()
-                const velAlongString = vel.x * dirX + vel.y * dirY + vel.z * dirZ
-                const dampingForce = -velAlongString * damping
-
-                const totalForce = springForce + dampingForce
+                const physics = getMarblePhysics()
+                const force = physics.computeSpringForce(
+                    pos.x, pos.y, pos.z,
+                    target.x, target.y, target.z,
+                    restLength, stiffness, damping,
+                    vel.x, vel.y, vel.z
+                )
+                const totalForce = force.x * dirX + force.y * dirY + force.z * dirZ
 
                 if (totalForce > 0) {
+                    const dt = 0.016
                     rb.applyImpulse({
-                        x: dirX * totalForce * 0.016, // scale by rough dt
-                        y: dirY * totalForce * 0.016,
-                        z: dirZ * totalForce * 0.016
+                        x: force.x * dt,
+                        y: force.y * dt,
+                        z: force.z * dt
                     }, true)
                 }
             }

@@ -9,6 +9,7 @@ from .music import router as music_router
 from .shaders import router as shaders_router
 from .storage import router as storage_router
 from .health import router as health_router
+from .marbles import router as marbles_router
 
 __all__ = [
     "admin_router",
@@ -18,4 +19,5 @@ __all__ = [
     "shaders_router",
     "storage_router",
     "health_router",
+    "marbles_router",
 ]

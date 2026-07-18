@@ -13,6 +13,7 @@ Files here are **not imported** by the Marbles 3D game runtime (`index.html` →
 | `unused-game-modules/unwired-game-loop/` | Split `game-loop/` modules (`abilities`, `camera`, `hud`, `input`) that were never connected to `game-loop/index.js`. |
 | `unused-game-modules/misc/` | `AssetRegistry`, `gpu-particles`, `particle-materials`, `material-variants`, and notes not on the runtime graph. |
 | `root-leftovers/` | Superseded `deploy_old.py` and a partial mirror of `backend/storage/` that lived at repo root. |
+| `GAME_ANALYSIS-2025.md` | Historical game analysis from the 7-level era (early 2025). Stub at [../GAME_ANALYSIS.md](../GAME_ANALYSIS.md) redirects here. |
 
 ## Runtime entry graph
 

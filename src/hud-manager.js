@@ -379,6 +379,17 @@ export class HUDManager {
             this.updateAbilityCooldown('chameleon', progress);
         }
     }
+
+    /**
+     * @param {boolean} active
+     * @param {number} maxError
+     */
+    setMultiplayerDesync(active, maxError) {
+        const pill = document.getElementById('mp-desync-pill');
+        if (!pill) return;
+        pill.classList.toggle('active', active);
+        pill.textContent = active ? `Drift ${maxError.toFixed(1)}u` : 'Drift';
+    }
 }
 
 export default HUDManager;

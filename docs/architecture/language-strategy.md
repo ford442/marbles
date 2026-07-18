@@ -62,12 +62,27 @@ The repo mixes JavaScript mixins, strict TypeScript config (unused on game JS), 
 
 **Type-checking rollout:**
 
-| Phase | `checkJs` scope | Action |
-|-------|-----------------|--------|
-| **Now** | `src/math.js` shim + all `src/**/*.ts` | Pilot: `math.ts` + `types/geometry.ts` |
-| **Next** | `+ src/wasm-bridge.js`, `src/game/state/*.js` | JSDoc + `@ts-check` on high-value bridges |
-| **Later** | `+ src/game/systems/`, `src/levels/catalog.js` | Level/ability types; then mixin extraction |
+| Phase | `checkJs` / `include` scope | Status |
+|-------|-----------------------------|--------|
+| **Pilot** | `src/math.js` shim + all `src/**/*.ts` | ✅ `math.ts`, `types/geometry.ts` |
+| **Slice 1** | `+ src/wasm-bridge.js`, `src/game/state/*.js` | ✅ `@ts-check` + `types/game-state.ts`, `types/wasm-physics.ts` |
+| **Slice 2** | `+ src/game/systems/{ability-cooldown,trick-scoring,campaign-progress,replay-codec}.js` shims → `.ts` | ✅ Pure systems converted with `.js` re-export shims |
+| **Next (slice 3)** | `+ src/levels/catalog.js`, `src/types/map.ts`, `src/abilities/registry.js` | Level/ability catalog types |
+| **Later (slice 4)** | Remaining `src/game/systems/*.js` pure modules (`physics-world-pure`, `input-target-lock`, …) | After Phase B subsystem split stabilizes |
 | **Not yet** | `src/zones/**`, `src/game-loop/render.js` | Large files; type after subsystem split |
+
+Current `tsconfig.json` `include` (July 2026):
+
+```json
+"src/**/*.ts",
+"src/math.js",
+"src/wasm-bridge.js",
+"src/game/state/**/*.js",
+"src/game/systems/ability-cooldown.js",
+"src/game/systems/trick-scoring.js",
+"src/game/systems/campaign-progress.js",
+"src/game/systems/replay-codec.js"
+```
 
 `npm run typecheck` must pass at each phase before widening `include`.
 
@@ -114,6 +129,15 @@ First fully typed runtime module:
 - `src/math.js` — thin re-export shim so existing JS imports unchanged
 
 Downstream JS (`game-loop/sync.js`, zones, abilities) imports `./math.js` and receives typed implementations via Vite + `tsc`.
+
+## Typed state + pure systems (slice 1–2)
+
+- `src/types/game-state.ts` — `GameState`, `PhysicsState`, `AbilityState`, … factory return shapes
+- `src/types/wasm-physics.ts` — `MarblePhysicsApi` (used by `@ts-check` on `wasm-bridge.js`)
+- `src/types/global.d.ts` — `Window` extensions for game bootstrap flags
+- `src/game/state/*.js` — `@ts-check` factories; JSDoc `@returns` wired to `GameState` slices
+- Pure systems in `.ts` with `.js` shims (same pattern as `math.js`):
+  - `ability-cooldown.ts`, `trick-scoring.ts`, `campaign-progress.ts`, `replay-codec.ts`
 
 ## Consequences
 

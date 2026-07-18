@@ -1,0 +1,35 @@
+{
+  "id": "neon_grid",
+  "name": "Neon Grid Run",
+  "description": "Navigate the glowing neon grid and avoid moving walls!",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "difficulty": "medium",
+  "chapter": "neon",
+  "environment": "neon_city",
+  "nightMode": true,
+  "backgroundColor": [0.01, 0.0, 0.05, 1.0],
+  "zones": [
+    { "type": "floor", "pos": { "x": 0, "y": -2, "z": 0 }, "size": { "x": 50, "y": 0.5, "z": 50 } },
+    { "type": "track", "pos": { "x": 0, "y": 3, "z": 0 } },
+    { "type": "neon_grid", "pos": { "x": 0, "y": 0, "z": 25 } }
+  ],
+  "spawn": { "x": 0, "y": 8, "z": -12 },
+  "goals": [
+    {
+      "id": 1,
+      "range": {
+        "x": [-5, 5],
+        "y": [-2, 5],
+        "z": [80, 90]
+      }
+    }
+  ],
+  "camera": { "mode": "follow", "height": 15, "offset": -25 },
+  "medals": {
+    "goldTime": 45,
+    "silverTime": 90,
+    "bronzeTime": 180,
+    "parTime": 75
+  }
+}

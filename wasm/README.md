@@ -94,6 +94,8 @@ physics.computeForceFieldsBatch(
 
 Benchmark: `node scripts/benchmark-wasm-bridge.mjs [--wasm]` (see `docs/PERFORMANCE_BASELINE.md`).
 
+WASM loads by default when `public/wasm/marble_physics.wasm` exists. Use `?wasmPhysics=0` to force JS fallbacks for A/B testing. The perf overlay (`?perf=1`, F2) shows `physics: wasm | js-fallback | pending`.
+
 ## Adding New Functions
 
 1. Implement the function in `marble_physics.cpp`.

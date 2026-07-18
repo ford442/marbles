@@ -66,7 +66,7 @@ Methods are organized into separate mixins applied via `apply*Methods` functions
 - `sounds/` - Audio definitions
 - `schemas/` - JSON schema validation
 
-**Contributing Assets**: See `CONTRIBUTING.md` for detailed guidelines on creating new:
+**Contributing Assets**: See `docs/CONTRIBUTING.md` for detailed guidelines on creating new:
 - Maps/Zones
 - Marbles
 - Sounds
@@ -120,10 +120,11 @@ WASM binary is built.
 
 **Usage:**
 ```javascript
-import { initMarblePhysicsWasm, getMarblePhysics } from './wasm-bridge.js';
+import { initMarblePhysicsWasm, getMarblePhysics, getPhysicsBackend } from './wasm-bridge.js';
 
-// init once (non-blocking; fallback to JS if WASM absent)
+// Initialize once (e.g. during game init) — loads WASM when built, else JS fallbacks
 await initMarblePhysicsWasm();
+console.log(getPhysicsBackend()); // 'wasm' | 'js-fallback'
 
 // then anywhere in the game loop:
 const force = getMarblePhysics().computeForceField(
@@ -247,8 +248,8 @@ npm run build                  # Production build to dist/
 
 - **Filament Docs**: https://google.github.io/filament/
 - **Rapier3D**: https://rapier.rs/
-- **Asset Contributing**: See CONTRIBUTING.md
-- **Game Design Analysis**: See GAME_ANALYSIS.md for level design patterns
+- **Asset Contributing**: See `docs/CONTRIBUTING.md`
+- **Game Design Analysis**: Historical snapshot — see `docs/GAME_ANALYSIS.md` (archived; 7-level era)
 
 ## Notes
 

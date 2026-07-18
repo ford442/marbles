@@ -230,6 +230,28 @@ export class InitSettingsTabs {
                 if (this.settings) this.settings.accessibility.screenShake = parseInt(e.target.value)
             })
         }
+
+        const cloudOptIn = document.getElementById('setting-cloud-opt-in')
+        if (cloudOptIn) {
+            cloudOptIn.addEventListener('change', (e) => {
+                void import('../game/network/cloud-client.js').then((m) => {
+                    m.setCloudOptIn(e.target.checked)
+                    if (e.target.checked) {
+                        m.scheduleQueueFlush()
+                        this.cloudClient?.pullAndMergeCampaign()
+                    }
+                })
+            })
+        }
+
+        const cloudDisplayName = document.getElementById('setting-cloud-display-name')
+        if (cloudDisplayName) {
+            cloudDisplayName.addEventListener('change', (e) => {
+                void import('../game/network/cloud-client.js').then((m) => {
+                    m.setDisplayName(e.target.value)
+                })
+            })
+        }
     }
 
     populateSettingsValues() {
@@ -328,6 +350,14 @@ export class InitSettingsTabs {
         const shakeValue = document.getElementById('value-shake')
         if (shakeSlider) shakeSlider.value = s.accessibility.screenShake
         if (shakeValue) shakeValue.textContent = `${s.accessibility.screenShake}%`
+
+        void import('../game/network/cloud-client.js').then((m) => {
+            const cloudOptIn = document.getElementById('setting-cloud-opt-in')
+            if (cloudOptIn) cloudOptIn.checked = m.getCloudOptIn()
+
+            const cloudDisplayName = document.getElementById('setting-cloud-display-name')
+            if (cloudDisplayName) cloudDisplayName.value = m.getDisplayName()
+        })
     }
 }
 

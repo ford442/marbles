@@ -1,5 +1,6 @@
 import { audio } from '../audio.js';
 import { quaternionToMat4 } from '../math.js';
+import { tickLevelBehaviors } from '../game/level-behaviors/index.js';
 
 export class GameLoopLogic {
     updateGameState() {
@@ -8,6 +9,8 @@ export class GameLoopLogic {
             // Still render the scene, just don't update game state
             return
         }
+
+        tickLevelBehaviors(this, this.deltaTime || 1 / 60);
 
         // Note: gamepads are already polled once per frame in loop(); no need
         // to poll again here.
@@ -140,8 +143,12 @@ export class GameLoopLogic {
         }
 
         // Apply Time Scale to Physics
-        if (this.world) {
-            this.world.timestep = (1/60) * this.timeScale
+        const backend = this.physicsBackend
+        const timestep = (1 / 60) * this.timeScale
+        if (backend?.isWorkerMode?.()) {
+            backend.setTimestep(timestep)
+        } else if (this.world) {
+            this.world.timestep = timestep
         }
 
         // Time Stop Mechanic Logic

@@ -1,4 +1,7 @@
+// @ts-check
 /** Keyboard, gamepad, aim, charge, dash, jump input. */
+
+/** @returns {import('../../types/game-state.js').InputState} */
 export function createInputState() {
     return {
         keys: {},

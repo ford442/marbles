@@ -1,11 +1,14 @@
 export { MapEditor, bootMapEditor } from './map-editor.js';
 export {
+    MapDocument,
     createEmptyMap,
     mapDefToLevel,
     serializeMap,
     serializeMapJson,
     parseMapJson,
     syncGoalsFromZones,
+    syncCheckpointsFromZones,
+    recountCollectiblesTotal,
     downloadMapJson,
     saveDraft,
     loadDraft,
@@ -13,7 +16,12 @@ export {
     DRAFT_STORAGE_KEY,
 } from './map-document.js';
 export { validateMap, validateAgainstSchema } from './map-validator.js';
-export { EDITOR_STAMPS, STAMP_BY_ID, createZoneFromStamp } from './stamps.js';
+export {
+    EDITOR_STAMPS,
+    EDITOR_GAMEPLAY_STAMPS,
+    STAMP_BY_ID,
+    createZoneFromStamp,
+} from './stamps.js';
 
 /**
  * @returns {boolean}

@@ -130,6 +130,11 @@ export class AbilitySystem {
         }
 
         const result = def.activate(game);
+        if (result !== false) {
+            if (game.multiplayerMode && game.network?.room) {
+                game.network.sendAbility(id);
+            }
+        }
         return result !== false;
     }
 

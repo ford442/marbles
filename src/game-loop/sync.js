@@ -104,6 +104,8 @@ export class GameLoopSyncMethods {
             cueVisible: this.cueInst ? 1 : 0,
             activeMarbleLight: this.activeMarbleLightEntity ? 1 : 0,
             physicsStepMs: 0,
+            mainThreadPhysicsWaitMs: 0,
+            physicsBackend: 'main',
             renderMs: 0,
             renderedFrame: false,
             transformsSet: 0,
@@ -460,8 +462,17 @@ export class GameLoopSyncMethods {
         // Skip physics and game logic when paused
         if (!this.isPaused) {
             const physicsStart = performance.now()
-            this.world.step()
-            perfCounts.physicsStepMs = performance.now() - physicsStart
+            this.physicsWorld.step()
+            const backend = this.physicsBackend
+            if (backend?.isWorkerMode?.()) {
+                perfCounts.physicsStepMs = backend.lastStepMs || 0
+                perfCounts.mainThreadPhysicsWaitMs = backend.lastWaitMs || 0
+                perfCounts.physicsBackend = 'worker'
+            } else {
+                perfCounts.physicsStepMs = performance.now() - physicsStart
+                perfCounts.mainThreadPhysicsWaitMs = 0
+                perfCounts.physicsBackend = 'main'
+            }
             this.processCollisionEvents()
             this.checkGameLogic()
         }

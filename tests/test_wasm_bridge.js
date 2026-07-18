@@ -9,9 +9,19 @@
  *   node tests/test_wasm_bridge.js
  */
 
-import { _testExports, FORCE_BATCH_THRESHOLD } from '../src/wasm-bridge.js';
+import {
+    _testExports,
+    FORCE_BATCH_THRESHOLD,
+    WASM_HEAP_BATCH_MIN,
+    getPhysicsBackend,
+} from '../src/wasm-bridge.js';
 
-const { jsFallback, computeForceFieldScalar, applyVelocityDampingScalar } = _testExports;
+const {
+    jsFallback,
+    computeForceFieldScalar,
+    applyVelocityDampingScalar,
+    shouldUseWasmHeapBatch,
+} = _testExports;
 
 // ── Minimal test harness ──────────────────────────────────────────────────────
 
@@ -72,6 +82,10 @@ function runScalarBatchParity(name, scalarFn, batchFn, argsList, tol = 1e-5) {
 
 console.log('MarblePhysics JS fallback tests\n');
 test('FORCE_BATCH_THRESHOLD is positive', FORCE_BATCH_THRESHOLD > 0, true);
+test('WASM_HEAP_BATCH_MIN exceeds FORCE_BATCH_THRESHOLD', WASM_HEAP_BATCH_MIN > FORCE_BATCH_THRESHOLD, true);
+test('shouldUseWasmHeapBatch false below crossover', shouldUseWasmHeapBatch(WASM_HEAP_BATCH_MIN - 1), false);
+test('shouldUseWasmHeapBatch true at crossover', shouldUseWasmHeapBatch(WASM_HEAP_BATCH_MIN), true);
+test('getPhysicsBackend defaults to pending before init', getPhysicsBackend(), 'pending');
 
 // vec3Distance
 console.log('vec3Distance / vec3DistanceSq');
@@ -105,6 +119,12 @@ const ffFar = jsFallback.computeForceField(0, 0, 0, 30, 0, 0, 20, 1.0, 0.5, 25);
 test('zero force beyond maxDist', ffFar, { x: 0, y: 0, z: 0 });
 const ff2 = jsFallback.computeForceField(0, 0, 0, 2, 0, 0, 4, 2.0, 0.5, 25);
 test('inverse-square at dist=2', ff2.x, -1, 1e-4);
+
+console.log('\ncomputeForceFieldInto');
+const intoOut = new Float32Array(3);
+jsFallback.computeForceFieldInto(intoOut, 0, 0, 0, 5, 0, 0, 20, 1.0, 0.5, 25, 0);
+test('Into matches scalar object', intoOut[0], ff.x, 1e-4);
+test('Into y/z', intoOut[1], ff.y, 1e-4);
 
 // softening (magnet-style)
 console.log('\ncomputeForceField softening');
@@ -220,6 +240,87 @@ for (let i = 0; i < dampCases.length; i++) {
     }
 }
 test('applyVelocityDampingBatch matches scalar', dampParityOk, true);
+
+console.log('\ncomputeSpringForcesBatch parity');
+const springCases = [
+    [0, 0, 0, 10, 0, 0, 5, 1, 0, 0, 0, 0],
+    [8, 0, 0, 10, 0, 0, 5, 1, 0, 0, 0, 0],
+];
+const springPositions = new Float32Array(springCases.length * 3);
+const springAnchors = new Float32Array(springCases.length * 3);
+const springVelocities = new Float32Array(springCases.length * 3);
+const springRest = new Float32Array(springCases.length);
+const springStiff = new Float32Array(springCases.length);
+const springDamp = new Float32Array(springCases.length);
+const springBatchOut = new Float32Array(springCases.length * 3);
+
+for (let i = 0; i < springCases.length; i++) {
+    const c = springCases[i];
+    const scalar = jsFallback.computeSpringForce(...c);
+    const base = i * 3;
+    springPositions[base] = c[0];
+    springPositions[base + 1] = c[1];
+    springPositions[base + 2] = c[2];
+    springAnchors[base] = c[3];
+    springAnchors[base + 1] = c[4];
+    springAnchors[base + 2] = c[5];
+    springRest[i] = c[6];
+    springStiff[i] = c[7];
+    springDamp[i] = c[8];
+    springVelocities[base] = c[9];
+    springVelocities[base + 1] = c[10];
+    springVelocities[base + 2] = c[11];
+    springBatchOut[base] = scalar.x;
+    springBatchOut[base + 1] = scalar.y;
+    springBatchOut[base + 2] = scalar.z;
+}
+
+const springOut = new Float32Array(springCases.length * 3);
+jsFallback.computeSpringForcesBatch(
+    springPositions, springAnchors, springVelocities,
+    springRest, springStiff, springDamp, springOut, springCases.length
+);
+let springParityOk = true;
+for (let i = 0; i < springBatchOut.length; i++) {
+    if (Math.abs(springOut[i] - springBatchOut[i]) > 1e-4) {
+        springParityOk = false;
+        break;
+    }
+}
+test('computeSpringForcesBatch matches scalar', springParityOk, true);
+
+console.log('\nclosestPointsOnSegmentBatch parity');
+const segmentCases = [
+    [0, 0, 0, 10, 0, 0, 4, 3, 0],
+    [0, 0, 0, 10, 0, 0, -5, 0, 0],
+];
+const p0 = new Float32Array(segmentCases.length * 3);
+const p1 = new Float32Array(segmentCases.length * 3);
+const q = new Float32Array(segmentCases.length * 3);
+const segmentExpected = new Float32Array(segmentCases.length * 3);
+
+for (let i = 0; i < segmentCases.length; i++) {
+    const c = segmentCases[i];
+    const point = jsFallback.closestPointOnSegment(...c);
+    const base = i * 3;
+    p0[base] = c[0]; p0[base + 1] = c[1]; p0[base + 2] = c[2];
+    p1[base] = c[3]; p1[base + 1] = c[4]; p1[base + 2] = c[5];
+    q[base] = c[6]; q[base + 1] = c[7]; q[base + 2] = c[8];
+    segmentExpected[base] = point.x;
+    segmentExpected[base + 1] = point.y;
+    segmentExpected[base + 2] = point.z;
+}
+
+const segmentOut = new Float32Array(segmentCases.length * 3);
+jsFallback.closestPointsOnSegmentBatch(p0, p1, q, segmentOut, segmentCases.length);
+let segmentParityOk = true;
+for (let i = 0; i < segmentExpected.length; i++) {
+    if (Math.abs(segmentOut[i] - segmentExpected[i]) > 1e-4) {
+        segmentParityOk = false;
+        break;
+    }
+}
+test('closestPointsOnSegmentBatch matches scalar', segmentParityOk, true);
 
 // ── Summary ───────────────────────────────────────────────────────────────────
 

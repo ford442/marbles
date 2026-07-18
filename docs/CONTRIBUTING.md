@@ -13,7 +13,15 @@ Thank you for your interest in contributing! This guide will help you create new
 - [Asset Validation](#asset-validation)
 - [Submission Guidelines](#submission-guidelines)
 
+> **Archived code — do not restore**
+>
+> React sequencer, shader gallery, and AI/RBS importers live under [`docs/backups/orphan-react-stack/`](backups/orphan-react-stack/). They are **not** part of the Marbles 3D game runtime.
+>
+> Do **not** re-add `react`, `@testing-library/react`, or move archived TSX back into `src/` without a separate product decision. See [language-strategy.md](architecture/language-strategy.md) and [backups/README.md](backups/README.md).
+
 ## Getting Started
+
+See [CURRENT_STATE.md](CURRENT_STATE.md) for project health and migration status.
 
 1. Fork the repository
 2. Create your assets in the appropriate `/assets/` subdirectory
@@ -24,9 +32,24 @@ Thank you for your interest in contributing! This guide will help you create new
 
 Playable levels are loaded from **`assets/maps/*.json`** via **`assets/manifest.json`** at boot (`src/assets/AssetRegistry.js`). Zone geometry builders live in **`src/zones/<kebab-name>.js`**, registered in **`src/zone-setup/registry.js`**.
 
-Code-only levels remain in **`src/levels.js`** as `DEV_LEVELS` and appear in the level menu only when **`?devLevels=1`** is set (for experimental maps not yet migrated to JSON).
+Code-only levels remain in **`src/levels.js`** as `DEV_LEVELS` and appear in the level menu only when **`?devLevels=1`** or **`?dev=1`** is set (for experimental maps not yet migrated to JSON).
 
-### Checklist (JSON map — preferred)
+### Policy: new campaign levels
+
+**All new campaign levels must ship as JSON + manifest.** Do not add permanent content to `DEV_LEVELS`.
+
+| Requirement | Detail |
+|-------------|--------|
+| Map file | `assets/maps/<id>.json` validated against `assets/schemas/map-schema.json` |
+| Manifest | Entry under `maps` in `assets/manifest.json` |
+| Zone geometry | Reference registered `zones[].type` stamps (builtin or factory in `src/zones/`) |
+| Chapter | Set `"chapter"` in map JSON (`tutorial`, `classic`, `neon`, `extreme`, `expert`) |
+| Custom logic | Optional `"behaviors": ["behavior-id"]` — see [level pipeline](../architecture/level-pipeline.md) |
+| Dev path | `DEV_LEVELS` is **WIP/sandbox only**; PRs adding campaign content via `levels.js` should be rejected |
+
+Full inventory: [`docs/architecture/level-pipeline.md`](../architecture/level-pipeline.md).
+
+### Checklist (JSON map — required for campaign)
 
 1. **Create or extend a zone builder** if needed — `src/zones/my-cool-zone.js` (see factory checklist below).
 
@@ -89,15 +112,39 @@ Use only for work-in-progress zones. Add to `DEV_LEVELS` in `src/levels.js` and 
 
 Many legacy levels still live in `DEV_LEVELS` (`src/levels.js`). To migrate one:
 
-1. Copy its object fields into `assets/maps/<id>.json` (match an existing map like `tutorial.json`).
-2. Add `"version"`, `"id"`, and `"difficulty"` per `assets/schemas/map-schema.json`.
+1. Copy its object fields into `assets/maps/<id>.json` (match an existing map like `tutorial.json` or a hybrid factory map below).
+2. Add `"version"`, `"id"`, `"difficulty"`, and `"chapter"` per `assets/schemas/map-schema.json`.
 3. Register the file in `assets/manifest.json`.
-4. Remove the entry from `DEV_LEVELS` (or leave it behind `?devLevels=1` until the JSON version is verified).
+4. Remove the entry from `DEV_LEVELS` once verified in normal play (no dev flag).
 5. Run `npm run validate:assets`.
 
-**Already on JSON (manifest-driven):** `tutorial`, `landing`, `jump`, `slalom`, `staircase`, `full_course`, `sandbox`, `volcano_run`, `neon_showcase`.
+**Hybrid factory-stamp example** (migrated from `storm_peak_run`):
 
-**Still code-only (dev flag):** all other entries in `DEV_LEVELS` — mushroom hop, wind tunnel, themed factory zones, etc.
+```json
+{
+  "id": "storm_peak",
+  "name": "Storm Peak",
+  "version": "1.0.0",
+  "difficulty": "hard",
+  "chapter": "extreme",
+  "environment": "space_nebula",
+  "nightMode": true,
+  "backgroundColor": [0.1, 0.1, 0.15, 1.0],
+  "zones": [
+    { "type": "storm_peak", "pos": { "x": 0, "y": 0, "z": 0 } },
+    { "type": "goal", "pos": { "x": 0, "y": 15, "z": 105 } }
+  ],
+  "spawn": { "x": 0, "y": 5, "z": -40 },
+  "goals": [{ "id": 1, "range": { "x": [-10, 10], "z": [100, 110], "y": [10, 20] } }],
+  "camera": { "mode": "follow", "height": 15, "offset": -25 }
+}
+```
+
+The factory builder (`src/zones/storm-peak.js`) stays; JSON only references it by `type`.
+
+**Already on JSON (manifest-driven):** `tutorial`, `landing`, `jump`, `slalom`, `staircase`, `full_course`, `sandbox`, `volcano_run`, `neon_showcase`, `prismatic_speedway`, `storm_peak`, `stellar_forge`, `space_station`, `neon_grid`.
+
+**Still code-only (dev flag):** remaining entries in `DEV_LEVELS` — see [`level-inventory.json`](../architecture/level-inventory.json).
 
 Zone `type` strings in JSON must match keys in `src/zone-setup/registry.js` (`ZONE_HANDLERS`).
 
@@ -403,6 +450,17 @@ npm run validate:assets
 ```
 
 This runs automatically in CI on every pull request.
+
+### Optional local pre-commit hook
+
+CI is the source of truth for asset validation. To run `validate:assets` before each commit (opt-in):
+
+```bash
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit
+```
+
+The hook script lives at [`.githooks/pre-commit`](../.githooks/pre-commit) and runs `npm run validate:assets`.
 
 ## Development checks
 

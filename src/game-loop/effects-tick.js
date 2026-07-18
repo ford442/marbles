@@ -88,17 +88,20 @@ export class GameLoopEffectsTick {
                                 }, true)
                             }
                         } else {
+                            if (!this._forceBatchBuffers) this._forceBatchBuffers = new PhysicsBatchBuffers(16)
+                            const scalarBuf = this._forceBatchBuffers.forces
                             for (const { body, pos: bodyPos, strength } of targets) {
-                                const force = physics.computeForceField(
+                                physics.computeForceFieldInto(
+                                    scalarBuf,
                                     pos.x, pos.y, pos.z,
                                     bodyPos.x, bodyPos.y, bodyPos.z,
                                     strength,
                                     1.0, 0.5, radius, 0
                                 )
                                 body.applyImpulse({
-                                    x: force.x,
-                                    y: force.y + body.mass() * 0.2,
-                                    z: force.z
+                                    x: scalarBuf[0],
+                                    y: scalarBuf[1] + body.mass() * 0.2,
+                                    z: scalarBuf[2]
                                 }, true)
                             }
                         }

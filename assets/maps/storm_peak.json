@@ -1,0 +1,35 @@
+{
+  "id": "storm_peak",
+  "name": "Storm Peak",
+  "description": "Brave the icy slide, pulsing clouds, and high winds of Storm Peak!",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "difficulty": "hard",
+  "chapter": "extreme",
+  "environment": "space_nebula",
+  "nightMode": true,
+  "backgroundColor": [0.1, 0.1, 0.15, 1.0],
+  "behaviors": ["storm-peak-ambient"],
+  "zones": [
+    { "type": "storm_peak", "pos": { "x": 0, "y": 0, "z": 0 } },
+    { "type": "goal", "pos": { "x": 0, "y": 15, "z": 105 } }
+  ],
+  "spawn": { "x": 0, "y": 5, "z": -40 },
+  "goals": [
+    {
+      "id": 1,
+      "range": {
+        "x": [-10, 10],
+        "y": [10, 20],
+        "z": [100, 110]
+      }
+    }
+  ],
+  "camera": { "mode": "follow", "height": 15, "offset": -25 },
+  "medals": {
+    "goldTime": 60,
+    "silverTime": 120,
+    "bronzeTime": 240,
+    "parTime": 100
+  }
+}

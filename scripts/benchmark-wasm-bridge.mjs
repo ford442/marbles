@@ -13,7 +13,7 @@ import { performance } from 'node:perf_hooks';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { _testExports } from '../src/wasm-bridge.js';
+import { _testExports, FORCE_BATCH_THRESHOLD, WASM_HEAP_BATCH_MIN } from '../src/wasm-bridge.js';
 
 const { jsFallback, WasmBatchRunner } = _testExports;
 
@@ -141,6 +141,7 @@ async function main() {
 
     console.log('MarblePhysics force-field benchmark (ms per frame, lower is better)');
     console.log(`Warmup: ${WARMUP_ITERS} iters, measured: ${BENCH_ITERS} iters`);
+    console.log(`Hybrid routing: JS batch for ${FORCE_BATCH_THRESHOLD}..${WASM_HEAP_BATCH_MIN - 1} entities, WASM HEAP batch at ≥${WASM_HEAP_BATCH_MIN}`);
     console.log(formatRow(['Entities', 'Scalar JS', 'Batch JS', 'Speedup', 'Batch WASM', 'WASM vs scalar']));
 
     const results = [];

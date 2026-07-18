@@ -1,8 +1,13 @@
 import { destroyLoadedTrackModels } from '../assets/gltf-track-loader.js';
 import { audio } from '../audio.js';
+import { unloadLevelBehaviors } from '../game/level-behaviors/index.js';
+import { clearRemoteAbilityFx } from '../game/network/ability-sync.js';
+import { resetDesyncIndicator } from '../game/network/desync-indicator.js';
 
 export class InitCleanup {
     clearLevel() {
+        unloadLevelBehaviors(this);
+        this.physicsBackend?.resetWorld?.();
         for (const m of this.marbles) {
             this.world.removeRigidBody(m.rigidBody)
             this.scene.remove(m.entity)
@@ -86,6 +91,14 @@ export class InitCleanup {
         }
         this.collectibles = []
 
+        if (this.grappleAnchors) {
+            for (const a of this.grappleAnchors) {
+                this.scene.remove(a.entity)
+                this.engine.destroyEntity(a.entity)
+            }
+        }
+        this.grappleAnchors = []
+
         for (const p of this.powerUps) {
             this.world.removeRigidBody(p.rigidBody)
             this.scene.remove(p.entity)
@@ -126,6 +139,11 @@ export class InitCleanup {
 
         this.remotePlayers?.clear()
         this.multiplayerMode = false
+        this.hostAuthorityMode = false
+        this.hostSim?.reset?.()
+        this.clientPrediction?.reset?.()
+        clearRemoteAbilityFx?.(this)
+        resetDesyncIndicator?.(this)
         this.touchControls?.setGameplayActive(false)
 
         if (this.portalA) this.destroyPortal(this.portalA)

@@ -1,3 +1,4 @@
+// @ts-nocheck — typed in Phase C step 4 (levels/catalog + map types)
 /**
  * Campaign chapter layout and unlock rules.
  * Levels not listed explicitly are auto-assigned by heuristics.
@@ -58,6 +59,12 @@ export const LEVEL_CHAPTER_OVERRIDES = {
     volcano_run: 'extreme',
     volcano_run_extreme: 'extreme',
     full_course: 'expert',
+    prismatic_speedway: 'neon',
+    storm_peak: 'extreme',
+    stellar_forge: 'extreme',
+    space_station: 'expert',
+    neon_grid: 'neon',
+    neon_showcase: 'neon',
 };
 
 const NEON_KEYWORDS = /neon|cyber|synth|prismatic|plasma|pulse|chrono|grid_run|alley/i;
@@ -71,6 +78,10 @@ const EXTREME_KEYWORDS = /extreme|volcano|lava|storm|abyssal|void|toxic|magnetic
 export function getChapterForLevel(levelId, level = {}) {
     if (LEVEL_CHAPTER_OVERRIDES[levelId]) {
         return LEVEL_CHAPTER_OVERRIDES[levelId];
+    }
+
+    if (level?.chapter && CAMPAIGN_CHAPTERS.some((c) => c.id === level.chapter)) {
+        return level.chapter;
     }
 
     const id = levelId.toLowerCase();

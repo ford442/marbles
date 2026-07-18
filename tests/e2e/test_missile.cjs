@@ -4,7 +4,7 @@ const assert = require('assert');
 (async () => {
     const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
-    const url = 'http://localhost:5173/';
+    const url = process.env.BASE_URL || 'http://localhost:5173/';
     console.log(`Navigating to ${url}...`);
 
     let gameLoaded = false;

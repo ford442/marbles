@@ -9,6 +9,10 @@ import {
 } from '../rendering-defaults.js';
 import { loadFilament } from './filament-loader.js';
 import { initMarblePhysicsWasm } from '../wasm-bridge.js';
+import {
+    activatePhysicsBackendForLevel,
+    createPhysicsBackend,
+} from '../game/systems/physics-backend.js';
 import { ParticleSystem } from '../particle-system.js';
 import { scheduleWebGPUExperiments } from '../webgpu/index.js';
 import { LightingSystem } from '../lighting-system.js';
@@ -447,6 +451,9 @@ export class InitCore {
                     this.playerMarble.rigidBody.applyImpulse({ x: 0, y: force * gravityDir, z: 0 }, true)
                     audio.playJump()
                     this.jumpCount = 1
+                    if (this.multiplayerMode && this.network?.room) {
+                        this.network.sendAbility('jump', this.jumpCharge);
+                    }
                 }
                 this.isChargingJump = false
                 this.jumpCharge = 0
@@ -485,8 +492,15 @@ export class InitCore {
             window.updateLoadingProgress(15, 'Physics engine ready')
         }
         const gravity = { x: 0.0, y: -9.81, z: 0.0 }
-        this.world = new RAPIER.World(gravity)
-        console.log('[INIT] Physics initialized')
+        this.physicsWorld.init(gravity)
+        this.physicsGravity = gravity
+        this.mainPhysicsBackend = null
+        this.workerPhysicsBackend = null
+        await createPhysicsBackend(this, {
+            gravity,
+            editorMode: isEditorMode(),
+        })
+        console.log(`[INIT] Physics initialized (rapier: ${this.physicsBackend?.getMode?.() || 'main'})`)
         if (typeof window.updateLoadingProgress === 'function') {
             window.updateLoadingProgress(20, 'Physics initialized')
         }
@@ -675,6 +689,9 @@ export class InitCore {
             }
             if (this.campaignProgress) {
                 this.campaignProgress.setCatalog(LEVELS)
+            }
+            if (this.cloudClient?.enabled) {
+                void this.cloudClient.pullAndMergeCampaign()
             }
             console.log('[INIT] Asset registry loaded')
         } catch (assetError) {

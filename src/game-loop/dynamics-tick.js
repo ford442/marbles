@@ -158,8 +158,8 @@ export class GameLoopDynamics {
         
                                 // Trigger collection burst effect
                                 const collectionPos = { x: c.pos.x, y: newY, z: c.pos.z }
-                                const scoreValue = 10
-                                const collectibleType = c.type || 'coin'
+                                const scoreValue = c.value ?? 10;
+                                const collectibleType = c.type || 'coin';
                                 if (typeof this.triggerCollectionEffect === 'function') {
                                     this.triggerCollectionEffect(collectionPos, scoreValue, collectibleType)
                                 }

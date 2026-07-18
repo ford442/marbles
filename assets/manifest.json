@@ -46,6 +46,31 @@
       "file": "maps/neon_showcase.json",
       "name": "Neon Showcase Track",
       "difficulty": "easy"
+    },
+    "prismatic_speedway": {
+      "file": "maps/prismatic_speedway.json",
+      "name": "Prismatic Speedway",
+      "difficulty": "hard"
+    },
+    "storm_peak": {
+      "file": "maps/storm_peak.json",
+      "name": "Storm Peak",
+      "difficulty": "hard"
+    },
+    "stellar_forge": {
+      "file": "maps/stellar_forge.json",
+      "name": "Stellar Forge",
+      "difficulty": "hard"
+    },
+    "space_station": {
+      "file": "maps/space_station.json",
+      "name": "Space Station",
+      "difficulty": "expert"
+    },
+    "neon_grid": {
+      "file": "maps/neon_grid.json",
+      "name": "Neon Grid Run",
+      "difficulty": "medium"
     }
   },
   "marbles": {

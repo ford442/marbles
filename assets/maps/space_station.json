@@ -1,0 +1,34 @@
+{
+  "id": "space_station",
+  "name": "Space Station",
+  "description": "Zero-G environment with artificial gravity",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "difficulty": "expert",
+  "chapter": "expert",
+  "environment": "space_nebula",
+  "nightMode": true,
+  "backgroundColor": [0.0, 0.0, 0.0, 1.0],
+  "zones": [
+    { "type": "space_station", "pos": { "x": 0, "y": 0, "z": 0 } },
+    { "type": "goal", "pos": { "x": 0, "y": 2, "z": 105 } }
+  ],
+  "spawn": { "x": 0, "y": 2, "z": -5 },
+  "goals": [
+    {
+      "id": 1,
+      "range": {
+        "x": [-3, 3],
+        "y": [0, 5],
+        "z": [103, 107]
+      }
+    }
+  ],
+  "camera": { "mode": "follow", "height": 12, "offset": -20 },
+  "medals": {
+    "goldTime": 90,
+    "silverTime": 180,
+    "bronzeTime": 300,
+    "parTime": 150
+  }
+}

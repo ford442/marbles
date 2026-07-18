@@ -6,11 +6,13 @@ import {
     getMedalThresholds,
     medalEmoji,
 } from '../levels/campaign.js';
+import { getApiUrl } from '../game/network/cloud-client.js';
 
 export class GameLogicLevelComplete {
     setupReplayShareButtons() {
         const btnCopy = document.getElementById('btn-copy-replay')
         const btnImport = document.getElementById('btn-import-replay')
+        const btnRaceLeader = document.getElementById('btn-race-leader-ghost')
 
         if (btnCopy && !btnCopy.dataset.bound) {
             btnCopy.dataset.bound = '1'
@@ -20,6 +22,49 @@ export class GameLogicLevelComplete {
         if (btnImport && !btnImport.dataset.bound) {
             btnImport.dataset.bound = '1'
             btnImport.addEventListener('click', () => this.importGhostReplay())
+        }
+
+        if (btnRaceLeader && !btnRaceLeader.dataset.bound) {
+            btnRaceLeader.dataset.bound = '1'
+            btnRaceLeader.addEventListener('click', () => this.queueLeaderboardGhost())
+        }
+    }
+
+    queueLeaderboardGhost() {
+        const ghostId = this._leaderboardTopGhostId
+        if (!ghostId) return
+        this._pendingLeaderboardGhostId = ghostId
+        this.setReplayImportStatus('Leaderboard ghost queued — press Retry to race it.')
+    }
+
+    async refreshLeaderboardSection(levelId) {
+        const section = document.getElementById('leaderboard-section')
+        const list = document.getElementById('leaderboard-list')
+        const btnRace = document.getElementById('btn-race-leader-ghost')
+        if (!section || !list || !getApiUrl()) {
+            if (section) section.style.display = 'none'
+            return
+        }
+
+        section.style.display = 'block'
+        list.innerHTML = '<li>Loading leaderboard…</li>'
+        if (btnRace) btnRace.style.display = 'none'
+        this._leaderboardTopGhostId = null
+
+        const entries = await this.cloudClient?.fetchLeaderboard(levelId) || []
+        if (!entries.length) {
+            list.innerHTML = '<li>No global times yet.</li>'
+            return
+        }
+
+        list.innerHTML = entries.map((e) => (
+            `<li>#${e.rank} ${e.displayName} — ${formatRunTime(e.bestTime)}</li>`
+        )).join('')
+
+        const top = entries[0]
+        if (top?.ghostId && btnRace) {
+            this._leaderboardTopGhostId = top.ghostId
+            btnRace.style.display = 'inline-block'
         }
     }
 
@@ -102,6 +147,7 @@ export class GameLogicLevelComplete {
         }
         this.setupReplayShareButtons()
         this.setReplayImportStatus('')
+        void this.refreshLeaderboardSection(this.currentLevel)
 
         // Setup button handlers with smooth transitions
         const btnNext = document.getElementById('btn-next-level')

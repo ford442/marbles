@@ -20,8 +20,8 @@ export default defineConfig({
   assetsInclude: ['**/*.wasm', '**/*.filmat', '**/*.glb', '**/*.gltf', '**/*.wgsl'],
   build: {
     rollupOptions: {
-      // marble_physics.js is loaded dynamically by src/wasm-bridge.js only when
-      // ?wasmPhysics=1 is set, so it must remain a static asset rather than a bundle.
+      // marble_physics.js is loaded dynamically by src/wasm-bridge.js when the
+      // WASM binary is present; it must remain a static asset rather than a bundle.
       external: ['/wasm/marble_physics.js']
     }
   }

@@ -31,7 +31,13 @@
     },
     "include": [
         "src/**/*.ts",
-        "src/math.js"
+        "src/math.js",
+        "src/wasm-bridge.js",
+        "src/game/state/**/*.js",
+        "src/game/systems/ability-cooldown.js",
+        "src/game/systems/trick-scoring.js",
+        "src/game/systems/campaign-progress.js",
+        "src/game/systems/replay-codec.js"
     ],
     "exclude": [
         "node_modules",

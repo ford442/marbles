@@ -12,22 +12,33 @@ A 3D marble roller game using Google Filament (WASM) and Rapier3D-Compat for phy
 - **Transform System**: Helper function to convert quaternion rotations to 4x4 transformation matrices
 - **Game Loop**: Synchronized physics stepping and rendering
 
-## Project Structure
+## Project status
 
-```
-marbles/
-├── index.html          # Main HTML file
-├── package.json        # Dependencies and scripts
-├── vite.config.js      # Vite configuration with CORS headers
-├── wasm/               # C++ WebAssembly physics module (Emscripten)
-│   ├── marble_physics.cpp   # C++ source with Embind exports
-│   ├── CMakeLists.txt       # Emscripten build config
-│   ├── build.sh             # Build script → public/wasm/
-│   └── README.md            # Build instructions
-└── src/
-    ├── main.js         # Main game logic
-    └── wasm-bridge.js  # JS façade for the WASM module (+ pure-JS fallbacks)
-```
+See **[docs/CURRENT_STATE.md](docs/CURRENT_STATE.md)** for the full health dashboard. Snapshot:
+
+| Area | Status | Link |
+|------|--------|------|
+| Shipped levels | 14 JSON maps via manifest | [level-pipeline.md](docs/architecture/level-pipeline.md) |
+| Dev levels | ~58 via `?devLevels=1` | same |
+| Phase A | Game loop consolidated in `src/game-loop/` | [architecture README](docs/architecture/README.md) |
+| Phase B | Started — `PhysicsWorld`, `InputSystem`, `MarbleRegistry` | same |
+| Phase C | In progress — pilot `.ts` systems + `@ts-check` state | [language-strategy.md](docs/architecture/language-strategy.md) |
+| Multiplayer | Party relay optional | [multiplayer.md](docs/multiplayer.md) |
+| Backend | Optional cloud sync (not required to play) | [backend/README.md](backend/README.md) |
+| CI | Assets + unit + lint + typecheck + WASM build | [.github/workflows/debug_build.yml](.github/workflows/debug_build.yml) |
+| E2E | Optional smoke job (`continue-on-error`) | [tests/e2e/smoke.cjs](tests/e2e/smoke.cjs) |
+
+Active repo layout: **[docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)**.
+
+### Documentation
+
+- [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md) — health checklist and migration status
+- [docs/architecture/README.md](docs/architecture/README.md) — Phase A/B/C ADR and ownership map
+- [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) — assets, zones, validation
+- [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) — runtime entry graph
+- [LIGHTING_SYSTEM_GUIDE.md](LIGHTING_SYSTEM_GUIDE.md) — zone lighting API
+- [PARTICLE_INTEGRATION_GUIDE.md](PARTICLE_INTEGRATION_GUIDE.md) — CPU particle system
+- [docs/backups/](docs/backups/README.md) — archived code (intentional; not runtime)
 
 ## Setup
 
@@ -134,10 +145,20 @@ function quaternionToMat4(position, quaternion) {
 
 ## Dependencies
 
-- **vite**: ^7.3.1 - Build tool and dev server
-- **filament**: ^1.51.5 - Google's physically based rendering engine
-- **@dimforge/rapier3d-compat**: ^0.13.0 - Physics engine
-- **Emscripten** (dev, optional) - Compiles `wasm/marble_physics.cpp` to WASM
+### Runtime (game bundle)
+
+| Package | Role |
+|---------|------|
+| `filament` | WebGL2 renderer (WASM UMD) |
+| `@dimforge/rapier3d-compat` | Physics simulation |
+
+The game intentionally does **not** use three.js or React in the shipped bundle. See [docs/architecture/language-strategy.md](docs/architecture/language-strategy.md).
+
+### Dev / build
+
+- **vite**: ^7.3.1 — build tool and dev server
+- **playwright**, **eslint**, **typescript**, etc. — see `package.json` devDependencies
+- **Emscripten** (optional) — compiles `wasm/marble_physics.cpp` to WASM
 
 ## Browser Requirements
 
