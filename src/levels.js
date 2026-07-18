@@ -1,3 +1,4 @@
+import { spaceStationLevel } from './zones/space-station.js';
 import { skateParkLevel } from './zones/skate-park.js';
 import { pinballLevel } from './zones/pinball-zone.js';
 import { canyonRunLevel } from './zones/canyon-run.js';
