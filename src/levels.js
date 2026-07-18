@@ -973,6 +973,22 @@ export const DEV_LEVELS = {
         backgroundColor: [0.1, 0.1, 0.15, 1.0],
         environment: 'space_nebula'
     },
+    neon_pipeline_run: {
+        name: 'Neon Pipeline',
+        description: 'Navigate the high-speed enclosed pipe with sweeping laser bars!',
+        zones: [
+            { type: 'neon_pipeline', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: -2, z: 80 } }
+        ],
+        spawn: { x: 0, y: 5, z: -5 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [75, 85], y: [-5, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.01, 0.0, 0.05, 1.0],
+        environment: 'neon_city'
+    },
     stellar_forge_run: {
         name: "Stellar Forge",
         description: "Brave the icy slide and the glowing hot forge hammers!",

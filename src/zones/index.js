@@ -31,6 +31,7 @@ export { createMysticForestZone } from './mystic-forest.js';
 export { createNebulaNexusZone } from './nebula-nexus.js';
 export { createNeonAlleyZone } from './neon-alley.js';
 export { createNeonGridZone } from './neon-grid.js';
+export { createNeonPipelineZone } from './neon-pipeline.js';
 export { createNeonPlungeZone } from './neon-plunge.js';
 export { createNeonPulseGridZone } from './neon-pulse-grid.js';
 export { createPinballZone } from './pinball-zone.js';
