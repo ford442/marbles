@@ -331,4 +331,4 @@ export class InputSystem {
     }
 }
 
-export { findBestLockOnTargetPure as findBestLockOnTarget } from './input-target-lock.js';
+export { findBestLockOnTarget } from './input-target-lock.js';
