@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-07-18T11:58:45.678Z",
+  "generated_at": "2026-07-18T23:16:35.196Z",
   "counts": {
     "manifest": 14,
-    "dev_levels": 58,
+    "dev_levels": 61,
     "map_files": 18,
-    "unique_ids": 72,
+    "unique_ids": 75,
     "json_only": 10,
-    "code_only": 54,
+    "code_only": 57,
     "dual": 4,
     "orphan_json": 4
   },
@@ -480,6 +480,19 @@
       "difficulty": "medium"
     },
     {
+      "id": "neon_pipeline_run",
+      "source": "code",
+      "in_manifest": false,
+      "in_dev_levels": true,
+      "on_disk": false,
+      "chapter": "neon",
+      "chapter_source": "heuristic:neon",
+      "zone_types": "(dev inline)",
+      "unknown_zones": "",
+      "migration_status": "dev-only",
+      "difficulty": ""
+    },
+    {
       "id": "neon_plunge_run",
       "source": "code",
       "in_manifest": false,
@@ -779,6 +792,19 @@
       "difficulty": "hard"
     },
     {
+      "id": "stellar_forge_run",
+      "source": "code",
+      "in_manifest": false,
+      "in_dev_levels": true,
+      "on_disk": false,
+      "chapter": "classic",
+      "chapter_source": "heuristic:classic",
+      "zone_types": "(dev inline)",
+      "unknown_zones": "",
+      "migration_status": "dev-only",
+      "difficulty": ""
+    },
+    {
       "id": "storm_peak",
       "source": "json",
       "in_manifest": true,
@@ -790,6 +816,19 @@
       "unknown_zones": "",
       "migration_status": "shipped",
       "difficulty": "hard"
+    },
+    {
+      "id": "storm_peak_run",
+      "source": "code",
+      "in_manifest": false,
+      "in_dev_levels": true,
+      "on_disk": false,
+      "chapter": "extreme",
+      "chapter_source": "heuristic:extreme",
+      "zone_types": "(dev inline)",
+      "unknown_zones": "",
+      "migration_status": "dev-only",
+      "difficulty": ""
     },
     {
       "id": "synthwave_surge_run",

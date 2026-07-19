@@ -147,11 +147,20 @@ export class GameLogicCore {
 
             if (this.isStomping) {
                 let multiplier = 1.0
-                const stompDuration = Date.now() - this.stompStartTime
-                if (stompDuration < 300) {
-                    multiplier = 2.0
-                    this.awardTrickPoints('Perfect Stomp!', 50, '#ff0000')
+                const chargeDuration = (this.stompReleaseTime || Date.now()) - (this.stompChargeTime || Date.now())
+
+                // Add fall distance to the multiplier
+                const fallDistance = Math.max(0, (this.stompStartAltitude || this.playerMarble.rigidBody.translation().y) - this.playerMarble.rigidBody.translation().y)
+
+                multiplier += Math.min(3.0, chargeDuration / 1000.0) // Max +3.0 from charge
+                multiplier += Math.min(5.0, fallDistance / 10.0)     // Max +5.0 from drop height
+
+                if (multiplier > 5.0) {
+                    this.awardTrickPoints('Meteor Strike!', 100 * Math.floor(multiplier), '#00ffff')
+                } else {
+                    this.awardTrickPoints('Stomp!', 50 * Math.floor(multiplier), '#ff0000')
                 }
+
                 this.performStompImpact(multiplier)
                 this.isStomping = false
             }
