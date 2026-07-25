@@ -20,6 +20,7 @@ export function createInputState() {
         boostCooldown: 3000,
         lastDashTime: 0,
         dashCooldown: 2000,
+        lastAirDashTime: 0,
         isChargingDash: false,
         dashCharge: 0,
         maxDashCharge: 1.0,

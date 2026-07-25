@@ -175,6 +175,37 @@ export class InitCore {
                 }
                 if (this.hudManager) this.hudManager.markAbilityUsed('flip')
             }
+            if (e.code === 'ShiftLeft' && this.playerMarble && !this.isGrounded(this.playerMarble)) {
+                const now = Date.now()
+                if (now - (this.lastAirDashTime || 0) > 2000) {
+                    this.lastAirDashTime = now
+
+                    const rb = this.playerMarble.rigidBody
+                    const linvel = rb.linvel()
+                    rb.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true)
+
+                    const force = 40.0
+                    const forwardX = Math.sin(this.aimYaw)
+                    const forwardZ = Math.cos(this.aimYaw)
+
+                    rb.applyImpulse({ x: forwardX * force, y: 0, z: forwardZ * force }, true)
+
+                    const pos = rb.translation()
+                    this.visualParticles.push({
+                        isEMPRing: true,
+                        color: [0, 1, 1],
+                        pos: { x: pos.x, y: pos.y, z: pos.z },
+                        radius: 0.1,
+                        maxRadius: 10,
+                        opacity: 1.0,
+                        duration: 300,
+                        spawnTime: now
+                    })
+
+                    if (typeof audio !== 'undefined' && audio.playBoost) audio.playBoost()
+                    if (typeof this.awardTrickPoints === 'function') this.awardTrickPoints('Air Dash!', 25, '#00ffff')
+                }
+            }
             if (e.code === 'KeyV' && this.playerMarble && !this.keys['KeyV']) {
                 const now = Date.now()
                 if (now - this.lastDashTime > this.dashCooldown) {
