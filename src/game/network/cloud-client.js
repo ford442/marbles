@@ -146,7 +146,7 @@ async function flushQueue() {
         return;
     }
 
-    let queue = readQueue();
+    const queue = readQueue();
     if (!queue.length) return;
 
     const remaining = [];

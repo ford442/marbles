@@ -1,4 +1,3 @@
-// @ts-nocheck — typed in Phase C step 4 (levels/catalog + map types)
 /**
  * Campaign chapter layout and unlock rules.
  * Levels not listed explicitly are auto-assigned by heuristics.

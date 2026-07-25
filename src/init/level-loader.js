@@ -2,6 +2,7 @@ import { getLevel } from '../levels/catalog.js';
 import { runWebGPUStressBurst } from '../webgpu/index.js';
 import { audio } from '../audio.js';
 import { loadLevelBehaviors } from '../game/level-behaviors/index.js';
+import { activatePhysicsBackendForLevel } from '../game/systems/physics-backend.js';
 
 export class InitLevelLoader {
     async loadLevel(levelId, options = {}) {

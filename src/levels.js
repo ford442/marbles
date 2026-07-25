@@ -519,7 +519,7 @@ export const DEV_LEVELS = {
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: false
     },
-    desert_ruins_run: {
+    ice_bridges_run: {
         name: 'Ice Bridges Run',
         description: 'Cross the slippery, spinning ice bridges!',
         zones: [

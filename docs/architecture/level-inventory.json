@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-07-25T09:37:34.728Z",
+  "generated_at": "2026-07-25T09:50:19.972Z",
   "counts": {
     "manifest": 14,
-    "dev_levels": 61,
+    "dev_levels": 62,
     "map_files": 18,
-    "unique_ids": 75,
+    "unique_ids": 76,
     "json_only": 10,
-    "code_only": 57,
+    "code_only": 58,
     "dual": 4,
     "orphan_json": 4
   },
@@ -260,6 +260,19 @@
     },
     {
       "id": "helix_havoc",
+      "source": "code",
+      "in_manifest": false,
+      "in_dev_levels": true,
+      "on_disk": false,
+      "chapter": "classic",
+      "chapter_source": "heuristic:classic",
+      "zone_types": "(dev inline)",
+      "unknown_zones": "",
+      "migration_status": "dev-only",
+      "difficulty": ""
+    },
+    {
+      "id": "ice_bridges_run",
       "source": "code",
       "in_manifest": false,
       "in_dev_levels": true,
