@@ -6,22 +6,6 @@ import { antigravityLevel } from './zones/antigravity-zone.js';
 
 /** Code-only levels (experimental / not yet migrated to JSON). Shown when `?devLevels=1`. */
 export const DEV_LEVELS = {
-    neon_abyss_run: {
-        name: 'Neon Abyss Run',
-        description: 'Brave the glowing abyss, dodge the neon lasers, and survive the icy slide!',
-        zones: [
-            { type: 'neon_abyss', pos: { x: 0, y: 0, z: 0 } },
-            { type: 'goal', pos: { x: 0, y: -25, z: 53.3 } } // Match the landing pad calculation
-        ],
-        spawn: { x: 0, y: 5, z: -5 },
-        goals: [
-            { id: 1, range: { x: [-10, 10], z: [48, 58], y: [-30, -20] } }
-        ],
-        camera: { mode: 'action', height: 12, offset: -25 },
-        nightMode: true,
-        backgroundColor: [0.0, 0.05, 0.1, 1.0],
-        environment: 'neon_city'
-    },
     mushroom_hop: {
         name: 'Mushroom Hop',
         description: 'Bounce across the giant mushrooms!',

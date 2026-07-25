@@ -35,7 +35,21 @@ let failed = 0;
 for (const file of files) {
   const rel = path.relative(root, file);
   process.stdout.write(`▶ ${rel} ... `);
-  const result = spawnSync(process.execPath, [file], {
+
+  // Use --experimental-strip-types for native TS execution if available (Node 22+)
+  // We parse the node version to only pass the flag if it's supported (v22.6.0+)
+  const args = [file];
+  const versionMatches = process.version.match(/^v(\d+)\.(\d+)/);
+  if (versionMatches) {
+    const major = parseInt(versionMatches[1], 10);
+    const minor = parseInt(versionMatches[2], 10);
+    // --experimental-strip-types was added in 22.6.0, but works differently
+    if (major > 22 || (major === 22 && minor >= 6)) {
+        args.unshift('--experimental-strip-types');
+    }
+  }
+
+  const result = spawnSync(process.execPath, args, {
     cwd: root,
     stdio: 'pipe',
     encoding: 'utf-8',

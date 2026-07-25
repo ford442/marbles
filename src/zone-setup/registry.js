@@ -94,7 +94,6 @@ const FACTORY_ZONE_HANDLERS = {
     storm_peak: (game, _zone, offset) => zones.createStormPeakZone(game, offset),
     neon_pipeline: (game, _zone, offset) => zones.createNeonPipelineZone(game, offset),
     stellar_forge: (game, _zone, offset) => zones.createStellarForgeZone(game, offset),
-    neon_abyss: (game, _zone, offset) => zones.createNeonAbyssZone(game, offset),
 };
 
 /** @type {Record<string, ZoneHandler>} */
