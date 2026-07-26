@@ -117,6 +117,8 @@ Mixins communicate via implicit `this.*` on `MarblesGame`. Prefer:
 
 - [language-strategy.md](./language-strategy.md) — language boundaries, C++ rules, archived React/WebGPU
 - [physics-worker.md](./physics-worker.md) — SharedArrayBuffer physics worker (120 Hz spike)
+- [product-epic.md](./product-epic.md) — 12–18 month north-star (workshop, ranked, hero content)
+- [workshop-platform.md](./workshop-platform.md) — Workshop UGC data model + moderation ADR
 - [level-pipeline.md](./level-pipeline.md) — JSON vs code level inventory and migration policy
 - [PROJECT_STRUCTURE.md](../PROJECT_STRUCTURE.md) — repo layout and entry graph
 - [CONTRIBUTING.md](../CONTRIBUTING.md) — adding zones and content
