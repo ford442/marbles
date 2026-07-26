@@ -30,6 +30,9 @@ export const CMD_OP = {
     SET_LINVEL: 7,
     SET_ANGVEL: 8,
     SET_GRAVITY_SCALE: 9,
+    KINEMATIC_ROTATION: 10,
+    SET_TRANSLATION: 11,
+    SET_ROTATION: 12,
 };
 
 export const RAYCAST_STATUS = {
@@ -40,7 +43,13 @@ export const RAYCAST_STATUS = {
 };
 
 export const RAYCAST_HEADER_BYTES = 4;
-export const RAYCAST_RESULT_BYTES = 36;
+export const RAYCAST_STATUS_INDEX = 0;
+export const RAYCAST_HIT_INDEX = 1;
+export const RAYCAST_TOI_INDEX = 2;
+export const RAYCAST_POINT_INDEX = 3;
+export const RAYCAST_NORMAL_INDEX = 6;
+export const RAYCAST_BODY_INDEX = 9;
+export const RAYCAST_RESULT_BYTES = 40;
 export const RAYCAST_BUFFER_BYTES = RAYCAST_HEADER_BYTES + RAYCAST_RESULT_BYTES;
 
 export const WORKER_MSG = {
@@ -52,6 +61,8 @@ export const WORKER_MSG = {
     RESET_WORLD: 'RESET_WORLD',
     FRAME_READY: 'FRAME_READY',
     STEP: 'STEP',
+    ADD_BODY: 'ADD_BODY',
+    RAYCAST: 'RAYCAST',
     LOG: 'LOG',
 };
 
@@ -91,7 +102,8 @@ export function createCommandViews(sab) {
 export function createRaycastViews(sab) {
     const i32 = new Int32Array(sab, 0, RAYCAST_BUFFER_BYTES / 4);
     const f32 = new Float32Array(sab, 0, RAYCAST_BUFFER_BYTES / 4);
-    return { i32, f32, sab };
+    const u32 = new Uint32Array(sab, 0, RAYCAST_BUFFER_BYTES / 4);
+    return { i32, f32, u32, sab };
 }
 
 /**

@@ -10,6 +10,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
  * @property {number} [linearDamping]
  * @property {number} [angularDamping]
  * @property {boolean} [canSleep]
+ * @property {number[]} [linvel]
  */
 
 /**
@@ -61,6 +62,25 @@ function buildColliderDesc(collider) {
 }
 
 /**
+ * @param {BodyDescriptor} desc
+ */
+export function createBodyFromDescriptor(world, desc) {
+    const bodyDesc = buildBodyDesc(desc);
+    const body = world.createRigidBody(bodyDesc);
+    const colliderDesc = buildColliderDesc(desc.collider);
+    world.createCollider(colliderDesc, body);
+
+    if (desc.linvel) {
+        body.setLinvel(
+            { x: desc.linvel[0], y: desc.linvel[1], z: desc.linvel[2] },
+            false,
+        );
+    }
+
+    return body;
+}
+
+/**
  * @param {{ x: number, y: number, z: number }} gravity
  * @param {BodyDescriptor[]} descriptors
  */
@@ -69,14 +89,33 @@ export function buildWorldFromDescriptors(gravity, descriptors) {
     const bodies = [];
 
     for (const desc of descriptors) {
-        const bodyDesc = buildBodyDesc(desc);
-        const body = world.createRigidBody(bodyDesc);
-        const colliderDesc = buildColliderDesc(desc.collider);
-        world.createCollider(colliderDesc, body);
-        bodies.push(body);
+        bodies.push(createBodyFromDescriptor(world, desc));
     }
 
     return { world, bodies };
+}
+
+/**
+ * Insert a body at a stable index (sparse array).
+ * @param {import('@dimforge/rapier3d-compat').World} world
+ * @param {Array<import('@dimforge/rapier3d-compat').RigidBody | null>} bodies
+ * @param {BodyDescriptor} desc
+ * @param {number} bodyIndex
+ */
+export function insertBodyAtIndex(world, bodies, desc, bodyIndex) {
+    while (bodies.length <= bodyIndex) {
+        bodies.push(null);
+    }
+    bodies[bodyIndex] = createBodyFromDescriptor(world, desc);
+    return bodies[bodyIndex];
+}
+
+/**
+ * @param {import('@dimforge/rapier3d-compat').RigidBody[]} bodies
+ * @returns {number}
+ */
+export function getBodySlotCount(bodies) {
+    return bodies.length;
 }
 
 /**

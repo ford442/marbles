@@ -12,6 +12,11 @@ import {
     enqueueCommand,
     readBodyTransform,
     RAYCAST_STATUS,
+    RAYCAST_HIT_INDEX,
+    RAYCAST_TOI_INDEX,
+    RAYCAST_POINT_INDEX,
+    RAYCAST_NORMAL_INDEX,
+    RAYCAST_BODY_INDEX,
 } from '../physics-worker/protocol.js';
 import { createProxyRigidBody, createProxyWorld } from '../physics-worker/proxy-rigid-body.js';
 import {
@@ -20,6 +25,7 @@ import {
 } from './physics-backend-pure.js';
 
 export { shouldUsePhysicsWorker, resolvePhysicsHzFromSearch, WORKER_SPIKE_LEVEL_ID } from './physics-backend-pure.js';
+export { MANIFEST_LEVEL_IDS, isManifestLevel } from './manifest-level-ids.js';
 
 /**
  * Main-thread Rapier backend (default).
@@ -107,11 +113,14 @@ export class WorkerPhysicsBackend {
         this._ready = false;
         this._active = false;
         this._descriptors = [];
+        this._descriptorSlots = [];
         this._proxies = new Map();
         this._linvelCache = new Map();
         this._gravityScaleCache = new Map();
         this._pendingFrame = null;
         this._initPromise = null;
+        this._worldCommitted = false;
+        this._pendingBodies = new Map();
     }
 
     isWorkerMode() {
@@ -184,31 +193,102 @@ export class WorkerPhysicsBackend {
 
     beginLevel(levelId) {
         this._descriptors = [];
+        this._descriptorSlots = [];
         this._proxies.clear();
         this._linvelCache.clear();
         this._gravityScaleCache.clear();
+        this._pendingBodies.clear();
         this._nextBodyIndex = 0;
+        this._worldCommitted = false;
         this._active = true;
         this.game.world = createProxyWorld(this);
+    }
+
+    reserveBodyIndex() {
+        return this._nextBodyIndex++;
+    }
+
+    /**
+     * @param {number} bodyIndex
+     * @param {object} stored
+     */
+    _storeDescriptorSlot(bodyIndex, stored) {
+        while (this._descriptorSlots.length <= bodyIndex) {
+            this._descriptorSlots.push(null);
+        }
+        this._descriptorSlots[bodyIndex] = stored;
+    }
+
+    /**
+     * @param {number} bodyIndex
+     * @param {object} desc
+     */
+    finalizeBodyDescriptor(bodyIndex, desc) {
+        const stored = {
+            ...desc,
+            translation: [...(desc.translation || [0, 0, 0])],
+            rotation: [...(desc.rotation || [0, 0, 0, 1])],
+        };
+        if (desc.gravityScale != null) {
+            this._gravityScaleCache.set(bodyIndex, desc.gravityScale);
+        } else {
+            this._gravityScaleCache.set(bodyIndex, 1);
+        }
+        if (desc.linvel) {
+            this._linvelCache.set(bodyIndex, {
+                x: desc.linvel[0],
+                y: desc.linvel[1],
+                z: desc.linvel[2],
+            });
+        } else {
+            this._linvelCache.set(bodyIndex, { x: 0, y: 0, z: 0 });
+        }
+
+        if (!this._worldCommitted) {
+            this._storeDescriptorSlot(bodyIndex, stored);
+            return;
+        }
+
+        this.worker.postMessage({
+            type: WORKER_MSG.ADD_BODY,
+            bodyIndex,
+            descriptor: stored,
+        });
     }
 
     /**
      * @param {object} desc
      */
     registerBody(desc) {
-        const bodyIndex = this._nextBodyIndex++;
+        const bodyIndex = this.reserveBodyIndex();
         const stored = {
             ...desc,
             translation: [...(desc.translation || [0, 0, 0])],
             rotation: [...(desc.rotation || [0, 0, 0, 1])],
         };
-        this._descriptors.push(stored);
+        if (!this._worldCommitted) {
+            this._storeDescriptorSlot(bodyIndex, stored);
+        } else {
+            this.worker.postMessage({
+                type: WORKER_MSG.ADD_BODY,
+                bodyIndex,
+                descriptor: stored,
+            });
+        }
         if (desc.gravityScale != null) {
             this._gravityScaleCache.set(bodyIndex, desc.gravityScale);
         } else {
             this._gravityScaleCache.set(bodyIndex, 1);
         }
-        this._linvelCache.set(bodyIndex, { x: 0, y: 0, z: 0 });
+        if (desc.linvel) {
+            this._linvelCache.set(bodyIndex, {
+                x: desc.linvel[0],
+                y: desc.linvel[1],
+                z: desc.linvel[2],
+            });
+        } else {
+            this._linvelCache.set(bodyIndex, { x: 0, y: 0, z: 0 });
+        }
         return createProxyRigidBody(this, bodyIndex);
     }
 
@@ -224,6 +304,7 @@ export class WorkerPhysicsBackend {
                 const msg = event.data;
                 if (msg.type === WORKER_MSG.INIT_OK) {
                     this.worker.removeEventListener('message', onMessage);
+                    this._worldCommitted = true;
                     resolve(true);
                 } else if (msg.type === WORKER_MSG.INIT_ERROR) {
                     this.worker.removeEventListener('message', onMessage);
@@ -234,7 +315,7 @@ export class WorkerPhysicsBackend {
             this.worker.postMessage({
                 type: WORKER_MSG.INIT_WORLD,
                 gravity: this.gravity,
-                descriptors: this._descriptors,
+                descriptors: this._descriptorSlots.slice(0, this._nextBodyIndex),
             });
         });
     }
@@ -244,8 +325,17 @@ export class WorkerPhysicsBackend {
             this.worker.postMessage({ type: WORKER_MSG.RESET_WORLD });
         }
         this._descriptors = [];
+        this._descriptorSlots = [];
         this._proxies.clear();
+        this._pendingBodies.clear();
+        this._worldCommitted = false;
         this._active = false;
+
+        const g = this.game;
+        if (g.mainPhysicsBackend) {
+            g.physicsBackend = g.mainPhysicsBackend;
+            g.physicsWorld.init(g.physicsGravity || { x: 0, y: -9.81, z: 0 });
+        }
     }
 
     step() {
@@ -380,8 +470,43 @@ export class WorkerPhysicsBackend {
     }
 
     queueKinematicRotation(bodyIndex, r) {
-        void bodyIndex;
-        void r;
+        enqueueCommand(
+            this.commandViews.u32,
+            this.commandViews.f32,
+            CMD_OP.KINEMATIC_ROTATION,
+            bodyIndex,
+            r.x,
+            r.y,
+            r.z,
+            r.w,
+        );
+    }
+
+    queueSetTranslation(bodyIndex, t, wake = true) {
+        enqueueCommand(
+            this.commandViews.u32,
+            this.commandViews.f32,
+            CMD_OP.SET_TRANSLATION,
+            bodyIndex,
+            t.x,
+            t.y,
+            t.z,
+            wake ? 1 : 0,
+        );
+    }
+
+    queueSetRotation(bodyIndex, r, wake = true) {
+        void wake;
+        enqueueCommand(
+            this.commandViews.u32,
+            this.commandViews.f32,
+            CMD_OP.SET_ROTATION,
+            bodyIndex,
+            r.x,
+            r.y,
+            r.z,
+            r.w,
+        );
     }
 
     removeRigidBody(body) {
@@ -399,24 +524,43 @@ export class WorkerPhysicsBackend {
 
     castRay(spec) {
         if (!this.worker || !this.isWorkerMode()) return null;
-        const { i32, f32 } = this.raycastViews;
+        const { i32, f32, u32 } = this.raycastViews;
         Atomics.store(i32, 0, RAYCAST_STATUS.PENDING);
         this.worker.postMessage({
-            type: 'RAYCAST',
+            type: WORKER_MSG.RAYCAST,
             ray: spec.ray,
             maxDist: spec.maxDist,
             solid: spec.solid,
+            filterExcludeRigidBody: spec.filterExcludeRigidBody?.handle
+                ?? spec.filterExcludeRigidBody?._bodyIndex
+                ?? null,
         });
 
         const deadline = performance.now() + 8;
         while (Atomics.load(i32, 0) === RAYCAST_STATUS.PENDING && performance.now() < deadline) {
-            // spin wait — spike only
+            // spin wait — worker fills SAB synchronously on message
         }
         if (Atomics.load(i32, 0) !== RAYCAST_STATUS.READY) return null;
-        if (f32[1] < 0.5) return null;
+        if (f32[RAYCAST_HIT_INDEX] < 0.5) return null;
+
+        const hitBodyIndex = u32[RAYCAST_BODY_INDEX];
+        const hitBody = hitBodyIndex !== 0xffffffff
+            ? { handle: hitBodyIndex, _bodyIndex: hitBodyIndex }
+            : null;
+
         return {
-            timeOfImpact: f32[2],
-            normal: { x: f32[6], y: f32[7], z: f32[8] },
+            timeOfImpact: f32[RAYCAST_TOI_INDEX],
+            toi: f32[RAYCAST_TOI_INDEX],
+            normal: {
+                x: f32[RAYCAST_NORMAL_INDEX],
+                y: f32[RAYCAST_NORMAL_INDEX + 1],
+                z: f32[RAYCAST_NORMAL_INDEX + 2],
+            },
+            collider: {
+                parent() {
+                    return hitBody;
+                },
+            },
         };
     }
 
@@ -457,7 +601,7 @@ export async function createPhysicsBackend(game, options = {}) {
         await workerBackend.init(options.gravity || { x: 0, y: -9.81, z: 0 });
         game.workerPhysicsBackend = workerBackend;
         game.physicsBackend = mainBackend;
-        console.info('[Physics] Worker infrastructure ready (activates on tutorial + ?physicsWorker=1)');
+        console.info('[Physics] Worker infrastructure ready (?physicsWorker=1 + manifest level)');
         return mainBackend;
     } catch (err) {
         console.warn('[Physics] Worker init failed, using main thread:', err?.message || err);
