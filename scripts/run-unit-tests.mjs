@@ -36,6 +36,7 @@ for (const file of files) {
   const rel = path.relative(root, file);
   process.stdout.write(`▶ ${rel} ... `);
 
+
   // Use --experimental-strip-types for native TS execution if available (Node 22+)
   // We parse the node version to only pass the flag if it's supported (v22.6.0+)
   const args = [file];

@@ -1,3 +1,4 @@
+// @ts-nocheck — legacy vanilla JS; cloud client types deferred
 /**
  * Non-blocking cloud sync for campaign progress and ghost leaderboards.
  * No-ops when VITE_MARBLES_API_URL is unset or player has not opted in.
