@@ -3,6 +3,8 @@ import { audio } from '../audio.js';
 
 import { getMarblePhysics } from '../wasm-bridge.js';
 
+const _springForceScratch = new Float32Array(3);
+
 export class ZoneSetupGrapple {
     createGrappleLine() {
         this.grappleEntity = this.Filament.EntityManager.get().create()
@@ -174,20 +176,23 @@ export class ZoneSetupGrapple {
                 const damping = 2.0
                 const vel = rb.linvel()
                 const physics = getMarblePhysics()
-                const force = physics.computeSpringForce(
+                physics.computeSpringForceInto(
+                    _springForceScratch,
                     pos.x, pos.y, pos.z,
                     target.x, target.y, target.z,
                     restLength, stiffness, damping,
                     vel.x, vel.y, vel.z
                 )
-                const totalForce = force.x * dirX + force.y * dirY + force.z * dirZ
+                const totalForce = _springForceScratch[0] * dirX
+                    + _springForceScratch[1] * dirY
+                    + _springForceScratch[2] * dirZ
 
                 if (totalForce > 0) {
                     const dt = 0.016
                     rb.applyImpulse({
-                        x: force.x * dt,
-                        y: force.y * dt,
-                        z: force.z * dt
+                        x: _springForceScratch[0] * dt,
+                        y: _springForceScratch[1] * dt,
+                        z: _springForceScratch[2] * dt
                     }, true)
                 }
             }

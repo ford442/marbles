@@ -2,6 +2,9 @@ import { audio } from '../../audio.js';
 import { quaternionToMat4 } from '../../math.js';
 import { getMarblePhysics } from '../../wasm-bridge.js';
 
+/** Reusable vec3 scratch — avoids per-tick `{x,y,z}` allocations on hot paths. */
+const _forceScratch = new Float32Array(3);
+
 /**
  * @param {string} playerId
  * @param {number} seq
@@ -313,12 +316,17 @@ export function tickRemoteAbilityFx(game, now = Date.now()) {
 
             if (fx.kind === 'blackhole' && game.playerMarble?.rigidBody) {
                 const pos = game.playerMarble.rigidBody.translation();
-                const force = physics.computeForceField(
+                physics.computeForceFieldInto(
+                    _forceScratch,
                     fx.pos.x, fx.pos.y, fx.pos.z,
                     pos.x, pos.y, pos.z,
                     20, 1, 0.5, 25
                 );
-                game.playerMarble.rigidBody.applyImpulse(force, true);
+                game.playerMarble.rigidBody.applyImpulse({
+                    x: _forceScratch[0],
+                    y: _forceScratch[1],
+                    z: _forceScratch[2],
+                }, true);
             }
         }
 

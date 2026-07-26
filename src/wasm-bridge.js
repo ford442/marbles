@@ -281,6 +281,40 @@ const jsFallback = {
     },
 
     /**
+     * Writes spring force xyz into `out` (length ≥ 3) without allocating.
+     *
+     * @param {Float32Array | number[]} out
+     */
+    computeSpringForceInto(out,
+                           marbleX, marbleY, marbleZ,
+                           anchorX, anchorY, anchorZ,
+                           restLength, stiffness, damping,
+                           velX, velY, velZ) {
+        const dx = anchorX - marbleX;
+        const dy = anchorY - marbleY;
+        const dz = anchorZ - marbleZ;
+        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+        if (dist < 1e-6) {
+            out[0] = 0;
+            out[1] = 0;
+            out[2] = 0;
+            return;
+        }
+
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const nz = dz / dist;
+        const extension = dist - restLength;
+        const velAlongAxis = velX * nx + velY * ny + velZ * nz;
+        const fMag = stiffness * extension - damping * velAlongAxis;
+
+        out[0] = nx * fMag;
+        out[1] = ny * fMag;
+        out[2] = nz * fMag;
+    },
+
+    /**
      * Batched spring forces.
      *
      * @param {Float32Array} positions   length count * 3
@@ -502,6 +536,38 @@ class WasmBatchRunner {
     }
 
     /**
+     * @param {Float32Array | number[]} out
+     * @param {number} marbleX
+     * @param {number} marbleY
+     * @param {number} marbleZ
+     * @param {number} anchorX
+     * @param {number} anchorY
+     * @param {number} anchorZ
+     * @param {number} restLength
+     * @param {number} stiffness
+     * @param {number} damping
+     * @param {number} velX
+     * @param {number} velY
+     * @param {number} velZ
+     */
+    computeSpringForceInto(out,
+                           marbleX, marbleY, marbleZ,
+                           anchorX, anchorY, anchorZ,
+                           restLength, stiffness, damping,
+                           velX, velY, velZ) {
+        this._mod.computeSpringForceOut(
+            this._scalarOutPtr,
+            marbleX, marbleY, marbleZ,
+            anchorX, anchorY, anchorZ,
+            restLength, stiffness, damping,
+            velX, velY, velZ
+        );
+        out[0] = /** @type {number} */ (this._scalarOutView[0]);
+        out[1] = /** @type {number} */ (this._scalarOutView[1]);
+        out[2] = /** @type {number} */ (this._scalarOutView[2]);
+    }
+
+    /**
      * @param {Float32Array} positions
      * @param {Float32Array} strengths
      * @param {Float32Array} out
@@ -675,6 +741,8 @@ function buildPhysicsApi() {
                 const v = wasmBatch._scalarOutView;
                 return vec3FromView(v);
             },
+            computeSpringForceInto: (out, ...args) =>
+                wasmBatch.computeSpringForceInto(out, ...args),
             reflectVelocity: (...args) => {
                 wasmApi.reflectVelocityOut(wasmBatch._scalarOutPtr, ...args);
                 const v = wasmBatch._scalarOutView;

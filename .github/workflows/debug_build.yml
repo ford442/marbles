@@ -38,11 +38,17 @@ jobs:
       - name: Build WASM
         run: npm run build:wasm
 
+      - name: Verify WASM artefacts
+        run: npm run check:wasm
+
+      - name: WASM parity tests
+        run: npm run test:wasm:parity
+
       - name: Validate assets
         run: npm run validate:assets
 
       - name: Unit tests
-        run: npm run test:unit
+        run: node scripts/run-unit-tests.mjs
 
       - name: Lint
         run: npm run lint
@@ -52,9 +58,6 @@ jobs:
 
       - name: Build Vite app
         run: npx vite build
-
-      - name: WASM parity tests
-        run: node tests/test_wasm_bridge_wasm.js
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
