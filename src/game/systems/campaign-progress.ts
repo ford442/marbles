@@ -79,6 +79,10 @@ export function mergeLevelProgress(
         merged.bestTime = rt;
     }
 
+    const betterMedal = medalRank(remote.medal ?? null) > medalRank(local.medal ?? null)
+        ? remote.medal
+        : (local.medal ?? remote.medal);
+    if (betterMedal !== undefined) merged.medal = betterMedal;
     const medal = medalRank(remote.medal ?? null) > medalRank(local.medal ?? null)
         ? remote.medal
         : (local.medal ?? remote.medal);
@@ -89,8 +93,8 @@ export function mergeLevelProgress(
         local.collectiblesPercent ?? 0,
         remote.collectiblesPercent ?? 0,
     );
-    const collectiblesTotal = local.collectiblesTotal ?? remote.collectiblesTotal;
-    if (collectiblesTotal !== undefined) merged.collectiblesTotal = collectiblesTotal;
+    const ct = local.collectiblesTotal ?? remote.collectiblesTotal;
+    if (ct !== undefined) merged.collectiblesTotal = ct;
 
     return merged;
 }
@@ -110,6 +114,7 @@ export function mergeCampaignSave(local: CampaignSave, remote: Partial<CampaignS
         levels[levelId] = mergeLevelProgress(l.levels[levelId], r.levels?.[levelId]);
     }
 
+    const res: CampaignSave = {
     const updatedAt = r.updatedAt ?? l.updatedAt;
     return {
         version: Math.max(l.version, r.version ?? 1),
@@ -126,6 +131,11 @@ export function mergeCampaignSave(local: CampaignSave, remote: Partial<CampaignS
         revision: Math.max(l.revision ?? 0, r.revision ?? 0),
         ...(updatedAt !== undefined ? { updatedAt } : {}),
     };
+    const up = r.updatedAt ?? l.updatedAt;
+    if (up !== undefined) {
+        res.updatedAt = up;
+    }
+    return res;
 }
 
 export class CampaignProgress {

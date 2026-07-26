@@ -39,6 +39,7 @@ module.exports = {
         'no-loss-of-precision': 'warn',
         '@typescript-eslint/no-require-imports': 'off',
         '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/ban-ts-comment': 'off',
     },
     overrides: [
         {
