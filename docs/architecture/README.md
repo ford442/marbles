@@ -17,7 +17,7 @@ Phased migration from mixin-assembled `MarblesGame` toward composable subsystems
 | Game loop | `src/game-loop/` | `game-loop-*.js` at `src/` root | **Phase A complete** — single folder |
 | Input | `src/game/systems/input-system.js` | `input-methods.js` | Phase B — `InputSystem` ✅ |
 | Physics factory | `src/game/systems/physics-world.js` | `physics-factory-methods.js` | Phase B — `PhysicsWorld` ✅ |
-| Physics worker | `src/game/physics-worker/` + `physics-backend.js` | — | Tutorial spike — see [physics-worker.md](./physics-worker.md) |
+| Physics worker | `src/game/physics-worker/` + `physics-backend.js` | — | Production opt-in — see [physics-worker.md](./physics-worker.md) |
 | Marble spawn | `src/game/systems/marble-registry.js` | `marble-management-methods.js` | Phase B — `MarbleRegistry` ✅ |
 | Render sync | `src/game/systems/render-pipeline.js` | `src/game-loop/sync.js` runtime slice | `RenderPipeline` owns frame order, transform sync, draw, culling path, and static flush |
 | HUD | `src/game/systems/hud-controller.js` + `hud` state | `src/hud-manager.js`, `game-loop/hud-tick.js` | `HudController` owns HUD DOM, cooldowns, goal FX, and desync display |

@@ -161,7 +161,7 @@ Expected signal: modest p50 improvement on levels with many simultaneous force-f
 
 ## Physics worker A/B (Rapier offload)
 
-Opt in with `?physicsWorker=1` on the **tutorial** level (spike). Requires COOP/COEP (`vite.config.js` / production CDN). Compare against `?physicsWorker=0` on the same level.
+Opt in with `?physicsWorker=1` on any **manifest** campaign level (24 maps in `assets/manifest.json`). Requires COOP/COEP (`vite.config.js` / production CDN). Compare against `?physicsWorker=0` on the same level.
 
 Suggested route (isolates physics from Filament):
 
@@ -179,9 +179,18 @@ window.perfMonitor.getLevelSummary()
 // latestMetrics.rapierBackend — 'worker' | 'main'
 ```
 
-Also sample body-pressure and particle-heavy levels (`space_station`, `lava_tubes_run`) on **main-thread** baseline; worker path is tutorial-only until expanded.
+Sample levels:
 
-**Expected:** main-thread `physicsStepMs` drops when Rapier runs in the worker; marble transform sync in `sync.js` remains on the main thread and is unchanged.
+| Level | Why |
+|-------|-----|
+| `tutorial` | Spike baseline |
+| `space_station` | High static body count |
+| `mushroom_hop` | Factory stamp (manifest) |
+| `lava_tubes_run` (`?devLevels=1`) | Particle-heavy; worker still offloads Rapier only |
+
+**Expected on real hardware:** main-thread `physicsStepMs` drops when Rapier runs in the worker; marble transform sync in `sync.js` remains on the main thread. SwiftShader headless timings are not representative — capture notes from a discrete-GPU machine when updating this table.
+
+E2E: `npm run test:e2e:smoke:worker` (with dev server on :5173).
 
 See [architecture/physics-worker.md](./architecture/physics-worker.md).
 

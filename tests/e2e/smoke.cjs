@@ -2,7 +2,8 @@ const { chromium } = require('playwright');
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:5173/';
 const GAME_TIMEOUT_MS = 30000;
-const FACTORY_LEVEL_ID = 'ice_bridges_run';
+const FACTORY_LEVEL_ID = process.env.SMOKE_FACTORY_LEVEL || 'mushroom_hop';
+const USE_PHYSICS_WORKER = process.env.PHYSICS_WORKER === '1';
 
 (async () => {
   const browser = await chromium.launch({ headless: true });
@@ -16,7 +17,10 @@ const FACTORY_LEVEL_ID = 'ice_bridges_run';
 
   try {
     const url = new URL(BASE_URL);
-    url.searchParams.set('devLevels', '1');
+    if (USE_PHYSICS_WORKER) {
+      url.searchParams.set('physicsWorker', '1');
+      url.searchParams.set('renderer', 'simple');
+    }
     console.log(`Navigating to ${url}...`);
     await page.goto(url.toString());
 
@@ -40,10 +44,23 @@ const FACTORY_LEVEL_ID = 'ice_bridges_run';
         levelId,
         { timeout: GAME_TIMEOUT_MS }
       );
+
+      if (USE_PHYSICS_WORKER) {
+        await page.waitForFunction(
+          () => window.game.physicsBackend?.getMode?.() === 'worker',
+          { timeout: GAME_TIMEOUT_MS }
+        );
+      }
     };
 
     console.log('Loading tutorial...');
     await loadFromMenu('tutorial');
+
+    if (USE_PHYSICS_WORKER) {
+      const backend = await page.evaluate(() => window.game.physicsBackend?.getMode?.());
+      console.log(`Physics backend after tutorial: ${backend}`);
+      assertBackend(backend, 'worker');
+    }
 
     console.log('Returning to menu...');
     await page.evaluate(() => window.game.returnToMenu());
@@ -56,6 +73,12 @@ const FACTORY_LEVEL_ID = 'ice_bridges_run';
     console.log(`Loading factory level ${FACTORY_LEVEL_ID}...`);
     await loadFromMenu(FACTORY_LEVEL_ID);
 
+    if (USE_PHYSICS_WORKER) {
+      const backend = await page.evaluate(() => window.game.physicsBackend?.getMode?.());
+      console.log(`Physics backend after ${FACTORY_LEVEL_ID}: ${backend}`);
+      assertBackend(backend, 'worker');
+    }
+
     console.log('Returning to menu after factory level...');
     await page.evaluate(() => window.game.returnToMenu());
     await page.waitForSelector('#level-menu', { state: 'visible', timeout: GAME_TIMEOUT_MS });
@@ -64,7 +87,7 @@ const FACTORY_LEVEL_ID = 'ice_bridges_run';
       throw new Error(`Page errors during load: ${errors.map((e) => e.message).join('; ')}`);
     }
 
-    console.log('Smoke test passed.');
+    console.log(`Smoke test passed${USE_PHYSICS_WORKER ? ' (physics worker)' : ''}.`);
     process.exit(0);
   } catch (err) {
     console.error('Smoke test failed:', err.message);
@@ -73,3 +96,9 @@ const FACTORY_LEVEL_ID = 'ice_bridges_run';
     await browser.close();
   }
 })();
+
+function assertBackend(actual, expected) {
+  if (actual !== expected) {
+    throw new Error(`Expected physics backend "${expected}", got "${actual}"`);
+  }
+}

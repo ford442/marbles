@@ -1,3 +1,5 @@
+import { serializeColliderDesc, serializeRigidBodyDesc } from './rapier-desc-serializer.js';
+
 /**
  * Rapier-shaped facade backed by SharedArrayBuffer + command ring.
  * @param {import('../systems/physics-backend.js').WorkerPhysicsBackend} backend
@@ -44,6 +46,13 @@ export function createProxyRigidBody(backend, bodyIndex) {
         setNextKinematicRotation(r) {
             backend.queueKinematicRotation(bodyIndex, r);
         },
+        setTranslation(t, wake = true) {
+            backend.queueSetTranslation(bodyIndex, t, wake);
+            backend._linvelCache.set(bodyIndex, { x: 0, y: 0, z: 0 });
+        },
+        setRotation(r, wake = true) {
+            backend.queueSetRotation(bodyIndex, r, wake);
+        },
     };
     backend.registerProxy(bodyIndex, proxy);
     return proxy;
@@ -74,11 +83,34 @@ export function createProxyWorld(backend) {
         removeRigidBody(body) {
             backend.removeRigidBody(body);
         },
-        createRigidBody() {
-            throw new Error('[PhysicsWorker] createRigidBody on proxy world — use physicsBackend.registerBody');
+        step() {
+            // Worker loop owns simulation; main thread only drains commands via backend.step().
         },
-        createCollider() {
-            throw new Error('[PhysicsWorker] createCollider on proxy world — use physicsBackend.registerBody');
+        createRigidBody(bodyDesc) {
+            const bodyIndex = backend.reserveBodyIndex();
+            const partial = serializeRigidBodyDesc(bodyDesc);
+            backend._pendingBodies.set(bodyIndex, partial);
+            return createProxyRigidBody(backend, bodyIndex);
+        },
+        createCollider(colliderDesc, body) {
+            const bodyIndex = body?.handle ?? body?._bodyIndex;
+            if (bodyIndex == null) {
+                throw new Error('[PhysicsWorker] createCollider requires a proxy rigid body');
+            }
+
+            const partial = backend._pendingBodies.get(bodyIndex);
+            if (!partial) {
+                throw new Error(`[PhysicsWorker] missing pending body for index ${bodyIndex}`);
+            }
+
+            partial.collider = serializeColliderDesc(colliderDesc);
+            backend._pendingBodies.delete(bodyIndex);
+            backend.finalizeBodyDescriptor(bodyIndex, partial);
+            return {
+                parent() {
+                    return body;
+                },
+            };
         },
     };
 }

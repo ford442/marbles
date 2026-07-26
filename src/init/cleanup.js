@@ -7,9 +7,10 @@ import { resetDesyncIndicator } from '../game/network/desync-indicator.js';
 export class InitCleanup {
     clearLevel() {
         unloadLevelBehaviors(this);
-        this.physicsBackend?.resetWorld?.();
+        const workerActive = this.physicsBackend?.isWorkerMode?.();
+
         for (const m of this.marbles) {
-            this.world.removeRigidBody(m.rigidBody)
+            if (!workerActive) this.world.removeRigidBody(m.rigidBody)
             this.scene.remove(m.entity)
             if (m.matInstance) this.engine.destroyMaterialInstance(m.matInstance)
             this.engine.destroyEntity(m.entity)
@@ -25,7 +26,7 @@ export class InitCleanup {
         this.playerMarble = null
 
         for (const body of this.staticBodies) {
-            this.world.removeRigidBody(body)
+            if (!workerActive) this.world.removeRigidBody(body)
         }
         this.staticBodies = []
 
@@ -73,7 +74,7 @@ export class InitCleanup {
         }
 
         for (const obj of this.dynamicObjects) {
-            this.world.removeRigidBody(obj.rigidBody)
+            if (!workerActive) this.world.removeRigidBody(obj.rigidBody)
             this.scene.remove(obj.entity)
             this.engine.destroyEntity(obj.entity)
         }
@@ -100,7 +101,7 @@ export class InitCleanup {
         this.grappleAnchors = []
 
         for (const p of this.powerUps) {
-            this.world.removeRigidBody(p.rigidBody)
+            if (!workerActive) this.world.removeRigidBody(p.rigidBody)
             this.scene.remove(p.entity)
             this.engine.destroyEntity(p.entity)
         }
@@ -108,14 +109,14 @@ export class InitCleanup {
         this.activeEffects = {}
 
         for (const platform of this.movingPlatforms) {
-            this.world.removeRigidBody(platform.rigidBody)
+            if (!workerActive) this.world.removeRigidBody(platform.rigidBody)
             this.scene.remove(platform.entity)
             this.engine.destroyEntity(platform.entity)
         }
         this.movingPlatforms = []
 
         for (const platform of this.rotatingPlatforms) {
-            this.world.removeRigidBody(platform.rigidBody)
+            if (!workerActive) this.world.removeRigidBody(platform.rigidBody)
             this.scene.remove(platform.entity)
             this.engine.destroyEntity(platform.entity)
         }
@@ -160,5 +161,9 @@ export class InitCleanup {
 
         this.dynamicBodies = new Set()
         this.setNightMode(false)
+
+        if (workerActive) {
+            this.physicsBackend?.resetWorld?.();
+        }
     }
 }
