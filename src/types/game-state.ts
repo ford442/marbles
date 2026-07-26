@@ -262,6 +262,7 @@ export interface InputState {
     boostCooldown: number;
     lastDashTime: number;
     dashCooldown: number;
+    lastAirDashTime: number;
     isChargingDash: boolean;
     dashCharge: number;
     maxDashCharge: number;
