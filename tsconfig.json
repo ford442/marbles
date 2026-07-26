@@ -32,7 +32,6 @@
     "include": [
         "src/**/*.ts",
         "src/math.js",
-        "src/wasm-bridge.js",
         "src/game/state/**/*.js",
         "src/game/systems/ability-cooldown.js",
         "src/game/systems/trick-scoring.js",

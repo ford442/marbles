@@ -583,7 +583,7 @@ export async function createPhysicsBackend(game, options = {}) {
     const search = typeof window !== 'undefined' ? window.location.search : '';
     const wantWorker = shouldUsePhysicsWorker({
         search,
-        crossOriginIsolated: globalThis.crossOriginIsolated === true,
+        crossOriginIsolated: typeof window !== 'undefined' && typeof window.crossOriginIsolated !== 'undefined' ? window.crossOriginIsolated : false,
         hasSharedArrayBuffer: typeof SharedArrayBuffer !== 'undefined',
         multiplayerMode: game.multiplayerMode,
         hostAuthorityMode: game.hostAuthorityMode,
@@ -619,7 +619,7 @@ export async function activatePhysicsBackendForLevel(game, levelId) {
     const search = typeof window !== 'undefined' ? window.location.search : '';
     const useWorker = shouldUsePhysicsWorker({
         search,
-        crossOriginIsolated: globalThis.crossOriginIsolated === true,
+        crossOriginIsolated: typeof window !== 'undefined' && typeof window.crossOriginIsolated !== 'undefined' ? window.crossOriginIsolated : false,
         hasSharedArrayBuffer: typeof SharedArrayBuffer !== 'undefined',
         multiplayerMode: game.multiplayerMode,
         hostAuthorityMode: game.hostAuthorityMode,

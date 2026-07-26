@@ -1,5 +1,11 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import {
+    CMD_HEADER_HEAD,
+    CMD_HEADER_TAIL,
+    CMD_HEADER_BYTES,
+    CMD_ENTRY_BYTES,
+    CMD_OP,
+    CMD_HEADER_BYTES,
     TRANSFORM_HEADER_BODY_COUNT,
     TRANSFORM_HEADER_BYTES,
     TRANSFORM_HEADER_FRAME_TICK,
@@ -69,6 +75,65 @@ function drainCommands() {
         world,
         { timestep },
     );
+    const { u32, f32 } = commandViews;
+
+    let hasCommands = true;
+    while (hasCommands) {
+    for (;;) {
+        const tail = Atomics.load(u32, CMD_HEADER_TAIL);
+        const head = Atomics.load(u32, CMD_HEADER_HEAD);
+        if (tail === head) {
+            hasCommands = false;
+            break;
+        }
+
+        const entryIndex = CMD_HEADER_BYTES / 4 + tail * (CMD_ENTRY_BYTES / 4);
+        const op = u32[entryIndex];
+        const bodyIndex = u32[entryIndex + 1];
+        const f0 = f32[entryIndex + 2];
+        const f1 = f32[entryIndex + 3];
+        const f2 = f32[entryIndex + 4];
+        const f3 = f32[entryIndex + 5];
+
+        const body = bodies[bodyIndex];
+        if (body && !removedIndices.has(bodyIndex)) {
+            switch (op) {
+                case CMD_OP.IMPULSE:
+                    body.applyImpulse({ x: f0, y: f1, z: f2 }, f3 !== 0);
+                    break;
+                case CMD_OP.TORQUE:
+                    body.applyTorqueImpulse({ x: f0, y: f1, z: f2 }, f3 !== 0);
+                    break;
+                case CMD_OP.KINEMATIC_POSE:
+                    body.setNextKinematicTranslation({ x: f0, y: f1, z: f2 });
+                    break;
+                case CMD_OP.SET_LINVEL:
+                    body.setLinvel({ x: f0, y: f1, z: f2 }, f3 !== 0);
+                    break;
+                case CMD_OP.SET_ANGVEL:
+                    body.setAngvel({ x: f0, y: f1, z: f2 }, f3 !== 0);
+                    break;
+                case CMD_OP.SET_GRAVITY_SCALE:
+                    body.setGravityScale(f0, f3 !== 0);
+                    break;
+                case CMD_OP.SET_TIMESTEP:
+                    timestep = f0;
+                    if (world) world.timestep = timestep;
+                    break;
+                case CMD_OP.REMOVE_BODY:
+                    if (bodies[bodyIndex]) {
+                        world.removeRigidBody(bodies[bodyIndex]);
+                        bodies[bodyIndex] = null;
+                        removedIndices.add(bodyIndex);
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        Atomics.store(u32, CMD_HEADER_TAIL, (tail + 1) % u32[2]);
+    }
 }
 
 function runPhysicsStep() {
