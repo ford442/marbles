@@ -111,6 +111,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md#asset-validation).
 
 ## Related docs
 
+- [architecture/product-epic.md](architecture/product-epic.md) — competition, workshop, showcase roadmap (P0–P4)
 - [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) — runtime entry graph
 - [CONTRIBUTING.md](CONTRIBUTING.md) — how to add content
 - [AGENTS.md](../AGENTS.md) — Cursor Cloud agent ops (prefer over `docs/AGENTS.md`)

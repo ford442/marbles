@@ -75,6 +75,6 @@ node tests/test_map_editor.js
 
 Covers undo/redo, snap helpers, checkpoint sync, schema round-trip for v2 stamps, playtest session serialization, and workshop asset path collection.
 
-## Later (out of scope)
+## Later (out of scope for editor v2)
 
-Upload/share to server, procedural brushes, workshop browser UI.
+Upload/share to server, procedural brushes, workshop browser UI — see [workshop-platform.md](./workshop-platform.md) and [product-epic.md](./product-epic.md) (P1–P2).
