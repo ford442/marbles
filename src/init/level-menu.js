@@ -167,11 +167,3 @@ export class InitLevelMenu {
         })
     }
 }
-
-export function applyInitLevelMenu(targetClass) {
-    for (const name of Object.getOwnPropertyNames(InitLevelMenu.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = InitLevelMenu.prototype[name];
-        }
-    }
-}

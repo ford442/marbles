@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
-import { ABILITY_REGISTRY, ALL_ABILITY_IDS } from '../src/abilities/registry.js';
+import {
+    ABILITY_REGISTRY,
+    ALL_ABILITY_IDS,
+    MAX_NETWORKED_ABILITY_IDS,
+} from '../src/abilities/registry.js';
 import { AbilitySystem } from '../src/game/systems/ability-system.js';
 
 function createMockGame(overrides = {}) {
@@ -48,6 +52,10 @@ function testRegistryHasCoreAbilities() {
         assert.ok(ABILITY_REGISTRY[id], `missing registry entry: ${id}`);
     }
     assert.equal(ALL_ABILITY_IDS.length >= 6, true);
+    assert.ok(
+        ALL_ABILITY_IDS.length <= MAX_NETWORKED_ABILITY_IDS,
+        'registry abilities must fit in the reserved multiplayer bitfield',
+    );
 }
 
 function testTutorialMask() {
@@ -58,6 +66,16 @@ function testTutorialMask() {
     assert.equal(game.abilitySystem.isEnabled('bomb'), false);
     assert.equal(game.abilitySystem.handleKeyDown('KeyX'), true);
     assert.equal(game.lastBombTime, 0);
+}
+
+function testMaskPrecedenceAndUnknownIds() {
+    const game = createMockGame();
+    game.abilitySystem.applyLevelMask({
+        enabled: ['jump', 'not_registered'],
+        disabled: ['jump'],
+    });
+
+    assert.deepEqual([...game.abilitySystem.enabled], ['jump']);
 }
 
 function testActivateRespectsCooldown() {
@@ -87,6 +105,7 @@ function testHudBarTick() {
 
 testRegistryHasCoreAbilities();
 testTutorialMask();
+testMaskPrecedenceAndUnknownIds();
 testActivateRespectsCooldown();
 testKeybindOverride();
 testHudBarTick();

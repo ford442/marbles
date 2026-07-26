@@ -333,11 +333,3 @@ export class InitSettings {
         updateMarbleMaterialTiers(this, performance.now())
     }
 }
-
-export function applyInitSettings(targetClass) {
-    for (const name of Object.getOwnPropertyNames(InitSettings.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = InitSettings.prototype[name];
-        }
-    }
-}

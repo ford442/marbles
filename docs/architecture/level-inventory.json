@@ -1,14 +1,19 @@
 {
-  "generated_at": "2026-07-22T11:34:47.999Z",
+  "generated_at": "2026-07-26T14:00:36.355Z",
   "counts": {
-    "manifest": 14,
-    "dev_levels": 61,
-    "map_files": 18,
-    "unique_ids": 75,
-    "json_only": 10,
-    "code_only": 57,
+    "manifest": 24,
+    "dev_levels": 52,
+    "map_files": 28,
+    "unique_ids": 76,
+    "json_only": 20,
+    "code_only": 48,
     "dual": 4,
-    "orphan_json": 4
+    "orphan_json": 0,
+    "archived_json": 4
+  },
+  "checks": {
+    "duplicate_dev_level_ids": [],
+    "shipped_without_handlers": []
   },
   "rows": [
     {
@@ -22,6 +27,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -35,6 +41,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -48,6 +55,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -61,6 +69,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -74,6 +83,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -87,20 +97,22 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
       "id": "clockwork_chaos",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
-      "chapter": "classic",
-      "chapter_source": "heuristic:classic",
-      "zone_types": "(dev inline)",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "extreme",
+      "chapter_source": "json:extreme",
+      "zone_types": "floor, track, clockwork, goal",
       "unknown_zones": "",
-      "migration_status": "dev-only",
-      "difficulty": ""
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "difficulty": "hard"
     },
     {
       "id": "cloud_city_run",
@@ -113,6 +125,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -126,6 +139,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -139,20 +153,22 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
       "id": "cyber_run",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
       "chapter": "neon",
-      "chapter_source": "heuristic:neon",
-      "zone_types": "(dev inline)",
+      "chapter_source": "json:neon",
+      "zone_types": "floor, track, cyber_track, goal",
       "unknown_zones": "",
-      "migration_status": "dev-only",
-      "difficulty": ""
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "difficulty": "medium"
     },
     {
       "id": "desert_ruins_run",
@@ -165,6 +181,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -178,6 +195,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -191,6 +209,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -204,20 +223,22 @@
       "zone_types": "floor, track, landing, goal, jump, slalom, staircase",
       "unknown_zones": "",
       "migration_status": "json-wins",
+      "archive_reason": "",
       "difficulty": "expert"
     },
     {
       "id": "galaxy_spiral_run",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
-      "chapter": "classic",
-      "chapter_source": "heuristic:classic",
-      "zone_types": "(dev inline)",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "expert",
+      "chapter_source": "json:expert",
+      "zone_types": "floor, track, galaxy_spiral, goal",
       "unknown_zones": "",
-      "migration_status": "dev-only",
-      "difficulty": ""
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "difficulty": "expert"
     },
     {
       "id": "glacial_chasm_run",
@@ -230,6 +251,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -243,6 +265,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -256,10 +279,25 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
       "id": "helix_havoc",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "extreme",
+      "chapter_source": "json:extreme",
+      "zone_types": "floor, track, helix, goal",
+      "unknown_zones": "",
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "difficulty": "hard"
+    },
+    {
+      "id": "ice_bridges_run",
       "source": "code",
       "in_manifest": false,
       "in_dev_levels": true,
@@ -269,20 +307,22 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
       "id": "ice_cave_run",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
-      "chapter": "classic",
-      "chapter_source": "heuristic:classic",
-      "zone_types": "(dev inline)",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "extreme",
+      "chapter_source": "json:extreme",
+      "zone_types": "floor, track, ice_cave, goal",
       "unknown_zones": "",
-      "migration_status": "dev-only",
-      "difficulty": ""
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "difficulty": "hard"
     },
     {
       "id": "jump",
@@ -295,20 +335,22 @@
       "zone_types": "floor, track, landing, jump, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
+      "archive_reason": "",
       "difficulty": "medium"
     },
     {
       "id": "jungle_run",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
       "chapter": "classic",
-      "chapter_source": "heuristic:classic",
-      "zone_types": "(dev inline)",
+      "chapter_source": "json:classic",
+      "zone_types": "floor, track, jungle_run, goal",
       "unknown_zones": "",
-      "migration_status": "dev-only",
-      "difficulty": ""
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "difficulty": "medium"
     },
     {
       "id": "landing",
@@ -321,6 +363,7 @@
       "zone_types": "floor, track, landing, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
+      "archive_reason": "",
       "difficulty": "easy"
     },
     {
@@ -334,6 +377,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -347,6 +391,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -360,6 +405,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -373,6 +419,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -386,6 +433,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -399,20 +447,22 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
       "id": "mushroom_hop",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
       "chapter": "classic",
-      "chapter_source": "heuristic:classic",
-      "zone_types": "(dev inline)",
+      "chapter_source": "json:classic",
+      "zone_types": "mushroom_bounce, goal",
       "unknown_zones": "",
-      "migration_status": "dev-only",
-      "difficulty": ""
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "difficulty": "easy"
     },
     {
       "id": "mystic_forest_run",
@@ -425,6 +475,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -438,6 +489,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -451,6 +503,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -464,6 +517,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -477,6 +531,7 @@
       "zone_types": "floor, track, neon_grid",
       "unknown_zones": "",
       "migration_status": "shipped",
+      "archive_reason": "",
       "difficulty": "medium"
     },
     {
@@ -490,6 +545,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -503,6 +559,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -516,6 +573,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -529,20 +587,22 @@
       "zone_types": "floor, model, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
+      "archive_reason": "",
       "difficulty": "easy"
     },
     {
       "id": "pinwheel_alley",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
-      "chapter": "neon",
-      "chapter_source": "heuristic:neon",
-      "zone_types": "(dev inline)",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "classic",
+      "chapter_source": "json:classic",
+      "zone_types": "floor, track, pinwheel_alley, goal",
       "unknown_zones": "",
-      "migration_status": "dev-only",
-      "difficulty": ""
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "difficulty": "hard"
     },
     {
       "id": "plasma_pipeline_run",
@@ -555,6 +615,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -568,6 +629,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -581,6 +643,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -594,6 +657,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -607,6 +671,7 @@
       "zone_types": "prismatic_speedway, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
+      "archive_reason": "",
       "difficulty": "hard"
     },
     {
@@ -620,6 +685,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -633,6 +699,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -646,6 +713,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -659,6 +727,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -672,6 +741,7 @@
       "zone_types": "floor",
       "unknown_zones": "",
       "migration_status": "json-wins",
+      "archive_reason": "",
       "difficulty": "easy"
     },
     {
@@ -685,11 +755,12 @@
       "zone_types": "floor, track, landing, slalom, jump, staircase, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
+      "archive_reason": "",
       "difficulty": "hard"
     },
     {
       "id": "slalom_extreme",
-      "source": "orphan-json",
+      "source": "archived-json",
       "in_manifest": false,
       "in_dev_levels": false,
       "on_disk": true,
@@ -697,7 +768,8 @@
       "chapter_source": "override:extreme",
       "zone_types": "floor, track, landing, boost_pad, slalom, collectible, jump, spiral_drop, switchback, banked_turn, trap, boost_chain, merge, plunge, checkpoint, goal",
       "unknown_zones": "boost_pad, spiral_drop, switchback, banked_turn, trap, boost_chain, merge, plunge",
-      "migration_status": "blocked (missing handlers / manifest)",
+      "migration_status": "archived (unsupported mechanics)",
+      "archive_reason": "Prototype branching, trap, boost-chain, and plunge mechanics are not implemented.",
       "difficulty": "extreme"
     },
     {
@@ -711,6 +783,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -724,6 +797,7 @@
       "zone_types": "space_station, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
+      "archive_reason": "",
       "difficulty": "expert"
     },
     {
@@ -737,6 +811,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -750,11 +825,12 @@
       "zone_types": "floor, track, landing, slalom, staircase, goal",
       "unknown_zones": "",
       "migration_status": "json-wins",
+      "archive_reason": "",
       "difficulty": "hard"
     },
     {
       "id": "staircase_extreme",
-      "source": "orphan-json",
+      "source": "archived-json",
       "in_manifest": false,
       "in_dev_levels": false,
       "on_disk": true,
@@ -762,7 +838,8 @@
       "chapter_source": "override:extreme",
       "zone_types": "floor, track, landing, checkpoint, fork, spiral_staircase, trap_stair, platform, collectible, freefall, double_helix, boost_pad, staircase, goal",
       "unknown_zones": "fork, spiral_staircase, trap_stair, platform, freefall, double_helix, boost_pad",
-      "migration_status": "blocked (missing handlers / manifest)",
+      "migration_status": "archived (unsupported mechanics)",
+      "archive_reason": "Prototype fork, freefall, trap-stair, platform, and spiral-staircase mechanics are not implemented.",
       "difficulty": "extreme"
     },
     {
@@ -776,6 +853,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -789,6 +867,7 @@
       "zone_types": "stellar_forge, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
+      "archive_reason": "",
       "difficulty": "hard"
     },
     {
@@ -802,6 +881,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -815,6 +895,7 @@
       "zone_types": "storm_peak, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
+      "archive_reason": "",
       "difficulty": "hard"
     },
     {
@@ -828,6 +909,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -841,6 +923,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -854,6 +937,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -867,6 +951,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -880,11 +965,12 @@
       "zone_types": "floor, track, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
+      "archive_reason": "",
       "difficulty": "easy"
     },
     {
       "id": "tutorial_extreme",
-      "source": "orphan-json",
+      "source": "archived-json",
       "in_manifest": false,
       "in_dev_levels": false,
       "on_disk": true,
@@ -892,7 +978,8 @@
       "chapter_source": "override:extreme",
       "zone_types": "floor, track, boost_pad, collectible, checkpoint, spiral_drop, switchback, hazard, ramp, trap, jump, platform, stomp_pad, goal",
       "unknown_zones": "boost_pad, spiral_drop, switchback, hazard, ramp, trap, platform, stomp_pad",
-      "migration_status": "blocked (missing handlers / manifest)",
+      "migration_status": "archived (unsupported mechanics)",
+      "archive_reason": "Prototype mechanics are not implemented by the runtime zone registry.",
       "difficulty": "extreme"
     },
     {
@@ -906,6 +993,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
@@ -919,11 +1007,12 @@
       "zone_types": "floor, track, landing, jump, slalom, goal",
       "unknown_zones": "",
       "migration_status": "json-wins",
+      "archive_reason": "",
       "difficulty": "hard"
     },
     {
       "id": "volcano_run_extreme",
-      "source": "orphan-json",
+      "source": "archived-json",
       "in_manifest": false,
       "in_dev_levels": false,
       "on_disk": true,
@@ -931,7 +1020,8 @@
       "chapter_source": "override:extreme",
       "zone_types": "floor, track, landing, checkpoint, stairs, heat_zone, collectible, bridge, magma_spiral, eruption_zone, boost_pad, jump, slalom, lava_tsunami_zone, boss_caldera, collapsing_platform, victory_ramp, goal",
       "unknown_zones": "stairs, heat_zone, bridge, magma_spiral, eruption_zone, boost_pad, lava_tsunami_zone, boss_caldera, collapsing_platform, victory_ramp",
-      "migration_status": "blocked (missing handlers / manifest)",
+      "migration_status": "archived (unsupported mechanics)",
+      "archive_reason": "Prototype heat, eruption, tsunami, collapsing-platform, and boss-caldera systems are not implemented.",
       "difficulty": "extreme"
     },
     {
@@ -945,33 +1035,36 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     },
     {
       "id": "wind_tunnel",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
       "chapter": "classic",
-      "chapter_source": "heuristic:classic",
-      "zone_types": "(dev inline)",
+      "chapter_source": "json:classic",
+      "zone_types": "floor, track, wind_tunnel, goal",
       "unknown_zones": "",
-      "migration_status": "dev-only",
-      "difficulty": ""
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "difficulty": "medium"
     },
     {
       "id": "zen_garden_run",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
       "chapter": "classic",
-      "chapter_source": "heuristic:classic",
-      "zone_types": "(dev inline)",
+      "chapter_source": "json:classic",
+      "zone_types": "zen_garden, goal",
       "unknown_zones": "",
-      "migration_status": "dev-only",
-      "difficulty": ""
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "difficulty": "easy"
     },
     {
       "id": "zigzag",
@@ -984,6 +1077,7 @@
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
+      "archive_reason": "",
       "difficulty": ""
     }
   ]

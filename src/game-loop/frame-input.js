@@ -250,11 +250,3 @@ export class GameLoopFrameInput {
                 }
     }
 }
-
-export function applyGameLoopFrameInput(targetClass) {
-    for (const name of Object.getOwnPropertyNames(GameLoopFrameInput.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = GameLoopFrameInput.prototype[name];
-        }
-    }
-}

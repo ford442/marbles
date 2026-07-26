@@ -1,0 +1,21 @@
+{
+  "id": "helix_havoc",
+  "name": "Helix Havoc",
+  "description": "Spiral up the double helix!",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "difficulty": "hard",
+  "chapter": "extreme",
+  "zones": [
+    { "type": "floor", "pos": { "x": 0, "y": -2, "z": 0 }, "size": { "x": 80, "y": 0.5, "z": 80 } },
+    { "type": "track", "pos": { "x": 0, "y": 3, "z": 0 } },
+    { "type": "helix", "pos": { "x": 0, "y": 0, "z": 30 } },
+    { "type": "goal", "pos": { "x": 0, "y": 44, "z": 30 } }
+  ],
+  "spawn": { "x": 0, "y": 8, "z": -12 },
+  "goals": [
+    { "id": 1, "range": { "x": [-5, 5], "y": [42, 46], "z": [25, 35] } }
+  ],
+  "camera": { "mode": "follow", "height": 18, "offset": -30 },
+  "medals": { "goldTime": 80, "silverTime": 160, "bronzeTime": 300, "parTime": 130 }
+}

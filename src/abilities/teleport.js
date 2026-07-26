@@ -29,11 +29,3 @@ export class AbilityTeleport {
         if (this.hudManager) this.hudManager.markAbilityUsed('teleport')
     }
 }
-
-export function applyAbilityTeleport(targetClass) {
-    for (const name of Object.getOwnPropertyNames(AbilityTeleport.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = AbilityTeleport.prototype[name];
-        }
-    }
-}

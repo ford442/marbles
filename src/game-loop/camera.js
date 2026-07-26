@@ -361,11 +361,3 @@ export class GameLoopCamera {
                 }
     }
 }
-
-export function applyGameLoopCamera(targetClass) {
-    for (const name of Object.getOwnPropertyNames(GameLoopCamera.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = GameLoopCamera.prototype[name];
-        }
-    }
-}

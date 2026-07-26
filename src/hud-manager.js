@@ -56,7 +56,7 @@ export const ABILITY_METADATA = {
 };
 
 export class HUDManager {
-    constructor(game) {
+    constructor(game, { initialize = true } = {}) {
         this.game = game;
         this.abilityElements = new Map();
         this.allAbilityElements = new Map(); // Cache all-ability DOM elements
@@ -69,7 +69,7 @@ export class HUDManager {
             utility: false
         };
         
-        this.init();
+        if (initialize) this.init();
     }
 
     init() {

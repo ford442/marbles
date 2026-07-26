@@ -242,11 +242,3 @@ export class InitMultiplayerMenu {
         updateDesyncIndicator(this, now);
     }
 }
-
-export function applyInitMultiplayerMenu(targetClass) {
-    for (const name of Object.getOwnPropertyNames(InitMultiplayerMenu.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = InitMultiplayerMenu.prototype[name];
-        }
-    }
-}

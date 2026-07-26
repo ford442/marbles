@@ -67,6 +67,7 @@ export interface PhysicsState {
     magnetPower: number;
     magnetActive: boolean;
     magnetMode: string | null;
+    grappleAnchors: unknown[];
     isGrappling: boolean;
     grappleTarget: unknown;
     grappleEntity: unknown;

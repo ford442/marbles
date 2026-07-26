@@ -1,7 +1,8 @@
 const { chromium } = require('playwright');
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:5173/';
-const GAME_TIMEOUT_MS = 20000;
+const GAME_TIMEOUT_MS = 30000;
+const FACTORY_LEVEL_ID = 'ice_bridges_run';
 
 (async () => {
   const browser = await chromium.launch({ headless: true });
@@ -14,25 +15,50 @@ const GAME_TIMEOUT_MS = 20000;
   });
 
   try {
-    console.log(`Navigating to ${BASE_URL}...`);
-    await page.goto(BASE_URL);
+    const url = new URL(BASE_URL);
+    url.searchParams.set('devLevels', '1');
+    console.log(`Navigating to ${url}...`);
+    await page.goto(url.toString());
 
     console.log('Waiting for level menu...');
     await page.waitForSelector('#level-menu', { state: 'visible', timeout: 15000 });
 
-    const levelCards = await page.$$('.level-card');
-    if (levelCards.length === 0) {
-      throw new Error('No level cards found on the menu.');
-    }
-
-    console.log('Loading first level...');
-    await levelCards[0].click();
-
-    console.log('Waiting for window.game...');
+    console.log('Waiting for game readiness...');
     await page.waitForFunction(
-      () => typeof window.game !== 'undefined',
+      () => typeof window.game !== 'undefined' && window.__FILAMENT_FULLY_READY__ === true,
       { timeout: GAME_TIMEOUT_MS }
     );
+
+    const loadFromMenu = async (levelId) => {
+      await page.evaluate((id) => new Promise((resolve, reject) => {
+        window.game.hideLevelSelection(() => {
+          window.game.loadLevel(id, { startAtMs: Date.now() }).then(resolve, reject);
+        });
+      }), levelId);
+      await page.waitForFunction(
+        (id) => window.game.currentLevel === id && window.game.marbles.length > 0,
+        levelId,
+        { timeout: GAME_TIMEOUT_MS }
+      );
+    };
+
+    console.log('Loading tutorial...');
+    await loadFromMenu('tutorial');
+
+    console.log('Returning to menu...');
+    await page.evaluate(() => window.game.returnToMenu());
+    await page.waitForFunction(
+      () => window.game.currentLevel === null,
+      { timeout: GAME_TIMEOUT_MS }
+    );
+    await page.waitForSelector('#level-menu', { state: 'visible', timeout: GAME_TIMEOUT_MS });
+
+    console.log(`Loading factory level ${FACTORY_LEVEL_ID}...`);
+    await loadFromMenu(FACTORY_LEVEL_ID);
+
+    console.log('Returning to menu after factory level...');
+    await page.evaluate(() => window.game.returnToMenu());
+    await page.waitForSelector('#level-menu', { state: 'visible', timeout: GAME_TIMEOUT_MS });
 
     if (errors.length > 0) {
       throw new Error(`Page errors during load: ${errors.map((e) => e.message).join('; ')}`);

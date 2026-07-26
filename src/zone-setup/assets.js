@@ -97,11 +97,3 @@ export class ZoneSetupAssets {
     }
 
 }
-
-export function applyZoneSetupAssets(targetClass) {
-    for (const name of Object.getOwnPropertyNames(ZoneSetupAssets.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = ZoneSetupAssets.prototype[name];
-        }
-    }
-}

@@ -102,11 +102,3 @@ export class GameLoopHudTick {
                 }
     }
 }
-
-export function applyGameLoopHudTick(targetClass) {
-    for (const name of Object.getOwnPropertyNames(GameLoopHudTick.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = GameLoopHudTick.prototype[name];
-        }
-    }
-}

@@ -1,8 +1,8 @@
 /**
  * @fileoverview Zone methods module
  * 
- * This module exports the applyZoneMethods function which mixes all zone-related
- * methods into a target class. The methods are organized into logical groups:
+ * This module exports a closed zone-method installer. Method names come from
+ * explicit object maps rather than prototype enumeration:
  * - creation: Zone creation methods (checkpoints, zones, levels)
  * - physics: Physics body creation and management
  * - visuals: Visual effects, lighting, and particles
@@ -18,7 +18,7 @@ import { utilityMethods } from './utilities.js';
  * Applies all zone methods to a target class
  * @param {Function} targetClass - The class to mix methods into
  */
-export function applyZoneMethods(targetClass) {
+export function installZoneMethods(targetClass) {
     const allMethods = {
         ...creationMethods,
         ...physicsMethods,

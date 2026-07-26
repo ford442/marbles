@@ -1,10 +1,13 @@
-// @ts-nocheck — typed in Phase C step 4 (levels/catalog + map types)
+// @ts-check
 /**
  * Campaign chapter layout and unlock rules.
  * Levels not listed explicitly are auto-assigned by heuristics.
  */
 
 /** @typedef {{ id: string, name: string, icon: string, description: string, order: number }} ChapterDef */
+/** @typedef {'easy' | 'medium' | 'hard' | 'expert' | 'extreme'} Difficulty */
+/** @typedef {{ difficulty?: string, name?: string, chapter?: string }} CampaignLevel */
+/** @typedef {{ goldTime: number, silverTime: number, bronzeTime: number, parTime?: number }} MedalThresholds */
 
 /** @type {ChapterDef[]} */
 export const CAMPAIGN_CHAPTERS = [
@@ -45,7 +48,7 @@ export const CAMPAIGN_CHAPTERS = [
     },
 ];
 
-/** Explicit level → chapter overrides (manifest JSON + key dev levels). */
+/** Explicit level → chapter overrides (manifest JSON + key dev levels). @type {Record<string, string>} */
 export const LEVEL_CHAPTER_OVERRIDES = {
     tutorial: 'tutorial',
     tutorial_extreme: 'extreme',
@@ -72,7 +75,7 @@ const EXTREME_KEYWORDS = /extreme|volcano|lava|storm|abyssal|void|toxic|magnetic
 
 /**
  * @param {string} levelId
- * @param {{ difficulty?: string, name?: string }} [level]
+ * @param {CampaignLevel} [level]
  * @returns {string}
  */
 export function getChapterForLevel(levelId, level = {}) {
@@ -117,7 +120,7 @@ export const CHAPTER_UNLOCK_RULES = {
 
 /**
  * Build chapter → level id lists from the runtime catalog.
- * @param {Record<string, object>} levels
+ * @param {Record<string, CampaignLevel>} levels
  * @returns {Record<string, string[]>}
  */
 export function buildChapterLayout(levels) {
@@ -126,14 +129,17 @@ export function buildChapterLayout(levels) {
 
     for (const levelId of Object.keys(levels)) {
         const chapterId = getChapterForLevel(levelId, levels[levelId]);
-        if (!layout[chapterId]) layout[chapterId] = [];
-        layout[chapterId].push(levelId);
+        const chapterLevels = layout[chapterId] ?? (layout[chapterId] = []);
+        chapterLevels.push(levelId);
     }
 
     for (const chapterId of Object.keys(layout)) {
-        layout[chapterId].sort((a, b) => {
+        const chapterLevels = layout[chapterId];
+        if (!chapterLevels) continue;
+        chapterLevels.sort((a, b) => {
             const da = levels[a]?.difficulty || 'medium';
             const db = levels[b]?.difficulty || 'medium';
+            /** @type {Record<string, number>} */
             const order = { easy: 0, medium: 1, hard: 2, expert: 3, extreme: 4 };
             return (order[da] ?? 1) - (order[db] ?? 1) || a.localeCompare(b);
         });
@@ -142,7 +148,7 @@ export function buildChapterLayout(levels) {
     return layout;
 }
 
-/** Default medal thresholds when map JSON omits `medals`. */
+/** Default medal thresholds when map JSON omits `medals`. @type {Record<Difficulty, MedalThresholds>} */
 export const DEFAULT_MEDALS_BY_DIFFICULTY = {
     easy: { goldTime: 30, silverTime: 60, bronzeTime: 120, parTime: 45 },
     medium: { goldTime: 45, silverTime: 90, bronzeTime: 180, parTime: 75 },
@@ -152,12 +158,14 @@ export const DEFAULT_MEDALS_BY_DIFFICULTY = {
 };
 
 /**
- * @param {{ medals?: object, difficulty?: string }} level
+ * @param {{ medals?: MedalThresholds, difficulty?: string }} level
+ * @returns {MedalThresholds}
  */
 export function getMedalThresholds(level) {
     if (level?.medals) return level.medals;
     const diff = level?.difficulty || 'medium';
-    return DEFAULT_MEDALS_BY_DIFFICULTY[diff] || DEFAULT_MEDALS_BY_DIFFICULTY.medium;
+    return DEFAULT_MEDALS_BY_DIFFICULTY[/** @type {Difficulty} */ (diff)]
+        || DEFAULT_MEDALS_BY_DIFFICULTY.medium;
 }
 
 /**

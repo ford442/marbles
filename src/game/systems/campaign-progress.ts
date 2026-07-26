@@ -36,7 +36,12 @@ export interface LevelCompletionResult {
     time: number;
     level: {
         collectiblesTotal?: number;
-        medals?: Record<string, number>;
+        medals?: {
+            goldTime: number;
+            silverTime: number;
+            bronzeTime: number;
+            parTime?: number;
+        };
         difficulty?: string;
         [key: string]: unknown;
     };
@@ -74,16 +79,18 @@ export function mergeLevelProgress(
         merged.bestTime = rt;
     }
 
-    merged.medal = medalRank(remote.medal ?? null) > medalRank(local.medal ?? null)
+    const medal = medalRank(remote.medal ?? null) > medalRank(local.medal ?? null)
         ? remote.medal
         : (local.medal ?? remote.medal);
+    if (medal !== undefined) merged.medal = medal;
 
     merged.collectibles = Math.max(local.collectibles ?? 0, remote.collectibles ?? 0);
     merged.collectiblesPercent = Math.max(
         local.collectiblesPercent ?? 0,
         remote.collectiblesPercent ?? 0,
     );
-    merged.collectiblesTotal = local.collectiblesTotal ?? remote.collectiblesTotal;
+    const collectiblesTotal = local.collectiblesTotal ?? remote.collectiblesTotal;
+    if (collectiblesTotal !== undefined) merged.collectiblesTotal = collectiblesTotal;
 
     return merged;
 }
@@ -103,6 +110,7 @@ export function mergeCampaignSave(local: CampaignSave, remote: Partial<CampaignS
         levels[levelId] = mergeLevelProgress(l.levels[levelId], r.levels?.[levelId]);
     }
 
+    const updatedAt = r.updatedAt ?? l.updatedAt;
     return {
         version: Math.max(l.version, r.version ?? 1),
         freePlay: Boolean(l.freePlay || r.freePlay),
@@ -116,7 +124,7 @@ export function mergeCampaignSave(local: CampaignSave, remote: Partial<CampaignS
         ])],
         levels,
         revision: Math.max(l.revision ?? 0, r.revision ?? 0),
-        updatedAt: r.updatedAt ?? l.updatedAt,
+        ...(updatedAt !== undefined ? { updatedAt } : {}),
     };
 }
 

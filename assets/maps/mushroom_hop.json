@@ -1,0 +1,19 @@
+{
+  "id": "mushroom_hop",
+  "name": "Mushroom Hop",
+  "description": "Bounce across the giant mushrooms!",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "difficulty": "easy",
+  "chapter": "classic",
+  "zones": [
+    { "type": "mushroom_bounce", "pos": { "x": 0, "y": 0, "z": 0 } },
+    { "type": "goal", "pos": { "x": 0, "y": 0, "z": 50 } }
+  ],
+  "spawn": { "x": 0, "y": 5, "z": -5 },
+  "goals": [
+    { "id": 1, "range": { "x": [-5, 5], "y": [-2, 5], "z": [45, 55] } }
+  ],
+  "camera": { "mode": "follow", "height": 15, "offset": -25 },
+  "medals": { "goldTime": 35, "silverTime": 70, "bronzeTime": 140, "parTime": 55 }
+}

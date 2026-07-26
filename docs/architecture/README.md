@@ -6,7 +6,7 @@ Phased migration from mixin-assembled `MarblesGame` toward composable subsystems
 
 | Concern | Canonical home | Mixin bridge (deprecated) | Notes |
 |---------|----------------|---------------------------|-------|
-| Entry / wiring | `src/main.js` | — | Creates state, applies mixins, boots `init()` |
+| Entry / wiring | `src/main.js` | — | Creates state/subsystems, installs closed compatibility lists, boots `init()` |
 | Grouped state | `src/game/state/` | `this.*` mirrors via `bindGameState()` | physics, abilities, level, camera, input, hud, render |
 | Pure game logic | `src/game/systems/` | — | Unit-testable without Filament |
 | Zones (geometry) | `src/zones/` + `zone-setup/registry.js` | `zones/methods/` primitives | See `docs/PROJECT_STRUCTURE.md` |
@@ -19,8 +19,9 @@ Phased migration from mixin-assembled `MarblesGame` toward composable subsystems
 | Physics factory | `src/game/systems/physics-world.js` | `physics-factory-methods.js` | Phase B — `PhysicsWorld` ✅ |
 | Physics worker | `src/game/physics-worker/` + `physics-backend.js` | — | Tutorial spike — see [physics-worker.md](./physics-worker.md) |
 | Marble spawn | `src/game/systems/marble-registry.js` | `marble-management-methods.js` | Phase B — `MarbleRegistry` ✅ |
-| Render sync | `src/game-loop/sync.js` | — | Part of `RenderPipeline` in Phase B |
-| HUD | `src/hud-manager.js` + `hud` state | — | Phase B → `HudController` |
+| Render sync | `src/game/systems/render-pipeline.js` | `src/game-loop/sync.js` runtime slice | `RenderPipeline` owns frame order, transform sync, draw, culling path, and static flush |
+| HUD | `src/game/systems/hud-controller.js` + `hud` state | `src/hud-manager.js`, `game-loop/hud-tick.js` | `HudController` owns HUD DOM, cooldowns, goal FX, and desync display |
+| Level lifecycle | `src/game/systems/level-loader.js` | `src/init/level-loader.js`, `src/init/cleanup.js` runtime slices | Injected physics, marble, asset, and catalog dependencies |
 | Levels catalog | `assets/manifest.json` + `src/levels/catalog.js` | `src/levels.js` (dev only) | JSON production path — see [level-pipeline.md](./level-pipeline.md); chapters — [campaign.md](./campaign.md) |
 | Map editor | `src/editor/` | — | `?editor=1` — see [map-editor.md](./map-editor.md) |
 
@@ -33,14 +34,13 @@ Phased migration from mixin-assembled `MarblesGame` toward composable subsystems
 | `frame-input.js` | Shortcuts, movement impulses, magnet |
 | `camera.js` | Camera matrices, DoF |
 | `dynamics-tick.js` | Kinematic platforms, collectibles |
-| `hud-tick.js` | Legacy DOM cooldown bars |
+| `hud-tick.js` | Legacy cooldown implementation invoked only by `HudController` |
 | `effects-tick.js` | Black holes, missiles, bombs |
-| `finalize-frame.js` | HUDManager + perf + goal FX |
-| `render.js` | `renderAndSync()` orchestrator only |
-| `sync.js` | `syncTransformsAndRender()` — physics step + draw |
+| `finalize-frame.js` | Single `HudController.updateFrame()` entry + perf accounting |
+| `sync.js` | Transform/draw runtime slice owned by `RenderPipeline` |
 | `speed-lines.js` | Motion overlay |
 | `helpers.js` | Shared transform/color helpers |
-| `index.js` | `applyGameLoop` exports |
+| `index.js` | Closed compatibility method list for non-composed frame slices |
 
 See **[game-loop.md](./game-loop.md)** for the live import graph and per-frame call order.
 
@@ -54,13 +54,20 @@ Root `game-loop-*-methods.js` shims were **removed** July 2026.
 - [x] `zone-setup/` already canonical (prior cleanup)
 - [x] `abilities/`, `game-logic/`, `init/` use thin root re-exports only
 
-### Phase B — Composition (started)
+### Phase B — Composition ✅
 
 - [x] Constructor state grouped in `src/game/state/*`
 - [x] `bindGameState()` mirrors onto `this.*` for existing mixins
 - [x] Extract `PhysicsWorld`, `InputSystem`, `MarbleRegistry` as composed classes (`main.js` delegates; mixin apply removed for these three)
-- [ ] Extract `RenderPipeline`, `HudController`, `LevelLoader` as classes that receive `game` or state slices
-- [ ] Replace remaining `apply*Methods` with explicit delegation from `MarblesGame`
+- [x] Extract `RenderPipeline`, `HudController`, `LevelLoader` as constructed classes with explicit dependencies
+- [x] Delegate composed APIs from `MarblesGame`; remaining legacy folders use closed, named compatibility lists
+
+#### Phase B composition decision (July 2026)
+
+- `LevelLoader` owns level lookup/load/clear and receives `PhysicsWorld`, `MarbleRegistry`, `AssetRegistry`, and the catalog lookup. Browser-heavy runtime bodies remain injected adapters until Phase C.
+- `RenderPipeline` remains main-thread-only and owns frame ordering, transform sync, Filament/simple-WebGL draw, culling orchestration, and static batch flush delegation.
+- `HudController` is the single owner for ability DOM, legacy cooldown bars, goal FX, and multiplayer drift presentation. `finalize-frame.js` calls one `updateFrame` entry.
+- Zone, setup, game-logic, ability, init, and residual game-loop compatibility methods are installed from explicit allowlists. Prototype enumeration and `applyLegacyMixins` are no longer in the active entry path.
 
 ### Phase C — TypeScript (in progress)
 
@@ -81,12 +88,12 @@ See **[language-strategy.md](./language-strategy.md)** for:
 
 ## Mixin deprecation
 
-`apply*Methods(MarblesGame)` copies prototype methods at load time. **Do not add new mixins.** New behavior should go in:
+Legacy folders use closed `install*Methods(MarblesGame)` allowlists at load time. **Do not add new mixins or prototype enumeration.** New behavior should go in:
 
 1. `src/game/systems/` (pure logic), or
-2. `src/<concern>/` folder module with explicit `apply*` in that folder's `index.js`
+2. `src/<concern>/` folder module with a reviewed entry in that folder's closed installer
 
-Existing mixins remain until Phase B delegation is complete.
+The installers are compatibility boundaries only; composed subsystem APIs use `delegateTo` in `main.js`.
 
 ## Testing without Filament
 

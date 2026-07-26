@@ -25,11 +25,3 @@ export class GameLoopLoop {
         requestAnimationFrame(() => this.loop())
     }
 }
-
-export function applyGameLoopLoop(targetClass) {
-    for (const name of Object.getOwnPropertyNames(GameLoopLoop.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = GameLoopLoop.prototype[name];
-        }
-    }
-}

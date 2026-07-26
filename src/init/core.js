@@ -1,6 +1,5 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
-import { assetRegistry } from '../assets/AssetRegistry.js';
 import { initLevelCatalog, LEVELS } from '../levels/catalog.js';
 import { mergeRegistryMarbles } from '../marbles_data.js';
 import {
@@ -743,6 +742,7 @@ export class InitCore {
         }
 
         try {
+            const assetRegistry = this.levelLoader.assetRegistry
             await assetRegistry.loadAll()
             initLevelCatalog(assetRegistry)
             mergeRegistryMarbles(assetRegistry)
@@ -811,14 +811,6 @@ export class InitCore {
         }
         if (typeof window.updateLoadingProgress === 'function') {
             window.updateLoadingProgress(0, message)
-        }
-    }
-}
-
-export function applyInitCore(targetClass) {
-    for (const name of Object.getOwnPropertyNames(InitCore.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = InitCore.prototype[name];
         }
     }
 }

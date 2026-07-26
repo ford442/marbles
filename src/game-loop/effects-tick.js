@@ -266,11 +266,3 @@ export class GameLoopEffectsTick {
                 }
     }
 }
-
-export function applyGameLoopEffectsTick(targetClass) {
-    for (const name of Object.getOwnPropertyNames(GameLoopEffectsTick.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = GameLoopEffectsTick.prototype[name];
-        }
-    }
-}

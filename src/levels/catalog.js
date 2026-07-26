@@ -1,12 +1,18 @@
+// @ts-check
 import { DEV_LEVELS } from '../levels.js';
 import { mapDefToLevel } from '../editor/map-document.js';
 
-/** @type {Record<string, object>} */
+/** @typedef {import('../types/map.js').MapDefinition} MapDefinition */
+/** @typedef {import('../types/map.js').RuntimeLevel} RuntimeLevel */
+/** @typedef {{ getAllMaps(): MapDefinition[], convertMapToLevel(map: MapDefinition): RuntimeLevel }} MapCatalogRegistry */
+
+/** @type {Record<string, RuntimeLevel>} */
 export let LEVELS = {};
 
 /** Maps loaded exclusively from JSON (manifest-driven). */
 export const JSON_LEVEL_IDS = new Set();
 
+/** @returns {boolean} */
 export function isDevLevelsEnabled() {
   if (typeof window === 'undefined') return false;
   const params = new URLSearchParams(window.location.search);
@@ -15,7 +21,8 @@ export function isDevLevelsEnabled() {
 
 /**
  * Build the runtime level catalog from AssetRegistry maps plus optional dev-only levels.
- * @param {import('../assets/AssetRegistry.js').AssetRegistry} registry
+ * @param {MapCatalogRegistry} registry
+ * @returns {Record<string, RuntimeLevel>}
  */
 export function initLevelCatalog(registry) {
   LEVELS = {};
@@ -29,7 +36,7 @@ export function initLevelCatalog(registry) {
   if (isDevLevelsEnabled()) {
     for (const [id, level] of Object.entries(DEV_LEVELS)) {
       if (!LEVELS[id]) {
-        LEVELS[id] = { ...level, source: 'code' };
+        LEVELS[id] = /** @type {RuntimeLevel} */ ({ ...level, source: 'code' });
       }
     }
   }
@@ -37,19 +44,25 @@ export function initLevelCatalog(registry) {
   return LEVELS;
 }
 
+/**
+ * @param {string} levelId
+ * @returns {RuntimeLevel | undefined}
+ */
 export function getLevel(levelId) {
   return LEVELS[levelId];
 }
 
+/** @returns {string[]} */
 export function getOrderedLevelIds() {
   return Object.keys(LEVELS);
 }
 
 /**
  * Register a runtime-only level (editor playtest, imported drafts).
- * @param {import('../types/map.js').MapDefinition} mapDef
+ * @param {MapDefinition} mapDef
+ * @returns {string}
  */
 export function registerCustomLevel(mapDef) {
-  LEVELS[mapDef.id] = mapDefToLevel(mapDef);
+  LEVELS[mapDef.id] = /** @type {RuntimeLevel} */ (mapDefToLevel(mapDef));
   return mapDef.id;
 }

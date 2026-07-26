@@ -1,8 +1,19 @@
+// @ts-check
 /**
  * Canonical ability definitions. New abilities are registered here first.
  *
  * @typedef {'keydown' | 'charge' | 'hold'} AbilityInputTrigger
  * @typedef {'cooldown' | 'energy' | 'charge'} AbilityHudMode
+ * @typedef {import('../types/map.js').AbilityMask} AbilityMask
+ *
+ * @typedef {object} AbilityGameContext
+ * @property {unknown} playerMarble
+ * @property {() => void} spawnBomb
+ * @property {() => void} spawnMissile
+ * @property {() => void} spawnBlackHole
+ * @property {() => void} spawnHoloPlatform
+ * @property {() => void} triggerBlink
+ * @property {{ markAbilityUsed(id: string): void } | null | undefined} [hudManager]
  *
  * @typedef {object} AbilityHudSlot
  * @property {string} [barKey] - `game` state key for the bar element (e.g. `bombBarEl`)
@@ -25,11 +36,11 @@
  * @property {{ defaultCode: string, trigger?: AbilityInputTrigger, settingsKey?: string }} [input]
  * @property {AbilityHudSlot} [hudSlot]
  * @property {string} [hudIconId] - id used by HUDManager icon overlay
- * @property {(game: object) => boolean | void} [activate]
- * @property {(game: object, now: number) => void} [update]
+ * @property {(game: AbilityGameContext) => boolean | void} [activate]
+ * @property {(game: AbilityGameContext, now: number) => void} [update]
  */
 
-/** @type {Record<string, AbilityDefinition>} */
+/** @satisfies {Record<string, AbilityDefinition>} */
 export const ABILITY_REGISTRY = {
     jump: {
         id: 'jump',
@@ -145,13 +156,44 @@ export const ABILITY_REGISTRY = {
     },
 };
 
+/** @typedef {keyof typeof ABILITY_REGISTRY} AbilityId */
+
 /** All registered ability ids (default: all enabled). */
-export const ALL_ABILITY_IDS = Object.keys(ABILITY_REGISTRY);
+export const ALL_ABILITY_IDS = /** @type {AbilityId[]} */ (Object.keys(ABILITY_REGISTRY));
+
+/** Input bitfields reserve bits 8–15 for registry abilities. */
+export const MAX_NETWORKED_ABILITY_IDS = 8;
+
+/**
+ * @param {string} id
+ * @returns {id is AbilityId}
+ */
+export function isAbilityId(id) {
+    return Object.hasOwn(ABILITY_REGISTRY, id);
+}
+
+/**
+ * Resolve a level mask to the registered ids it enables.
+ * `enabled` takes precedence when both lists are present.
+ * @param {AbilityMask | null | undefined} mask
+ * @returns {AbilityId[]}
+ */
+export function resolveAbilityMask(mask) {
+    if (!mask) return [...ALL_ABILITY_IDS];
+    if (Array.isArray(mask.enabled)) {
+        return mask.enabled.filter(isAbilityId);
+    }
+    if (Array.isArray(mask.disabled)) {
+        const disabled = new Set(mask.disabled);
+        return ALL_ABILITY_IDS.filter((id) => !disabled.has(id));
+    }
+    return [...ALL_ABILITY_IDS];
+}
 
 /**
  * @param {string} id
  * @returns {AbilityDefinition | undefined}
  */
 export function getAbilityDefinition(id) {
-    return ABILITY_REGISTRY[id];
+    return isAbilityId(id) ? ABILITY_REGISTRY[id] : undefined;
 }

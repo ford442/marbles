@@ -92,11 +92,3 @@ export class AbilityMissiles {
         }
     }
 }
-
-export function applyAbilityMissiles(targetClass) {
-    for (const name of Object.getOwnPropertyNames(AbilityMissiles.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = AbilityMissiles.prototype[name];
-        }
-    }
-}

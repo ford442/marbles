@@ -64,7 +64,7 @@ Full inventory: [`docs/architecture/level-pipeline.md`](../architecture/level-pi
    }
    ```
 
-4. **Validate** — `npm run validate:assets` (also runs in CI).
+4. **Validate** — `npm run validate:assets` and `node tests/test_level_inventory.js` (also run in CI). The inventory gate rejects duplicate `DEV_LEVELS` ids and shipped maps with unknown handlers.
 
 5. **Play** — `npm run dev`; the map appears in the level select without editing `levels.js`.
 
@@ -142,9 +142,11 @@ Many legacy levels still live in `DEV_LEVELS` (`src/levels.js`). To migrate one:
 
 The factory builder (`src/zones/storm-peak.js`) stays; JSON only references it by `type`.
 
-**Already on JSON (manifest-driven):** `tutorial`, `landing`, `jump`, `slalom`, `staircase`, `full_course`, `sandbox`, `volcano_run`, `neon_showcase`, `prismatic_speedway`, `storm_peak`, `stellar_forge`, `space_station`, `neon_grid`.
+**Already on JSON (manifest-driven):** 24 production maps, including the first factory migration wave (`mushroom_hop`, `wind_tunnel`, `pinwheel_alley`, `helix_havoc`, `clockwork_chaos`, `cyber_run`, `ice_cave_run`, `jungle_run`, `zen_garden_run`, `galaxy_spiral_run`). See the generated inventory for the full catalog.
 
-**Still code-only (dev flag):** remaining entries in `DEV_LEVELS` — see [`level-inventory.json`](../architecture/level-inventory.json).
+**Still code-only (dev flag):** remaining entries in `DEV_LEVELS` — see [`level-inventory.json`](architecture/level-inventory.json).
+
+**Archived prototypes:** the four `*_extreme` JSON maps are preserved but intentionally excluded from the manifest because their gameplay systems are not implemented. See [`archived-levels.json`](architecture/archived-levels.json); do not register placeholder handlers to make validation pass.
 
 Zone `type` strings in JSON must match keys in `src/zone-setup/registry.js` (`ZONE_HANDLERS`).
 

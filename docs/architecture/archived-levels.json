@@ -1,0 +1,22 @@
+{
+  "tutorial_extreme": {
+    "file": "assets/maps/tutorial_extreme.json",
+    "reason": "Prototype mechanics are not implemented by the runtime zone registry.",
+    "missing_handlers": ["boost_pad", "hazard", "platform", "ramp", "spiral_drop", "stomp_pad", "switchback", "trap"]
+  },
+  "slalom_extreme": {
+    "file": "assets/maps/slalom_extreme.json",
+    "reason": "Prototype branching, trap, boost-chain, and plunge mechanics are not implemented.",
+    "missing_handlers": ["banked_turn", "boost_chain", "boost_pad", "merge", "plunge", "spiral_drop", "switchback", "trap"]
+  },
+  "staircase_extreme": {
+    "file": "assets/maps/staircase_extreme.json",
+    "reason": "Prototype fork, freefall, trap-stair, platform, and spiral-staircase mechanics are not implemented.",
+    "missing_handlers": ["boost_pad", "double_helix", "fork", "freefall", "platform", "spiral_staircase", "trap_stair"]
+  },
+  "volcano_run_extreme": {
+    "file": "assets/maps/volcano_run_extreme.json",
+    "reason": "Prototype heat, eruption, tsunami, collapsing-platform, and boss-caldera systems are not implemented.",
+    "missing_handlers": ["boost_pad", "boss_caldera", "bridge", "collapsing_platform", "eruption_zone", "heat_zone", "lava_tsunami_zone", "magma_spiral", "stairs", "victory_ramp"]
+  }
+}

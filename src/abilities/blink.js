@@ -74,11 +74,3 @@ export class AbilityBlink {
         })
     }
 }
-
-export function applyAbilityBlink(targetClass) {
-    for (const name of Object.getOwnPropertyNames(AbilityBlink.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = AbilityBlink.prototype[name];
-        }
-    }
-}

@@ -2,6 +2,8 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import {
     CMD_HEADER_HEAD,
     CMD_HEADER_TAIL,
+    CMD_HEADER_BYTES,
+    CMD_ENTRY_BYTES,
     CMD_OP,
     TRANSFORM_HEADER_BODY_COUNT,
     TRANSFORM_HEADER_BYTES,
@@ -55,12 +57,12 @@ function drainCommands() {
     if (!commandViews || !world) return;
     const { u32, f32 } = commandViews;
 
-    while (true) {
+    for (;;) {
         const tail = Atomics.load(u32, CMD_HEADER_TAIL);
         const head = Atomics.load(u32, CMD_HEADER_HEAD);
         if (tail === head) break;
 
-        const entryIndex = CMD_HEADER_BYTES / 4 + tail * (32 / 4);
+        const entryIndex = CMD_HEADER_BYTES / 4 + tail * (CMD_ENTRY_BYTES / 4);
         const op = u32[entryIndex];
         const bodyIndex = u32[entryIndex + 1];
         const f0 = f32[entryIndex + 2];

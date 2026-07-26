@@ -361,11 +361,3 @@ export class ZoneSetupEnvironment {
      * @param {object} offset - Base position offset
      */
 }
-
-export function applyZoneSetupEnvironment(targetClass) {
-    for (const name of Object.getOwnPropertyNames(ZoneSetupEnvironment.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = ZoneSetupEnvironment.prototype[name];
-        }
-    }
-}

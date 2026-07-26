@@ -1,7 +1,7 @@
 /**
  * Single zone-type registry. Maps levels.js `zone.type` strings to setup handlers.
  *
- * Built-in handlers call methods mixed in via zones/methods (applyZoneMethods).
+ * Built-in handlers call methods installed from the closed zones/methods maps.
  * Factory handlers delegate to src/zones/<name>.js builders.
  */
 import * as zones from '../zones/index.js';

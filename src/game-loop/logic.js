@@ -881,11 +881,3 @@ export class GameLoopLogic {
         }
     }
 }
-
-export function applyGameLoopLogic(targetClass) {
-    for (const name of Object.getOwnPropertyNames(GameLoopLogic.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = GameLoopLogic.prototype[name];
-        }
-    }
-}

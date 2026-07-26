@@ -162,11 +162,3 @@ export class InitCleanup {
         this.setNightMode(false)
     }
 }
-
-export function applyInitCleanup(targetClass) {
-    for (const name of Object.getOwnPropertyNames(InitCleanup.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = InitCleanup.prototype[name];
-        }
-    }
-}

@@ -3,7 +3,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AssetRegistry } from '../src/assets/AssetRegistry.js';
-import { initLevelCatalog, JSON_LEVEL_IDS } from '../src/levels/catalog.js';
+import {
+  getLevel,
+  initLevelCatalog,
+  JSON_LEVEL_IDS,
+  registerCustomLevel,
+} from '../src/levels/catalog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
@@ -49,9 +54,27 @@ function testInitLevelCatalogFromMockRegistry() {
   assert.ok(levels.jump, 'jump from JSON');
   assert.ok(levels.slalom, 'slalom from JSON');
   assert.equal(JSON_LEVEL_IDS.has('tutorial'), true);
-  assert.equal(levels.mushroom_hop, undefined, 'dev levels hidden without flag');
+  assert.equal(levels.mushroom_hop?.source, 'json', 'migrated level comes from JSON');
+  assert.equal(levels.plinko_obstacle, undefined, 'remaining dev levels hidden without flag');
+}
+
+function testRegisterCustomLevel() {
+  const id = registerCustomLevel({
+    id: 'custom_test',
+    name: 'Custom Test',
+    version: '1.0.0',
+    zones: [],
+    spawn: { x: 0, y: 1, z: 2 },
+    goals: [{ id: 1, range: { x: [-1, 1], y: [0, 2], z: [3, 5] } }],
+    abilities: { enabled: ['jump'] },
+  });
+
+  assert.equal(id, 'custom_test');
+  assert.equal(getLevel(id)?.source, 'editor');
+  assert.deepEqual(getLevel(id)?.abilities, { enabled: ['jump'] });
 }
 
 testConvertMapToLevel();
 testInitLevelCatalogFromMockRegistry();
+testRegisterCustomLevel();
 console.log('Asset pipeline tests passed');

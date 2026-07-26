@@ -153,11 +153,3 @@ export class GameLoopSpeedLines {
         ctx.globalCompositeOperation = 'source-over'
     }
 }
-
-export function applyGameLoopSpeedLines(targetClass) {
-    for (const name of Object.getOwnPropertyNames(GameLoopSpeedLines.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = GameLoopSpeedLines.prototype[name];
-        }
-    }
-}

@@ -100,11 +100,3 @@ export class GameLogicCheckpoints {
         })
     }
 }
-
-export function applyGameLogicCheckpoints(targetClass) {
-    for (const name of Object.getOwnPropertyNames(GameLogicCheckpoints.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = GameLogicCheckpoints.prototype[name];
-        }
-    }
-}

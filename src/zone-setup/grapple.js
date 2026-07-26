@@ -263,11 +263,3 @@ export class ZoneSetupGrapple {
     }
 
 }
-
-export function applyZoneSetupGrapple(targetClass) {
-    for (const name of Object.getOwnPropertyNames(ZoneSetupGrapple.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = ZoneSetupGrapple.prototype[name];
-        }
-    }
-}

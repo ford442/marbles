@@ -5,11 +5,3 @@ export class ZoneSetupCore {
         await dispatchZone(this, zone);
     }
 }
-
-export function applyZoneSetupCore(targetClass) {
-    for (const name of Object.getOwnPropertyNames(ZoneSetupCore.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = ZoneSetupCore.prototype[name];
-        }
-    }
-}

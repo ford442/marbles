@@ -27,11 +27,14 @@ __pycache__/
 /docs/backups/experimental-wasm-renderer/build/
 /docs/backups/experimental-wasm-renderer/dist/
 /docs/backups/experimental-wasm-renderer/public/
-/public/wasm/
 /cmake-build-*/
 
 # MarblePhysics WASM module build outputs
 /wasm/build/
+# Runtime artifacts are committed so local unit parity never consumes stale glue.
+!/public/wasm/
+!/public/wasm/marble_physics.js
+!/public/wasm/marble_physics.wasm
 
 # IDE
 .vscode/settings.json

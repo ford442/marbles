@@ -28,6 +28,8 @@ if(EMSCRIPTEN)
         # Factory pattern (required by src/wasm-bridge.js)
         -sMODULARIZE=1
         -sEXPORT_NAME="MarblePhysicsModule"
+        -sEXPORT_ES6=1
+        -sINCOMING_MODULE_JS_API=['locateFile','wasmBinary']
 
         # Target environment
         -sENVIRONMENT=web,worker

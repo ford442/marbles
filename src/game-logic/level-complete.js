@@ -335,11 +335,3 @@ export class GameLogicLevelComplete {
         }
     }
 }
-
-export function applyGameLogicLevelComplete(targetClass) {
-    for (const name of Object.getOwnPropertyNames(GameLogicLevelComplete.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = GameLogicLevelComplete.prototype[name];
-        }
-    }
-}

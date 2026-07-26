@@ -6,34 +6,6 @@ import { antigravityLevel } from './zones/antigravity-zone.js';
 
 /** Code-only levels (experimental / not yet migrated to JSON). Shown when `?devLevels=1`. */
 export const DEV_LEVELS = {
-    mushroom_hop: {
-        name: 'Mushroom Hop',
-        description: 'Bounce across the giant mushrooms!',
-        zones: [
-            { type: 'mushroom_bounce', pos: { x: 0, y: 0, z: 0 } },
-            { type: 'goal', pos: { x: 0, y: 0, z: 50 } }
-        ],
-        spawn: { x: 0, y: 5, z: -5 },
-        goals: [
-            { id: 1, range: { x: [-5, 5], z: [45, 55], y: [-2, 5] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 }
-    },
-    wind_tunnel: {
-        name: 'Wind Tunnel',
-        description: 'Navigate through the giant fans!',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'wind_tunnel', pos: { x: 0, y: 0, z: 25 } },
-            { type: 'goal', pos: { x: 0, y: 0.25, z: 70 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-5, 5], z: [65, 75], y: [-1, 3] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 }
-    },
     plinko_obstacle: {
         name: 'Plinko Obstacle Course',
         description: 'Navigate the slanted board full of pegs!',
@@ -285,36 +257,6 @@ export const DEV_LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
-    helix_havoc: {
-        name: 'Helix Havoc',
-        description: 'Spiral down the double helix!',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 80, y: 0.5, z: 80 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'helix', pos: { x: 0, y: 0, z: 30 } },
-            { type: 'goal', pos: { x: 0, y: 44, z: 30 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-5, 5], z: [25, 35], y: [42, 46] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 }
-    },
-    clockwork_chaos: {
-        name: 'Clockwork Chaos',
-        description: 'Jump across the rotating gears!',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'clockwork', pos: { x: 0, y: 0, z: 25 } },
-            { type: 'goal', pos: { x: 0, y: 4, z: 100 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-2, 2], z: [98, 102], y: [3, 7] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 }
-    },
     plinko_challenge: {
         name: 'Plinko Challenge',
         description: 'Drop the marble and hope for the best!',
@@ -345,21 +287,6 @@ export const DEV_LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
-    pinwheel_alley: {
-        name: 'Pinwheel Alley',
-        description: 'Dodge the sweeping arms and cross the spinning pinwheels!',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'pinwheel_alley', pos: { x: 0, y: 0, z: 25 } },
-            { type: 'goal', pos: { x: 0, y: 3.25, z: 105 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-5, 5], z: [103, 107], y: [3, 8] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 }
-    },
     volcano_run: {
         name: 'Volcano Run',
         description: 'Cross the glowing lava pit!',
@@ -377,24 +304,6 @@ export const DEV_LEVELS = {
         nightMode: true,
         backgroundColor: [0.05, 0.0, 0.0, 1.0],
         environment: 'volcanic'
-    },
-    cyber_run: {
-        name: 'Cyber Run',
-        description: 'Race across the neon tracks and dodge the lasers!',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'cyber_track', pos: { x: 0, y: 0, z: 25 } },
-            { type: 'goal', pos: { x: 0, y: -0.75, z: 85 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-5, 5], z: [80, 90], y: [-2, 2] } }
-        ],
-        camera: { mode: 'follow', height: 12, offset: -20 },
-        nightMode: true,
-        backgroundColor: [0.05, 0.05, 0.1, 1.0],
-        environment: 'neon_city'
     },
     water_slide: {
         name: 'Water Slide',
@@ -427,23 +336,6 @@ export const DEV_LEVELS = {
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: true,
         backgroundColor: [0.02, 0.05, 0.1, 1.0]
-    },
-    ice_cave_run: {
-        name: 'Ice Cave',
-        description: 'Navigate the slippery slopes and rotating ice platforms!',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'ice_cave', pos: { x: 0, y: 0, z: 25 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-5, 5], z: [95, 110], y: [-10, 0] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 },
-        nightMode: true,
-        backgroundColor: [0.05, 0.1, 0.2, 1.0],
-        environment: 'ice'
     },
     trampoline_park: {
         name: 'Trampoline Park',
@@ -519,7 +411,7 @@ export const DEV_LEVELS = {
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: false
     },
-    desert_ruins_run: {
+    ice_bridges_run: {
         name: 'Ice Bridges Run',
         description: 'Cross the slippery, spinning ice bridges!',
         zones: [
@@ -530,20 +422,6 @@ export const DEV_LEVELS = {
         spawn: { x: 0, y: 8, z: -12 },
         goals: [
             { id: 1, range: { x: [-5, 5], z: [80, 90], y: [-2, 5] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 }
-    },
-    jungle_run: {
-        name: 'Jungle Run',
-        description: 'Navigate the jungle logs!',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'jungle_run', pos: { x: 0, y: 0, z: 25 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-5, 5], z: [85, 95], y: [-2, 5] } }
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
@@ -576,36 +454,6 @@ export const DEV_LEVELS = {
         camera: { mode: 'follow', height: 15, offset: -25 },
         nightMode: true,
         backgroundColor: [0.02, 0.02, 0.08, 1.0],
-        environment: 'space_nebula'
-    },
-    zen_garden_run: {
-        name: 'Zen Garden',
-        description: 'Find inner peace among the sand and stones',
-        zones: [
-            { type: 'zen_garden', pos: { x: 0, y: 0, z: 0 } }
-        ],
-        spawn: { x: 0, y: 5, z: -2 },
-        goals: [
-            { id: 1, range: { x: [-5, 5], z: [75, 85], y: [-2, 5] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 }
-    },
-    galaxy_spiral_run: {
-        name: 'Galaxy Spiral Run',
-        description: 'Ascend the galaxy spiral!',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'galaxy_spiral', pos: { x: 0, y: 0, z: 25 } },
-            { type: 'goal', pos: { x: -4.8, y: 29.25, z: 40.8 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-15, 5], z: [35, 45], y: [25, 40] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 },
-        nightMode: true,
-        backgroundColor: [0.02, 0.02, 0.05, 1.0],
         environment: 'space_nebula'
     },
     toxic_swamp_run: {

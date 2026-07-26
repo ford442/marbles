@@ -373,11 +373,3 @@ export class AbilityConstructs {
         })
     }
 }
-
-export function applyAbilityConstructs(targetClass) {
-    for (const name of Object.getOwnPropertyNames(AbilityConstructs.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = AbilityConstructs.prototype[name];
-        }
-    }
-}
