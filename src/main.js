@@ -4,13 +4,12 @@ import { mountShell } from './ui/mount-shell.js';
 mountShell();
 
 import { createGameState, bindGameState } from './game/state/index.js';
-import { applyZoneMethods } from './zones/methods/index.js';
-import { loadFilament, applyInitMethods } from './init-methods.js';
-import { applyZoneSetupMethods } from './zone-setup-methods.js';
-import { applyGameLogicMethods } from './game-logic-methods.js';
-import { applyAbilityMethods } from './ability-methods.js';
-import { applyGameLoop } from './game-loop/index.js';
-import { HUDManager } from './hud-manager.js';
+import { installZoneMethods } from './zones/methods/index.js';
+import { installInitMethods } from './init-methods.js';
+import { installZoneSetupMethods } from './zone-setup-methods.js';
+import { installGameLogicMethods } from './game-logic-methods.js';
+import { installAbilityMethods } from './ability-methods.js';
+import { installGameLoopMethods } from './game-loop/index.js';
 import { PerfMonitor } from './perf-monitor.js';
 import { CullingManager } from './culling-manager.js';
 import { MarbleLodManager } from './marble-lod.js';
@@ -22,6 +21,13 @@ import { AbilitySystem } from './game/systems/ability-system.js';
 import { PhysicsWorld } from './game/systems/physics-world.js';
 import { InputSystem } from './game/systems/input-system.js';
 import { MarbleRegistry } from './game/systems/marble-registry.js';
+import { RenderPipeline } from './game/systems/render-pipeline.js';
+import { HudController } from './game/systems/hud-controller.js';
+import { LevelLoader } from './game/systems/level-loader.js';
+import { InitLevelLoader } from './init/level-loader.js';
+import { InitCleanup } from './init/cleanup.js';
+import { assetRegistry } from './assets/AssetRegistry.js';
+import { getLevel } from './levels/catalog.js';
 import { registerServiceWorker } from './pwa/register-sw.js';
 import { CampaignProgress } from './game/systems/campaign-progress.js';
 import { GhostReplay } from './game/systems/ghost-replay.js';
@@ -47,7 +53,6 @@ const PHYSICS_WORLD_METHODS = [
     'queueDecorativeBatch',
     'queueDecorativeBoxes',
     'flushDecorativeBatches',
-    'flushStaticBatches',
     'createPhaseBox',
     'createStaticBox',
     'createDynamicBox',
@@ -73,6 +78,22 @@ const MARBLE_REGISTRY_METHODS = [
     'processCollisionEvents',
 ];
 
+const LEVEL_LOADER_METHODS = [
+    'loadLevel',
+    'clearLevel',
+    'startLevelSequence',
+    'animateHUDIn',
+    'delay',
+    '_waitUntil',
+    'createGhostMarble',
+];
+
+const RENDER_PIPELINE_METHODS = [
+    'renderAndSync',
+    'syncTransformsAndRender',
+    'flushStaticBatches',
+];
+
 class MarblesGame {
     constructor() {
         bindGameState(this, createGameState());
@@ -82,10 +103,23 @@ class MarblesGame {
         this.inputSystem = new InputSystem(this);
         this.marbleRegistry = new MarbleRegistry(this);
         this.abilitySystem = new AbilitySystem(this);
+        this.renderPipeline = new RenderPipeline(this, {
+            physicsWorld: this.physicsWorld,
+        });
+        this.levelLoader = new LevelLoader(this, {
+            physicsWorld: this.physicsWorld,
+            marbleRegistry: this.marbleRegistry,
+            assetRegistry,
+            getLevelById: getLevel,
+            runtime: InitLevelLoader.prototype,
+            cleanupRuntime: InitCleanup.prototype,
+        });
+        this.hudController = new HudController(this);
+        // Compatibility alias while call sites migrate to the composed owner.
+        this.hudManager = this.hudController;
         this.campaignProgress = new CampaignProgress();
         this.ghostReplay = new GhostReplay();
         this.cloudClient = new CloudClient(this);
-        this.hudManager = new HUDManager(this);
         this.perfMonitor = new PerfMonitor(this);
         this.autoQualityGovernor = new AutoQualityGovernor(this);
         this.levelEffectBudget = new LevelEffectBudget(this);
@@ -100,21 +134,23 @@ class MarblesGame {
 delegateTo('physicsWorld', PHYSICS_WORLD_METHODS);
 delegateTo('inputSystem', INPUT_SYSTEM_METHODS);
 delegateTo('marbleRegistry', MARBLE_REGISTRY_METHODS);
+delegateTo('levelLoader', LEVEL_LOADER_METHODS);
+delegateTo('renderPipeline', RENDER_PIPELINE_METHODS);
 
 /**
- * @deprecated Mixin assembly — migrate to composed subsystems (see docs/architecture/).
- * New methods belong in src/<concern>/ or src/game/systems/, not new *-methods.js files.
+ * Closed compatibility wiring for legacy folders. Each installer owns an
+ * explicit method list; first-class subsystems are delegated above.
  */
-function applyLegacyMixins(targetClass) {
-    applyZoneMethods(targetClass);
-    applyInitMethods(targetClass);
-    applyZoneSetupMethods(targetClass);
-    applyGameLogicMethods(targetClass);
-    applyAbilityMethods(targetClass);
-    applyGameLoop(targetClass);
+function installLegacyMethodGroups(targetClass) {
+    installZoneMethods(targetClass);
+    installInitMethods(targetClass);
+    installZoneSetupMethods(targetClass);
+    installGameLogicMethods(targetClass);
+    installAbilityMethods(targetClass);
+    installGameLoopMethods(targetClass);
 }
 
-applyLegacyMixins(MarblesGame);
+installLegacyMethodGroups(MarblesGame);
 
 registerServiceWorker();
 

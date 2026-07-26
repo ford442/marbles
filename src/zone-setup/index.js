@@ -1,11 +1,19 @@
-import { applyZoneSetupCore } from './core.js';
-import { applyZoneSetupAssets } from './assets.js';
-import { applyZoneSetupEnvironment } from './environment.js';
-import { applyZoneSetupGrapple } from './grapple.js';
+import { installKnownMethods } from '../game/systems/method-installer.js';
+import { ZoneSetupCore } from './core.js';
+import { ZoneSetupAssets } from './assets.js';
+import { ZoneSetupEnvironment } from './environment.js';
+import { ZoneSetupGrapple } from './grapple.js';
 
-export function applyZoneSetupMethods(targetClass) {
-    applyZoneSetupCore(targetClass);
-    applyZoneSetupAssets(targetClass);
-    applyZoneSetupEnvironment(targetClass);
-    applyZoneSetupGrapple(targetClass);
+/** Closed compatibility list for rendering/interaction setup helpers. */
+export function installZoneSetupMethods(targetClass) {
+    installKnownMethods(targetClass, ZoneSetupCore, ['createZone']);
+    installKnownMethods(targetClass, ZoneSetupAssets, ['setupAssets']);
+    installKnownMethods(targetClass, ZoneSetupEnvironment, [
+        'setupPostProcessing', 'setupEnvironmentLighting', 'applyEnvironmentFog',
+        'applyColorGradingForEnvironment', '_upgradeEnvironmentWithCubemap', 'applyEnvironment',
+    ]);
+    installKnownMethods(targetClass, ZoneSetupGrapple, [
+        'createGrappleLine', 'createCueStick', 'startGrapple', 'stopGrapple',
+        'updateGrapple', 'shootMarble',
+    ]);
 }

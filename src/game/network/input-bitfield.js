@@ -1,4 +1,7 @@
-import { ALL_ABILITY_IDS } from '../../abilities/registry.js';
+import {
+    ALL_ABILITY_IDS,
+    MAX_NETWORKED_ABILITY_IDS,
+} from '../../abilities/registry.js';
 
 /** Movement keys in bit order [0:7]. */
 export const MOVEMENT_KEY_CODES = [
@@ -22,7 +25,7 @@ export function encodeInputSnapshot(game) {
         }
     }
 
-    for (let i = 0; i < ALL_ABILITY_IDS.length && i < 8; i++) {
+    for (let i = 0; i < ALL_ABILITY_IDS.length && i < MAX_NETWORKED_ABILITY_IDS; i++) {
         const id = ALL_ABILITY_IDS[i];
         const code = game.abilitySystem?.getKeyCode(id);
         if (code && keys[code]) {
@@ -61,7 +64,7 @@ export function decodeMovementBits(bits) {
  */
 export function decodeAbilityBits(bits) {
     const active = [];
-    for (let i = 0; i < ALL_ABILITY_IDS.length && i < 8; i++) {
+    for (let i = 0; i < ALL_ABILITY_IDS.length && i < MAX_NETWORKED_ABILITY_IDS; i++) {
         if (bits & (1 << (ABILITY_BIT_OFFSET + i))) {
             active.push(ALL_ABILITY_IDS[i]);
         }

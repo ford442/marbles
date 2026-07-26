@@ -71,6 +71,56 @@
       "file": "maps/neon_grid.json",
       "name": "Neon Grid Run",
       "difficulty": "medium"
+    },
+    "mushroom_hop": {
+      "file": "maps/mushroom_hop.json",
+      "name": "Mushroom Hop",
+      "difficulty": "easy"
+    },
+    "wind_tunnel": {
+      "file": "maps/wind_tunnel.json",
+      "name": "Wind Tunnel",
+      "difficulty": "medium"
+    },
+    "pinwheel_alley": {
+      "file": "maps/pinwheel_alley.json",
+      "name": "Pinwheel Alley",
+      "difficulty": "hard"
+    },
+    "helix_havoc": {
+      "file": "maps/helix_havoc.json",
+      "name": "Helix Havoc",
+      "difficulty": "hard"
+    },
+    "clockwork_chaos": {
+      "file": "maps/clockwork_chaos.json",
+      "name": "Clockwork Chaos",
+      "difficulty": "hard"
+    },
+    "cyber_run": {
+      "file": "maps/cyber_run.json",
+      "name": "Cyber Run",
+      "difficulty": "medium"
+    },
+    "ice_cave_run": {
+      "file": "maps/ice_cave_run.json",
+      "name": "Ice Cave",
+      "difficulty": "hard"
+    },
+    "jungle_run": {
+      "file": "maps/jungle_run.json",
+      "name": "Jungle Run",
+      "difficulty": "medium"
+    },
+    "zen_garden_run": {
+      "file": "maps/zen_garden_run.json",
+      "name": "Zen Garden",
+      "difficulty": "easy"
+    },
+    "galaxy_spiral_run": {
+      "file": "maps/galaxy_spiral_run.json",
+      "name": "Galaxy Spiral Run",
+      "difficulty": "expert"
     }
   },
   "marbles": {

@@ -15,11 +15,3 @@ export class InitTouchControls {
         }
     }
 }
-
-export function applyInitTouchControls(targetClass) {
-    for (const name of Object.getOwnPropertyNames(InitTouchControls.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = InitTouchControls.prototype[name];
-        }
-    }
-}

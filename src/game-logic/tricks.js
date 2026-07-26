@@ -147,11 +147,3 @@ export class GameLogicTricks {
         }
     }
 }
-
-export function applyGameLogicTricks(targetClass) {
-    for (const name of Object.getOwnPropertyNames(GameLogicTricks.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = GameLogicTricks.prototype[name];
-        }
-    }
-}

@@ -8,11 +8,11 @@ Last aligned with repo audit: July 2026.
 
 | Check | Status | Command / location |
 |-------|--------|-------------------|
-| Unit tests | ✅ | `npm run test:unit` |
+| Unit tests | ✅ | `npm run test:unit` (38 files, including rebuilt WASM parity) |
 | Lint | ✅ | `npm run lint` |
 | Typecheck | ✅ | `npm run typecheck` (narrow `include`; widening is Phase C) |
 | Asset validation | ✅ | `npm run validate:assets` (CI + optional local hook) |
-| CI build | ✅ | [.github/workflows/debug_build.yml](../.github/workflows/debug_build.yml) — WASM + Vite |
+| CI build | ✅ | [.github/workflows/debug_build.yml](../.github/workflows/debug_build.yml) — rebuilds WASM before unit/parity, then Vite |
 | E2E smoke | ⚠️ optional | `e2e-smoke` job, `continue-on-error: true`; local: `npm run test:e2e:smoke` |
 | Playwright full e2e | Manual | `npm run dev` then `npm run test:e2e` (missile lifecycle) |
 
@@ -24,10 +24,10 @@ Counts from [architecture/level-inventory.json](architecture/level-inventory.jso
 
 | Metric | Count |
 |--------|------:|
-| Shipped (manifest) | 14 |
-| Dev-only (`?devLevels=1`) | 58 |
-| Unique level ids | 72 |
-| Map JSON files on disk | 18 |
+| Shipped (manifest) | 24 |
+| `DEV_LEVELS` entries | 52 |
+| Unique level ids | 76 |
+| Map JSON files on disk | 28 (including 4 archived prototypes) |
 
 Policy: [architecture/level-pipeline.md](architecture/level-pipeline.md). Campaign content ships as JSON + manifest only.
 
@@ -38,7 +38,7 @@ Canonical checklist: [architecture/README.md](architecture/README.md).
 | Phase | Focus | Status |
 |-------|-------|--------|
 | **A** | Single home per concern (`src/game-loop/`, thin re-exports) | ✅ largely complete |
-| **B** | Composition — `PhysicsWorld`, `InputSystem`, `MarbleRegistry` | Started ✅; `RenderPipeline`, `HudController`, `LevelLoader` TODO |
+| **B** | Composition — explicit subsystem delegation + closed legacy method lists | ✅ complete |
 | **C** | TypeScript on pure systems + `@ts-check` state | In progress |
 
 Language boundaries (no React/three.js in game bundle): [architecture/language-strategy.md](architecture/language-strategy.md).
@@ -86,7 +86,7 @@ Intentional archive — reduces noise for contributors:
 
 ## CI and E2E
 
-**Main CI** (`debug_build.yml`): validate assets → unit tests → lint → typecheck → Emscripten build → WASM parity → upload `dist/` artifact.
+**Main CI** (`debug_build.yml`): install Emscripten → build WASM → validate assets → unit tests → lint → typecheck → Vite build → explicit WASM parity → upload `dist/` artifact.
 
 **E2E smoke** (optional job, `needs: ci`):
 

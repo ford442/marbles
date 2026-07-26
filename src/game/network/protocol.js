@@ -1,7 +1,12 @@
+// @ts-check
 import { ALL_ABILITY_IDS } from '../../abilities/registry.js';
 
-/** @typedef {'join' | 'leave' | 'state' | 'start' | 'ping' | 'ability' | 'input'} ClientMessageType */
-/** @typedef {'joined' | 'player_joined' | 'player_left' | 'room_state' | 'starting' | 'state' | 'ability' | 'input' | 'error' | 'pong'} ServerMessageType */
+/** @typedef {import('./protocol-types.js').ClientMessage} ClientMessage */
+/** @typedef {import('./protocol-types.js').ClientMessageType} ClientMessageType */
+/** @typedef {import('./protocol-types.js').ServerMessage} ServerMessage */
+/** @typedef {import('./protocol-types.js').ServerMessageType} ServerMessageType */
+/** @template T @typedef {import('./protocol-types.js').ValidationResult<T>} ValidationResult */
+/** @typedef {Record<string, unknown>} UnknownRecord */
 
 export const PROTOCOL_VERSION = 2;
 export const MAX_MESSAGE_BYTES = 4096;
@@ -14,9 +19,10 @@ export const MAX_PLAYERS_PER_ROOM = 8;
 /** Matches 3×800 ms countdown + GO flash in level-loader. */
 export const COUNTDOWN_MS = 3200;
 
+/** @type {ReadonlySet<string>} */
 const ABILITY_ID_SET = new Set(ALL_ABILITY_IDS);
 
-export const MSG = {
+export const MSG = /** @type {const} */ ({
     JOIN: 'join',
     LEAVE: 'leave',
     STATE: 'state',
@@ -31,11 +37,13 @@ export const MSG = {
     STARTING: 'starting',
     ERROR: 'error',
     PONG: 'pong',
-};
+});
 
+/** @type {ReadonlySet<string>} */
 const CLIENT_TYPES = new Set([
     MSG.JOIN, MSG.LEAVE, MSG.STATE, MSG.START, MSG.PING, MSG.ABILITY, MSG.INPUT,
 ]);
+/** @type {ReadonlySet<string>} */
 const SERVER_TYPES = new Set([
     MSG.JOINED, MSG.PLAYER_JOINED, MSG.PLAYER_LEFT, MSG.ROOM_STATE,
     MSG.STARTING, MSG.STATE, MSG.ABILITY, MSG.INPUT, MSG.ERROR, MSG.PONG,
@@ -69,7 +77,7 @@ function isValidSeq(value) {
 
 /**
  * @param {unknown} raw
- * @returns {{ ok: true, data: object } | { ok: false, error: string }}
+ * @returns {ValidationResult<UnknownRecord>}
  */
 export function parseJsonMessage(raw) {
     if (typeof raw !== 'string') {
@@ -79,6 +87,7 @@ export function parseJsonMessage(raw) {
         return { ok: false, error: 'Message too large' };
     }
 
+    /** @type {unknown} */
     let parsed;
     try {
         parsed = JSON.parse(raw);
@@ -90,7 +99,7 @@ export function parseJsonMessage(raw) {
         return { ok: false, error: 'Message must be a JSON object' };
     }
 
-    return { ok: true, data: parsed };
+    return { ok: true, data: /** @type {UnknownRecord} */ (parsed) };
 }
 
 /**
@@ -115,8 +124,8 @@ export function hashRoomCode(roomCode) {
 }
 
 /**
- * @param {object} msg
- * @returns {{ ok: true, data: object } | { ok: false, error: string }}
+ * @param {UnknownRecord} msg
+ * @returns {ValidationResult<ClientMessage>}
  */
 export function validateClientMessage(msg) {
     if (!isString(msg.type) || !CLIENT_TYPES.has(msg.type)) {
@@ -159,17 +168,18 @@ export function validateClientMessage(msg) {
         if (!isValidSeq(msg.seq)) {
             return { ok: false, error: 'Invalid state seq' };
         }
+        /** @type {import('./protocol-types.js').StateMessage} */
         const data = {
             type: MSG.STATE,
-            t: msg.t,
-            x: msg.x,
-            y: msg.y,
-            z: msg.z,
-            qx: msg.qx,
-            qy: msg.qy,
-            qz: msg.qz,
-            qw: msg.qw,
-            seq: msg.seq,
+            t: /** @type {number} */ (msg.t),
+            x: /** @type {number} */ (msg.x),
+            y: /** @type {number} */ (msg.y),
+            z: /** @type {number} */ (msg.z),
+            qx: /** @type {number} */ (msg.qx),
+            qy: /** @type {number} */ (msg.qy),
+            qz: /** @type {number} */ (msg.qz),
+            qw: /** @type {number} */ (msg.qw),
+            seq: /** @type {number} */ (msg.seq),
         };
         if (msg.playerId !== undefined) {
             if (!isString(msg.playerId) || msg.playerId.length > 64) {
@@ -194,17 +204,18 @@ export function validateClientMessage(msg) {
                 return { ok: false, error: `Invalid ability field: ${key}` };
             }
         }
+        /** @type {import('./protocol-types.js').AbilityMessage} */
         const data = {
             type: MSG.ABILITY,
-            id: msg.id,
+            id: /** @type {import('../../abilities/registry.js').AbilityId} */ (msg.id),
             t: msg.t,
             seq: msg.seq,
-            ox: msg.ox,
-            oy: msg.oy,
-            oz: msg.oz,
-            dx: msg.dx,
-            dy: msg.dy,
-            dz: msg.dz,
+            ox: /** @type {number} */ (msg.ox),
+            oy: /** @type {number} */ (msg.oy),
+            oz: /** @type {number} */ (msg.oz),
+            dx: /** @type {number} */ (msg.dx),
+            dy: /** @type {number} */ (msg.dy),
+            dz: /** @type {number} */ (msg.dz),
         };
         if (msg.charge !== undefined) {
             if (!isFiniteNumber(msg.charge) || msg.charge < 0 || msg.charge > 1) {
@@ -219,13 +230,13 @@ export function validateClientMessage(msg) {
         if (!isFiniteNumber(msg.t) || !isValidSeq(msg.seq)) {
             return { ok: false, error: 'Invalid input timing fields' };
         }
-        if (!Number.isInteger(msg.bits) || msg.bits < 0 || msg.bits > 0xffffffff) {
+        if (!isFiniteNumber(msg.bits) || !Number.isInteger(msg.bits) || msg.bits < 0 || msg.bits > 0xffffffff) {
             return { ok: false, error: 'Invalid input bits' };
         }
-        if (!Number.isInteger(msg.yaw) || msg.yaw < -32768 || msg.yaw > 32767) {
+        if (!isFiniteNumber(msg.yaw) || !Number.isInteger(msg.yaw) || msg.yaw < -32768 || msg.yaw > 32767) {
             return { ok: false, error: 'Invalid input yaw' };
         }
-        if (!Number.isInteger(msg.pitch) || msg.pitch < -32768 || msg.pitch > 32767) {
+        if (!isFiniteNumber(msg.pitch) || !Number.isInteger(msg.pitch) || msg.pitch < -32768 || msg.pitch > 32767) {
             return { ok: false, error: 'Invalid input pitch' };
         }
         return {
@@ -245,14 +256,14 @@ export function validateClientMessage(msg) {
 }
 
 /**
- * @param {object} msg
- * @returns {{ ok: true, data: object } | { ok: false, error: string }}
+ * @param {UnknownRecord} msg
+ * @returns {ValidationResult<ServerMessage>}
  */
 export function validateServerMessage(msg) {
     if (!isString(msg.type) || !SERVER_TYPES.has(msg.type)) {
         return { ok: false, error: 'Unknown server message type' };
     }
-    return { ok: true, data: msg };
+    return { ok: true, data: /** @type {ServerMessage} */ (msg) };
 }
 
 /**
@@ -272,6 +283,7 @@ export function generateRoomCode() {
  * @returns {[number, number, number]}
  */
 export function playerColorForIndex(index) {
+    /** @type {Array<[number, number, number]>} */
     const palette = [
         [1.0, 0.35, 0.45],
         [0.35, 0.85, 1.0],
@@ -282,7 +294,7 @@ export function playerColorForIndex(index) {
         [0.4, 1.0, 0.85],
         [0.95, 0.95, 0.95],
     ];
-    return palette[index % palette.length];
+    return /** @type {[number, number, number]} */ (palette[index % palette.length]);
 }
 
 /**

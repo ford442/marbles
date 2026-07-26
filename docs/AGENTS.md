@@ -14,7 +14,7 @@ This document provides essential information for AI coding agents working on the
 - **Backend**: Python FastAPI with Google Cloud Storage integration
 - **WASM physics helpers**: C++ numeric kernels (`wasm/`) — see `docs/architecture/language-strategy.md`
 
-The game features **14 manifest JSON levels** in normal play (plus ~58 dev-only entries with `?devLevels=1`), diverse zones, scoring goals, checkpoints, collectibles, power-ups, and marble types defined in `assets/marbles/`.
+The game features **24 manifest JSON levels** in normal play (plus 52 `DEV_LEVELS` lab entries with `?devLevels=1`), diverse zones, scoring goals, checkpoints, collectibles, power-ups, and marble types defined in `assets/marbles/`.
 
 ## Technology Stack
 

@@ -33,8 +33,8 @@ Everything under `src/` that ships in `npm run build` must be reachable from `sr
 
 ### Zone loading pattern
 
-- **Production levels**: `assets/manifest.json` → `AssetRegistry` → `src/levels/catalog.js` (**14 shipped**; see [architecture/level-pipeline.md](architecture/level-pipeline.md)).
-- **Dev-only levels**: `src/levels.js` (`DEV_LEVELS`, ~58 entries) merged when `?devLevels=1` or `?dev=1` (~68 unique ids total with dev flag).
+- **Production levels**: `assets/manifest.json` → `AssetRegistry` → `src/levels/catalog.js` (**24 shipped**; see [architecture/level-pipeline.md](architecture/level-pipeline.md)).
+- **Dev-only levels**: `src/levels.js` (`DEV_LEVELS`, 52 entries) merged when `?devLevels=1` or `?dev=1` (72 playable unique ids total with the dev flag).
 - **Registration**: `src/zone-setup/registry.js` maps each `zone.type` to a handler (single source of truth).
 - **Dispatch**: `src/zone-setup/core.js` calls `dispatchZone()` — no duplicate switch statements.
 - **Factories**: `src/zones/<kebab-name>.js` export `create*Zone(game, offset)`; barrel re-export in `src/zones/index.js`.

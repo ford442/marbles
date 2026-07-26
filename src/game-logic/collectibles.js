@@ -172,11 +172,3 @@ export class GameLogicCollectibles {
         })
     }
 }
-
-export function applyGameLogicCollectibles(targetClass) {
-    for (const name of Object.getOwnPropertyNames(GameLogicCollectibles.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = GameLogicCollectibles.prototype[name];
-        }
-    }
-}

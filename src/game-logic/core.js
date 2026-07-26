@@ -482,11 +482,3 @@ export class GameLogicCore {
         }
     }
 }
-
-export function applyGameLogicCore(targetClass) {
-    for (const name of Object.getOwnPropertyNames(GameLogicCore.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = GameLogicCore.prototype[name];
-        }
-    }
-}

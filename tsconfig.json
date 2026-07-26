@@ -36,7 +36,14 @@
         "src/game/systems/ability-cooldown.js",
         "src/game/systems/trick-scoring.js",
         "src/game/systems/campaign-progress.js",
-        "src/game/systems/replay-codec.js"
+        "src/game/systems/replay-codec.js",
+        "src/levels/catalog.js",
+        "src/levels/campaign.js",
+        "src/abilities/registry.js",
+        "src/game/systems/physics-world-pure.js",
+        "src/game/systems/physics-backend-pure.js",
+        "src/game/systems/input-target-lock.js",
+        "src/game/network/protocol.js"
     ],
     "exclude": [
         "node_modules",

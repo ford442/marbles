@@ -360,11 +360,3 @@ export class InitSettingsTabs {
         })
     }
 }
-
-export function applyInitSettingsTabs(targetClass) {
-    for (const name of Object.getOwnPropertyNames(InitSettingsTabs.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = InitSettingsTabs.prototype[name];
-        }
-    }
-}

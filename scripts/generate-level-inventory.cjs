@@ -13,6 +13,7 @@ const MANIFEST_PATH = path.join(ROOT, 'assets', 'manifest.json');
 const LEVELS_JS = path.join(ROOT, 'src', 'levels.js');
 const CAMPAIGN_JS = path.join(ROOT, 'src', 'levels', 'campaign.js');
 const REGISTRY_JS = path.join(ROOT, 'src', 'zone-setup', 'registry.js');
+const ARCHIVED_LEVELS_PATH = path.join(ROOT, 'docs', 'architecture', 'archived-levels.json');
 
 function loadJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -27,7 +28,7 @@ function extractDevLevelIds(levelsJs) {
       ids.push(m[1]);
     }
   }
-  return [...new Set(ids)];
+  return ids;
 }
 
 function extractChapterOverrides(campaignJs) {
@@ -86,9 +87,10 @@ function resolveChapter(chapterField) {
   return parts[parts.length - 1];
 }
 
-function classifySource(id, inManifest, inDev, onDisk) {
+function classifySource(id, inManifest, inDev, onDisk, isArchived) {
   if (inManifest && inDev) return 'dual';
   if (inManifest) return 'json';
+  if (isArchived && onDisk) return 'archived-json';
   if (onDisk && !inManifest && id.endsWith('_extreme')) return 'orphan-json';
   if (onDisk && !inManifest) return 'orphan-json';
   if (inDev) return 'code';
@@ -96,9 +98,10 @@ function classifySource(id, inManifest, inDev, onDisk) {
   return 'unknown';
 }
 
-function migrationStatus(source, inManifest) {
+function migrationStatus(source) {
   if (source === 'json') return 'shipped';
   if (source === 'dual') return 'json-wins';
+  if (source === 'archived-json') return 'archived (unsupported mechanics)';
   if (source === 'orphan-json') return 'blocked (missing handlers / manifest)';
   return 'dev-only';
 }
@@ -107,9 +110,16 @@ function buildInventory() {
   const manifest = loadJson(MANIFEST_PATH);
   const manifestIds = new Set(Object.keys(manifest.maps || {}));
   const levelsJs = fs.readFileSync(LEVELS_JS, 'utf8');
-  const devIds = new Set(extractDevLevelIds(levelsJs));
+  const rawDevIds = extractDevLevelIds(levelsJs);
+  const devIds = new Set(rawDevIds);
+  const duplicateDevIds = [...devIds].filter(
+    (id) => rawDevIds.filter((candidate) => candidate === id).length > 1
+  );
   const overrides = extractChapterOverrides(fs.readFileSync(CAMPAIGN_JS, 'utf8'));
   const handlers = extractZoneHandlers(fs.readFileSync(REGISTRY_JS, 'utf8'));
+  const archivedLevels = fs.existsSync(ARCHIVED_LEVELS_PATH)
+    ? loadJson(ARCHIVED_LEVELS_PATH)
+    : {};
 
   const mapFiles = fs
     .readdirSync(MAPS_DIR)
@@ -128,7 +138,8 @@ function buildInventory() {
     const inManifest = manifestIds.has(id);
     const inDev = devIds.has(id);
     const onDisk = Boolean(mapById[id]);
-    const source = classifySource(id, inManifest, inDev, onDisk);
+    const archive = archivedLevels[id];
+    const source = classifySource(id, inManifest, inDev, onDisk, Boolean(archive));
     const level = mapById[id] || {};
     const zoneTypes = [...new Set((level.zones || []).map((z) => z.type).filter(Boolean))];
     const unknownZones = zoneTypes.filter((t) => !handlers.has(t));
@@ -145,7 +156,8 @@ function buildInventory() {
       chapter_source: chapterField,
       zone_types: zoneTypes.join(', ') || '(dev inline)',
       unknown_zones: unknownZones.join(', ') || '',
-      migration_status: migrationStatus(source, inManifest),
+      migration_status: migrationStatus(source),
+      archive_reason: archive?.reason || '',
       difficulty: level.difficulty || manifest.maps?.[id]?.difficulty || '',
     });
   }
@@ -161,6 +173,13 @@ function buildInventory() {
       code_only: rows.filter((r) => r.source === 'code').length,
       dual: rows.filter((r) => r.source === 'dual').length,
       orphan_json: rows.filter((r) => r.source === 'orphan-json').length,
+      archived_json: rows.filter((r) => r.source === 'archived-json').length,
+    },
+    checks: {
+      duplicate_dev_level_ids: duplicateDevIds,
+      shipped_without_handlers: rows
+        .filter((r) => r.in_manifest && r.unknown_zones)
+        .map((r) => ({ id: r.id, unknown_zones: r.unknown_zones })),
     },
     rows,
   };
@@ -185,6 +204,7 @@ function toMarkdown(inventory) {
     `| Code-only (dev) | ${counts.code_only} |`,
     `| Dual (JSON wins) | ${counts.dual} |`,
     `| Orphan JSON | ${counts.orphan_json} |`,
+    `| Archived JSON prototypes | ${counts.archived_json} |`,
     '',
     '## Master table',
     '',
@@ -202,14 +222,18 @@ function toMarkdown(inventory) {
   return lines.join('\n');
 }
 
-const inventory = buildInventory();
-const outJson = path.join(ROOT, 'docs', 'architecture', 'level-inventory.json');
+module.exports = { buildInventory, toMarkdown };
 
-fs.mkdirSync(path.dirname(outJson), { recursive: true });
-fs.writeFileSync(outJson, JSON.stringify(inventory, null, 2));
+if (require.main === module) {
+  const inventory = buildInventory();
+  const outJson = path.join(ROOT, 'docs', 'architecture', 'level-inventory.json');
 
-if (process.argv.includes('--markdown')) {
-  process.stdout.write(toMarkdown(inventory));
-} else {
-  console.log(`Wrote ${outJson} (${inventory.rows.length} levels)`);
+  fs.mkdirSync(path.dirname(outJson), { recursive: true });
+  fs.writeFileSync(outJson, JSON.stringify(inventory, null, 2));
+
+  if (process.argv.includes('--markdown')) {
+    process.stdout.write(toMarkdown(inventory));
+  } else {
+    console.log(`Wrote ${outJson} (${inventory.rows.length} levels)`);
+  }
 }

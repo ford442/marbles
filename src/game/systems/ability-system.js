@@ -2,6 +2,7 @@ import {
     ABILITY_REGISTRY,
     ALL_ABILITY_IDS,
     getAbilityDefinition,
+    resolveAbilityMask,
 } from '../../abilities/registry.js';
 import {
     cooldownFillRatio,
@@ -71,19 +72,10 @@ export class AbilitySystem {
 
     /**
      * Apply per-level ability subset from level JSON.
-     * @param {{ enabled?: string[], disabled?: string[] } | null | undefined} mask
+     * @param {import('../../types/map.js').AbilityMask | null | undefined} mask
      */
     applyLevelMask(mask) {
-        if (!mask) {
-            this.enabled = new Set(ALL_ABILITY_IDS);
-        } else if (Array.isArray(mask.enabled)) {
-            this.enabled = new Set(mask.enabled.filter((id) => ABILITY_REGISTRY[id]));
-        } else if (Array.isArray(mask.disabled)) {
-            const disabled = new Set(mask.disabled);
-            this.enabled = new Set(ALL_ABILITY_IDS.filter((id) => !disabled.has(id)));
-        } else {
-            this.enabled = new Set(ALL_ABILITY_IDS);
-        }
+        this.enabled = new Set(resolveAbilityMask(mask));
         this._applyHudVisibility();
     }
 

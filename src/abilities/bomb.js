@@ -78,11 +78,3 @@ export class AbilityBomb {
         }
     }
 }
-
-export function applyAbilityBomb(targetClass) {
-    for (const name of Object.getOwnPropertyNames(AbilityBomb.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = AbilityBomb.prototype[name];
-        }
-    }
-}

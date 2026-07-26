@@ -1,6 +1,5 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
-import { assetRegistry } from '../assets/AssetRegistry.js';
 import { initLevelCatalog, LEVELS } from '../levels/catalog.js';
 import { mergeRegistryMarbles } from '../marbles_data.js';
 import {
@@ -174,6 +173,37 @@ export class InitCore {
                     this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
                 }
                 if (this.hudManager) this.hudManager.markAbilityUsed('flip')
+            }
+            if (e.code === 'ShiftLeft' && this.playerMarble && !this.isGrounded(this.playerMarble)) {
+                const now = Date.now()
+                if (now - (this.lastAirDashTime || 0) > 2000) {
+                    this.lastAirDashTime = now
+
+                    const rb = this.playerMarble.rigidBody
+                    const linvel = rb.linvel()
+                    rb.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true)
+
+                    const force = 40.0
+                    const forwardX = Math.sin(this.aimYaw)
+                    const forwardZ = Math.cos(this.aimYaw)
+
+                    rb.applyImpulse({ x: forwardX * force, y: 0, z: forwardZ * force }, true)
+
+                    const pos = rb.translation()
+                    this.visualParticles.push({
+                        isEMPRing: true,
+                        color: [0, 1, 1],
+                        pos: { x: pos.x, y: pos.y, z: pos.z },
+                        radius: 0.1,
+                        maxRadius: 10,
+                        opacity: 1.0,
+                        duration: 300,
+                        spawnTime: now
+                    })
+
+                    if (typeof audio !== 'undefined' && audio.playBoost) audio.playBoost()
+                    if (typeof this.awardTrickPoints === 'function') this.awardTrickPoints('Air Dash!', 25, '#00ffff')
+                }
             }
             if (e.code === 'KeyV' && this.playerMarble && !this.keys['KeyV']) {
                 const now = Date.now()
@@ -712,6 +742,7 @@ export class InitCore {
         }
 
         try {
+            const assetRegistry = this.levelLoader.assetRegistry
             await assetRegistry.loadAll()
             initLevelCatalog(assetRegistry)
             mergeRegistryMarbles(assetRegistry)
@@ -780,14 +811,6 @@ export class InitCore {
         }
         if (typeof window.updateLoadingProgress === 'function') {
             window.updateLoadingProgress(0, message)
-        }
-    }
-}
-
-export function applyInitCore(targetClass) {
-    for (const name of Object.getOwnPropertyNames(InitCore.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = InitCore.prototype[name];
         }
     }
 }

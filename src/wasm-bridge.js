@@ -43,6 +43,19 @@ export const WASM_HEAP_BATCH_MIN = 200;
 const WASM_MODULE_URL = '/wasm/marble_physics.js';
 const WASM_BINARY_URL = '/wasm/marble_physics.wasm';
 
+/**
+ * Scalar WASM calls always write three floats into their fixed-size output view.
+ * @param {Float32Array} view
+ * @returns {Vec3}
+ */
+function vec3FromView(view) {
+    return {
+        x: /** @type {number} */ (view[0]),
+        y: /** @type {number} */ (view[1]),
+        z: /** @type {number} */ (view[2]),
+    };
+}
+
 // ── Pure-JS fallbacks ─────────────────────────────────────────────────────────
 
 /**
@@ -463,6 +476,17 @@ class WasmBatchRunner {
 
     /**
      * @param {Float32Array | number[]} out length ≥ 3
+     * @param {number} fieldX
+     * @param {number} fieldY
+     * @param {number} fieldZ
+     * @param {number} marbleX
+     * @param {number} marbleY
+     * @param {number} marbleZ
+     * @param {number} strength
+     * @param {number} falloffExp
+     * @param {number} minDist
+     * @param {number} maxDist
+     * @param {number} [softening]
      */
     computeForceFieldInto(out, fieldX, fieldY, fieldZ,
                           marbleX, marbleY, marbleZ,
@@ -472,9 +496,9 @@ class WasmBatchRunner {
             marbleX, marbleY, marbleZ,
             strength, falloffExp, minDist, maxDist, softening
         );
-        out[0] = view[0];
-        out[1] = view[1];
-        out[2] = view[2];
+        out[0] = /** @type {number} */ (view[0]);
+        out[1] = /** @type {number} */ (view[1]);
+        out[2] = /** @type {number} */ (view[2]);
     }
 
     /**
@@ -638,28 +662,28 @@ function buildPhysicsApi() {
             applyVelocityDamping: (...args) => {
                 wasmApi.applyVelocityDampingOut(wasmBatch._scalarOutPtr, ...args);
                 const v = wasmBatch._scalarOutView;
-                return { x: v[0], y: v[1], z: v[2] };
+                return vec3FromView(v);
             },
             computeForceField: (...args) => {
                 const v = wasmBatch.computeForceFieldOut(...args);
-                return { x: v[0], y: v[1], z: v[2] };
+                return vec3FromView(v);
             },
             computeForceFieldInto: (out, ...args) =>
                 wasmBatch.computeForceFieldInto(out, ...args),
             computeSpringForce: (...args) => {
                 wasmApi.computeSpringForceOut(wasmBatch._scalarOutPtr, ...args);
                 const v = wasmBatch._scalarOutView;
-                return { x: v[0], y: v[1], z: v[2] };
+                return vec3FromView(v);
             },
             reflectVelocity: (...args) => {
                 wasmApi.reflectVelocityOut(wasmBatch._scalarOutPtr, ...args);
                 const v = wasmBatch._scalarOutView;
-                return { x: v[0], y: v[1], z: v[2] };
+                return vec3FromView(v);
             },
             closestPointOnSegment: (...args) => {
                 wasmApi.closestPointOnSegmentOut(wasmBatch._scalarOutPtr, ...args);
                 const v = wasmBatch._scalarOutView;
-                return { x: v[0], y: v[1], z: v[2] };
+                return vec3FromView(v);
             },
             applyVelocityDampingBatch: (velocities, out, count, dampingFactor, dt, maxSpeed) => {
                 if (shouldUseWasmHeapBatch(count)) {
@@ -754,11 +778,9 @@ export class PhysicsBatchBuffers {
     }
 }
 
+/** @returns {typeof globalThis} */
 function getRuntimeGlobal() {
-    if (typeof globalThis !== 'undefined') return globalThis;
-    if (typeof self !== 'undefined') return self;
-    if (typeof window !== 'undefined') return window;
-    return {};
+    return globalThis;
 }
 
 /**
@@ -825,7 +847,8 @@ export async function initMarblePhysicsWasm() {
                 return false;
             }
 
-            const moduleImport = await import(/* @vite-ignore */ WASM_MODULE_URL);
+            const moduleUrl = new URL(WASM_MODULE_URL, globalThis.location.href).href;
+            const moduleImport = await import(/* @vite-ignore */ moduleUrl);
             /** @type {{ default: () => Promise<MarblePhysicsWasmModule> }} */
             const MarblePhysicsModule = moduleImport;
             const instance = await MarblePhysicsModule.default();

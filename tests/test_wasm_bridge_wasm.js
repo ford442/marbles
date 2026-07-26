@@ -11,7 +11,7 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { _testExports } from '../src/wasm-bridge.js';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -49,12 +49,9 @@ async function loadWasmInNode() {
         return null;
     }
 
-    const code = readFileSync(wasmJsPath, 'utf8');
     const wasmBin = new Uint8Array(readFileSync(wasmBinPath));
-    const module = { exports: {} };
-    const MarblePhysicsModule = new Function(
-        'module', 'exports', `${code}\nreturn module.exports.default || module.exports;`
-    )(module, module.exports);
+    const module = await import(pathToFileURL(wasmJsPath).href);
+    const MarblePhysicsModule = module.default;
 
     if (typeof MarblePhysicsModule !== 'function') {
         throw new Error('MarblePhysicsModule is not a function');

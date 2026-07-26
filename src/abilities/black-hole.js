@@ -55,11 +55,3 @@ export class AbilityBlackHole {
         if (this.hudManager) this.hudManager.markAbilityUsed('blackhole')
     }
 }
-
-export function applyAbilityBlackHole(targetClass) {
-    for (const name of Object.getOwnPropertyNames(AbilityBlackHole.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = AbilityBlackHole.prototype[name];
-        }
-    }
-}

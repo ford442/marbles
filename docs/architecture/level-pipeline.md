@@ -31,22 +31,24 @@ See [`neon_showcase.json`](../../assets/maps/neon_showcase.json) for GLB + built
 | **json** | In manifest, JSON-only | yes |
 | **dual** | Same id in manifest and `DEV_LEVELS`; JSON wins | yes (JSON version) |
 | **code** | `DEV_LEVELS` only | no |
-| **orphan-json** | Map file on disk, not in manifest | no (often broken zone handlers) |
+| **archived-json** | Preserved prototype named in `archived-levels.json` | no |
+| **orphan-json** | Unclassified map file on disk, not in manifest | no |
 
 ## Counts (current)
 
 | Metric | Count |
 |--------|------:|
-| Manifest (production) | **14** |
-| `DEV_LEVELS` entries | **58** |
-| Map JSON files (excl. template) | **18** |
-| Unique level ids | **72** |
-| JSON-only | **10** |
-| Code-only (dev) | **54** |
+| Manifest (production) | **24** |
+| `DEV_LEVELS` entries | **52** |
+| Map JSON files (excl. template) | **28** |
+| Unique level ids | **76** |
+| JSON-only | **20** |
+| Code-only (dev) | **48** |
 | Dual (JSON wins) | **4** |
-| Orphan JSON | **4** |
-| Playable in normal mode | **14** manifest ids |
-| Playable with `?devLevels=1` | ~68 unique ids |
+| Archived JSON prototypes | **4** |
+| Orphan JSON | **0** |
+| Playable in normal mode | **24** manifest ids |
+| Playable with `?devLevels=1` | **72** unique ids |
 
 Regenerate the machine-readable inventory:
 
@@ -79,21 +81,37 @@ See [`level-inventory.json`](level-inventory.json) for the full table (`id`, `so
 | `stellar_forge` | extreme | factory stamp |
 | `space_station` | expert | factory stamp |
 | `neon_grid` | neon | floor + track + factory stamp |
+| `mushroom_hop` | classic | wave 1 factory stamp |
+| `wind_tunnel` | classic | wave 1 factory stamp |
+| `pinwheel_alley` | classic | wave 1 factory stamp |
+| `helix_havoc` | extreme | wave 1 factory stamp |
+| `clockwork_chaos` | extreme | wave 1 factory stamp |
+| `cyber_run` | neon | wave 1 factory stamp |
+| `ice_cave_run` | extreme | wave 1 factory stamp |
+| `jungle_run` | classic | wave 1 factory stamp |
+| `zen_garden_run` | classic | wave 1 factory stamp |
+| `galaxy_spiral_run` | expert | wave 1 factory stamp |
 
 ### Dual ids (JSON wins at runtime)
 
 `staircase`, `full_course`, `sandbox`, `volcano_run` — legacy copies remain in `DEV_LEVELS` for dev comparison but are skipped when manifest JSON exists.
 
-### Orphan JSON (blocked)
+### Archived extreme prototypes
 
-| id | blocker |
-|----|---------|
-| `tutorial_extreme` | Not in manifest; uses unregistered zone types |
-| `slalom_extreme` | Same |
-| `staircase_extreme` | Same |
-| `volcano_run_extreme` | Same |
+| id | archive reason |
+|----|----------------|
+| `tutorial_extreme` | Depends on unimplemented hazard, trap, ramp, stomp, and route stamps |
+| `slalom_extreme` | Depends on unimplemented branching, trap, boost-chain, and plunge mechanics |
+| `staircase_extreme` | Depends on unimplemented fork, freefall, trap-stair, and spiral-staircase mechanics |
+| `volcano_run_extreme` | Depends on unimplemented heat, eruption, tsunami, collapsing-platform, and boss systems |
 
-These maps use ~29 zone types with no `ZONE_HANDLERS` entry. Register handlers before adding to manifest.
+These source maps remain on disk as design references but are explicitly excluded from the product catalog. Their machine-readable reasons and 26 missing handlers live in [`archived-levels.json`](archived-levels.json). Reviving one requires real gameplay implementations, asset validation, and a playable smoke—not placeholder handlers.
+
+## Inventory regression gate
+
+`tests/test_level_inventory.js` rebuilds the inventory in memory and rejects duplicate `DEV_LEVELS` ids, manifest maps with unknown zone handlers, unclassified orphan JSON, and stale committed inventory data.
+
+All wave 1 maps set an explicit chapter, difficulty, follow camera, goal volume, and medal thresholds. Falling below the global `y < -20` boundary respawns at the latest checkpoint or initial spawn.
 
 ## Campaign chapter assignment
 

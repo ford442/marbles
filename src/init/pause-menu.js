@@ -187,11 +187,3 @@ export class InitPauseMenu {
         }
     }
 }
-
-export function applyInitPauseMenu(targetClass) {
-    for (const name of Object.getOwnPropertyNames(InitPauseMenu.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = InitPauseMenu.prototype[name];
-        }
-    }
-}

@@ -226,11 +226,3 @@ export class GameLoopDynamics {
         return { culledPowerUps, culledCollectibles }
     }
 }
-
-export function applyGameLoopDynamics(targetClass) {
-    for (const name of Object.getOwnPropertyNames(GameLoopDynamics.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = GameLoopDynamics.prototype[name];
-        }
-    }
-}

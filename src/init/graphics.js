@@ -71,11 +71,3 @@ export class InitGraphics {
         return this.settings.accessibility.screenShake / 100
     }
 }
-
-export function applyInitGraphics(targetClass) {
-    for (const name of Object.getOwnPropertyNames(InitGraphics.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = InitGraphics.prototype[name];
-        }
-    }
-}

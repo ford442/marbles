@@ -91,7 +91,7 @@ export function updateDesyncIndicator(game, now = Date.now()) {
             : 'Multiplayer sync OK';
     }
 
-    game.hudManager?.setMultiplayerDesync?.(tracker.active, tracker.maxError);
+    game.hudController?.setMultiplayerDesync?.(tracker.active, tracker.maxError);
 }
 
 /**

@@ -1,0 +1,21 @@
+{
+  "id": "wind_tunnel",
+  "name": "Wind Tunnel",
+  "description": "Navigate through the giant fans!",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "difficulty": "medium",
+  "chapter": "classic",
+  "zones": [
+    { "type": "floor", "pos": { "x": 0, "y": -2, "z": 0 }, "size": { "x": 50, "y": 0.5, "z": 50 } },
+    { "type": "track", "pos": { "x": 0, "y": 3, "z": 0 } },
+    { "type": "wind_tunnel", "pos": { "x": 0, "y": 0, "z": 25 } },
+    { "type": "goal", "pos": { "x": 0, "y": 0.25, "z": 70 } }
+  ],
+  "spawn": { "x": 0, "y": 8, "z": -12 },
+  "goals": [
+    { "id": 1, "range": { "x": [-5, 5], "y": [-1, 3], "z": [65, 75] } }
+  ],
+  "camera": { "mode": "follow", "height": 15, "offset": -25 },
+  "medals": { "goldTime": 45, "silverTime": 90, "bronzeTime": 180, "parTime": 75 }
+}

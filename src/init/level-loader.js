@@ -12,7 +12,7 @@ export class InitLevelLoader {
         }
 
         console.log(`[LEVEL] Loading level: ${levelId}`)
-        const level = getLevel(levelId)
+        const level = this.levelLoader.getLevel(levelId)
         if (!level) {
             console.error(`[LEVEL] Level ${levelId} not found!`)
             return
@@ -84,11 +84,11 @@ export class InitLevelLoader {
             await this.createZone(zone)
         }
         loadLevelBehaviors(this, level.behaviors || [], { level, levelId })
-        this.flushStaticBatches?.()
+        this.levelLoader.physicsWorld.flushStaticBatches?.()
         console.log(`[LEVEL] Created ${this.staticEntities.length} static entities`)
 
         console.log(`[LEVEL] Spawning marbles at ${JSON.stringify(level.spawn)}...`)
-        this.createMarbles(level.spawn)
+        this.levelLoader.marbleRegistry.createMarbles(level.spawn)
         if (this.physicsBackend?.isWorkerMode?.()) {
             await this.physicsBackend.commitWorldBuild()
         }
@@ -259,13 +259,5 @@ export class InitLevelLoader {
         this.scene.addEntity(this.ghostLightEntity)
 
         console.log('[GAME] Spawned Speedrun Ghost')
-    }
-}
-
-export function applyInitLevelLoader(targetClass) {
-    for (const name of Object.getOwnPropertyNames(InitLevelLoader.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = InitLevelLoader.prototype[name];
-        }
     }
 }

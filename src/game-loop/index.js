@@ -1,49 +1,27 @@
-import { applyGameLoopLoop } from './loop.js';
-import { applyGameLoopLogic } from './logic.js';
-import { applyGameLoopFrameInput } from './frame-input.js';
-import { applyGameLoopCamera } from './camera.js';
-import { applyGameLoopDynamics } from './dynamics-tick.js';
-import { applyGameLoopHudTick } from './hud-tick.js';
-import { applyGameLoopEffectsTick } from './effects-tick.js';
-import { applyGameLoopFinalize } from './finalize-frame.js';
-import { applyGameLoopRender } from './render.js';
-import { applyGameLoopSync } from './sync.js';
-import { applyGameLoopSpeedLines } from './speed-lines.js';
+import { installKnownMethods } from '../game/systems/method-installer.js';
+import { GameLoopLoop } from './loop.js';
+import { GameLoopLogic } from './logic.js';
+import { GameLoopSpeedLines } from './speed-lines.js';
+import { GameLoopFrameInput } from './frame-input.js';
+import { GameLoopCamera } from './camera.js';
+import { GameLoopDynamics } from './dynamics-tick.js';
+import { GameLoopEffectsTick } from './effects-tick.js';
+import { GameLoopFinalize } from './finalize-frame.js';
 
-/** @deprecated Use applyGameLoopLoop */
-export function applyGameLoopMethods(targetClass) {
-    applyGameLoopLoop(targetClass);
-    applyGameLoopLogic(targetClass);
-}
-
-/** @deprecated Use applyGameLoopRender + applyGameLoopSpeedLines */
-export function applyGameLoopRenderMethods(targetClass) {
-    applyGameLoopSpeedLines(targetClass);
-    applyGameLoopFrameInput(targetClass);
-    applyGameLoopCamera(targetClass);
-    applyGameLoopDynamics(targetClass);
-    applyGameLoopHudTick(targetClass);
-    applyGameLoopEffectsTick(targetClass);
-    applyGameLoopFinalize(targetClass);
-    applyGameLoopRender(targetClass);
-}
-
-/** @deprecated Use applyGameLoopSync */
-export function applyGameLoopSyncMethods(targetClass) {
-    applyGameLoopSync(targetClass);
-}
-
-/** Canonical game-loop wiring — single entry used by main.js */
-export function applyGameLoop(targetClass) {
-    applyGameLoopLoop(targetClass);
-    applyGameLoopLogic(targetClass);
-    applyGameLoopSpeedLines(targetClass);
-    applyGameLoopFrameInput(targetClass);
-    applyGameLoopCamera(targetClass);
-    applyGameLoopDynamics(targetClass);
-    applyGameLoopHudTick(targetClass);
-    applyGameLoopEffectsTick(targetClass);
-    applyGameLoopFinalize(targetClass);
-    applyGameLoopRender(targetClass);
-    applyGameLoopSync(targetClass);
+/**
+ * Closed compatibility list for frame behaviors not yet composed.
+ * Render/sync and HUD methods are owned by RenderPipeline and HudController.
+ */
+export function installGameLoopMethods(targetClass) {
+    installKnownMethods(targetClass, GameLoopLoop, ['loop']);
+    installKnownMethods(targetClass, GameLoopLogic, ['updateGameState']);
+    installKnownMethods(targetClass, GameLoopSpeedLines, [
+        'initSpeedLines', 'resizeSpeedLinesCanvas', 'createSpeedLine',
+        'updateSpeedLines', 'renderSpeedLines',
+    ]);
+    installKnownMethods(targetClass, GameLoopFrameInput, ['tickFrameInput']);
+    installKnownMethods(targetClass, GameLoopCamera, ['updateCamera']);
+    installKnownMethods(targetClass, GameLoopDynamics, ['tickSceneDynamics']);
+    installKnownMethods(targetClass, GameLoopEffectsTick, ['tickActiveProjectiles']);
+    installKnownMethods(targetClass, GameLoopFinalize, ['finalizeFrame']);
 }

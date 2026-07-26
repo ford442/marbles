@@ -14,11 +14,8 @@ import {
 } from './helpers.js';
 
 export class GameLoopFinalize {
-    finalizeFrame(now, culledPowerUps, culledCollectibles) {
-                // Update consolidated HUD
-                if (this.hudManager) {
-                    this.hudManager.updateAllAbilities()
-                }
+    finalizeFrame(now, culledPowerUps, culledCollectibles, shouldUpdateHUD = true) {
+                this.hudController?.updateFrame(now, { shouldUpdateHUD })
         
                 this.perfMonitor?.recordCoreWork({
                     movingPlatforms: this.movingPlatforms?.length || 0,
@@ -40,18 +37,5 @@ export class GameLoopFinalize {
                         (this.activeMissiles?.length || 0)
                 })
         
-                // Update goal zone effects
-                if (this.playerMarble) {
-                    const playerPos = this.playerMarble.rigidBody.translation()
-                    this.updateGoalEffects(0.016, playerPos)
-                }
-    }
-}
-
-export function applyGameLoopFinalize(targetClass) {
-    for (const name of Object.getOwnPropertyNames(GameLoopFinalize.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = GameLoopFinalize.prototype[name];
-        }
     }
 }

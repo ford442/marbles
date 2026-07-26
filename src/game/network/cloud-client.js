@@ -4,11 +4,19 @@
  * No-ops when VITE_MARBLES_API_URL is unset or player has not opted in.
  */
 
+/** @typedef {import('../systems/campaign-progress.js').CampaignSave} CampaignSave */
+/** @typedef {{ levelId: string, blob: unknown, bestTime: number }} GhostPayload */
+/** @typedef {{ op: 'progress', payload: Partial<CampaignSave>, ts: number } | { op: 'ghost', payload: GhostPayload, ts: number }} QueueItem */
+/** @typedef {{ importReplay: (blob: unknown, levelId: string) => void, loadPlayback: (levelId: string) => void }} GhostReplayClient */
+/** @typedef {{ data: CampaignSave, recalculateUnlocks: () => void, save: (options?: { skipCloud?: boolean }) => void }} CampaignProgressClient */
+/** @typedef {{ campaignProgress?: CampaignProgressClient, ghostReplay: GhostReplayClient }} CloudGame */
+
 export const DEVICE_ID_KEY = 'marbles3d_device_id';
 export const CLOUD_OPT_IN_KEY = 'marbles3d_cloud_opt_in';
 export const CLOUD_QUEUE_KEY = 'marbles3d_cloud_queue';
 export const CLOUD_DISPLAY_NAME_KEY = 'marbles3d_cloud_display_name';
 
+/** @type {Map<string, { entries: unknown[], at: number }>} */
 const LEADERBOARD_CACHE = new Map();
 const MAX_QUEUE = 50;
 const FLUSH_DELAY_MS = 0;
@@ -26,6 +34,11 @@ function defaultApiUrl() {
     return null;
 }
 
+/**
+ * @param {string} key
+ * @param {string | null} [fallback]
+ * @returns {string | null}
+ */
 function readStorage(key, fallback = null) {
     try {
         return localStorage.getItem(key) ?? fallback;
@@ -34,6 +47,7 @@ function readStorage(key, fallback = null) {
     }
 }
 
+/** @param {string} key @param {string} value */
 function writeStorage(key, value) {
     try {
         localStorage.setItem(key, value);
@@ -50,6 +64,7 @@ export function isCloudEnabled() {
     return Boolean(getApiUrl()) && readStorage(CLOUD_OPT_IN_KEY) === '1';
 }
 
+/** @param {boolean} enabled */
 export function setCloudOptIn(enabled) {
     writeStorage(CLOUD_OPT_IN_KEY, enabled ? '1' : '0');
     if (enabled) {
@@ -78,6 +93,7 @@ export function getDisplayName() {
     return `Player-${deviceId.slice(-4).toUpperCase()}`;
 }
 
+/** @param {string} name */
 export function setDisplayName(name) {
     writeStorage(CLOUD_DISPLAY_NAME_KEY, (name || '').trim().slice(0, 32));
 }
@@ -91,25 +107,28 @@ function authHeaders() {
     };
 }
 
+/** @returns {QueueItem[]} */
 function readQueue() {
     try {
         const raw = readStorage(CLOUD_QUEUE_KEY);
         if (!raw) return [];
         const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
+        return Array.isArray(parsed) ? /** @type {QueueItem[]} */ (parsed) : [];
     } catch {
         return [];
     }
 }
 
+/** @param {QueueItem[]} queue */
 function writeQueue(queue) {
     writeStorage(CLOUD_QUEUE_KEY, JSON.stringify(queue.slice(-MAX_QUEUE)));
 }
 
-function enqueue(op, payload) {
+/** @param {QueueItem} item */
+function enqueue(item) {
     if (!isCloudEnabled()) return;
     const queue = readQueue();
-    queue.push({ op, payload, ts: Date.now() });
+    queue.push(item);
     writeQueue(queue);
     scheduleQueueFlush();
 }
@@ -130,14 +149,20 @@ export function scheduleQueueFlush() {
     }
 }
 
+/**
+ * @param {string} path
+ * @param {RequestInit} [options]
+ */
 async function apiFetch(path, options = {}) {
     const base = getApiUrl();
     const headers = authHeaders();
     if (!base || !headers) return null;
 
+    const requestHeaders = new Headers(options.headers);
+    for (const [name, value] of Object.entries(headers)) requestHeaders.set(name, value);
     const res = await fetch(`${base}${path}`, {
         ...options,
-        headers: { ...headers, ...options.headers },
+        headers: requestHeaders,
     });
     return res;
 }
@@ -163,6 +188,7 @@ async function flushQueue() {
     writeQueue(remaining);
 }
 
+/** @param {QueueItem} item */
 async function processQueueItem(item) {
     const deviceId = getDeviceId();
     if (!deviceId) return true;
@@ -191,21 +217,27 @@ async function processQueueItem(item) {
     return true;
 }
 
+/** @param {Partial<CampaignSave> | null | undefined} campaignSave */
 export function scheduleProgressSync(campaignSave) {
     if (!isCloudEnabled() || !campaignSave) return;
-    enqueue('progress', {
-        version: campaignSave.version ?? 1,
-        freePlay: campaignSave.freePlay ?? false,
-        unlockedChapters: campaignSave.unlockedChapters ?? [],
-        levels: campaignSave.levels ?? {},
-        unlockedMarbles: campaignSave.unlockedMarbles ?? [],
-        revision: campaignSave.revision ?? 0,
+    enqueue({
+        op: 'progress',
+        payload: {
+            version: campaignSave.version ?? 1,
+            freePlay: campaignSave.freePlay ?? false,
+            unlockedChapters: campaignSave.unlockedChapters ?? [],
+            levels: campaignSave.levels ?? {},
+            unlockedMarbles: campaignSave.unlockedMarbles ?? [],
+            revision: campaignSave.revision ?? 0,
+        },
+        ts: Date.now(),
     });
 }
 
+/** @param {string} levelId @param {unknown} blob @param {number} bestTime */
 export function scheduleGhostUpload(levelId, blob, bestTime) {
     if (!isCloudEnabled() || !blob || !levelId) return;
-    enqueue('ghost', { levelId, blob, bestTime });
+    enqueue({ op: 'ghost', payload: { levelId, blob, bestTime }, ts: Date.now() });
 }
 
 export async function fetchRemoteProgress() {
@@ -217,13 +249,14 @@ export async function fetchRemoteProgress() {
         const res = await apiFetch(`/v1/marbles/progress/${deviceId}`);
         if (res?.status === 404) return null;
         if (!res?.ok) return null;
-        return await res.json();
+        return /** @type {Partial<CampaignSave>} */ (await res.json());
     } catch (e) {
         console.warn('[CLOUD] Progress fetch failed:', e);
         return null;
     }
 }
 
+/** @param {string} levelId */
 export async function fetchLeaderboard(levelId) {
     if (!getApiUrl()) return [];
     const cached = LEADERBOARD_CACHE.get(levelId);
@@ -234,7 +267,7 @@ export async function fetchLeaderboard(levelId) {
     try {
         const res = await apiFetch(`/v1/marbles/leaderboards/${levelId}`);
         if (!res?.ok) return [];
-        const data = await res.json();
+        const data = /** @type {{ entries?: unknown[] }} */ (await res.json());
         const entries = data.entries || [];
         LEADERBOARD_CACHE.set(levelId, { entries, at: Date.now() });
         return entries;
@@ -244,12 +277,17 @@ export async function fetchLeaderboard(levelId) {
     }
 }
 
+/**
+ * @param {string} ghostId
+ * @param {GhostReplayClient | null | undefined} ghostReplay
+ * @param {string} [levelId]
+ */
 export async function fetchAndImportGhost(ghostId, ghostReplay, levelId) {
     if (!ghostReplay || !ghostId) return false;
     try {
         const res = await apiFetch(`/v1/marbles/ghosts/${ghostId}`);
         if (!res?.ok) return false;
-        const data = await res.json();
+        const data = /** @type {{ blob: unknown, levelId: string }} */ (await res.json());
         ghostReplay.importReplay(data.blob, levelId || data.levelId);
         return true;
     } catch (e) {
@@ -260,7 +298,7 @@ export async function fetchAndImportGhost(ghostId, ghostReplay, levelId) {
 
 export class CloudClient {
     /**
-     * @param {object} game
+     * @param {CloudGame} game
      */
     constructor(game) {
         this.game = game;
@@ -276,10 +314,12 @@ export class CloudClient {
         return isCloudEnabled();
     }
 
+    /** @param {Partial<CampaignSave>} campaignSave */
     scheduleProgressSync(campaignSave) {
         scheduleProgressSync(campaignSave);
     }
 
+    /** @param {string} levelId @param {unknown} blob @param {number} bestTime */
     scheduleGhostUpload(levelId, blob, bestTime) {
         scheduleGhostUpload(levelId, blob, bestTime);
     }
@@ -298,6 +338,7 @@ export class CloudClient {
         this.game.campaignProgress.save({ skipCloud: true });
     }
 
+    /** @param {string} levelId */
     fetchLeaderboard(levelId) {
         return fetchLeaderboard(levelId);
     }

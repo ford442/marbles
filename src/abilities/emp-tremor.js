@@ -209,11 +209,3 @@ export class AbilityEmpTremor {
         }, 500)
     }
 }
-
-export function applyAbilityEmpTremor(targetClass) {
-    for (const name of Object.getOwnPropertyNames(AbilityEmpTremor.prototype)) {
-        if (name !== 'constructor') {
-            targetClass.prototype[name] = AbilityEmpTremor.prototype[name];
-        }
-    }
-}
