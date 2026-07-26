@@ -145,7 +145,9 @@ Captured on 2026-07-11 (Node v24.5.0, `/root/marbles` dev host):
 Notes:
 
 - WASM HEAP batch pays a fixed copy + `_malloc` setup cost; hybrid routing keeps mid-size batches on JS until `WASM_HEAP_BATCH_MIN` (200).
-- Scalar WASM uses `*Out` HEAP writers instead of Embind `{x,y,z}` objects for magnet/black-hole paths with ≤8 targets.
+- Scalar WASM uses `*Out` / `compute*Into` HEAP writers instead of Embind `{x,y,z}` objects for magnet/black-hole paths with ≤8 targets.
+- Game hot paths using `computeForceFieldInto` / `computeSpringForceInto`: `effects-tick.js`, `frame-input.js` (magnet), `ability-sync.js` (remote black holes), `zone-setup/grapple.js` (spring).
+- CI: `npm run build:wasm` → `check:wasm` → `test:wasm:parity` before unit tests (Emscripten **3.1.50** — see `wasm/README.md`).
 - Local dev without emsdk continues to use JS fallbacks silently (`npm run build:wasm` skips gracefully when Emscripten is absent).
 - Shared test vectors live in `tests/test_wasm_bridge.js` and `tests/test_wasm_bridge_wasm.js`.
 

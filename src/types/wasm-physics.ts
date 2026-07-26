@@ -77,6 +77,21 @@ export interface MarblePhysicsApi {
         velY: number,
         velZ: number,
     ): Vec3;
+    computeSpringForceInto(
+        out: Float32Array | number[],
+        marbleX: number,
+        marbleY: number,
+        marbleZ: number,
+        anchorX: number,
+        anchorY: number,
+        anchorZ: number,
+        restLength: number,
+        stiffness: number,
+        damping: number,
+        velX: number,
+        velY: number,
+        velZ: number,
+    ): void;
     reflectVelocity(
         vx: number,
         vy: number,

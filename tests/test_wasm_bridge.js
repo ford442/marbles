@@ -140,6 +140,11 @@ test('compressed spring pushes away', sfComp.x, -3, 1e-4);
 const sfDamp = jsFallback.computeSpringForce(0, 0, 0, 10, 0, 0, 5, 1, 2, 2, 0, 0);
 test('damping subtracts from spring force', sfDamp.x, 5 - 2 * 2, 1e-4);
 
+console.log('\ncomputeSpringForceInto');
+const springInto = new Float32Array(3);
+jsFallback.computeSpringForceInto(springInto, 0, 0, 0, 10, 0, 0, 5, 1, 0, 0, 0, 0);
+test('Spring Into matches scalar', springInto[0], sf.x, 1e-4);
+
 // reflectVelocity
 console.log('\nreflectVelocity');
 const rv = jsFallback.reflectVelocity(0, -10, 0, 0, 1, 0, 1.0);

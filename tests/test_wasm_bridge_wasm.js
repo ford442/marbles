@@ -85,6 +85,10 @@ async function main() {
     const jsSf = jsFallback.computeSpringForce(0, 0, 0, 10, 0, 0, 5, 1, 0, 0, 0, 0);
     test('computeSpringForceOut vs JS', { x: runner._scalarOutView[0], y: runner._scalarOutView[1], z: runner._scalarOutView[2] }, jsSf);
 
+    const springInto = new Float32Array(3);
+    runner.computeSpringForceInto(springInto, 0, 0, 0, 10, 0, 0, 5, 1, 0, 0, 0, 0);
+    test('computeSpringForceInto vs JS', { x: springInto[0], y: springInto[1], z: springInto[2] }, jsSf);
+
     wasm.closestPointOnSegmentOut(outPtr, 0, 0, 0, 10, 0, 0, 4, 3, 0);
     const jsCp = jsFallback.closestPointOnSegment(0, 0, 0, 10, 0, 0, 4, 3, 0);
     test('closestPointOnSegmentOut vs JS', { x: runner._scalarOutView[0], y: runner._scalarOutView[1], z: runner._scalarOutView[2] }, jsCp);
