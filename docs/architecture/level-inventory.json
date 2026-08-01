@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-07-26T06:06:43.842Z",
+  "generated_at": "2026-08-01T09:40:31.241Z",
   "counts": {
-    "manifest": 14,
-    "dev_levels": 62,
-    "map_files": 18,
-    "unique_ids": 76,
-    "json_only": 10,
-    "code_only": 58,
+    "manifest": 24,
+    "dev_levels": 53,
+    "map_files": 28,
+    "unique_ids": 77,
+    "json_only": 20,
+    "code_only": 49,
     "dual": 4,
     "orphan_json": 0,
     "archived_json": 4
@@ -116,6 +116,20 @@
     },
     {
       "id": "cloud_city_run",
+      "source": "code",
+      "in_manifest": false,
+      "in_dev_levels": true,
+      "on_disk": false,
+      "chapter": "classic",
+      "chapter_source": "heuristic:classic",
+      "zone_types": "(dev inline)",
+      "unknown_zones": "",
+      "migration_status": "dev-only",
+      "archive_reason": "",
+      "difficulty": ""
+    },
+    {
+      "id": "crystal_cavern_run",
       "source": "code",
       "in_manifest": false,
       "in_dev_levels": true,
@@ -308,19 +322,6 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
-      "difficulty": ""
-    },
-    {
-      "id": "ice_bridges_run",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
-      "chapter": "classic",
-      "chapter_source": "heuristic:classic",
-      "zone_types": "(dev inline)",
-      "unknown_zones": "",
-      "migration_status": "dev-only",
       "difficulty": ""
     },
     {

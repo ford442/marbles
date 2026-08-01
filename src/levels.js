@@ -21,6 +21,21 @@ export const DEV_LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
+    crystal_cavern_run: {
+        name: 'Crystal Cavern Run',
+        description: 'Navigate the icy depths and dodge the glowing purple crystals!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 150 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'crystal_cavern', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 0, y: -3, z: 125 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [120, 130], y: [-5, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
+    },
     staircase: {
         name: 'Stairway to Heaven',
         description: 'Climb the steps to victory',

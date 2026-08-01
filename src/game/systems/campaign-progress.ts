@@ -115,8 +115,6 @@ export function mergeCampaignSave(local: CampaignSave, remote: Partial<CampaignS
     }
 
     const res: CampaignSave = {
-    const updatedAt = r.updatedAt ?? l.updatedAt;
-    return {
         version: Math.max(l.version, r.version ?? 1),
         freePlay: Boolean(l.freePlay || r.freePlay),
         unlockedChapters: [...new Set([
@@ -129,7 +127,6 @@ export function mergeCampaignSave(local: CampaignSave, remote: Partial<CampaignS
         ])],
         levels,
         revision: Math.max(l.revision ?? 0, r.revision ?? 0),
-        ...(updatedAt !== undefined ? { updatedAt } : {}),
     };
     const up = r.updatedAt ?? l.updatedAt;
     if (up !== undefined) {
