@@ -5,7 +5,6 @@ import {
     CMD_HEADER_BYTES,
     CMD_ENTRY_BYTES,
     CMD_OP,
-    CMD_HEADER_BYTES,
     TRANSFORM_HEADER_BODY_COUNT,
     TRANSFORM_HEADER_BYTES,
     TRANSFORM_HEADER_FRAME_TICK,
@@ -77,13 +76,10 @@ function drainCommands() {
     );
     const { u32, f32 } = commandViews;
 
-    let hasCommands = true;
-    while (hasCommands) {
     for (;;) {
         const tail = Atomics.load(u32, CMD_HEADER_TAIL);
         const head = Atomics.load(u32, CMD_HEADER_HEAD);
         if (tail === head) {
-            hasCommands = false;
             break;
         }
 
