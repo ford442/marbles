@@ -18,7 +18,7 @@
     "radius": 0.7,
     "density": 50.0,
     "friction": 0.0,
-    "restitution": 2.5,
+    "restitution": 2.0,
     "gravityScale": 1.0
   }
 }
