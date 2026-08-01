@@ -1,0 +1,24 @@
+{
+  "id": "starfire_diamond",
+  "name": "Starfire Diamond",
+  "description": "A stunning diamond that burns with stellar fire. Fast, bouncy, and highly visible.",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "legendary",
+  "appearance": {
+    "color": { "r": 1.0, "g": 0.4, "b": 0.1 },
+    "roughness": 0.0,
+    "metallic": 0.0,
+    "emissive": { "r": 1.0, "g": 0.5, "b": 0.2, "intensity": 85000.0 },
+    "clearCoat": 1.0,
+    "clearCoatRoughness": 0.0,
+    "materialType": "glass"
+  },
+  "physics": {
+    "radius": 0.7,
+    "density": 50.0,
+    "friction": 0.0,
+    "restitution": 2.5,
+    "gravityScale": 1.0
+  }
+}
