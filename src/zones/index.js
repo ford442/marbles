@@ -10,6 +10,7 @@ export { createCanyonRunZone } from './canyon-run.js';
 export { createChronoCanyonZone } from './chrono-canyon.js';
 export { createClockworkZone } from './clockwork-zone.js';
 export { createCloudCityZone } from './cloud-city.js';
+export { createCrystalCavernZone } from './crystal-cavern.js';
 export { createCyberIceTrackZone } from './cyber-ice-track.js';
 export { createCyberTrackZone } from './cyber-track-zone.js';
 export { createDesertRuinsZone } from './desert-ruins.js';
