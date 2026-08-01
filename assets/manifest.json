@@ -147,17 +147,48 @@
     "cosmic_nebula": {
       "file": "marbles/cosmic_nebula.json",
       "rarity": "legendary"
+    },
+    "starfire_diamond": {
+      "file": "marbles/starfire_diamond.json",
+      "rarity": "legendary"
     }
   },
   "sounds": {
-    "collision_wood": { "file": "sounds/collision_wood.json", "category": "sfx" },
-    "collision_metal": { "file": "sounds/collision_metal.json", "category": "sfx" },
-    "collision_concrete": { "file": "sounds/collision_concrete.json", "category": "sfx" },
-    "collision_glass": { "file": "sounds/collision_glass.json", "category": "sfx" },
-    "collision_rubber": { "file": "sounds/collision_rubber.json", "category": "sfx" },
-    "ability_bomb": { "file": "sounds/ability_bomb.json", "category": "sfx" },
-    "ability_missile": { "file": "sounds/ability_missile.json", "category": "sfx" },
-    "ability_blink": { "file": "sounds/ability_blink.json", "category": "sfx" },
-    "goal_chime": { "file": "sounds/goal_chime.json", "category": "sfx" }
+    "collision_wood": {
+      "file": "sounds/collision_wood.json",
+      "category": "sfx"
+    },
+    "collision_metal": {
+      "file": "sounds/collision_metal.json",
+      "category": "sfx"
+    },
+    "collision_concrete": {
+      "file": "sounds/collision_concrete.json",
+      "category": "sfx"
+    },
+    "collision_glass": {
+      "file": "sounds/collision_glass.json",
+      "category": "sfx"
+    },
+    "collision_rubber": {
+      "file": "sounds/collision_rubber.json",
+      "category": "sfx"
+    },
+    "ability_bomb": {
+      "file": "sounds/ability_bomb.json",
+      "category": "sfx"
+    },
+    "ability_missile": {
+      "file": "sounds/ability_missile.json",
+      "category": "sfx"
+    },
+    "ability_blink": {
+      "file": "sounds/ability_blink.json",
+      "category": "sfx"
+    },
+    "goal_chime": {
+      "file": "sounds/goal_chime.json",
+      "category": "sfx"
+    }
   }
 }
