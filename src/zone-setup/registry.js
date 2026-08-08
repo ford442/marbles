@@ -74,6 +74,7 @@ const FACTORY_ZONE_HANDLERS = {
     gravity_well: (game, _zone, offset) => zones.createGravityWellZone(game, offset),
     crystal_cavern: (game, _zone, offset) => zones.createCrystalCavernZone(game, offset),
     cyber_ice_track: (game, _zone, offset) => zones.createCyberIceTrackZone(game, offset),
+    cyber_reactor: (game, _zone, offset) => zones.createCyberReactorZone(game, offset),
     neon_plunge: (game, _zone, offset) => zones.createNeonPlungeZone(game, offset),
     prismatic_speedway: (game, _zone, offset) => zones.createPrismaticSpeedwayZone(game, offset),
     neon_alley: (game, _zone, offset) => zones.createNeonAlleyZone(game, offset),
