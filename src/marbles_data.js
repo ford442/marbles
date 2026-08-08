@@ -1,5 +1,6 @@
 /** Premium marbles (formerly marble_draft.js); inlined to keep src/ free of draft modules. */
 const premiumMarbles = [
+    { name: "Juggernaut Prism", color: [0.1, 0.9, 0.4], offset: { x: 0.0, y: 5, z: 0 }, radius: 1.2, density: 100.0, friction: 0.0, restitution: 1.8, clearCoat: 1.0, clearCoatRoughness: 0.0, materialType: "glass", emissive: true, lightIntensity: 120000.0, lightColor: [0.1, 1.0, 0.5] },
     { name: "Starfire Diamond", color: [1.0, 0.4, 0.1], offset: { x: 0.0, y: 5, z: 0 }, radius: 0.7, density: 50.0, restitution: 2.0, gravityScale: 1.0, friction: 0.0, roughness: 0.0, clearCoat: 1.0, clearCoatRoughness: 0.0, materialType: "glass", emissive: true, lightIntensity: 85000.0, lightColor: [1.0, 0.5, 0.2] },
     { name: "Celestial Pearl", color: [0.95, 0.9, 1.0], offset: { x: 0.0, y: 5, z: 0 }, radius: 0.65, density: 1.2, restitution: 0.95, gravityScale: 0.8, friction: 0.05, roughness: 0.1, emissive: true, lightIntensity: 45000.0, lightColor: [0.8, 0.9, 1.0] },
     { name: "Celestial Orb", color: [0.3, 0.7, 1.0], offset: { x: 0.0, y: 5, z: 0 }, radius: 0.6, density: 1.5, restitution: 0.8, gravityScale: 0.8, friction: 0.1, roughness: 0.05, emissive: true, lightIntensity: 30000.0, lightColor: [0.5, 0.0, 1.0] },
