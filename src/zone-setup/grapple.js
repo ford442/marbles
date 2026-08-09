@@ -162,52 +162,46 @@ export class ZoneSetupGrapple {
         const restLength = this.grappleRestLength || 10.0
 
         if (this.isGrappleZipping) {
-            // Powerfully pull marble towards target and quickly reel in
-            const zipForce = 150.0
-            rb.applyImpulse({
-                x: dirX * zipForce * 0.016,
-                y: dirY * zipForce * 0.016,
-                z: dirZ * zipForce * 0.016
-            }, true)
+            // Quickly reel in by shrinking the rest length
             this.grappleRestLength = Math.max(1.0, this.grappleRestLength - 0.5)
-        } else {
-            if (dist > restLength) {
-                const stiffness = 15.0
-                const damping = 2.0
-                const vel = rb.linvel()
-                const physics = getMarblePhysics()
-                physics.computeSpringForceInto(
-                    _springForceScratch,
-                    pos.x, pos.y, pos.z,
-                    target.x, target.y, target.z,
-                    restLength, stiffness, damping,
-                    vel.x, vel.y, vel.z
-                )
-                const totalForce = _springForceScratch[0] * dirX
-                    + _springForceScratch[1] * dirY
-                    + _springForceScratch[2] * dirZ
+        }
 
-                if (totalForce > 0) {
-                    const dt = 0.016
-                    rb.applyImpulse({
-                        x: _springForceScratch[0] * dt,
-                        y: _springForceScratch[1] * dt,
-                        z: _springForceScratch[2] * dt
-                    }, true)
-                }
-            }
+        if (dist > restLength) {
+            const stiffness = this.isGrappleZipping ? 50.0 : 15.0
+            const damping = this.isGrappleZipping ? 5.0 : 2.0
+            const vel = rb.linvel()
+            const physics = getMarblePhysics()
+            physics.computeSpringForceInto(
+                _springForceScratch,
+                pos.x, pos.y, pos.z,
+                target.x, target.y, target.z,
+                restLength, stiffness, damping,
+                vel.x, vel.y, vel.z
+            )
+            const totalForce = _springForceScratch[0] * dirX
+                + _springForceScratch[1] * dirY
+                + _springForceScratch[2] * dirZ
 
-            // Counter-gravity when swinging
-            if (dirY > 0 && dist > restLength) {
-                rb.applyImpulse({ x: 0, y: 0.5, z: 0 }, true)
+            if (totalForce > 0) {
+                const dt = 0.016
+                rb.applyImpulse({
+                    x: _springForceScratch[0] * dt,
+                    y: _springForceScratch[1] * dt,
+                    z: _springForceScratch[2] * dt
+                }, true)
             }
+        }
+
+        // Counter-gravity when swinging
+        if (dirY > 0 && dist > restLength) {
+            rb.applyImpulse({ x: 0, y: 0.5, z: 0 }, true)
         }
 
         // Visuals
         if (this.grappleInst) {
             if (this.grappleMatInstance) {
                 if (this.isGrappleZipping) {
-                    this.grappleMatInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, [1.0, 0.0, 0.0])
+                    this.grappleMatInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, [1.0, 0.5, 0.0])
                 } else {
                     this.grappleMatInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, [0.0, 1.0, 1.0])
                 }
