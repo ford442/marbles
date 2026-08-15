@@ -21,6 +21,21 @@ export const DEV_LEVELS = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
+    aether_core_run: {
+        name: 'Aether Core Run',
+        description: 'Navigate the glowing purple tracks and master the jump pads!',
+        zones: [
+            { type: 'aether_core', pos: { x: 0, y: 0, z: 0 } }
+        ],
+        spawn: { x: 0, y: 5, z: -30 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [105, 115], y: [5, 15] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.05, 0.02, 0.1, 1.0],
+        environment: 'space_nebula'
+    },
     cyber_reactor_run: {
         name: 'Cyber Reactor Run',
         description: 'Brave the icy track and jump across the glowing red reactor cores!',

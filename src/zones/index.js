@@ -5,6 +5,7 @@
 
 export { createAntigravityZone } from './antigravity-zone.js';
 export { createAbyssalTrenchZone } from './abyssal-trench.js';
+export { createAetherCoreZone } from './aether-core.js';
 export { createBumperArenaZone } from './bumper-arena.js';
 export { createCanyonRunZone } from './canyon-run.js';
 export { createChronoCanyonZone } from './chrono-canyon.js';
