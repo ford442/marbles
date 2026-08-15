@@ -148,6 +148,10 @@
       "file": "marbles/cosmic_nebula.json",
       "rarity": "legendary"
     },
+    "vortex_annihilator": {
+      "file": "marbles/vortex_annihilator.json",
+      "rarity": "legendary"
+    },
     "starfire_diamond": {
       "file": "marbles/starfire_diamond.json",
       "rarity": "legendary"
