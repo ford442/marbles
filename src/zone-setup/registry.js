@@ -92,6 +92,7 @@ const FACTORY_ZONE_HANDLERS = {
     nebula_nexus: (game, _zone, offset) => zones.createNebulaNexusZone(game, offset),
     quantum_tunnel: (game, _zone, offset) => zones.createQuantumTunnelZone(game, offset),
     abyssal_trench: (game, _zone, offset) => zones.createAbyssalTrenchZone(game, offset),
+    aether_core: (game, _zone, offset) => zones.createAetherCoreZone(game, offset),
     void_station: (game, _zone, offset) => zones.createVoidStationZone(game, offset),
     storm_peak: (game, _zone, offset) => zones.createStormPeakZone(game, offset),
     neon_pipeline: (game, _zone, offset) => zones.createNeonPipelineZone(game, offset),

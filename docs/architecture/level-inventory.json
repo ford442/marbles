@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-08-08T09:29:39.537Z",
+  "generated_at": "2026-08-15T09:28:37.218Z",
   "counts": {
     "manifest": 24,
-    "dev_levels": 54,
+    "dev_levels": 55,
     "map_files": 28,
-    "unique_ids": 78,
+    "unique_ids": 79,
     "json_only": 20,
-    "code_only": 50,
+    "code_only": 51,
     "dual": 4,
     "orphan_json": 0,
     "archived_json": 4
@@ -24,6 +24,20 @@
       "on_disk": false,
       "chapter": "extreme",
       "chapter_source": "heuristic:extreme",
+      "zone_types": "(dev inline)",
+      "unknown_zones": "",
+      "migration_status": "dev-only",
+      "archive_reason": "",
+      "difficulty": ""
+    },
+    {
+      "id": "aether_core_run",
+      "source": "code",
+      "in_manifest": false,
+      "in_dev_levels": true,
+      "on_disk": false,
+      "chapter": "classic",
+      "chapter_source": "heuristic:classic",
       "zone_types": "(dev inline)",
       "unknown_zones": "",
       "migration_status": "dev-only",
