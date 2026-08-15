@@ -26,6 +26,8 @@ export function createHudState(doc) {
         jumpBarEl: el('jumpbar'),
         boostBarEl: el('boostbar'),
         dashBarEl: el('dashbar'),
+        airDashBarEl: el('airdashbar'),
+        airDashBarContainerEl: el('airdashbar-container'),
         magnetBarEl: el('magnetbar'),
         focusBarEl: el('focusbar'),
         rewindBarEl: el('rewindbar'),

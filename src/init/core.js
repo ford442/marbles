@@ -174,35 +174,19 @@ export class InitCore {
                 }
                 if (this.hudManager) this.hudManager.markAbilityUsed('flip')
             }
-            if (e.code === 'ShiftLeft' && this.playerMarble && !this.isGrounded(this.playerMarble)) {
+            if (e.code === 'ShiftLeft' && this.playerMarble && !this.isGrounded(this.playerMarble) && !this.isChargingAirDash) {
                 const now = Date.now()
-                if (now - (this.lastAirDashTime || 0) > 2000) {
-                    this.lastAirDashTime = now
+                if (now - (this.lastAirDashTime || 0) > (this.airDashCooldown || 2000)) {
+                    this.isChargingAirDash = true
+                    this.airDashChargeTime = now
+                    this.airDashStartAltitude = this.playerMarble.rigidBody.translation().y
+                    this.airDashOldGravity = this.playerMarble.rigidBody.gravityScale()
 
-                    const rb = this.playerMarble.rigidBody
-                    const linvel = rb.linvel()
-                    rb.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true)
-
-                    const force = 40.0
-                    const forwardX = Math.sin(this.aimYaw)
-                    const forwardZ = Math.cos(this.aimYaw)
-
-                    rb.applyImpulse({ x: forwardX * force, y: 0, z: forwardZ * force }, true)
-
-                    const pos = rb.translation()
-                    this.visualParticles.push({
-                        isEMPRing: true,
-                        color: [0, 1, 1],
-                        pos: { x: pos.x, y: pos.y, z: pos.z },
-                        radius: 0.1,
-                        maxRadius: 10,
-                        opacity: 1.0,
-                        duration: 300,
-                        spawnTime: now
-                    })
+                    // Hang-time wind-up
+                    this.playerMarble.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true)
+                    this.playerMarble.rigidBody.setGravityScale(0, true)
 
                     if (typeof audio !== 'undefined' && audio.playBoost) audio.playBoost()
-                    if (typeof this.awardTrickPoints === 'function') this.awardTrickPoints('Air Dash!', 25, '#00ffff')
                 }
             }
             if (e.code === 'KeyV' && this.playerMarble && !this.keys['KeyV']) {
@@ -496,6 +480,43 @@ export class InitCore {
                             rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, this.stompOldColor)
                         }
                     }
+                }
+            }
+            if (e.code === 'ShiftLeft') {
+                if (this.isChargingAirDash && this.playerMarble) {
+                    this.isChargingAirDash = false
+                    this.lastAirDashTime = Date.now()
+
+                    const rb = this.playerMarble.rigidBody
+                    const grav = this.airDashOldGravity !== undefined
+                        ? this.airDashOldGravity
+                        : (this.playerMarble.baseGravityScale || 1.0)
+                    rb.setGravityScale(grav, true)
+
+                    const chargeDuration = Date.now() - (this.airDashChargeTime || Date.now())
+                    const force = 25.0 + Math.min(55.0, chargeDuration * 0.08) // tune as needed
+
+                    const forwardX = Math.sin(this.aimYaw)
+                    const forwardZ = Math.cos(this.aimYaw)
+                    rb.applyImpulse({ x: forwardX * force, y: 0, z: forwardZ * force }, true)
+
+                    const pos = rb.translation()
+                    this.visualParticles.push({
+                        isEMPRing: true,
+                        color: [0, 1, 1],
+                        pos: { x: pos.x, y: pos.y, z: pos.z },
+                        radius: 0.1,
+                        maxRadius: 10,
+                        opacity: 1.0,
+                        duration: 300,
+                        spawnTime: Date.now()
+                    })
+
+                    if (typeof audio !== 'undefined' && audio.playBoost) audio.playBoost()
+                    if (typeof this.awardTrickPoints === 'function') {
+                        this.awardTrickPoints('Air Dash!', 25 + Math.floor(chargeDuration / 50), '#00ffff')
+                    }
+                    if (this.hudManager) this.hudManager.markAbilityUsed('airdash')
                 }
             }
             if (e.code === 'KeyE' || e.code === 'KeyQ') {

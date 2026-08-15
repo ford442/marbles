@@ -264,6 +264,11 @@ export interface InputState {
     lastDashTime: number;
     dashCooldown: number;
     lastAirDashTime: number;
+    airDashCooldown: number;
+    isChargingAirDash: boolean;
+    airDashChargeTime: number;
+    airDashStartAltitude: number;
+    airDashOldGravity: number;
     isChargingDash: boolean;
     dashCharge: number;
     maxDashCharge: number;
@@ -287,6 +292,8 @@ export interface HudState {
     jumpBarEl: HTMLElement | null;
     boostBarEl: HTMLElement | null;
     dashBarEl: HTMLElement | null;
+    airDashBarEl: HTMLElement | null;
+    airDashBarContainerEl: HTMLElement | null;
     magnetBarEl: HTMLElement | null;
     focusBarEl: HTMLElement | null;
     rewindBarEl: HTMLElement | null;
