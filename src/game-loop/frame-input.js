@@ -137,6 +137,34 @@ export class GameLoopFrameInput {
                     }
                 }
         
+                if (shouldUpdateHUD && this.airDashBarEl) {
+                    if (this.isChargingAirDash) {
+                        const chargeDuration = now - (this.airDashChargeTime || now)
+                        // Fully charged at ~700ms based on force scaling up to 55.0 at 0.08 per ms. 55 / 0.08 = 687.5ms
+                        const maxChargeMs = 700.0
+                        const chargeRatio = Math.min(1.0, chargeDuration / maxChargeMs)
+                        this.airDashBarEl.style.width = `${chargeRatio * 100}%`
+
+                        if (chargeRatio >= 1.0) {
+                            this.airDashBarEl.style.filter = 'brightness(1.5) drop-shadow(0 0 10px #00ffff)'
+                            this.airDashBarEl.style.backgroundColor = '#ffffff'
+                        } else {
+                            this.airDashBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #00ffff)'
+                            this.airDashBarEl.style.backgroundColor = '#00ffff'
+                        }
+                    } else {
+                        const timeSince = now - (this.lastAirDashTime || 0)
+                        const progress = Math.min(1.0, timeSince / (this.airDashCooldown || 2000))
+                        this.airDashBarEl.style.width = `${progress * 100}%`
+                        this.airDashBarEl.style.backgroundColor = '#00ffff'
+                        if (progress >= 1.0) {
+                            this.airDashBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #00ffff)'
+                        } else {
+                            this.airDashBarEl.style.filter = 'brightness(0.7)'
+                        }
+                    }
+                }
+
                 if (this.isChargingJump) {
                     this.jumpCharge = Math.min(1.0, this.jumpCharge + 0.03)
                     if (this.jumpBarEl) this.jumpBarEl.style.width = `${this.jumpCharge * 100}%`
