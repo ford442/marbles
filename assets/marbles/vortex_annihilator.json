@@ -1,0 +1,24 @@
+{
+  "id": "vortex_annihilator",
+  "name": "Vortex Annihilator",
+  "description": "An incredibly heavy and bouncy anomaly that annihilates obstacles.",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "legendary",
+  "appearance": {
+    "color": { "r": 0.9, "g": 0.0, "b": 1.0 },
+    "roughness": 0.0,
+    "metallic": 0.0,
+    "emissive": { "r": 0.8, "g": 0.0, "b": 1.0, "intensity": 250000.0 },
+    "clearCoat": 1.0,
+    "clearCoatRoughness": 0.0,
+    "materialType": "glass"
+  },
+  "physics": {
+    "radius": 1.2,
+    "density": 1000.0,
+    "friction": 0.0,
+    "restitution": 2.0,
+    "gravityScale": 1.5
+  }
+}
