@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { CampaignProgress, CAMPAIGN_STORAGE_KEY } from '../src/game/systems/campaign-progress.js';
+import { CampaignProgress, CAMPAIGN_STORAGE_KEY } from '../src/game/systems/campaign-progress.ts';
 import {
     buildChapterLayout,
     computeMedal,

@@ -9,7 +9,7 @@ import {
  * Renders chapter-based campaign UI into the level menu.
  */
 export class CampaignMenu {
-    /** @param {import('../game/systems/campaign-progress.js').CampaignProgress} campaign */
+    /** @param {import('../game/systems/campaign-progress.ts').CampaignProgress} campaign */
     constructor(campaign) {
         this.campaign = campaign;
         this.activeChapterId = 'tutorial';

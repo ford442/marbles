@@ -1,5 +1,5 @@
 import RAPIER from '@dimforge/rapier3d-compat';
-import { quatFromEuler } from '../math.js';
+import { quatFromEuler } from '../math.ts';
 import { audio } from '../audio.js';
 import { resolveAssetModelPath, modelBasePath } from './model-paths.js';
 import {

@@ -1,4 +1,4 @@
-import { quatFromEuler } from '../math.js';
+import { quatFromEuler } from '../math.ts';
 import { createZoneLight } from './methods/visuals.js';
 import { decorateIceBridges } from './methods/decorations.js';
 

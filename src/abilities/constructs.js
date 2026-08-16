@@ -1,6 +1,6 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
-import { quatFromEuler, quaternionToMat4 } from '../math.js';
+import { quatFromEuler, quaternionToMat4 } from '../math.ts';
 
 export class AbilityConstructs {
     spawnIceBlock(pos) {

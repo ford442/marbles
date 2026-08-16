@@ -8,7 +8,7 @@ import {
     encodeReplayString,
     interpolateFrames,
     sampleReplayAtTime,
-} from '../src/game/systems/replay-codec.js';
+} from '../src/game/systems/replay-codec.ts';
 
 function makeFrames(count, startX = 0) {
     const frames = [];

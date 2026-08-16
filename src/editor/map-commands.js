@@ -8,8 +8,8 @@ import {
 } from './map-document.js';
 
 /**
- * @param {import('../types/map.js').MapDefinition} map
- * @param {import('../types/map.js').MapZoneDefinition} zone
+ * @param {import('../types/map.ts').MapDefinition} map
+ * @param {import('../types/map.ts').MapZoneDefinition} zone
  * @returns {number}
  */
 export function placeZone(map, zone) {
@@ -22,7 +22,7 @@ export function placeZone(map, zone) {
 }
 
 /**
- * @param {import('../types/map.js').MapDefinition} map
+ * @param {import('../types/map.ts').MapDefinition} map
  * @param {number[]} indices
  */
 export function deleteZonesAt(map, indices) {
@@ -36,7 +36,7 @@ export function deleteZonesAt(map, indices) {
 }
 
 /**
- * @param {import('../types/map.js').MapDefinition} map
+ * @param {import('../types/map.ts').MapDefinition} map
  * @param {number[]} indices
  * @param {{ x?: number, y?: number, z?: number }} delta
  */
@@ -55,7 +55,7 @@ export function moveZonesAt(map, indices, delta) {
 }
 
 /**
- * @param {import('../types/map.js').MapDefinition} map
+ * @param {import('../types/map.ts').MapDefinition} map
  * @param {number[]} indices
  * @param {number} deltaRad
  */
@@ -68,7 +68,7 @@ export function rotateZonesAt(map, indices, deltaRad) {
 }
 
 /**
- * @param {import('../types/map.js').MapDefinition} map
+ * @param {import('../types/map.ts').MapDefinition} map
  * @param {{ x: number, y: number, z: number }} spawn
  */
 export function setSpawn(map, spawn) {
@@ -76,9 +76,9 @@ export function setSpawn(map, spawn) {
 }
 
 /**
- * @param {import('../types/map.js').MapDefinition} map
+ * @param {import('../types/map.ts').MapDefinition} map
  * @param {number} index
- * @param {Partial<import('../types/map.js').MapZoneDefinition>} props
+ * @param {Partial<import('../types/map.ts').MapZoneDefinition>} props
  */
 export function updateZoneProps(map, index, props) {
     const zone = map.zones[index];
@@ -90,8 +90,8 @@ export function updateZoneProps(map, index, props) {
 }
 
 /**
- * @param {import('../types/map.js').MapDefinition} map
- * @param {Partial<import('../types/map.js').MapDefinition>} meta
+ * @param {import('../types/map.ts').MapDefinition} map
+ * @param {Partial<import('../types/map.ts').MapDefinition>} meta
  */
 export function updateMapMeta(map, meta) {
     for (const [key, value] of Object.entries(meta)) {
@@ -100,8 +100,8 @@ export function updateMapMeta(map, meta) {
 }
 
 /**
- * @param {import('../types/map.js').MapDefinition} map
- * @param {import('../types/map.js').MapZoneDefinition} zone
+ * @param {import('../types/map.ts').MapDefinition} map
+ * @param {import('../types/map.ts').MapZoneDefinition} zone
  * @returns {MapCommand}
  */
 export function cmdPlaceZone(map, zone) {
@@ -119,7 +119,7 @@ export function cmdPlaceZone(map, zone) {
 }
 
 /**
- * @param {import('../types/map.js').MapDefinition} map
+ * @param {import('../types/map.ts').MapDefinition} map
  * @param {number[]} indices
  * @returns {MapCommand}
  */
@@ -138,7 +138,7 @@ export function cmdDeleteZones(map, indices) {
 }
 
 /**
- * @param {import('../types/map.js').MapDefinition} map
+ * @param {import('../types/map.ts').MapDefinition} map
  * @param {number[]} indices
  * @param {{ x?: number, y?: number, z?: number }} delta
  * @returns {MapCommand}
@@ -157,7 +157,7 @@ export function cmdMoveZones(map, indices, delta) {
 }
 
 /**
- * @param {import('../types/map.js').MapDefinition} map
+ * @param {import('../types/map.ts').MapDefinition} map
  * @param {number[]} indices
  * @param {number} deltaRad
  * @returns {MapCommand}
@@ -176,7 +176,7 @@ export function cmdRotateZones(map, indices, deltaRad) {
 }
 
 /**
- * @param {import('../types/map.js').MapDefinition} map
+ * @param {import('../types/map.ts').MapDefinition} map
  * @param {{ x: number, y: number, z: number }} spawn
  * @returns {MapCommand}
  */
@@ -195,9 +195,9 @@ export function cmdSetSpawn(map, spawn) {
 }
 
 /**
- * @param {import('../types/map.js').MapDefinition} map
+ * @param {import('../types/map.ts').MapDefinition} map
  * @param {number} index
- * @param {Partial<import('../types/map.js').MapZoneDefinition>} props
+ * @param {Partial<import('../types/map.ts').MapZoneDefinition>} props
  * @returns {MapCommand}
  */
 export function cmdUpdateZoneProps(map, index, props) {
@@ -215,8 +215,8 @@ export function cmdUpdateZoneProps(map, index, props) {
 }
 
 /**
- * @param {import('../types/map.js').MapDefinition} map
- * @param {Partial<import('../types/map.js').MapDefinition>} meta
+ * @param {import('../types/map.ts').MapDefinition} map
+ * @param {Partial<import('../types/map.ts').MapDefinition>} meta
  * @returns {MapCommand}
  */
 export function cmdUpdateMapMeta(map, meta) {
@@ -234,8 +234,8 @@ export function cmdUpdateMapMeta(map, meta) {
 }
 
 /**
- * @param {import('../types/map.js').MapDefinition} map
- * @param {import('../types/map.js').MapDefinition} nextMap
+ * @param {import('../types/map.ts').MapDefinition} map
+ * @param {import('../types/map.ts').MapDefinition} nextMap
  * @returns {MapCommand}
  */
 export function cmdReplaceMap(map, nextMap) {

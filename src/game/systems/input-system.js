@@ -1,5 +1,5 @@
 import RAPIER from '@dimforge/rapier3d-compat';
-import { findBestLockOnTarget as findBestLockOnTargetPure } from './input-target-lock.js';
+import { findBestLockOnTarget as findBestLockOnTargetPure } from './input-target-lock.ts';
 
 /**
  * Keyboard, mouse, gamepad input and marble contact queries (Phase B subsystem).
@@ -331,4 +331,4 @@ export class InputSystem {
     }
 }
 
-export { findBestLockOnTarget } from './input-target-lock.js';
+export { findBestLockOnTarget } from './input-target-lock.ts';

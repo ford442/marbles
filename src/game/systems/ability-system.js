@@ -7,7 +7,7 @@ import {
 import {
     cooldownFillRatio,
     isCooldownReady,
-} from './ability-cooldown.js';
+} from './ability-cooldown.ts';
 
 /**
  * Unified ability cooldown/energy tick, input routing, level masks, and HUD bar binding.
@@ -72,7 +72,7 @@ export class AbilitySystem {
 
     /**
      * Apply per-level ability subset from level JSON.
-     * @param {import('../../types/map.js').AbilityMask | null | undefined} mask
+     * @param {import('../../types/map.ts').AbilityMask | null | undefined} mask
      */
     applyLevelMask(mask) {
         this.enabled = new Set(resolveAbilityMask(mask));
@@ -203,7 +203,7 @@ export class AbilitySystem {
 
     /**
      * Drive HUDManager icon cooldowns for registry abilities.
-     * @param {import('../../hud-manager.js').HUDManager} hudManager
+     * @param {import('../../hud-manager.ts').HUDManager} hudManager
      * @param {number} now
      */
     tickHudIcons(hudManager, now) {

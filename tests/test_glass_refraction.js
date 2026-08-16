@@ -72,7 +72,8 @@ const checks = [
     {
         name: 'Material system handles glass parameters',
         check: () => {
-            const content = fs.readFileSync('src/material-system.js', 'utf-8');
+            const matPath = fs.existsSync('src/material-system.ts') ? 'src/material-system.ts' : 'src/material-system.js';
+            const content = fs.readFileSync(matPath, 'utf-8');
             return content.includes("setFloatParameter('refractionMode'") &&
                    content.includes("setFloatParameter('thickness'") &&
                    content.includes("setFloatParameter('causticIntensity'") &&

@@ -3,7 +3,7 @@ import {
     decodeReplayString,
     encodeReplayString,
     sampleReplayAtTime,
-} from './replay-codec.js';
+} from './replay-codec.ts';
 
 export const GHOST_STORAGE_KEY = 'marbles3d_ghosts';
 
@@ -18,10 +18,10 @@ export class GhostReplay {
     constructor() {
         /** @type {Record<string, StoredGhost>} */
         this.data = this.load();
-        /** @type {import('./replay-codec.js').ReplayFrame[]} */
+        /** @type {import('./replay-codec.ts').ReplayFrame[]} */
         this.recording = [];
         this.lastSampleMs = 0;
-        /** @type {import('./replay-codec.js').ReplayFrame[] | null} */
+        /** @type {import('./replay-codec.ts').ReplayFrame[] | null} */
         this.playbackFrames = null;
         this.playbackLevelId = null;
         this._trailCooldown = 0;
@@ -104,7 +104,7 @@ export class GhostReplay {
         this.save();
         this.loadPlayback(levelId);
 
-        void import('../network/cloud-client.js').then((m) => {
+        void import('../network/cloud-client.ts').then((m) => {
             m.scheduleGhostUpload?.(levelId, blob, completionTime);
         }).catch(() => {});
 
@@ -197,7 +197,7 @@ export class GhostReplay {
     /**
      * @param {object} game
      * @param {number} [now]
-     * @returns {import('./replay-codec.js').ReplayFrame | null}
+     * @returns {import('./replay-codec.ts').ReplayFrame | null}
      */
     tickPlayback(game, now = Date.now()) {
         if (!this.playbackFrames?.length || !game.ghostEntity || game.timeStopActive) {

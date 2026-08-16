@@ -7,7 +7,7 @@ import {
     materialPresets,
     applyFullPreset,
     createThemedMaterialInstance,
-} from './material-system.js';
+} from './material-system.ts';
 import { getGlassQualityConfig } from './rendering-defaults.js';
 
 export const MATERIAL_TIER = {

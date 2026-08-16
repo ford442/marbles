@@ -29,9 +29,9 @@ import { InitCleanup } from './init/cleanup.js';
 import { assetRegistry } from './assets/AssetRegistry.js';
 import { getLevel } from './levels/catalog.js';
 import { registerServiceWorker } from './pwa/register-sw.js';
-import { CampaignProgress } from './game/systems/campaign-progress.js';
+import { CampaignProgress } from './game/systems/campaign-progress.ts';
 import { GhostReplay } from './game/systems/ghost-replay.js';
-import { CloudClient } from './game/network/cloud-client.js';
+import { CloudClient } from './game/network/cloud-client.ts';
 import { TrackLodManager } from './assets/track-lod-manager.js';
 
 /** Explicit prototype delegation — not the deprecated apply*Methods mixin copier. */

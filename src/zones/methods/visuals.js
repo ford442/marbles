@@ -1,4 +1,4 @@
-import { materialPresets } from '../../material-system.js';
+import { materialPresets } from '../../material-system.ts';
 import { ENVIRONMENT_PRESETS } from '../../rendering/environment.js';
 import { LIGHT_OWNER } from '../../lighting-budget.js';
 

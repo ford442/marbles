@@ -4,8 +4,8 @@ import {
     isStaticBatchingEnabled,
     resolveStaticSurfacePreset,
     MATERIAL_SURFACE_ALIASES,
-} from '../src/game/systems/physics-world-pure.js';
-import { findBestLockOnTarget } from '../src/game/systems/input-target-lock.js';
+} from '../src/game/systems/physics-world-pure.ts';
+import { findBestLockOnTarget } from '../src/game/systems/input-target-lock.ts';
 import { extractMarbleMaterialFields } from '../src/game/systems/marble-material-fields.js';
 import { LevelLoader } from '../src/game/systems/level-loader.js';
 import { RenderPipeline } from '../src/game/systems/render-pipeline.js';

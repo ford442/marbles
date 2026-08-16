@@ -1,9 +1,9 @@
 // @ts-check
-import { DEV_LEVELS } from '../levels.js';
+import { DEV_LEVELS } from '../levels.ts';
 import { mapDefToLevel } from '../editor/map-document.js';
 
-/** @typedef {import('../types/map.js').MapDefinition} MapDefinition */
-/** @typedef {import('../types/map.js').RuntimeLevel} RuntimeLevel */
+/** @typedef {import('../types/map.ts').MapDefinition} MapDefinition */
+/** @typedef {import('../types/map.ts').RuntimeLevel} RuntimeLevel */
 /** @typedef {{ getAllMaps(): MapDefinition[], convertMapToLevel(map: MapDefinition): RuntimeLevel }} MapCatalogRegistry */
 
 /** @type {Record<string, RuntimeLevel>} */

@@ -4,7 +4,7 @@
  *
  * @typedef {'keydown' | 'charge' | 'hold'} AbilityInputTrigger
  * @typedef {'cooldown' | 'energy' | 'charge'} AbilityHudMode
- * @typedef {import('../types/map.js').AbilityMask} AbilityMask
+ * @typedef {import('../types/map.ts').AbilityMask} AbilityMask
  *
  * @typedef {object} AbilityGameContext
  * @property {unknown} playerMarble

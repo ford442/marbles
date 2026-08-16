@@ -10,7 +10,9 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const MAPS_DIR = path.join(ROOT, 'assets', 'maps');
 const MANIFEST_PATH = path.join(ROOT, 'assets', 'manifest.json');
-const LEVELS_JS = path.join(ROOT, 'src', 'levels.js');
+const LEVELS_JS = fs.existsSync(path.join(ROOT, 'src', 'levels.ts'))
+  ? path.join(ROOT, 'src', 'levels.ts')
+  : path.join(ROOT, 'src', 'levels.js');
 const CAMPAIGN_JS = path.join(ROOT, 'src', 'levels', 'campaign.js');
 const REGISTRY_JS = path.join(ROOT, 'src', 'zone-setup', 'registry.js');
 const ARCHIVED_LEVELS_PATH = path.join(ROOT, 'docs', 'architecture', 'archived-levels.json');

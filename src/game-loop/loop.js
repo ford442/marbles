@@ -1,5 +1,5 @@
 import { audio } from '../audio.js';
-import { quaternionToMat4 } from '../math.js';
+import { quaternionToMat4 } from '../math.ts';
 
 export class GameLoopLoop {
     loop() {

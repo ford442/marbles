@@ -1,4 +1,4 @@
-import { HUDManager } from '../../hud-manager.js';
+import { HUDManager } from '../../hud-manager.ts';
 import { GameLoopHudTick } from '../../game-loop/hud-tick.js';
 
 /** Consolidated owner for HUD DOM, cooldown bars, goal FX, and desync state. */

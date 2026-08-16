@@ -169,8 +169,8 @@ export class CampaignProgress {
         }
 
         if (!options?.skipCloud) {
-            void import('../network/cloud-client.js').then((m) => {
-                m.scheduleProgressSync?.(this.data);
+            void import('../network/cloud-client.ts').then((m) => {
+                m.scheduleProgressSync(this.data);
             }).catch(() => {});
         }
     }

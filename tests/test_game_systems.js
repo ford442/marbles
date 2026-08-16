@@ -3,11 +3,13 @@ import {
     isCooldownReady,
     cooldownRemainingMs,
     cooldownFillRatio,
-} from '../src/game/systems/ability-cooldown.js';
+} from '../src/game/systems/ability-cooldown.ts';
 import {
     computeLandingTrickScore,
     applyComboMultiplier,
-} from '../src/game/systems/trick-scoring.js';
+} from '../src/game/systems/trick-scoring.ts';
+import { creationMethods } from '../src/zones/methods/creation.js';
+import { installZoneMethods } from '../src/zones/methods/index.js';
 
 function testCooldownReady() {
     assert.equal(isCooldownReady(1000, 500, 1600), true);
@@ -38,7 +40,48 @@ function testComboMultiplier() {
     assert.equal(applyComboMultiplier(50, 99), 500);
 }
 
+function testZoneCreationMethods() {
+    const expectedMethods = [
+        'createCheckpointZone',
+        'createMovingZone',
+        'createPowerUpZone',
+        'createPyramidZone',
+        'createDominoZone',
+        'createFloorZone',
+        'createTrackZone',
+        'createSpiralZone',
+        'createBlockZone',
+        'createLoopZone',
+        'createZigZagZone',
+        'createNeonCityZone',
+        'createLandingZone',
+        'createBowlingZone',
+        'createCastleZone',
+        'createJumpZone',
+        'createSlalomZone',
+        'createStaircaseZone',
+        'createSplitZone',
+        'createForestZone',
+        'createGoalZone',
+        'createOrchardZone',
+        'createTree',
+        'createCollectiblePickup',
+        'createGrappleAnchorZone',
+    ];
+
+    for (const methodName of expectedMethods) {
+        assert.equal(typeof creationMethods[methodName], 'function', `Missing method: ${methodName}`);
+    }
+
+    class DummyGame {}
+    installZoneMethods(DummyGame);
+    for (const methodName of expectedMethods) {
+        assert.equal(typeof DummyGame.prototype[methodName], 'function', `Method not installed: ${methodName}`);
+    }
+}
+
 testCooldownReady();
 testLandingTrickScore();
 testComboMultiplier();
+testZoneCreationMethods();
 console.log('All game subsystem tests passed');

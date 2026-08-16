@@ -1,4 +1,4 @@
-import { trackSurfacePresets } from '../../material-system.js';
+import { trackSurfacePresets } from '../../material-system.ts';
 
 export interface SurfacePreset {
     baseColor?: readonly number[];

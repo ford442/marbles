@@ -6,7 +6,7 @@ import {
     getMedalThresholds,
     medalEmoji,
 } from '../levels/campaign.js';
-import { getApiUrl } from '../game/network/cloud-client.js';
+import { getApiUrl } from '../game/network/cloud-client.ts';
 
 export class GameLogicLevelComplete {
     setupReplayShareButtons() {

@@ -1,6 +1,6 @@
 /** @typedef {{ x: number, y: number, z: number }} Vec3 */
 /** @typedef {{ type: string, pos: Vec3, size?: Vec3, color?: number[], rotY?: number }} MapZone */
-/** @typedef {import('../types/map.js').MapDefinition} MapDefinition */
+/** @typedef {import('../types/map.ts').MapDefinition} MapDefinition */
 
 export const PLAYTEST_LEVEL_ID = '__editor_playtest__';
 export const DRAFT_STORAGE_KEY = 'marbles3d_map_editor_draft';
@@ -142,7 +142,7 @@ export function recountCollectiblesTotal(map) {
 
 /**
  * Serialize a single zone for export.
- * @param {import('../types/map.js').MapZoneDefinition} z
+ * @param {import('../types/map.ts').MapZoneDefinition} z
  */
 export function serializeZone(z) {
     const zone = { type: z.type, pos: { ...z.pos } };

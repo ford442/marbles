@@ -3,8 +3,22 @@
  * Manages the display of ability bars with contextual visibility
  */
 
+export interface AbilityCategory {
+    name: string;
+    icon: string;
+    color: string;
+    abilities: string[];
+}
+
+export interface AbilityMeta {
+    icon: string;
+    key: string;
+    name: string;
+    color: string;
+}
+
 // Ability definitions organized by category
-export const ABILITY_CATEGORIES = {
+export const ABILITY_CATEGORIES: Record<string, AbilityCategory> = {
     movement: {
         name: 'Movement',
         icon: '🏃',
@@ -26,7 +40,7 @@ export const ABILITY_CATEGORIES = {
 };
 
 // Ability metadata for display
-export const ABILITY_METADATA = {
+export const ABILITY_METADATA: Record<string, AbilityMeta> = {
     boost: { icon: '⚡', key: 'Shift', name: 'Boost', color: '#f0f' },
     dash: { icon: '💨', key: 'V', name: 'Dash', color: '#ff8c00' },
     hover: { icon: '🛸', key: 'H', name: 'Hover', color: '#00ffcc' },
@@ -56,7 +70,16 @@ export const ABILITY_METADATA = {
 };
 
 export class HUDManager {
-    constructor(game, { initialize = true } = {}) {
+    game: any;
+    abilityElements: Map<string, HTMLElement>;
+    allAbilityElements: Map<string, HTMLElement>;
+    abilityLastUsed: Map<string, number>;
+    abilityVisible: Map<string, boolean>;
+    showAllTimeout: ReturnType<typeof setTimeout> | null;
+    categoryExpanded: Record<string, boolean>;
+    _lastHudUpdate?: number;
+
+    constructor(game: any, { initialize = true }: { initialize?: boolean } = {}) {
         this.game = game;
         this.abilityElements = new Map();
         this.allAbilityElements = new Map(); // Cache all-ability DOM elements
@@ -72,7 +95,7 @@ export class HUDManager {
         if (initialize) this.init();
     }
 
-    init() {
+    init(): void {
         this.createAbilityElements();
         this.setupEventListeners();
         this.setupCategoryToggles();
@@ -81,7 +104,7 @@ export class HUDManager {
     /**
      * Create DOM elements for all abilities
      */
-    createAbilityElements() {
+    createAbilityElements(): void {
         // Create elements for each category
         for (const [categoryKey, category] of Object.entries(ABILITY_CATEGORIES)) {
             const container = document.getElementById(`${categoryKey}-abilities`);
@@ -110,7 +133,7 @@ export class HUDManager {
     /**
      * Create a circular ability icon element
      */
-    createAbilityIcon(abilityId, meta) {
+    createAbilityIcon(abilityId: string, meta: AbilityMeta): HTMLElement {
         const el = document.createElement('div');
         el.className = 'ability-icon';
         el.id = `ability-${abilityId}`;
@@ -129,7 +152,7 @@ export class HUDManager {
     /**
      * Create element for "all abilities" overlay
      */
-    createAllAbilityItem(abilityId, meta) {
+    createAllAbilityItem(abilityId: string, meta: AbilityMeta): HTMLElement {
         const el = document.createElement('div');
         el.className = 'ability-icon';
         el.id = `all-ability-${abilityId}`;
@@ -147,13 +170,16 @@ export class HUDManager {
     /**
      * Setup category collapse/expand toggles
      */
-    setupCategoryToggles() {
+    setupCategoryToggles(): void {
         document.querySelectorAll('.hud-category-header').forEach(header => {
             header.addEventListener('click', () => {
                 const category = header.parentElement;
+                if (!category) return;
                 category.classList.toggle('collapsed');
                 const categoryKey = category.dataset.category;
-                this.categoryExpanded[categoryKey] = !category.classList.contains('collapsed');
+                if (categoryKey) {
+                    this.categoryExpanded[categoryKey] = !category.classList.contains('collapsed');
+                }
             });
         });
     }
@@ -161,7 +187,7 @@ export class HUDManager {
     /**
      * Setup Tab key listener for showing all abilities
      */
-    setupEventListeners() {
+    setupEventListeners(): void {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Tab') {
                 e.preventDefault();
@@ -179,7 +205,7 @@ export class HUDManager {
     /**
      * Show the "all abilities" overlay
      */
-    showAllAbilities() {
+    showAllAbilities(): void {
         const overlay = document.getElementById('hud-all-abilities');
         if (overlay) {
             overlay.classList.add('visible');
@@ -189,7 +215,7 @@ export class HUDManager {
     /**
      * Hide the "all abilities" overlay
      */
-    hideAllAbilities() {
+    hideAllAbilities(): void {
         const overlay = document.getElementById('hud-all-abilities');
         if (overlay) {
             overlay.classList.remove('visible');
@@ -198,11 +224,11 @@ export class HUDManager {
 
     /**
      * Update ability cooldown display
-     * @param {string} abilityId - The ability identifier
-     * @param {number} progress - Cooldown progress (0-1, where 1 is ready)
-     * @param {boolean} isActive - Whether the ability is currently active
+     * @param abilityId - The ability identifier
+     * @param progress - Cooldown progress (0-1, where 1 is ready)
+     * @param isActive - Whether the ability is currently active
      */
-    updateAbilityCooldown(abilityId, progress, isActive = false) {
+    updateAbilityCooldown(abilityId: string, progress: number, isActive = false): void {
         const el = this.abilityElements.get(abilityId);
         if (!el) return;
 
@@ -213,11 +239,13 @@ export class HUDManager {
         }
 
         const now = Date.now();
-        const overlay = el.querySelector('.ability-cooldown-overlay');
+        const overlay = el.querySelector('.ability-cooldown-overlay') as HTMLElement | null;
         
         // Calculate cooldown angle for circular progress (0-360 degrees)
         const angle = progress * 360;
-        overlay.style.setProperty('--cooldown-angle', `${angle}deg`);
+        if (overlay) {
+            overlay.style.setProperty('--cooldown-angle', `${angle}deg`);
+        }
 
         // Update visual state
         el.classList.toggle('active', isActive);
@@ -240,8 +268,10 @@ export class HUDManager {
         // Update "all abilities" overlay using cached element
         const allEl = this.allAbilityElements.get(abilityId);
         if (allEl) {
-            const allOverlay = allEl.querySelector('.ability-cooldown-overlay');
-            allOverlay.style.setProperty('--cooldown-angle', `${angle}deg`);
+            const allOverlay = allEl.querySelector('.ability-cooldown-overlay') as HTMLElement | null;
+            if (allOverlay) {
+                allOverlay.style.setProperty('--cooldown-angle', `${angle}deg`);
+            }
             allEl.classList.toggle('active', isActive);
             allEl.classList.toggle('cooldown', progress < 1);
             allEl.classList.toggle('ready', progress >= 1 && !isActive);
@@ -251,7 +281,7 @@ export class HUDManager {
     /**
      * Mark an ability as recently used
      */
-    markAbilityUsed(abilityId) {
+    markAbilityUsed(abilityId: string): void {
         this.abilityLastUsed.set(abilityId, Date.now());
     }
 
@@ -259,7 +289,7 @@ export class HUDManager {
      * Update all ability displays - call this from the game loop.
      * Throttled to ~10Hz to reduce DOM layout pressure.
      */
-    updateAllAbilities() {
+    updateAllAbilities(): void {
         // Throttle HUD updates to every 100ms to reduce layout/paint overhead
         if (Date.now() - (this._lastHudUpdate || 0) < 100) return;
         const now = this._lastHudUpdate = Date.now();
@@ -381,10 +411,10 @@ export class HUDManager {
     }
 
     /**
-     * @param {boolean} active
-     * @param {number} maxError
+     * @param active
+     * @param maxError
      */
-    setMultiplayerDesync(active, maxError) {
+    setMultiplayerDesync(active: boolean, maxError: number): void {
         const pill = document.getElementById('mp-desync-pill');
         if (!pill) return;
         pill.classList.toggle('active', active);

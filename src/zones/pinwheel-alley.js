@@ -1,4 +1,4 @@
-import { quatFromEuler } from '../math.js';
+import { quatFromEuler } from '../math.ts';
 
 export function createPinwheelAlleyZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };

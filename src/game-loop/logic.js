@@ -1,5 +1,5 @@
 import { audio } from '../audio.js';
-import { quaternionToMat4 } from '../math.js';
+import { quaternionToMat4 } from '../math.ts';
 import { tickLevelBehaviors } from '../game/level-behaviors/index.js';
 
 export class GameLoopLogic {

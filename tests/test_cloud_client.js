@@ -33,7 +33,7 @@ const {
     scheduleProgressSync,
     scheduleQueueFlush,
     setCloudOptIn,
-} = await import('../src/game/network/cloud-client.js');
+} = await import('../src/game/network/cloud-client.ts');
 
 function resetStorage() {
     storage.clear();

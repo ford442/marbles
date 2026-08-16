@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {
     mergeCampaignSave,
     mergeLevelProgress,
-} from '../src/game/systems/campaign-progress.js';
+} from '../src/game/systems/campaign-progress.ts';
 
 function testMergeLevelBestTime() {
     const merged = mergeLevelProgress(

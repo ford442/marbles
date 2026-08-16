@@ -3,7 +3,7 @@ import { resolveAssetModelPath } from '../assets/model-paths.js';
 
 /**
  * Collect unique asset paths referenced by a map (models + LOD).
- * @param {import('../types/map.js').MapDefinition} map
+ * @param {import('../types/map.ts').MapDefinition} map
  * @returns {string[]}
  */
 export function collectMapAssetPaths(map) {
@@ -101,7 +101,7 @@ const README = `Marbles 3D Workshop Map Package
 
 /**
  * Export map JSON + referenced GLB assets as a ZIP download.
- * @param {import('../types/map.js').MapDefinition} map
+ * @param {import('../types/map.ts').MapDefinition} map
  */
 export async function downloadWorkshopZip(map) {
     const mapJson = serializeMapJson(map);

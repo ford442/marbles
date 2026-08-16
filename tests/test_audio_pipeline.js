@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import { resolveCollisionSound } from '../src/audio/collision-matrix.js';
 import { soundProperties } from '../src/audio/sound-bank.js';
 import { VoicePool } from '../src/audio/voice-pool.js';
+import { MarbleAudio, audio } from '../src/audio.js';
+import { RollingSoundManager, ROLLING_MATERIAL_PARAMS } from '../src/audio/rolling-sound.js';
+import { SURFACE_MATERIAL_SYNTH_PARAMS } from '../src/audio/surface-synth.js';
 
 function testCollisionMatrixSurfaces() {
     const matrix = {
@@ -60,8 +63,64 @@ function testVoicePoolBounds() {
     assert.equal(pool.activeCount, 3);
 }
 
+function testMarbleAudioAPI() {
+    const testAudio = new MarbleAudio();
+    assert.equal(testAudio.enabled, false);
+    assert.equal(testAudio.muted, false);
+    assert.ok(testAudio.rollingSounds instanceof Map);
+
+    // Body material registration
+    const mockBody = { handle: 42 };
+    testAudio.registerBodyMaterial(mockBody, 'metal');
+    assert.equal(testAudio.getMaterial(42), 'metal');
+    assert.equal(testAudio.getMaterial(999), 'wood');
+
+    // Volume management
+    testAudio.setVolume(0.5);
+    testAudio.setMasterVolume(0.9);
+    testAudio.setSFXVolume(0.8);
+    testAudio.setMusicVolume(0.6);
+
+    const mutedState = testAudio.toggleMute();
+    assert.equal(mutedState, true);
+    assert.equal(testAudio.muted, true);
+    const unmutedState = testAudio.toggleMute();
+    assert.equal(unmutedState, false);
+    assert.equal(testAudio.muted, false);
+
+    // Singleton check
+    assert.ok(audio instanceof MarbleAudio);
+}
+
+function testRollingSoundManager() {
+    const manager = new RollingSoundManager();
+    assert.ok(manager.sounds instanceof Map);
+    assert.equal(manager.sounds.size, 0);
+
+    // Check material params exist
+    for (const mat of ['wood', 'metal', 'concrete', 'glass', 'rubber']) {
+        assert.ok(ROLLING_MATERIAL_PARAMS[mat], `Missing rolling params for ${mat}`);
+        assert.ok(ROLLING_MATERIAL_PARAMS[mat].baseFreq > 0);
+    }
+
+    // Stop on empty shouldn't throw
+    manager.stopRolling(null, 'non-existent');
+    manager.stopAllRolling(null);
+}
+
+function testSurfaceMaterialSynthParams() {
+    for (const mat of ['wood', 'metal', 'concrete', 'glass', 'rubber']) {
+        assert.ok(SURFACE_MATERIAL_SYNTH_PARAMS[mat], `Missing synth params for ${mat}`);
+        assert.ok(SURFACE_MATERIAL_SYNTH_PARAMS[mat].baseFreq > 0);
+        assert.ok(SURFACE_MATERIAL_SYNTH_PARAMS[mat].harmonics.length > 0);
+    }
+}
+
 testCollisionMatrixSurfaces();
 testSoundPropertiesDefaults();
 testCollisionMatrixSpecificity();
 testVoicePoolBounds();
+testMarbleAudioAPI();
+testRollingSoundManager();
+testSurfaceMaterialSynthParams();
 console.log('Audio pipeline tests passed');

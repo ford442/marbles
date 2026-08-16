@@ -1,6 +1,6 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
-import { quaternionToMat4, quatFromEuler } from '../math.js';
+import { quaternionToMat4, quatFromEuler } from '../math.ts';
 import { getLevel } from '../levels/catalog.js';
 import { getMarblePhysics, FORCE_BATCH_THRESHOLD, PhysicsBatchBuffers } from '../wasm-bridge.js';
 import { getDofConfig } from '../rendering/post-fx-presets.js';

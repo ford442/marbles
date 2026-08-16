@@ -3,7 +3,7 @@ import {
     shouldUsePhysicsWorker,
     resolvePhysicsHzFromSearch,
     WORKER_SPIKE_LEVEL_ID,
-} from '../src/game/systems/physics-backend-pure.js';
+} from '../src/game/systems/physics-backend-pure.ts';
 import { isManifestLevel, MANIFEST_LEVEL_IDS } from '../src/game/systems/manifest-level-ids.js';
 import {
     CMD_RING_BYTES,

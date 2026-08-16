@@ -1,4 +1,4 @@
-import { quatFromEuler } from '../math.js';
+import { quatFromEuler } from '../math.ts';
 
 export const skateParkLevel = {
     name: 'Skate Park',

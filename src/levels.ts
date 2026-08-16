@@ -4,8 +4,10 @@ import { pinballLevel } from './zones/pinball-zone.js';
 import { canyonRunLevel } from './zones/canyon-run.js';
 import { antigravityLevel } from './zones/antigravity-zone.js';
 
+import type { RuntimeLevel } from './types/map.ts';
+
 /** Code-only levels (experimental / not yet migrated to JSON). Shown when `?devLevels=1`. */
-export const DEV_LEVELS = {
+export const DEV_LEVELS: Record<string, any> = {
     plinko_obstacle: {
         name: 'Plinko Obstacle Course',
         description: 'Navigate the slanted board full of pegs!',

@@ -40,7 +40,7 @@ import {
 } from './snap.js';
 import { downloadWorkshopZip } from './workshop-export.js';
 import { registerCustomLevel } from '../levels/catalog.js';
-import { quaternionToMat4 } from '../math.js';
+import { quaternionToMat4 } from '../math.ts';
 
 export class MapEditor {
     /** @param {object} game */

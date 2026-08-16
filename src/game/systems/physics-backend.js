@@ -22,9 +22,9 @@ import { createProxyRigidBody, createProxyWorld } from '../physics-worker/proxy-
 import {
     resolvePhysicsHzFromSearch,
     shouldUsePhysicsWorker,
-} from './physics-backend-pure.js';
+} from './physics-backend-pure.ts';
 
-export { shouldUsePhysicsWorker, resolvePhysicsHzFromSearch, WORKER_SPIKE_LEVEL_ID } from './physics-backend-pure.js';
+export { shouldUsePhysicsWorker, resolvePhysicsHzFromSearch, WORKER_SPIKE_LEVEL_ID } from './physics-backend-pure.ts';
 export { MANIFEST_LEVEL_IDS, isManifestLevel } from './manifest-level-ids.js';
 
 /**

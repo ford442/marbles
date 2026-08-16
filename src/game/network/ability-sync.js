@@ -1,5 +1,5 @@
 import { audio } from '../../audio.js';
-import { quaternionToMat4 } from '../../math.js';
+import { quaternionToMat4 } from '../../math.ts';
 import { getMarblePhysics } from '../../wasm-bridge.js';
 
 /** Reusable vec3 scratch — avoids per-tick `{x,y,z}` allocations on hot paths. */

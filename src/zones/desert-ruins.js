@@ -1,4 +1,4 @@
-import { quatFromEuler } from '../math.js';
+import { quatFromEuler } from '../math.ts';
 import { decorateDesertRuins } from './methods/decorations.js';
 
 export function createDesertRuinsZone(game, offset) {

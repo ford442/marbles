@@ -234,7 +234,7 @@ export class InitSettingsTabs {
         const cloudOptIn = document.getElementById('setting-cloud-opt-in')
         if (cloudOptIn) {
             cloudOptIn.addEventListener('change', (e) => {
-                void import('../game/network/cloud-client.js').then((m) => {
+                void import('../game/network/cloud-client.ts').then((m) => {
                     m.setCloudOptIn(e.target.checked)
                     if (e.target.checked) {
                         m.scheduleQueueFlush()
@@ -247,7 +247,7 @@ export class InitSettingsTabs {
         const cloudDisplayName = document.getElementById('setting-cloud-display-name')
         if (cloudDisplayName) {
             cloudDisplayName.addEventListener('change', (e) => {
-                void import('../game/network/cloud-client.js').then((m) => {
+                void import('../game/network/cloud-client.ts').then((m) => {
                     m.setDisplayName(e.target.value)
                 })
             })
@@ -351,7 +351,7 @@ export class InitSettingsTabs {
         if (shakeSlider) shakeSlider.value = s.accessibility.screenShake
         if (shakeValue) shakeValue.textContent = `${s.accessibility.screenShake}%`
 
-        void import('../game/network/cloud-client.js').then((m) => {
+        void import('../game/network/cloud-client.ts').then((m) => {
             const cloudOptIn = document.getElementById('setting-cloud-opt-in')
             if (cloudOptIn) cloudOptIn.checked = m.getCloudOptIn()
 

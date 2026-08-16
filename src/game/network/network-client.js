@@ -9,7 +9,7 @@ import {
     validateServerMessage,
     serializeMessage,
 } from './protocol.js';
-import { sampleReplayAtTime } from '../systems/replay-codec.js';
+import { sampleReplayAtTime } from '../systems/replay-codec.ts';
 import { encodeInputSnapshot } from './input-bitfield.js';
 import { buildAbilityPayload, applyRemoteAbility } from './ability-sync.js';
 import { trackRemoteState } from './desync-indicator.js';

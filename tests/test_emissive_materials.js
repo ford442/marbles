@@ -2,7 +2,7 @@
  * Tests for emissive material system
  */
 
-import { materialPresets, createThemedMaterialInstance, applyFullPreset } from '../src/material-system.js';
+import { materialPresets, createThemedMaterialInstance, applyFullPreset } from '../src/material-system.ts';
 
 console.log('=== Testing Emissive Material System ===\n');
 

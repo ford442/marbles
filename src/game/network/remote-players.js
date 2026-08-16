@@ -1,4 +1,4 @@
-import { quaternionToMat4 } from '../../math.js';
+import { quaternionToMat4 } from '../../math.ts';
 import { playerColorForIndex } from './protocol.js';
 
 export class RemotePlayers {

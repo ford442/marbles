@@ -1,7 +1,7 @@
 import RAPIER from '@dimforge/rapier3d-compat';
-import { quatFromEuler, quaternionToMat4 } from '../../math.js';
+import { quatFromEuler, quaternionToMat4 } from '../../math.ts';
 import { audio } from '../../audio.js';
-import { applyFullPreset } from '../../material-system.js';
+import { applyFullPreset } from '../../material-system.ts';
 import { CUBE_VERTICES, CUBE_INDICES } from '../../cube-geometry.js';
 import {
     batchBoxGeometry,
@@ -19,7 +19,7 @@ import {
     getStaticBatchKey,
     isStaticBatchingEnabled,
     resolveStaticSurfacePreset,
-} from './physics-world-pure.js';
+} from './physics-world-pure.ts';
 
 const DEFAULT_SURFACE_ROUGHNESS = 0.4;
 
@@ -627,4 +627,4 @@ export {
     isStaticBatchingEnabled,
     MATERIAL_SURFACE_ALIASES,
     resolveStaticSurfacePreset,
-} from './physics-world-pure.js';
+} from './physics-world-pure.ts';

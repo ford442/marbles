@@ -1,4 +1,4 @@
-import { quaternionToMat4 } from '../math.js';
+import { quaternionToMat4 } from '../math.ts';
 
 export const DOF_CAMERA_MODES = new Set(['cinematic', 'follow', 'action'])
 export const DOF_UPDATE_THRESHOLD = 1.0
