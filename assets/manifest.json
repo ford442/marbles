@@ -155,6 +155,10 @@
     "starfire_diamond": {
       "file": "marbles/starfire_diamond.json",
       "rarity": "legendary"
+    },
+    "luminous_titan": {
+      "file": "marbles/luminous_titan.json",
+      "rarity": "legendary"
     }
   },
   "sounds": {
