@@ -60,3 +60,4 @@ export { createVoidStationZone } from './void-station.js';
 export { createWaterSlideZone } from './water-slide-zone.js';
 export { createWindTunnelZone } from './wind-tunnel-zone.js';
 export { createZenGardenZone } from './zen-garden.js';
+export { createInfernoChamberZone } from './inferno-chamber.js';
