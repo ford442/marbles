@@ -633,6 +633,11 @@ export class GameLoopLogic {
             }
         }
 
+        // Passive Double Jump Reset
+        if (this.playerMarble && this.isGrounded(this.playerMarble)) {
+            this.hasDoubleJumped = false;
+        }
+
         // Glider Logic
         if (this.gliderActive && this.gliderEnergy > 0) {
             if (this.playerMarble) {

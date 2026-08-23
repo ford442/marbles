@@ -15,6 +15,7 @@ export function createInputState() {
         jumpCharge: 0,
         isChargingJump: false,
         jumpCount: 0,
+        hasDoubleJumped: false,
         maxJumps: 3,
         lastBoostTime: 0,
         boostCooldown: 3000,

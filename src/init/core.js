@@ -79,6 +79,7 @@ export class InitCore {
                     if (this.isGrounded(this.playerMarble)) {
                         this.isChargingJump = true
                         this.jumpCharge = 0
+                        this.hasDoubleJumped = false
                     } else {
                         const wallContact = this.getWallContact(this.playerMarble)
                         if (wallContact) {
@@ -100,22 +101,37 @@ export class InitCore {
                             }, true)
 
                             this.jumpCount = 1
+                            this.hasDoubleJumped = false
                             audio.playJump()
                             if (typeof this.awardTrickPoints === 'function') this.awardTrickPoints('Wall Launch!', 75, '#ff00ff')
-                        } else if (this.jumpCount < this.maxJumps) {
+                        } else if (!this.hasDoubleJumped) {
                             const rb = this.playerMarble.rigidBody
                             const linvel = rb.linvel()
                             const gravityDir = rb.gravityScale() < 0 ? -1 : 1
-                            rb.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true)
-                            rb.applyImpulse({ x: 0, y: 10.0 * gravityDir, z: 0 }, true)
+
+                            // Reset downward velocity depending on gravity direction, preserving upward (jumping) velocity
+                            const newVelY = gravityDir > 0
+                                ? Math.max(0, linvel.y)
+                                : Math.min(0, linvel.y);
+                            rb.setLinvel({ x: linvel.x, y: newVelY, z: linvel.z }, true)
+                            rb.applyImpulse({ x: 0, y: 15.0 * gravityDir, z: 0 }, true)
+
+                            this.hasDoubleJumped = true
+                            this.jumpCount = 2
                             audio.playJump()
 
-                            if (this.jumpCount === 1) {
+                            if (typeof this.awardTrickPoints === 'function') {
                                 this.awardTrickPoints('Double Jump!', 20, '#00bfff')
-                            } else if (this.jumpCount === 2) {
-                                this.awardTrickPoints('Triple Jump!', 50, '#ff00ff')
                             }
-                            this.jumpCount++
+
+                            // Visual effect for double jump (burst particle)
+                            if (this.particleSystem && this.particleSystem.createEmitter) {
+                                this.particleSystem.createEmitter(
+                                    this.playerMarble.rigidBody.translation(),
+                                    { r: 0, g: 1, b: 1, a: 1 }, // Cyan burst
+                                    0.5
+                                )
+                            }
                         }
                     }
                 }

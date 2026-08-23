@@ -258,6 +258,7 @@ export interface InputState {
     jumpCharge: number;
     isChargingJump: boolean;
     jumpCount: number;
+    hasDoubleJumped: boolean;
     maxJumps: number;
     lastBoostTime: number;
     boostCooldown: number;
