@@ -742,6 +742,22 @@ export const DEV_LEVELS: Record<string, any> = {
         backgroundColor: [0.0, 0.05, 0.1, 1.0],
         environment: 'neon_city'
     },
+    inferno_chamber_run: {
+        name: 'Inferno Chamber',
+        description: 'Navigate the glowing hot magma pool and dodge the active magma pillars!',
+        zones: [
+            { type: 'inferno_chamber', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: 3, z: 95 } }
+        ],
+        spawn: { x: 0, y: 5, z: -5 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [90, 100], y: [0, 6] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.05, 0.01, 0.0, 1.0],
+        environment: 'volcanic'
+    },
     neon_pulse_grid_run: {
         name: 'Neon Pulse Grid',
         description: 'Slide through the dark grid and avoid the glowing pulse walls!',
