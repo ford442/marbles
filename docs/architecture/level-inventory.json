@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-08-22T09:27:40.623Z",
+  "generated_at": "2026-08-29T09:28:27.834Z",
   "counts": {
     "manifest": 24,
-    "dev_levels": 56,
+    "dev_levels": 57,
     "map_files": 28,
-    "unique_ids": 80,
+    "unique_ids": 81,
     "json_only": 20,
-    "code_only": 52,
+    "code_only": 53,
     "dual": 4,
     "orphan_json": 0,
     "archived_json": 4
@@ -32,6 +32,20 @@
     },
     {
       "id": "aether_core_run",
+      "source": "code",
+      "in_manifest": false,
+      "in_dev_levels": true,
+      "on_disk": false,
+      "chapter": "classic",
+      "chapter_source": "heuristic:classic",
+      "zone_types": "(dev inline)",
+      "unknown_zones": "",
+      "migration_status": "dev-only",
+      "archive_reason": "",
+      "difficulty": ""
+    },
+    {
+      "id": "astral_cascade_run",
       "source": "code",
       "in_manifest": false,
       "in_dev_levels": true,

@@ -886,6 +886,22 @@ export const DEV_LEVELS: Record<string, any> = {
         backgroundColor: [0.15, 0.05, 0.0, 1.0],
         environment: "volcanic"
     },
+    astral_cascade_run: {
+        name: 'Astral Cascade',
+        description: 'Slide through a glowing low-friction path, dodge sweeping platforms, and launch via a heavy jump pad to victory!',
+        zones: [
+            { type: 'astral_cascade', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: 20, z: 110 } }
+        ],
+        spawn: { x: 0, y: 5, z: 0 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [105, 115], y: [15, 25] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.05, 0.02, 0.1, 1.0],
+        environment: 'space_nebula'
+    },
     space_station: spaceStationLevel,
     skate_park: skateParkLevel,
     pinball_wizard: pinballLevel,
