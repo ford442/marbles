@@ -61,3 +61,4 @@ export { createWaterSlideZone } from './water-slide-zone.js';
 export { createWindTunnelZone } from './wind-tunnel-zone.js';
 export { createZenGardenZone } from './zen-garden.js';
 export { createInfernoChamberZone } from './inferno-chamber.js';
+export { createAstralCascadeZone } from './astral-cascade.js';
