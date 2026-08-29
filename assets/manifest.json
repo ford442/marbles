@@ -159,6 +159,10 @@
     "luminous_titan": {
       "file": "marbles/luminous_titan.json",
       "rarity": "legendary"
+    },
+    "ethereal_phantom": {
+      "file": "marbles/ethereal_phantom.json",
+      "rarity": "legendary"
     }
   },
   "sounds": {

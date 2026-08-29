@@ -1,0 +1,24 @@
+{
+  "id": "ethereal_phantom",
+  "name": "Ethereal Phantom",
+  "description": "An ethereal anomaly with extreme bouncing capabilities and devastating mass that shatters obstacles.",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "legendary",
+  "appearance": {
+    "color": { "r": 0.0, "g": 1.0, "b": 0.8 },
+    "roughness": 0.0,
+    "metallic": 0.0,
+    "emissive": { "r": 0.0, "g": 1.0, "b": 0.8, "intensity": 200000.0 },
+    "clearCoat": 1.0,
+    "clearCoatRoughness": 0.0,
+    "materialType": "glass"
+  },
+  "physics": {
+    "radius": 1.5,
+    "density": 500.0,
+    "friction": 0.0,
+    "restitution": 1.9,
+    "gravityScale": 1.5
+  }
+}
