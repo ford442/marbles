@@ -80,6 +80,31 @@ export class GameLoopFrameInput {
                     }
                 }
         
+
+                // Air dash edge detection via Ability System and Keys
+                const airDashCode = 'KeyQ';
+                const isAirDashKeyPressed = this.keys[airDashCode];
+                const wasAirDashKeyPressed = this._lastAirDashKeyPressed;
+
+                if (isAirDashKeyPressed && !wasAirDashKeyPressed) {
+                    if (this.abilitySystem?.isEnabled('airdashing')) {
+                        if (this.playerMarble && !this.isGrounded(this.playerMarble) && !this.isChargingAirDash) {
+                            if (now - (this.lastAirDashTime || 0) > (this.airDashCooldown || 2000)) {
+                                if (typeof this.beginAirDashCharge === 'function') {
+                                    this.beginAirDashCharge(now);
+                                }
+                            }
+                        }
+                    }
+                } else if (!isAirDashKeyPressed && wasAirDashKeyPressed) {
+                    if (this.isChargingAirDash && this.playerMarble) {
+                        if (typeof this.releaseAirDash === 'function') {
+                            this.releaseAirDash(now);
+                        }
+                    }
+                }
+                this._lastAirDashKeyPressed = isAirDashKeyPressed;
+
                 if (this.keys['ShiftLeft'] || this.keys['ShiftRight']) {
                     if (this.playerMarble && now - this.lastBoostTime > this.boostCooldown) {
                         const force = 60.0

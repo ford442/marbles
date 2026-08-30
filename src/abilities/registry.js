@@ -42,6 +42,16 @@
 
 /** @satisfies {Record<string, AbilityDefinition>} */
 export const ABILITY_REGISTRY = {
+    airdashing: {
+        id: 'airdashing',
+        name: 'Air Dash',
+        category: 'movement',
+        cooldownMs: 2000,
+        lastUseKey: 'lastAirDashTime',
+        cooldownKey: 'airDashCooldown',
+        input: { defaultCode: 'KeyQ', trigger: 'charge', settingsKey: 'airdashing' },
+        hudSlot: { barKey: 'airDashBarEl', mode: 'charge' },
+    },
     jump: {
         id: 'jump',
         name: 'Jump',

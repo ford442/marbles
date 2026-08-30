@@ -1,3 +1,4 @@
+import { AbilityAirDash } from './air-dash.js';
 import { installKnownMethods } from '../game/systems/method-installer.js';
 import { AbilityBlink } from './blink.js';
 import { AbilityEmpTremor } from './emp-tremor.js';
@@ -18,6 +19,7 @@ export {
 
 /** Closed compatibility list for ability actions not yet registry-owned. */
 export function installAbilityMethods(targetClass) {
+        installKnownMethods(targetClass, AbilityAirDash, ['beginAirDashCharge', 'releaseAirDash']);
     installKnownMethods(targetClass, AbilityBlink, ['triggerBlink', 'spawnBlinkParticle']);
     installKnownMethods(targetClass, AbilityEmpTremor, [
         'fireEMP', 'fireTremor', 'spawnEMPEffect', 'spawnEMPSpark', 'triggerEMPFlash',
