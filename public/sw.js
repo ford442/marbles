@@ -1,10 +1,12 @@
 const CACHE_VERSION = 'marbles3d-v1';
+const SW_SCOPE = new URL('./', self.location.href).pathname;
 const SHELL_ASSETS = [
-    '/',
-    '/index.html',
-    '/manifest.webmanifest',
-    '/icon.svg',
+    SW_SCOPE,
+    `${SW_SCOPE}index.html`,
+    `${SW_SCOPE}manifest.webmanifest`,
+    `${SW_SCOPE}icon.svg`,
 ];
+
 
 self.addEventListener('install', (event) => {
     event.waitUntil(

@@ -6,6 +6,16 @@ const REQUIRED_MAP_FIELDS = ['id', 'name', 'version', 'zones', 'spawn', 'goals']
 const REQUIRED_MARBLE_FIELDS = ['id', 'name', 'version', 'appearance', 'physics'];
 const REQUIRED_SOUND_FIELDS = ['id', 'name', 'version', 'files'];
 
+export function resolveAssetUrl(filePath) {
+  if (!filePath || typeof filePath !== 'string') return '';
+  if (filePath.startsWith('http://') || filePath.startsWith('https://')) return filePath;
+  const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) || '';
+  const normalizedBase = base ? (base.endsWith('/') ? base : `${base}/`) : '';
+  if (normalizedBase && filePath.startsWith(normalizedBase)) return filePath;
+  const clean = filePath.replace(/^\.?\/?(assets\/)?/, '');
+  return `${normalizedBase}assets/${clean}`;
+}
+
 export class AssetRegistry {
   constructor() {
     this.manifest = null;
@@ -20,9 +30,10 @@ export class AssetRegistry {
     console.log('[AssetRegistry] Loading manifest...');
     this.loadErrors = [];
 
-    const manifest = await this.fetchJson('assets/manifest.json');
+    const manifestUrl = resolveAssetUrl('manifest.json');
+    const manifest = await this.fetchJson(manifestUrl);
     if (!manifest) {
-      throw new Error('[AssetRegistry] Failed to load assets/manifest.json');
+      throw new Error(`[AssetRegistry] Failed to load game assets. Check ${manifestUrl}.`);
     }
 
     this.manifest = manifest;
@@ -88,15 +99,16 @@ export class AssetRegistry {
   }
 
   async fetchJson(url) {
+    const resolvedUrl = resolveAssetUrl(url);
     try {
-      const response = await fetch(url);
+      const response = await fetch(resolvedUrl);
       if (!response.ok) {
-        console.warn(`[AssetRegistry] HTTP ${response.status} for ${url}`);
+        console.warn(`[AssetRegistry] HTTP ${response.status} for ${resolvedUrl}`);
         return null;
       }
       return await response.json();
     } catch (error) {
-      console.warn(`[AssetRegistry] Failed to fetch ${url}:`, error);
+      console.warn(`[AssetRegistry] Failed to fetch ${resolvedUrl}:`, error);
       return null;
     }
   }

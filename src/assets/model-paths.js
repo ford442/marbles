@@ -12,8 +12,10 @@ export function resolveAssetModelPath(modelRef) {
     if (modelRef.startsWith('http://') || modelRef.startsWith('https://') || modelRef.startsWith('/')) {
         return modelRef;
     }
-    const normalized = modelRef.replace(/^assets\//, '');
-    return `assets/${normalized}`;
+    const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) || '';
+    const normalizedBase = base ? (base.endsWith('/') ? base : `${base}/`) : '';
+    const normalized = modelRef.replace(/^\.?\/?(assets\/)?/, '');
+    return `${normalizedBase}assets/${normalized}`;
 }
 
 /**

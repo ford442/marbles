@@ -20,9 +20,11 @@ export class ZoneSetupAssets {
         // compiled by an older matc and can abort newer Filament runtimes during
         // createMaterial(), so keep it as an explicit development opt-in.
         const useProceduralMaterial = new URLSearchParams(window.location.search).get('proceduralMaterial') === '1'
+        const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) || '/marbles/';
+        const normalizedBase = base.endsWith('/') ? base : `${base}/`;
         const materialFiles = useProceduralMaterial
-            ? ['./baked_procedural.filament', './baked_color.filmat']
-            : ['./baked_color.filmat']
+            ? [`${normalizedBase}baked_procedural.filament`, `${normalizedBase}baked_color.filmat`]
+            : [`${normalizedBase}baked_color.filmat`]
         let materialBuffer = null
         let materialFile = null
 
@@ -52,12 +54,13 @@ export class ZoneSetupAssets {
             console.log(`[ASSETS] Material created from ${materialFile}`)
         } catch (e) {
             // If the preferred material fails, try the fallback directly
-            if (materialFile !== './baked_color.filmat') {
+            const fallbackUrl = `${normalizedBase}baked_color.filmat`;
+            if (materialFile !== fallbackUrl) {
                 console.warn('[ASSETS] Primary material creation failed, trying baked_color.filmat...', e)
-                const resp = await fetch('./baked_color.filmat')
+                const resp = await fetch(fallbackUrl)
                 const buf = await resp.arrayBuffer()
                 this.material = this.engine.createMaterial(new Uint8Array(buf))
-                materialFile = './baked_color.filmat'
+                materialFile = fallbackUrl
                 console.log('[ASSETS] Fallback material created')
             } else {
                 throw e

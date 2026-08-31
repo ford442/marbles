@@ -7,8 +7,12 @@ export function registerServiceWorker() {
         return;
     }
 
+    const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) || '/marbles/';
+    const normalizedBase = base.endsWith('/') ? base : `${base}/`;
+    const swPath = `${normalizedBase}sw.js`;
+
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((err) => {
+        navigator.serviceWorker.register(swPath, { scope: normalizedBase }).catch((err) => {
             console.warn('[PWA] Service worker registration failed:', err);
         });
     });

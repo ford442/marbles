@@ -42,6 +42,8 @@
  * sunColor     – directional light tint override for this environment.
  * sunIntensity – directional light strength override.
  */
+import { resolveAssetUrl } from '../assets/AssetRegistry.js';
+
 export const ENVIRONMENT_PRESETS = {
     // ---- default: warm blue studio sky with amber ground bounce ------------
     default: {
@@ -389,7 +391,7 @@ export function destroyEnvironmentLighting(engine, scene, ibl, skybox) {
  * @returns {Promise<object|null>} Filament Texture, or null on failure
  */
 export async function loadIblCubemap(engine, envName) {
-    const url = `assets/environments/${envName}.ibl.ktx`;
+    const url = resolveAssetUrl(`environments/${envName}.ibl.ktx`);
     try {
         const response = await fetch(url);
         if (!response.ok) {
@@ -415,7 +417,7 @@ export async function loadIblCubemap(engine, envName) {
  * @returns {Promise<object|null>} Filament Texture, or null on failure
  */
 export async function loadSkyboxCubemap(engine, envName) {
-    const url = `assets/environments/${envName}.skybox.ktx`;
+    const url = resolveAssetUrl(`environments/${envName}.skybox.ktx`);
     try {
         const response = await fetch(url);
         if (!response.ok) {

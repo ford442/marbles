@@ -40,8 +40,11 @@ export const FORCE_BATCH_THRESHOLD = 8;
  */
 export const WASM_HEAP_BATCH_MIN = 200;
 
-const WASM_MODULE_URL = '/wasm/marble_physics.js';
-const WASM_BINARY_URL = '/wasm/marble_physics.wasm';
+const BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) || '/';
+const NORMALIZED_BASE = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
+const WASM_MODULE_URL = `${NORMALIZED_BASE}wasm/marble_physics.js`;
+const WASM_BINARY_URL = `${NORMALIZED_BASE}wasm/marble_physics.wasm`;
+
 
 /**
  * Scalar WASM calls always write three floats into their fixed-size output view.
@@ -915,7 +918,8 @@ export async function initMarblePhysicsWasm() {
                 return false;
             }
 
-            const moduleUrl = new URL(WASM_MODULE_URL, globalThis.location.href).href;
+            const moduleBase = globalThis.location?.href || 'http://localhost/';
+            const moduleUrl = new URL(WASM_MODULE_URL, moduleBase).href;
             const moduleImport = await import(/* @vite-ignore */ moduleUrl);
             /** @type {{ default: () => Promise<MarblePhysicsWasmModule> }} */
             const MarblePhysicsModule = moduleImport;

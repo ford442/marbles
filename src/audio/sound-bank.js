@@ -2,6 +2,8 @@
  * Loads sound definitions from AssetRegistry and caches decoded buffers (or synthesis profiles).
  */
 
+import { resolveAssetUrl } from '../assets/AssetRegistry.js';
+
 const SYNTH_PROFILES = new Set([
     'wood', 'metal', 'concrete', 'glass', 'rubber',
 ]);
@@ -17,7 +19,7 @@ export async function loadSoundBank(registry) {
 
     let matrix = null;
     try {
-        const matrixUrl = 'assets/audio/collision_matrix.json';
+        const matrixUrl = resolveAssetUrl('audio/collision_matrix.json');
         const res = await fetch(matrixUrl);
         if (res.ok) matrix = await res.json();
     } catch {
@@ -34,9 +36,7 @@ export async function loadSoundBank(registry) {
         const fileEntry = pickWeightedFile(def.files);
         if (!fileEntry?.path) continue;
 
-        const url = fileEntry.path.startsWith('assets/')
-            ? fileEntry.path
-            : `assets/${fileEntry.path}`;
+        const url = resolveAssetUrl(fileEntry.path);
 
         try {
             const response = await fetch(url);
