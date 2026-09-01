@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'marbles3d-v1';
+const CACHE_VERSION = 'marbles3d-v2';
 const SW_SCOPE = new URL('./', self.location.href).pathname;
 const SHELL_ASSETS = [
     SW_SCOPE,
