@@ -191,13 +191,6 @@ export class InitCore {
                 if (this.hudManager) this.hudManager.markAbilityUsed('flip')
             }
 
-            if (e.code === 'KeyV' && this.playerMarble && !this.keys['KeyV']) {
-                const now = Date.now()
-                if (now - this.lastDashTime > this.dashCooldown) {
-                    this.isChargingDash = true
-                    this.dashCharge = 0
-                }
-            }
             if (e.code === 'KeyZ' && this.playerMarble && !this.isGrounded(this.playerMarble)) {
                 this.isChargingStomp = true
                 this.stompChargeTime = Date.now()
@@ -429,33 +422,6 @@ export class InitCore {
                          rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, this.playerMarble.color)
                     }
                 }
-            }
-            if (e.code === 'KeyV') {
-                if (this.isChargingDash && this.playerMarble) {
-                    const rb = this.playerMarble.rigidBody
-                    const cosP = Math.cos(this.pitchAngle)
-                    const sinP = Math.sin(this.pitchAngle)
-                    const dirX = Math.sin(this.aimYaw) * cosP
-                    const dirY = sinP
-                    const dirZ = Math.cos(this.aimYaw) * cosP
-
-                    // Apply a strong physics impulse based on charge
-                    const baseForce = 50.0
-                    const force = baseForce + (this.dashCharge * 150.0)
-                    rb.applyImpulse({
-                        x: dirX * force,
-                        y: dirY * force,
-                        z: dirZ * force
-                    }, true)
-
-                    this.lastDashTime = Date.now()
-                    if (typeof audio !== 'undefined' && audio.playBoost) audio.playBoost()
-
-                    if (this.hudManager) this.hudManager.markAbilityUsed('dash')
-                }
-                this.isChargingDash = false
-                this.dashCharge = 0
-                if (this.dashBarEl) this.dashBarEl.style.boxShadow = 'none'
             }
             if (e.code === 'KeyZ') {
                 if (this.isChargingStomp && this.playerMarble) {
