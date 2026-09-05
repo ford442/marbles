@@ -52,6 +52,16 @@ export const ABILITY_REGISTRY = {
         input: { defaultCode: 'KeyQ', trigger: 'charge', settingsKey: 'airdashing' },
         hudSlot: { barKey: 'airDashBarEl', mode: 'charge' },
     },
+    dash: {
+        id: 'dash',
+        name: 'Dash',
+        category: 'movement',
+        cooldownMs: 1500,
+        lastUseKey: 'lastDashTime',
+        cooldownKey: 'dashCooldown',
+        input: { defaultCode: 'ShiftLeft', trigger: 'charge', settingsKey: 'dash' },
+        hudSlot: { barKey: 'dashBarEl', mode: 'charge' },
+    },
     jump: {
         id: 'jump',
         name: 'Jump',
