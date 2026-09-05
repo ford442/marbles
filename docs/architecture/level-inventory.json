@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-08-29T09:28:27.834Z",
+  "generated_at": "2026-09-05T11:34:35.747Z",
   "counts": {
     "manifest": 24,
-    "dev_levels": 57,
+    "dev_levels": 58,
     "map_files": 28,
-    "unique_ids": 81,
+    "unique_ids": 82,
     "json_only": 20,
-    "code_only": 53,
+    "code_only": 54,
     "dual": 4,
     "orphan_json": 0,
     "archived_json": 4
@@ -659,6 +659,20 @@
       "migration_status": "shipped",
       "archive_reason": "",
       "difficulty": "easy"
+    },
+    {
+      "id": "neon_vortex_run",
+      "source": "code",
+      "in_manifest": false,
+      "in_dev_levels": true,
+      "on_disk": false,
+      "chapter": "neon",
+      "chapter_source": "heuristic:neon",
+      "zone_types": "(dev inline)",
+      "unknown_zones": "",
+      "migration_status": "dev-only",
+      "archive_reason": "",
+      "difficulty": ""
     },
     {
       "id": "pinwheel_alley",

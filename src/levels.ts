@@ -8,6 +8,20 @@ import type { RuntimeLevel } from './types/map.ts';
 
 /** Code-only levels (experimental / not yet migrated to JSON). Shown when `?devLevels=1`. */
 export const DEV_LEVELS: Record<string, any> = {
+    neon_vortex_run: {
+        name: 'Neon Vortex',
+        description: 'Navigate the swirling kinematic platforms and high-speed jump!',
+        zones: [
+            { type: 'neon_vortex', pos: { x: 0, y: 0, z: 0 } },
+        ],
+        spawn: { x: 0, y: 2, z: 4 },
+        goals: [
+            { id: 1, range: { x: [-5, 5], z: [60, 75], y: [-15, 0] } }
+        ],
+        camera: { mode: 'action', height: 12, offset: -25 },
+        environment: 'space_nebula'
+    },
+
     plinko_obstacle: {
         name: 'Plinko Obstacle Course',
         description: 'Navigate the slanted board full of pegs!',
