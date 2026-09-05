@@ -11,7 +11,8 @@ const premiumMarbles = [
     { name: "Neon Juggernaut", color: [0.0, 1.0, 0.5], offset: { x: 0.0, y: 5, z: 20 }, radius: 0.9, density: 25.0, restitution: 2.2, gravityScale: 1.0, friction: 0.0, roughness: 0.0, clearCoat: 1.0, clearCoatRoughness: 0.0, materialType: "glass", emissive: true, lightIntensity: 90000.0, lightColor: [0.0, 1.0, 0.5] },
     { name: "Quantum Core", color: [0.1, 0.8, 1.0], offset: { x: 0.0, y: 5, z: 25 }, radius: 0.8, density: 10.0, restitution: 1.5, gravityScale: 1.0, friction: 0.0, clearCoat: 1.0, clearCoatRoughness: 0.0, materialType: "glass", emissive: true, lightIntensity: 75000.0, lightColor: [0.0, 1.0, 0.8] },
     { name: "Luminous Titan", color: [0.0, 1.0, 0.8], offset: { x: 0.0, y: 5, z: 30 }, radius: 1.5, density: 400.0, friction: 0.0, restitution: 2.0, gravityScale: 1.0, clearCoat: 1.0, clearCoatRoughness: 0.0, materialType: "glass", emissive: true, lightIntensity: 150000.0, lightColor: [0.0, 1.0, 0.8] },
-    { name: "Ethereal Phantom", color: [0.0, 1.0, 0.8], offset: { x: 0.0, y: 5, z: 35 }, radius: 1.5, density: 500.0, friction: 0.0, restitution: 1.9, gravityScale: 1.5, clearCoat: 1.0, clearCoatRoughness: 0.0, materialType: "glass", emissive: true, lightIntensity: 200000.0, lightColor: [0.0, 1.0, 0.8] }
+    { name: "Ethereal Phantom", color: [0.0, 1.0, 0.8], offset: { x: 0.0, y: 5, z: 35 }, radius: 1.5, density: 500.0, friction: 0.0, restitution: 1.9, gravityScale: 1.5, clearCoat: 1.0, clearCoatRoughness: 0.0, materialType: "glass", emissive: true, lightIntensity: 200000.0, lightColor: [0.0, 1.0, 0.8] },
+    { name: "Solar Flare", color: [1.0, 0.3, 0.0], offset: { x: 0.0, y: 5, z: 40 }, radius: 1.0, density: 100.0, friction: 0.0, restitution: 1.8, gravityScale: 1.2, clearCoat: 1.0, clearCoatRoughness: 0.0, materialType: "glass", emissive: true, lightIntensity: 100000.0, lightColor: [1.0, 0.4, 0.1] }
 ];
 
 export const marblesInfo = [

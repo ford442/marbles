@@ -1,0 +1,24 @@
+{
+  "id": "solar_flare",
+  "name": "Solar Flare",
+  "description": "A blazing star core with intense emissivity, high mass, and extreme bouncing capabilities.",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "legendary",
+  "appearance": {
+    "color": { "r": 1.0, "g": 0.3, "b": 0.0 },
+    "roughness": 0.0,
+    "metallic": 0.0,
+    "emissive": { "r": 1.0, "g": 0.4, "b": 0.1, "intensity": 100000.0 },
+    "clearCoat": 1.0,
+    "clearCoatRoughness": 0.0,
+    "materialType": "glass"
+  },
+  "physics": {
+    "radius": 1.0,
+    "density": 100.0,
+    "friction": 0.0,
+    "restitution": 1.8,
+    "gravityScale": 1.2
+  }
+}

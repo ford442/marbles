@@ -163,6 +163,10 @@
     "ethereal_phantom": {
       "file": "marbles/ethereal_phantom.json",
       "rarity": "legendary"
+    },
+    "solar_flare": {
+      "file": "marbles/solar_flare.json",
+      "rarity": "legendary"
     }
   },
   "sounds": {
