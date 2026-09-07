@@ -24,3 +24,8 @@ Marbles 3D is a browser-based 3D marble roller game (Vite + Google Filament for 
 - The game instance is exposed as `window.game` in the browser (used by E2E tests and handy for debugging).
 - Camera mode matters for input testing: the first/tutorial level defaults to `orbit` camera mode, where the arrow keys/WASD control the CAMERA, not the marble (the marble still rolls on its own via ramp gravity). Marble movement keys apply impulse to `window.game.playerMarble` only in `follow`/`action`/`fpv`/`topdown`/`cinematic`/`side-scroller`/`drone` modes (see `src/game-loop/frame-input.js`). To verify keyboard control programmatically, set `window.game.cameraMode='follow'`, then dispatch `KeyboardEvent('keydown'/'keyup', {code:'ArrowLeft'|'ArrowRight'|...})` on `window` and read `window.game.playerMarble.rigidBody.translation()`. No pointer lock is required for movement (pointer lock is only for mouse-look/aiming).
 - `npm run build` runs `build:wasm` (Emscripten) first, which will fail without the Emscripten SDK. The optional C++ WASM physics module has a pure-JS fallback (`src/wasm-bridge.js`), so it is not needed for dev. To build without Emscripten, run `npx vite build` directly.
+
+### Known issues / blockers
+
+- `backend/core/app_storage_manager.py` and `backend/shared/hf/app_storage_manager.py` are duplicate, byte-identical copies of the same file — fixes to one won't reach the other. See `CLAUDE.md` for detail.
+- Astral Cascade, Inferno Chamber, and Aether Core zones (recently merged) are wired into `DEV_LEVELS` only, not the shipped `assets/manifest.json` — confirm whether that's intentional staging before assuming they're in the live level rotation. See `CLAUDE.md` for detail.

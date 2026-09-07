@@ -244,6 +244,13 @@ npm run build                  # Production build to dist/
 # Use browser DevTools to profile rendering performance
 ```
 
+## Known issues / blockers
+
+- `backend/core/app_storage_manager.py` and `backend/shared/hf/app_storage_manager.py` are byte-for-byte identical (43,844 bytes, same content) — two copies of the same module living in two places with no import/re-export relationship between them. Nothing enforces they stay in sync; a fix applied to one silently won't reach the other. Worth picking one canonical location and having the other import from it (or deleting the duplicate).
+- Three recently merged zones — Astral Cascade (`src/zones/astral-cascade.js`), Inferno Chamber (`src/zones/inferno-chamber.js`), and Aether Core (`src/zones/aether-core.js`) — are only registered as `DEV_LEVELS` entries in `src/levels.ts` (reachable via `?devLevels=1`), not added to the shipped 24-map `assets/manifest.json` that normal play uses. A fourth zone from the same run of feature PRs, Cyber Reactor (`cyber_run`), *did* make it into the live manifest. Unclear whether the other three are intentionally staged in dev-only limbo or just missed the manifest update — worth confirming before assuming they're live content.
+- `docs/backups/` (including the `_backup_*` files and `orphan-react-stack/`) is intentionally archived and excluded from `tsconfig.json` — not dead weight to clean up, already correctly documented in AGENTS.md's "Non-obvious gotchas".
+- `npm run lint` and `npm run typecheck` were re-verified clean as of this check (2026-09-07) — the doc's claim still holds.
+
 ## Resources
 
 - **Filament Docs**: https://google.github.io/filament/
