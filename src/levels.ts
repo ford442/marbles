@@ -8,6 +8,20 @@ import type { RuntimeLevel } from './types/map.ts';
 
 /** Code-only levels (experimental / not yet migrated to JSON). Shown when `?devLevels=1`. */
 export const DEV_LEVELS: Record<string, any> = {
+    neon_drift_run: {
+        name: 'Neon Drift',
+        description: 'Drift along the icy cyan track and conquer the moving platforms!',
+        zones: [
+            { type: 'neon_drift', pos: { x: 0, y: 0, z: 0 } },
+        ],
+        spawn: { x: 0, y: 3, z: -3 },
+        goals: [
+            { id: 1, range: { x: [25, 40], z: [10, 30], y: [-15, 10] } }
+        ],
+        camera: { mode: 'action', height: 10, offset: -25 },
+        environment: 'space_nebula'
+    },
+
     neon_vortex_run: {
         name: 'Neon Vortex',
         description: 'Navigate the swirling kinematic platforms and high-speed jump!',

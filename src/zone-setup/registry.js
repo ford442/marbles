@@ -100,6 +100,7 @@ const FACTORY_ZONE_HANDLERS = {
     stellar_forge: (game, _zone, offset) => zones.createStellarForgeZone(game, offset),
     inferno_chamber: (game, _zone, offset) => zones.createInfernoChamberZone(game, offset),
     astral_cascade: (game, _zone, offset) => zones.createAstralCascadeZone(game, offset),
+    neon_drift: (game, _zone, offset) => zones.createNeonDriftZone(game, offset),
 };
 
 /** @type {Record<string, ZoneHandler>} */
