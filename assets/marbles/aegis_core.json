@@ -1,0 +1,28 @@
+{
+  "id": "aegis_core",
+  "name": "Aegis Core",
+  "description": "A massive, frictionless crystal sphere with an unstable, high-energy emissive core. Smashes through obstacles while retaining extreme bounce.",
+  "version": "1.0.0",
+  "author": "Jules",
+  "rarity": "legendary",
+  "appearance": {
+    "color": {"r": 0.8, "g": 0.2, "b": 1.0},
+    "roughness": 0.05,
+    "metallic": 0.1,
+    "emissive": {"r": 0.8, "g": 0.2, "b": 1.0, "intensity": 2.0},
+    "clearCoat": 1.0,
+    "clearCoatRoughness": 0.0,
+    "transmission": 0.9,
+    "ior": 1.5,
+    "rimLightColor": {"r": 1.0, "g": 0.5, "b": 1.0},
+    "rimLightIntensity": 1.5
+  },
+  "physics": {
+    "radius": 1.2,
+    "density": 200.0,
+    "friction": 0.0,
+    "restitution": 1.9,
+    "linearDamping": 0.0,
+    "angularDamping": 0.0
+  }
+}
