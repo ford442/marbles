@@ -50,6 +50,9 @@ export const SURFACE_MATERIAL_SYNTH_PARAMS = {
     },
 };
 
+/** Reference impact speed (units/sec) at which the speed-pitch multiplier is 1.0. */
+const NORMAL_IMPACT_SPEED = 8;
+
 /**
  * Synthesize a material-specific surface hit sound.
  * @param {AudioContext} ctx
@@ -58,18 +61,21 @@ export const SURFACE_MATERIAL_SYNTH_PARAMS = {
  * @param {number} radius
  * @param {string} surfaceMaterial
  * @param {number} volumeScale
+ * @param {number} [dopplerRate=1] Playback-rate multiplier from relative marble/camera motion.
  */
-export function synthesizeSurfaceHit(ctx, outputNode, velocity, radius = 0.5, surfaceMaterial = 'wood', volumeScale = 1) {
+export function synthesizeSurfaceHit(ctx, outputNode, velocity, radius = 0.5, surfaceMaterial = 'wood', volumeScale = 1, dopplerRate = 1) {
     if (!ctx || !outputNode) return;
 
     const normalizedVel = Math.min(Math.max(velocity, 0), 30) / 30;
     if (normalizedVel < 0.03) return;
 
     const sizePitchMult = 1.5 - (radius - 0.3) * (0.8 / 0.5);
+    // Harder impacts ring higher and sharper, not just louder.
+    const speedPitchMult = Math.min(Math.max(Math.sqrt(velocity / NORMAL_IMPACT_SPEED), 0.7), 1.6) * dopplerRate;
     const t = ctx.currentTime;
 
     const params = SURFACE_MATERIAL_SYNTH_PARAMS[surfaceMaterial] || SURFACE_MATERIAL_SYNTH_PARAMS.wood;
-    const pitch = params.baseFreq * sizePitchMult;
+    const pitch = params.baseFreq * sizePitchMult * speedPitchMult;
 
     const gain = ctx.createGain();
     gain.connect(outputNode);
@@ -85,8 +91,9 @@ export function synthesizeSurfaceHit(ctx, outputNode, velocity, radius = 0.5, su
 
     const noiseFilter = ctx.createBiquadFilter();
     noiseFilter.type = 'bandpass';
-    noiseFilter.frequency.value = params.noiseFreq * sizePitchMult;
-    noiseFilter.Q.value = params.noiseQ;
+    noiseFilter.frequency.value = params.noiseFreq * sizePitchMult * speedPitchMult;
+    // Sharper resonance on harder impacts gives high-speed hits more "crack".
+    noiseFilter.Q.value = params.noiseQ * (1 + normalizedVel * 0.5);
 
     const noiseGain = ctx.createGain();
     noise.connect(noiseFilter);

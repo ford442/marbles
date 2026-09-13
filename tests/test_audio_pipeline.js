@@ -4,7 +4,76 @@ import { soundProperties } from '../src/audio/sound-bank.js';
 import { VoicePool } from '../src/audio/voice-pool.js';
 import { MarbleAudio, audio } from '../src/audio.js';
 import { RollingSoundManager, ROLLING_MATERIAL_PARAMS } from '../src/audio/rolling-sound.js';
-import { SURFACE_MATERIAL_SYNTH_PARAMS } from '../src/audio/surface-synth.js';
+import { SURFACE_MATERIAL_SYNTH_PARAMS, synthesizeSurfaceHit } from '../src/audio/surface-synth.js';
+import { synthesizeClink } from '../src/audio/procedural-sfx.js';
+import { generateSyntheticImpulseResponse } from '../src/audio/impulse-response.js';
+import { ReverbZoneManager } from '../src/audio/reverb-zones.js';
+
+/** Minimal fake AudioContext for exercising oscillator/filter-based synthesis and recording what pitch they were given. */
+function makeSynthMockContext() {
+    const oscillators = [];
+    const filters = [];
+    return {
+        sampleRate: 44100,
+        currentTime: 0,
+        createBuffer(channels, length, sampleRate) {
+            const data = Array.from({ length: channels }, () => new Float32Array(length));
+            return { numberOfChannels: channels, length, sampleRate, getChannelData: (i) => data[i] };
+        },
+        createBufferSource() {
+            return { buffer: null, loop: false, connect() {}, start() {}, stop() {} };
+        },
+        createChannelMerger() {
+            return { connect() {} };
+        },
+        createGain() {
+            return {
+                gain: {
+                    value: 0,
+                    setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {}, setTargetAtTime() {},
+                },
+                connect() {},
+            };
+        },
+        createBiquadFilter() {
+            const f = { type: '', frequency: { value: 0 }, Q: { value: 0 }, connect() {} };
+            filters.push(f);
+            return f;
+        },
+        createOscillator() {
+            const o = { type: '', frequency: { value: 0 }, detune: { value: 0 }, connect() {}, start() {}, stop() {} };
+            oscillators.push(o);
+            return o;
+        },
+        _oscillators: oscillators,
+        _filters: filters,
+    };
+}
+
+/** Minimal fake AudioContext covering only what ReverbZoneManager/IR generation touch. */
+function makeMockAudioContext() {
+    return {
+        sampleRate: 44100,
+        currentTime: 0,
+        createGain() {
+            // setTargetAtTime is asymptotic on a real AudioParam; the mock just
+            // records the intended target so tests can assert on it directly.
+            return { gain: { value: 0, setTargetAtTime(v) { this.value = v; } }, connect() {} };
+        },
+        createConvolver() {
+            return { buffer: null, connect() {} };
+        },
+        createBuffer(channels, length, sampleRate) {
+            const data = Array.from({ length: channels }, () => new Float32Array(length));
+            return {
+                numberOfChannels: channels,
+                length,
+                sampleRate,
+                getChannelData: (i) => data[i],
+            };
+        },
+    };
+}
 
 function testCollisionMatrixSurfaces() {
     const matrix = {
@@ -116,6 +185,101 @@ function testSurfaceMaterialSynthParams() {
     }
 }
 
+function testGenerateSyntheticImpulseResponse() {
+    const ctx = makeMockAudioContext();
+
+    const ir = generateSyntheticImpulseResponse(ctx, 2, 0);
+    assert.equal(ir.numberOfChannels, 2);
+    assert.equal(ir.length, Math.floor(2 * ctx.sampleRate));
+
+    // preDelay shifts the tail start but doesn't shrink it.
+    const withPreDelay = generateSyntheticImpulseResponse(ctx, 2, 0.1);
+    assert.equal(withPreDelay.length, Math.floor(0.1 * ctx.sampleRate) + Math.floor(2 * ctx.sampleRate));
+    const preDelaySamples = Math.floor(0.1 * ctx.sampleRate);
+    const data = withPreDelay.getChannelData(0);
+    assert.equal(data[0], 0, 'pre-delay region should be silent');
+    assert.ok(data[preDelaySamples] !== undefined);
+
+    // Out-of-range decay/preDelay are clamped rather than throwing.
+    const clamped = generateSyntheticImpulseResponse(ctx, 999, 999);
+    assert.ok(clamped.length > 0);
+    assert.ok(clamped.length < ctx.sampleRate * 10);
+}
+
+function testReverbZoneManager() {
+    const ctx = makeMockAudioContext();
+    const manager = new ReverbZoneManager();
+    const source = { connect() {} };
+    const destination = { connect() {} };
+    manager.attach(ctx, source, destination);
+
+    manager.registerZone({ x: 0, y: 0, z: 25 }, 10, { decay: 2.5, wetMix: 0.6 });
+
+    // Outside the zone: dry.
+    manager.update(0, 0, 100);
+    assert.equal(manager.reverbSend.gain.value, 0);
+
+    // Inside the zone: wet gain opens and the convolver gets an impulse buffer.
+    manager.update(0, 0, 25);
+    assert.equal(manager.reverbSend.gain.value, 0.6);
+    assert.ok(manager.convolver.buffer);
+
+    // Leaving the zone closes the send again.
+    manager.update(0, 0, 100);
+    assert.equal(manager.reverbSend.gain.value, 0);
+
+    // Re-entering reuses the cached impulse buffer for identical params.
+    manager.update(0, 0, 25);
+    const cachedBuffer = manager.convolver.buffer;
+    manager.update(0, 0, 100);
+    manager.update(0, 0, 25);
+    assert.equal(manager.convolver.buffer, cachedBuffer);
+
+    manager.unregisterAll();
+    assert.equal(manager.zones.length, 0);
+    assert.equal(manager.reverbSend.gain.value, 0);
+}
+
+function testSurfaceHitPitchTracksSpeed() {
+    const outputNode = { connect() {} };
+
+    const slowCtx = makeSynthMockContext();
+    synthesizeSurfaceHit(slowCtx, outputNode, 1, 0.5, 'metal', 1);
+    const slowFundamental = slowCtx._oscillators[0].frequency.value;
+
+    const fastCtx = makeSynthMockContext();
+    synthesizeSurfaceHit(fastCtx, outputNode, 25, 0.5, 'metal', 1);
+    const fastFundamental = fastCtx._oscillators[0].frequency.value;
+
+    assert.ok(
+        fastFundamental > slowFundamental,
+        `a high-speed impact should ring higher than a tiny bounce, not just louder (got ${slowFundamental} vs ${fastFundamental})`
+    );
+
+    // Doppler rate is an additional multiplier on top of the speed-pitch effect.
+    const dopplerCtx = makeSynthMockContext();
+    synthesizeSurfaceHit(dopplerCtx, outputNode, 1, 0.5, 'metal', 1, 1.3);
+    const dopplerFundamental = dopplerCtx._oscillators[0].frequency.value;
+    assert.ok(Math.abs(dopplerFundamental - slowFundamental * 1.3) < 1e-6);
+}
+
+function testClinkPitchTracksSpeed() {
+    const outputNode = { connect() {} };
+
+    const slowCtx = makeSynthMockContext();
+    synthesizeClink(slowCtx, outputNode, new Map(), 1, 0.5, 'slow');
+    const slowFundamental = slowCtx._oscillators[0].frequency.value;
+
+    const fastCtx = makeSynthMockContext();
+    synthesizeClink(fastCtx, outputNode, new Map(), 20, 0.5, 'fast');
+    const fastFundamental = fastCtx._oscillators[0].frequency.value;
+
+    assert.ok(
+        fastFundamental > slowFundamental,
+        `a fast marble-to-marble clink should ring higher than a slow one (got ${slowFundamental} vs ${fastFundamental})`
+    );
+}
+
 testCollisionMatrixSurfaces();
 testSoundPropertiesDefaults();
 testCollisionMatrixSpecificity();
@@ -123,4 +287,8 @@ testVoicePoolBounds();
 testMarbleAudioAPI();
 testRollingSoundManager();
 testSurfaceMaterialSynthParams();
+testGenerateSyntheticImpulseResponse();
+testReverbZoneManager();
+testSurfaceHitPitchTracksSpeed();
+testClinkPitchTracksSpeed();
 console.log('Audio pipeline tests passed');

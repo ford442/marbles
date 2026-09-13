@@ -88,6 +88,7 @@ export interface MapZoneDefinition {
     collectible?: { kind?: string; value?: number };
     grappleAnchor?: { id?: string; radius?: number };
     checkpoint?: number;
+    reverb?: { decay: number; wetMix: number; preDelay?: number; radius?: number };
     /** Map JSON intentionally permits zone-specific extension fields. */
     [key: string]: unknown;
 }

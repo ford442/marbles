@@ -232,6 +232,11 @@ self.onmessage = async (event) => {
                 ({ world, bodies } = buildWorldFromDescriptors(msg.gravity, msg.descriptors || []));
                 world.timestep = timestep;
                 running = true;
+                // Publish twice so both double-buffer slots start with valid
+                // data — otherwise render-side interpolation would blend
+                // against the other slot's stale/zeroed memory on the very
+                // first frame.
+                publishTransforms(0);
                 publishTransforms(0);
                 startLoop();
                 self.postMessage({ type: WORKER_MSG.INIT_OK, bodyCount: bodies.length });
@@ -241,6 +246,9 @@ self.onmessage = async (event) => {
                 if (!world) break;
                 insertBodyAtIndex(world, bodies, msg.descriptor, msg.bodyIndex);
                 removedIndices.delete(msg.bodyIndex);
+                // Seed both slots (see INIT_WORLD) so the new body index has
+                // valid interpolation data on both sides immediately.
+                publishTransforms(0);
                 publishTransforms(0);
                 break;
 

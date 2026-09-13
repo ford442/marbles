@@ -93,6 +93,9 @@ async function main() {
     const jsCp = jsFallback.closestPointOnSegment(0, 0, 0, 10, 0, 0, 4, 3, 0);
     test('closestPointOnSegmentOut vs JS', { x: runner._scalarOutView[0], y: runner._scalarOutView[1], z: runner._scalarOutView[2] }, jsCp);
 
+    const dopplerArgs = [5, 0, 0, 10, 0, 0, 0, 0, 0, 20, 0.3];
+    test('computeDopplerRate vs JS', wasm.computeDopplerRate(...dopplerArgs), jsFallback.computeDopplerRate(...dopplerArgs));
+
     console.log('\nBatch kernels');
     const count = 3;
     const positions = new Float32Array([5, 0, 0, 30, 0, 0, 8, 0, 0]);
@@ -161,6 +164,89 @@ async function main() {
         }
     }
     test('closestPointsOnSegmentBatch WASM vs JS', segBatchOk, true);
+
+    console.log('\nSIMD-width batch kernels (non-multiple-of-4 counts, edge cases)');
+
+    // 13 entities: exercises three full SIMD groups of 4 plus a scalar
+    // remainder of 1, and covers in-range / beyond-maxDist / near-zero-dist
+    // marbles so the bitselect masking path is tested against JS.
+    {
+        const ffCount = 13;
+        const ffPositions = new Float32Array(ffCount * 3);
+        const ffStrengths = new Float32Array(ffCount);
+        for (let i = 0; i < ffCount; i++) {
+            const base = i * 3;
+            if (i === 0) {
+                // dist == 0 from field origin -> must zero out, not NaN.
+                ffPositions[base] = 0; ffPositions[base + 1] = 0; ffPositions[base + 2] = 0;
+            } else if (i % 4 === 0) {
+                // beyond maxDist (25) -> must zero out.
+                ffPositions[base] = 40 + i; ffPositions[base + 1] = 0; ffPositions[base + 2] = 0;
+            } else {
+                const angle = (i / ffCount) * Math.PI * 2;
+                const radius = 3 + (i % 5) * 1.7;
+                ffPositions[base] = Math.cos(angle) * radius;
+                ffPositions[base + 1] = (i % 3) * 0.6;
+                ffPositions[base + 2] = Math.sin(angle) * radius;
+            }
+            ffStrengths[i] = 15 + i * 2.3;
+        }
+
+        const ffWasmOut = new Float32Array(ffCount * 3);
+        const ffJsOut = new Float32Array(ffCount * 3);
+        runner.computeForceFieldsBatch(
+            ffPositions, ffStrengths, ffWasmOut, ffCount,
+            1.5, -0.5, 2.0, 1.75, 0.5, 25, 0.1
+        );
+        jsFallback.computeForceFieldsBatch(
+            ffPositions, ffStrengths, ffJsOut, ffCount,
+            1.5, -0.5, 2.0, 1.75, 0.5, 25, 0.1
+        );
+
+        let ffOk = true;
+        for (let i = 0; i < ffWasmOut.length; i++) {
+            const a = ffWasmOut[i], b = ffJsOut[i];
+            if (Number.isNaN(a) || Math.abs(a - b) > 1e-2) { ffOk = false; break; }
+        }
+        test('computeForceFieldsBatch WASM vs JS (13 entities, edge cases)', ffOk, true);
+    }
+
+    // 13 entities again for velocity damping, mixing speeds above/below the
+    // cap so both the vectorized branch and its bitselect blend are hit.
+    {
+        const vdCount = 13;
+        const velocities = new Float32Array(vdCount * 3);
+        for (let i = 0; i < vdCount; i++) {
+            const base = i * 3;
+            const speedScale = i % 2 === 0 ? 20 : 2; // alternately over/under the cap
+            velocities[base] = Math.sin(i) * speedScale;
+            velocities[base + 1] = Math.cos(i) * speedScale;
+            velocities[base + 2] = (i % 3 - 1) * speedScale;
+        }
+
+        const vdWasmOut = new Float32Array(vdCount * 3);
+        const vdJsOut = new Float32Array(vdCount * 3);
+        runner.applyVelocityDampingBatch(velocities, vdWasmOut, vdCount, 0.8, 1 / 60, 8);
+        jsFallback.applyVelocityDampingBatch(velocities, vdJsOut, vdCount, 0.8, 1 / 60, 8);
+
+        let vdOk = true;
+        for (let i = 0; i < vdWasmOut.length; i++) {
+            if (Math.abs(vdWasmOut[i] - vdJsOut[i]) > 1e-3) { vdOk = false; break; }
+        }
+        test('applyVelocityDampingBatch WASM vs JS (13 entities, speed cap)', vdOk, true);
+
+        // maxSpeed = 0 means "uncapped" — must skip the cap branch entirely.
+        const vdUncappedWasmOut = new Float32Array(vdCount * 3);
+        const vdUncappedJsOut = new Float32Array(vdCount * 3);
+        runner.applyVelocityDampingBatch(velocities, vdUncappedWasmOut, vdCount, 0.8, 1 / 60, 0);
+        jsFallback.applyVelocityDampingBatch(velocities, vdUncappedJsOut, vdCount, 0.8, 1 / 60, 0);
+
+        let vdUncappedOk = true;
+        for (let i = 0; i < vdUncappedWasmOut.length; i++) {
+            if (Math.abs(vdUncappedWasmOut[i] - vdUncappedJsOut[i]) > 1e-3) { vdUncappedOk = false; break; }
+        }
+        test('applyVelocityDampingBatch WASM vs JS (13 entities, uncapped)', vdUncappedOk, true);
+    }
 
     console.log(`\n${pass + fail} tests: ${pass} passed, ${fail} failed`);
     if (fail > 0) process.exit(1);

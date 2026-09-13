@@ -153,6 +153,28 @@ const jsFallback = {
     },
 
     /**
+     * Doppler playback-rate multiplier for a moving audio source (marble)
+     * heard by a stationary listener (camera). Projects the source velocity
+     * onto the listener->source axis and scales by a reference speed,
+     * clamped to +/-maxShift so the pitch shift stays musical.
+     *
+     * @param {number} vx/vy/vz Source (marble) velocity.
+     * @param {number} camX/camY/camZ Listener (camera) position.
+     * @param {number} marbleX/marbleY/marbleZ Source (marble) position.
+     * @param {number} speedOfSound Reference speed used to scale the shift.
+     * @param {number} maxShift Clamp fraction, e.g. 0.3 for +/-30%.
+     * @returns {number} Playback-rate multiplier, 1.0 = no shift.
+     */
+    computeDopplerRate(vx, vy, vz, camX, camY, camZ, marbleX, marbleY, marbleZ, speedOfSound, maxShift) {
+        const dx = camX - marbleX, dy = camY - marbleY, dz = camZ - marbleZ;
+        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (dist < 1e-5 || speedOfSound < 1e-5) return 1;
+        const radial = (vx * dx + vy * dy + vz * dz) / dist;
+        const rate = 1 + radial / speedOfSound;
+        return Math.min(Math.max(rate, 1 - maxShift), 1 + maxShift);
+    },
+
+    /**
      * Applies per-frame exponential velocity damping and an optional speed cap.
      *
      * @param {number} vx/vy/vz      Current velocity components.
@@ -728,6 +750,7 @@ function buildPhysicsApi() {
             vec3Dot: wasmApi.vec3Dot.bind(wasmApi),
             vec3Length: wasmApi.vec3Length.bind(wasmApi),
             vec3Normalize: wasmApi.vec3Normalize.bind(wasmApi),
+            computeDopplerRate: wasmApi.computeDopplerRate.bind(wasmApi),
             applyVelocityDamping: (...args) => {
                 wasmApi.applyVelocityDampingOut(wasmBatch._scalarOutPtr, ...args);
                 const v = wasmBatch._scalarOutView;

@@ -89,8 +89,9 @@ export class RollingSoundManager {
      * @param {string} id
      * @param {number} velocity
      * @param {number} [angularVel=0]
+     * @param {number} [dopplerRate=1] Playback-rate multiplier from relative marble/camera motion.
      */
-    updateRolling(ctx, id, velocity, angularVel = 0) {
+    updateRolling(ctx, id, velocity, angularVel = 0, dopplerRate = 1) {
         if (!ctx) return;
 
         const sound = this.sounds.get(id);
@@ -98,6 +99,8 @@ export class RollingSoundManager {
 
         const t = ctx.currentTime;
         const normalizedVel = Math.min(velocity / 15, 1); // Cap at 15 units/sec
+
+        sound.noise.playbackRate.setTargetAtTime(dopplerRate, t, 0.1);
 
         if (normalizedVel < 0.05) {
             // Too slow - silence

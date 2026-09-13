@@ -27,6 +27,8 @@ struct VertexOutput {
 
 @group(0) @binding(0) var<storage, read> particles: array<Particle>;
 @group(0) @binding(1) var<uniform> camera: CameraUniforms;
+// 1.0 = visible, 0.0 = occluded by scene geometry (see src/webgpu/occlusion.js).
+@group(0) @binding(2) var<storage, read> occlusion: array<f32>;
 
 const QUAD: array<vec2<f32>, 6> = array<vec2<f32>, 6>(
     vec2<f32>(-1.0, -1.0),
@@ -45,7 +47,7 @@ fn vs_main(
     var out: VertexOutput;
     let p = particles[instanceIndex];
 
-    if (p.active < 0.5 || p.life <= 0.0) {
+    if (p.active < 0.5 || p.life <= 0.0 || occlusion[instanceIndex] < 0.5) {
         out.position = vec4<f32>(0.0, 0.0, -2.0, 1.0);
         out.color = vec4<f32>(0.0);
         return out;

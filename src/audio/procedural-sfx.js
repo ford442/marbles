@@ -2,6 +2,9 @@
  * Procedural Web Audio synthesizers for marble game sound effects.
  */
 
+/** Reference impact speed (units/sec) at which the speed-pitch multiplier is 1.0. */
+const NORMAL_CLINK_SPEED = 10;
+
 /**
  * Generate a marble clink sound (impact noise + inharmonic ringing).
  * @param {AudioContext} ctx
@@ -10,8 +13,9 @@
  * @param {number} velocity Impact velocity (0-20)
  * @param {number} [radius=0.5] Marble radius (0.3-0.8) - affects pitch
  * @param {string} [id='default'] Marble identifier for cooldown tracking
+ * @param {number} [dopplerRate=1] Playback-rate multiplier from relative marble/camera motion.
  */
-export function synthesizeClink(ctx, outputNode, cooldowns, velocity, radius = 0.5, id = 'default') {
+export function synthesizeClink(ctx, outputNode, cooldowns, velocity, radius = 0.5, id = 'default', dopplerRate = 1) {
     if (!ctx || !outputNode) return;
 
     // Cooldown to prevent audio spam (max 1 clink per 100ms per marble)
@@ -27,6 +31,8 @@ export function synthesizeClink(ctx, outputNode, cooldowns, velocity, radius = 0
     // Pitch based on marble size (smaller = higher pitch)
     // Map radius 0.3-0.8 to frequency multiplier 1.5-0.7
     const sizePitchMult = 1.5 - (radius - 0.3) * (0.8 / 0.5);
+    // Harder impacts ring higher, not just louder.
+    const speedPitchMult = Math.min(Math.max(Math.sqrt(velocity / NORMAL_CLINK_SPEED), 0.7), 1.6) * dopplerRate;
 
     const t = ctx.currentTime;
     const duration = 0.3 + normalizedVel * 0.4;
@@ -55,8 +61,8 @@ export function synthesizeClink(ctx, outputNode, cooldowns, velocity, radius = 0
     // Higher frequency bandpass for more "glassy/metallic" impact character
     const impactFilter = ctx.createBiquadFilter();
     impactFilter.type = 'bandpass';
-    impactFilter.frequency.value = 4500 * sizePitchMult; // Higher center freq
-    impactFilter.Q.value = 3; // Sharper resonance
+    impactFilter.frequency.value = 4500 * sizePitchMult * speedPitchMult; // Higher center freq
+    impactFilter.Q.value = 3 * (1 + normalizedVel * 0.5); // Sharper resonance on harder impacts
 
     noise.connect(impactFilter);
     impactFilter.connect(impactGain);
@@ -71,7 +77,7 @@ export function synthesizeClink(ctx, outputNode, cooldowns, velocity, radius = 0
 
     // === RINGING SOUND (oscillators) ===
     // Glass marbles - higher fundamental with more metallic overtones
-    const fundamental = 1200 * sizePitchMult; // Higher pitch for glassy sound
+    const fundamental = 1200 * sizePitchMult * speedPitchMult; // Higher pitch for glassy sound
     const overtones = [1, 2.6, 4.2, 6.1, 8.0]; // More inharmonic ratios for "ping"
 
     overtones.forEach((ratio, i) => {

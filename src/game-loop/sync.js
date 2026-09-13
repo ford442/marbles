@@ -125,6 +125,11 @@ export class GameLoopSyncMethods {
                 this._cameraState.eye[1],
                 this._cameraState.eye[2]
             )
+            audio?.updateReverbZone?.(
+                this._cameraState.eye[0],
+                this._cameraState.eye[1],
+                this._cameraState.eye[2]
+            )
         }
         this.marbleLodManager?.updateMarbles(now)
         updateMarbleMaterialTiers(this, now)
@@ -459,11 +464,13 @@ export class GameLoopSyncMethods {
             }
         }
 
+        const backend = this.physicsBackend
+        const useWorkerInterp = backend?.isWorkerMode?.() === true
+
         // Skip physics and game logic when paused
         if (!this.isPaused) {
             const physicsStart = performance.now()
             this.physicsWorld.step()
-            const backend = this.physicsBackend
             if (backend?.isWorkerMode?.()) {
                 perfCounts.physicsStepMs = backend.lastStepMs || 0
                 perfCounts.mainThreadPhysicsWaitMs = backend.lastWaitMs || 0
@@ -478,8 +485,15 @@ export class GameLoopSyncMethods {
         }
 
         for (const m of this.marbles) {
-            const t = m.rigidBody.translation()
-            const r = m.rigidBody.rotation()
+            let t, r
+            if (useWorkerInterp && m.rigidBody._bodyIndex != null) {
+                const xf = backend.getInterpolatedTransform(m.rigidBody._bodyIndex)
+                t = xf.translation
+                r = xf.rotation
+            } else {
+                t = m.rigidBody.translation()
+                r = m.rigidBody.rotation()
+            }
             const mat = quaternionToMat4(t, r)
 
             if (m.scale && m.scale !== 1.0) {
@@ -522,8 +536,15 @@ export class GameLoopSyncMethods {
         updateMarbleDynamicMaterialEffects(this, now, perfCounts)
 
         for (const obj of this.dynamicObjects) {
-            const t = obj.rigidBody.translation()
-            const r = obj.rigidBody.rotation()
+            let t, r
+            if (useWorkerInterp && obj.rigidBody._bodyIndex != null) {
+                const xf = backend.getInterpolatedTransform(obj.rigidBody._bodyIndex)
+                t = xf.translation
+                r = xf.rotation
+            } else {
+                t = obj.rigidBody.translation()
+                r = obj.rigidBody.rotation()
+            }
             const mat = quaternionToMat4(t, r)
 
             if (obj.halfExtents) {

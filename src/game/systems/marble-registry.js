@@ -8,6 +8,32 @@ import {
 } from '../../marble-material-tier.js';
 import { shouldUseMarbleProxyLight, LIGHT_OWNER } from '../../lighting-budget.js';
 import { extractMarbleMaterialFields } from './marble-material-fields.js';
+import { getMarblePhysics } from '../../wasm-bridge.js';
+
+// Tuned for a musical pitch shift rather than a physically literal speed of sound
+// (marble speeds top out well under this).
+const DOPPLER_SPEED_OF_SOUND = 40;
+const DOPPLER_MAX_SHIFT = 0.3;
+
+/**
+ * Doppler playback-rate multiplier for a marble's audio, based on its velocity
+ * relative to the camera. Returns 1 (no shift) when camera state isn't available yet.
+ * @param {object} game
+ * @param {RAPIER.RigidBody} rb
+ * @returns {number}
+ */
+export function computeMarbleDopplerRate(game, rb) {
+    const eye = game._cameraState?.eye;
+    if (!eye) return 1;
+    const v = rb.linvel();
+    const p = rb.translation();
+    return getMarblePhysics().computeDopplerRate(
+        v.x, v.y, v.z,
+        eye[0], eye[1], eye[2],
+        p.x, p.y, p.z,
+        DOPPLER_SPEED_OF_SOUND, DOPPLER_MAX_SHIFT
+    );
+}
 
 /**
  * Marble spawn, reset, respawn, and collision-audio routing (Phase B subsystem).
@@ -413,8 +439,9 @@ export class MarbleRegistry {
                 if (otherBody && otherBody !== rb) {
                     if (otherBody.bodyType() === RAPIER.RigidBodyType.Fixed) {
                         const material = audio.getMaterial(otherBody.handle);
+                        const dopplerRate = computeMarbleDopplerRate(g, rb);
 
-                        touchingSurfaces.set(i, { material, speed, angularSpeed, radius });
+                        touchingSurfaces.set(i, { material, speed, angularSpeed, radius, dopplerRate });
 
                         const collisionId = `${rb.handle}-${otherBody.handle}`;
                         if (!processedCollisions.has(collisionId) && speed > 2.5) {
@@ -427,6 +454,7 @@ export class MarbleRegistry {
                                 surfaceMaterial: material,
                                 id: `surface-${rb.handle}`,
                                 position: { x: pos.x, y: pos.y, z: pos.z },
+                                dopplerRate,
                             });
                         }
                     }
@@ -443,7 +471,7 @@ export class MarbleRegistry {
                 if (!audio.rollingSounds || !audio.rollingSounds.has(rollingId)) {
                     audio.startRolling(rollingId, surfaceInfo.radius, surfaceInfo.material);
                 }
-                audio.updateRolling(rollingId, surfaceInfo.speed, surfaceInfo.angularSpeed);
+                audio.updateRolling(rollingId, surfaceInfo.speed, surfaceInfo.angularSpeed, surfaceInfo.dopplerRate);
             } else {
                 audio.stopRolling(`${marbleId}-rolling`);
             }

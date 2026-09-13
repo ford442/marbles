@@ -3,6 +3,7 @@ import {
     TRANSFORM_BUFFER_BYTES,
     CMD_RING_BYTES,
     RAYCAST_BUFFER_BYTES,
+    TRANSFORM_HEADER_FRAME_TICK,
     TRANSFORM_HEADER_STEP_MS,
     TRANSFORM_HEADER_U32,
     WORKER_MSG,
@@ -10,6 +11,7 @@ import {
     createRaycastViews,
     createTransformViews,
     enqueueCommand,
+    lerpBodyTransform,
     readBodyTransform,
     RAYCAST_STATUS,
     RAYCAST_HIT_INDEX,
@@ -121,6 +123,8 @@ export class WorkerPhysicsBackend {
         this._initPromise = null;
         this._worldCommitted = false;
         this._pendingBodies = new Map();
+        this._lastTick = -1;
+        this._lastTickAt = 0;
     }
 
     isWorkerMode() {
@@ -344,9 +348,41 @@ export class WorkerPhysicsBackend {
         const waitStart = performance.now();
         this.worker.postMessage({ type: WORKER_MSG.STEP });
 
-        const slot = Atomics.load(this.transformViews.u32, TRANSFORM_HEADER_U32);
+        Atomics.load(this.transformViews.u32, TRANSFORM_HEADER_U32);
         this.lastStepMs = this.transformViews.f32[TRANSFORM_HEADER_STEP_MS];
         this.lastWaitMs = performance.now() - waitStart;
+
+        const tick = this.transformViews.u32[TRANSFORM_HEADER_FRAME_TICK];
+        if (tick !== this._lastTick) {
+            this._lastTick = tick;
+            this._lastTickAt = waitStart;
+        }
+    }
+
+    /** Progress [0,1] between the last observed physics tick and the next one, for render interpolation. */
+    getInterpolationAlpha() {
+        const intervalMs = 1000 / this.physicsHz;
+        if (!intervalMs) return 1;
+        const alpha = (performance.now() - this._lastTickAt) / intervalMs;
+        return alpha < 0 ? 0 : alpha > 1 ? 1 : alpha;
+    }
+
+    /**
+     * Blends a body's transform between the previous and current SAB slot,
+     * decoupling the (up to 120Hz) physics tick from the render tick.
+     * @param {number} bodyIndex
+     * @param {number} [alpha]
+     */
+    getInterpolatedTransform(bodyIndex, alpha = this.getInterpolationAlpha()) {
+        const { u32, f32 } = this.transformViews;
+        const currentSlot = Atomics.load(u32, TRANSFORM_HEADER_U32);
+        const curr = readBodyTransform(u32, f32, currentSlot, bodyIndex);
+        const prev = readBodyTransform(u32, f32, 1 - currentSlot, bodyIndex);
+        const blended = lerpBodyTransform(prev, curr, alpha);
+        return {
+            translation: { x: blended.x, y: blended.y, z: blended.z },
+            rotation: { x: blended.qx, y: blended.qy, z: blended.qz, w: blended.qw },
+        };
     }
 
     setTimestep(value) {

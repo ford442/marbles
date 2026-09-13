@@ -10,7 +10,7 @@ import { scheduleVoiceStop } from './voice-pool.js';
  * @param {AudioNode} sfxBus
  * @param {import('./voice-pool.js').VoicePool} voicePool
  * @param {AudioBuffer} buffer
- * @param {{ pitch?: number, volume?: number, spatial?: boolean, position?: { x: number, y: number, z: number } | null, maxDistance?: number, id?: string }} opts
+ * @param {{ pitch?: number, volume?: number, spatial?: boolean, position?: { x: number, y: number, z: number } | null, maxDistance?: number, id?: string, dopplerRate?: number }} opts
  */
 export function playSpatialBuffer(ctx, sfxBus, voicePool, buffer, opts) {
     if (!ctx || !sfxBus || !voicePool || !buffer) return;
@@ -19,7 +19,7 @@ export function playSpatialBuffer(ctx, sfxBus, voicePool, buffer, opts) {
     const t = ctx.currentTime;
     const source = ctx.createBufferSource();
     source.buffer = buffer;
-    source.playbackRate.value = opts.pitch ?? 1;
+    source.playbackRate.value = (opts.pitch ?? 1) * (opts.dopplerRate ?? 1);
 
     const gain = ctx.createGain();
     gain.gain.value = opts.volume ?? 0.7;
@@ -44,7 +44,7 @@ export function playSpatialBuffer(ctx, sfxBus, voicePool, buffer, opts) {
 
     output.connect(sfxBus);
     source.start(t);
-    const stopAt = t + buffer.duration / (opts.pitch || 1);
+    const stopAt = t + buffer.duration / (source.playbackRate.value || 1);
     source.stop(stopAt);
     scheduleVoiceStop(ctx, nodes, stopAt, () => voicePool.release(opts));
 }

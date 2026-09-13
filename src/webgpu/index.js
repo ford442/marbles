@@ -2,12 +2,14 @@ export {
     isWebGPUAvailable,
     isWebGPUParticlesRequested,
     isWebGPUNoiseRequested,
+    isWebGPUDepthTestRequested,
     WEBGPU_PARTICLE_CAP,
 } from './detect.js';
 export { WebGPUParticleBackend, tryInitWebGPUParticles } from './particle-backend.js';
 export { packParticle, PARTICLE_STRIDE } from './particle-data.js';
 export { generateNoiseTexture, tryInitWebGPUNoise } from './noise-texture.js';
 export { buildViewProjection } from './camera-math.js';
+export { updateParticleOcclusion, OCCLUSION_RAYCAST_BUDGET } from './occlusion.js';
 
 import { isWebGPUNoiseRequested, isWebGPUParticlesRequested } from './detect.js';
 import { tryInitWebGPUParticles } from './particle-backend.js';

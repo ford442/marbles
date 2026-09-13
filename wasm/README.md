@@ -11,8 +11,10 @@ to native-speed code compiled with [Emscripten](https://emscripten.org/).
 | CMake | ≥ 3.20 | `wasm/CMakeLists.txt` |
 | C++ | 17 | `-std=c++17` |
 
-Use the same Emscripten major/minor when building locally so `public/wasm/` parity
-tests match CI:
+`wasm/build.sh` pins and activates 3.1.50 itself (via `emsdk install`/`activate`)
+whenever it can find an emsdk checkout (`$EMSDK`, `/opt/emsdk`,
+`/content/build_space/emsdk`, or `/root/emsdk`), so a plain `npm run build:wasm`
+already matches CI. To do it manually:
 
 ```bash
 # Example with emsdk
@@ -32,8 +34,8 @@ stale artefacts.
 |---|---|
 | `vec3Distance` / `vec3DistanceSq` | Euclidean distance helpers |
 | `vec3Dot` / `vec3Length` / `vec3Normalize` | Vector math |
-| `applyVelocityDamping` / `*Out` / `Batch` | Frame-rate–independent damping + speed cap |
-| `computeForceField` / `*Out` / `Batch` | Inverse-power-law attraction / repulsion |
+| `applyVelocityDamping` / `*Out` / `Batch` | Frame-rate–independent damping + speed cap (Batch is SIMD128-vectorized) |
+| `computeForceField` / `*Out` / `Batch` | Inverse-power-law attraction / repulsion (Batch is SIMD128-vectorized) |
 | `computeSpringForce` / `*Out` / `Batch` | Hooke's-law spring with velocity damping |
 | `reflectVelocity` / `*Out` | Specular velocity reflection |
 | `closestPointOnSegment` / `*Out` / `Batch` | Nearest point on a segment (grapple / rails) |
@@ -76,11 +78,24 @@ npm run check:wasm          # fail if cpp newer than public/wasm
 
 # Or directly:
 cd wasm && ./build.sh
+
+# Debug + AddressSanitizer build, for local testing only:
+cd wasm && ./build.sh --debug
 ```
 
 Output files are written to `public/wasm/`:
 - `marble_physics.js`   — Emscripten-generated JS glue code
 - `marble_physics.wasm` — Compiled WebAssembly binary
+
+`./build.sh --debug` builds with `-O0 -g -fsanitize=address -Weverything` into
+`wasm/build-debug/` instead (not copied to `public/wasm/`) so a Release build
+is never accidentally shipped with sanitizer instrumentation. Unlike the
+Release build it also allows the `node` environment (`-sENVIRONMENT` includes
+`node`, not just `web,worker`), so it can be loaded directly under Node —
+write a small script that `import()`s `wasm/build-debug/marble_physics.js`
+with `wasmBinary`/`locateFile` pointed at that directory (same pattern
+`tests/test_wasm_bridge_wasm.js` uses for the Release build) and call the
+batch/scalar functions directly to exercise them under ASan.
 
 ## JavaScript Usage
 
@@ -112,6 +127,12 @@ WASM loads by default when `public/wasm/marble_physics.wasm` exists. Use `?wasmP
 ```bash
 npm run test:wasm:parity    # C++ vs JS fallbacks (requires built wasm)
 npm run test:unit           # check:wasm + parity + all unit tests
+
+# Throughput benchmark for the SIMD batch kernels (1000 entities):
+node tests/benchmark_wasm_batch_simd.mjs
+# ...or compare against a previously built binary (e.g. checked out from git
+# history before a WASM perf change) to measure improvement:
+node tests/benchmark_wasm_batch_simd.mjs --baseline-dir /path/to/old/public/wasm
 ```
 
 ## Adding New Functions
@@ -129,10 +150,30 @@ See `wasm/CMakeLists.txt`:
 - `-O3`, `-msimd128`, `-ffast-math`, `-sASSERTIONS=0`
 - `-sMODULARIZE=1` + `EXPORT_NAME=MarblePhysicsModule`
 - `INITIAL_MEMORY=32MB`, `ALLOW_MEMORY_GROWTH=1`
-- `--closure 1` is **commented out** — test carefully before enabling (can break Embind).
+- `--closure 1` minifies the JS glue (~31 KB → ~15 KB raw, ~9 KB → ~6 KB
+  gzipped). Verified compatible with Embind + `MODULARIZE` + `EXPORT_ES6` in
+  this project's configuration — Embind attaches its exports via
+  string-keyed assignment (`Module["name"] = ...`), which Closure's default
+  `SIMPLE_OPTIMIZATIONS` level never renames, so no extra `extern "C"` export
+  shim is needed. Re-run `npm run test:wasm:parity` after touching link flags
+  to catch a regression here.
+
+Debug builds (`./build.sh --debug`) instead use `-O0 -g -fsanitize=address
+-sASSERTIONS=2` with no `--closure`, and permit the `node` environment — see
+"Building" above.
 
 ## Notes
 
 - Loaded asynchronously via dynamic `import()`. JS fallbacks run until WASM is ready.
 - No `SharedArrayBuffer` required for this module (unlike the Rapier physics worker).
 - Do not move Rapier body iteration or Filament transforms into C++ — numeric kernels only.
+- `computeForceFieldsBatch` and `applyVelocityDampingBatch` vectorize 4 entities
+  at a time with WASM SIMD128 (`#ifdef __wasm_simd128__`, scalar fallback
+  otherwise). Positions/velocities are stored AoS (interleaved xyz per
+  entity); since WASM SIMD128 has no strided-gather instruction, `loadVec3x4`/
+  `storeVec3x4` deinterleave/reinterleave 4 vec3s (12 contiguous floats = 3
+  `v128` words) via shuffles rather than gathering lane-by-lane. `std::pow`
+  has no SIMD128 intrinsic for a runtime-variable exponent, so
+  `computeForceFieldsBatch`'s falloff term is computed per-lane and folded
+  back into the otherwise fully-vectorized pipeline. A non-multiple-of-4
+  remainder always falls back to the scalar kernel.

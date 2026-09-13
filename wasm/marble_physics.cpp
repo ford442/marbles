@@ -18,6 +18,52 @@
 #include <cmath>
 #include <algorithm>
 
+#ifdef __wasm_simd128__
+#include <wasm_simd128.h>
+
+// ── AoS3 <-> SoA4 transpose ────────────────────────────────────────────────────
+//
+// The batch kernels below operate on 4 entities per iteration, but their
+// input/output buffers pack xyz interleaved per entity (AoS) while the SIMD
+// math wants one lane per entity (SoA). WASM SIMD128 has no strided-gather
+// instruction, so the standard technique is to load/store the 4 vec3s
+// (12 contiguous floats = exactly 3 v128 words) and shuffle between layouts,
+// rather than gathering/scattering lane-by-lane with scalar loads/stores.
+
+/** Deinterleaves 4 packed vec3s (12 contiguous floats at `ptr`) into SoA lanes. */
+inline void loadVec3x4(const float* ptr, v128_t& outX, v128_t& outY, v128_t& outZ) {
+    const v128_t in0 = wasm_v128_load(ptr);       // [x0,y0,z0,x1]
+    const v128_t in1 = wasm_v128_load(ptr + 4);   // [y1,z1,x2,y2]
+    const v128_t in2 = wasm_v128_load(ptr + 8);   // [z2,x3,y3,z3]
+
+    const v128_t abX = wasm_i32x4_shuffle(in0, in1, 0, 3, 6, 6);
+    outX = wasm_i32x4_shuffle(abX, in2, 0, 1, 2, 5);
+
+    const v128_t abY = wasm_i32x4_shuffle(in0, in1, 1, 4, 7, 7);
+    outY = wasm_i32x4_shuffle(abY, in2, 0, 1, 2, 6);
+
+    const v128_t abZ = wasm_i32x4_shuffle(in0, in1, 2, 5, 5, 5);
+    outZ = wasm_i32x4_shuffle(abZ, in2, 0, 1, 4, 7);
+}
+
+/** Interleaves SoA x/y/z lanes back into 4 packed vec3s (12 contiguous floats at `ptr`). */
+inline void storeVec3x4(float* ptr, v128_t x, v128_t y, v128_t z) {
+    const v128_t xy01 = wasm_i32x4_shuffle(x, y, 0, 4, 1, 5); // [x0,y0,x1,y1]
+    const v128_t xy23 = wasm_i32x4_shuffle(x, y, 2, 6, 3, 7); // [x2,y2,x3,y3]
+
+    const v128_t out0 = wasm_i32x4_shuffle(xy01, z, 0, 1, 4, 2); // [x0,y0,z0,x1]
+
+    const v128_t zx   = wasm_i32x4_shuffle(z, xy23, 1, 4, 5, 1);
+    const v128_t out1 = wasm_i32x4_shuffle(xy01, zx, 3, 4, 5, 6); // [y1,z1,x2,y2]
+
+    const v128_t out2 = wasm_i32x4_shuffle(z, xy23, 2, 6, 7, 3); // [z2,x3,y3,z3]
+
+    wasm_v128_store(ptr,     out0);
+    wasm_v128_store(ptr + 4, out1);
+    wasm_v128_store(ptr + 8, out2);
+}
+#endif // __wasm_simd128__
+
 // ── Vector Math ───────────────────────────────────────────────────────────────
 
 /** Euclidean distance between two 3-D points. */
@@ -43,6 +89,31 @@ float vec3Dot(float ax, float ay, float az,
 /** Returns the length (magnitude) of a 3-D vector. */
 float vec3Length(float x, float y, float z) {
     return std::sqrt(x * x + y * y + z * z);
+}
+
+/**
+ * Doppler playback-rate multiplier for a moving audio source (marble) heard
+ * by a stationary listener (camera). Projects the source velocity onto the
+ * listener->source axis and scales it by an approximate reference speed,
+ * clamping to keep the pitch shift musical rather than physically literal.
+ *
+ * @param vx,vy,vz Source (marble) velocity.
+ * @param camX,camY,camZ Listener (camera) position.
+ * @param marbleX,marbleY,marbleZ Source (marble) position.
+ * @param speedOfSound Reference speed used to scale the shift.
+ * @param maxShift Clamp fraction, e.g. 0.3 for +/-30%.
+ * @returns Playback-rate multiplier, 1.0 = no shift.
+ */
+float computeDopplerRate(float vx, float vy, float vz,
+                          float camX, float camY, float camZ,
+                          float marbleX, float marbleY, float marbleZ,
+                          float speedOfSound, float maxShift) {
+    const float dx = camX - marbleX, dy = camY - marbleY, dz = camZ - marbleZ;
+    const float dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+    if (dist < 1e-5f || speedOfSound < 1e-5f) return 1.0f;
+    const float radial = (vx * dx + vy * dy + vz * dz) / dist;
+    const float rate = 1.0f + radial / speedOfSound;
+    return std::clamp(rate, 1.0f - maxShift, 1.0f + maxShift);
 }
 
 /**
@@ -117,6 +188,71 @@ emscripten::val applyVelocityDamping(float vx, float vy, float vz,
     return result;
 }
 
+/** Scalar fallback: processes every entity one at a time. */
+inline void applyVelocityDampingBatchScalar(float* velocities, float* out, int count,
+                                            float dampingFactor, float dt, float maxSpeed,
+                                            int startIndex = 0) {
+    for (int i = startIndex; i < count; ++i) {
+        const int base = i * 3;
+        float nx, ny, nz;
+        applyVelocityDampingVec(velocities[base], velocities[base + 1], velocities[base + 2],
+                                dampingFactor, dt, maxSpeed, nx, ny, nz);
+        out[base]     = nx;
+        out[base + 1] = ny;
+        out[base + 2] = nz;
+    }
+}
+
+#ifdef __wasm_simd128__
+/**
+ * SIMD kernel: processes 4 entities per iteration.
+ *
+ * Velocities are stored AoS (interleaved xyz per entity); 4 entities' worth
+ * of x/y/z are deinterleaved into SoA lanes with `loadVec3x4` (3 vector loads
+ * + shuffles, no scalar gather), the damping + speed-cap math runs fully
+ * vectorized across those 4 lanes, and `storeVec3x4` re-interleaves the
+ * result back to AoS. The remainder (count % 4) falls back to the scalar
+ * kernel above.
+ */
+inline void applyVelocityDampingBatchSimd(float* velocities, float* out, int count,
+                                          float dampingFactor, float dt, float maxSpeed) {
+    const float decayScalar = 1.0f - std::clamp(dampingFactor * dt, 0.0f, 1.0f);
+    const v128_t vDecay    = wasm_f32x4_splat(decayScalar);
+    const v128_t vMaxSpeed = wasm_f32x4_splat(maxSpeed);
+    const bool capSpeed    = maxSpeed > 0.0f;
+
+    const int simdCount = count - (count % 4);
+    int i = 0;
+    for (; i < simdCount; i += 4) {
+        const int base = i * 3;
+
+        v128_t vx, vy, vz;
+        loadVec3x4(velocities + base, vx, vy, vz);
+
+        v128_t nx = wasm_f32x4_mul(vx, vDecay);
+        v128_t ny = wasm_f32x4_mul(vy, vDecay);
+        v128_t nz = wasm_f32x4_mul(vz, vDecay);
+
+        if (capSpeed) {
+            const v128_t speedSq = wasm_f32x4_add(
+                wasm_f32x4_add(wasm_f32x4_mul(nx, nx), wasm_f32x4_mul(ny, ny)),
+                wasm_f32x4_mul(nz, nz));
+            const v128_t speed    = wasm_f32x4_sqrt(speedSq);
+            const v128_t overMask = wasm_f32x4_gt(speed, vMaxSpeed);
+            const v128_t scale    = wasm_f32x4_div(vMaxSpeed, speed);
+
+            nx = wasm_v128_bitselect(wasm_f32x4_mul(nx, scale), nx, overMask);
+            ny = wasm_v128_bitselect(wasm_f32x4_mul(ny, scale), ny, overMask);
+            nz = wasm_v128_bitselect(wasm_f32x4_mul(nz, scale), nz, overMask);
+        }
+
+        storeVec3x4(out + base, nx, ny, nz);
+    }
+
+    applyVelocityDampingBatchScalar(velocities, out, count, dampingFactor, dt, maxSpeed, i);
+}
+#endif // __wasm_simd128__
+
 /**
  * Batched velocity damping. Reads/writes xyz triplets in HEAPF32 buffers.
  * When in-place, pass the same pointer for velocitiesPtr and outPtr.
@@ -128,15 +264,11 @@ void applyVelocityDampingBatch(uintptr_t velocitiesPtr, uintptr_t outPtr, int co
     float* velocities = reinterpret_cast<float*>(velocitiesPtr);
     float* out        = reinterpret_cast<float*>(outPtr);
 
-    for (int i = 0; i < count; ++i) {
-        const int base = i * 3;
-        float nx, ny, nz;
-        applyVelocityDampingVec(velocities[base], velocities[base + 1], velocities[base + 2],
-                                dampingFactor, dt, maxSpeed, nx, ny, nz);
-        out[base]     = nx;
-        out[base + 1] = ny;
-        out[base + 2] = nz;
-    }
+#ifdef __wasm_simd128__
+    applyVelocityDampingBatchSimd(velocities, out, count, dampingFactor, dt, maxSpeed);
+#else
+    applyVelocityDampingBatchScalar(velocities, out, count, dampingFactor, dt, maxSpeed);
+#endif
 }
 
 // ── Force Fields ──────────────────────────────────────────────────────────────
@@ -212,6 +344,96 @@ emscripten::val computeForceField(float fieldX, float fieldY, float fieldZ,
     return result;
 }
 
+/** Scalar fallback: processes every entity one at a time. */
+inline void computeForceFieldsBatchScalar(float* positions, float* strengths, float* out, int count,
+                                          float fieldX, float fieldY, float fieldZ,
+                                          float falloffExp, float minDist, float maxDist,
+                                          float softening, int startIndex = 0) {
+    for (int i = startIndex; i < count; ++i) {
+        const int base = i * 3;
+        float fx, fy, fz;
+        computeForceFieldVec(fieldX, fieldY, fieldZ,
+                             positions[base], positions[base + 1], positions[base + 2],
+                             strengths[i], falloffExp, minDist, maxDist, softening,
+                             fx, fy, fz);
+        out[base]     = fx;
+        out[base + 1] = fy;
+        out[base + 2] = fz;
+    }
+}
+
+#ifdef __wasm_simd128__
+/**
+ * SIMD kernel: processes 4 entities per iteration.
+ *
+ * The dx/dy/dz displacement, squared distance, sqrt and the final
+ * normalize-and-scale are all done 4-wide across entities deinterleaved into
+ * SoA lanes via `loadVec3x4`/`storeVec3x4`. `std::pow` has no WASM SIMD128
+ * intrinsic for a runtime-variable exponent, so the falloff term is computed
+ * per-lane and folded back into the vector pipeline for the remaining
+ * (already-vectorized) division and scale steps.
+ * The remainder (count % 4) falls back to the scalar kernel above.
+ */
+inline void computeForceFieldsBatchSimd(float* positions, float* strengths, float* out, int count,
+                                        float fieldX, float fieldY, float fieldZ,
+                                        float falloffExp, float minDist, float maxDist,
+                                        float softening) {
+    const v128_t vFieldX    = wasm_f32x4_splat(fieldX);
+    const v128_t vFieldY    = wasm_f32x4_splat(fieldY);
+    const v128_t vFieldZ    = wasm_f32x4_splat(fieldZ);
+    const v128_t vMinDist   = wasm_f32x4_splat(minDist);
+    const v128_t vMaxDist   = wasm_f32x4_splat(maxDist);
+    const v128_t vSoftening = wasm_f32x4_splat(softening);
+    const v128_t vEpsilon   = wasm_f32x4_splat(1e-6f);
+    const v128_t vZero      = wasm_f32x4_splat(0.0f);
+    const v128_t vOne       = wasm_f32x4_splat(1.0f);
+
+    const int simdCount = count - (count % 4);
+    int i = 0;
+    for (; i < simdCount; i += 4) {
+        const int base = i * 3;
+
+        v128_t px, py, pz;
+        loadVec3x4(positions + base, px, py, pz);
+        const v128_t vStrength = wasm_v128_load(&strengths[i]);
+
+        const v128_t dx = wasm_f32x4_sub(vFieldX, px);
+        const v128_t dy = wasm_f32x4_sub(vFieldY, py);
+        const v128_t dz = wasm_f32x4_sub(vFieldZ, pz);
+
+        const v128_t distSq = wasm_f32x4_add(
+            wasm_f32x4_add(wasm_f32x4_mul(dx, dx), wasm_f32x4_mul(dy, dy)),
+            wasm_f32x4_mul(dz, dz));
+        const v128_t dist = wasm_f32x4_sqrt(distSq);
+        const v128_t clampedDist = wasm_f32x4_max(dist, vMinDist);
+
+        float clampedArr[4];
+        wasm_v128_store(clampedArr, clampedDist);
+        float falloffArr[4];
+        for (int k = 0; k < 4; ++k) falloffArr[k] = std::pow(clampedArr[k], falloffExp);
+        const v128_t falloff = wasm_f32x4_add(wasm_v128_load(falloffArr), vSoftening);
+
+        const v128_t forceMag = wasm_f32x4_div(vStrength, falloff);
+        const v128_t invDist  = wasm_f32x4_div(vOne, dist);
+        const v128_t scale    = wasm_f32x4_mul(invDist, forceMag);
+
+        const v128_t validMask = wasm_v128_and(
+            wasm_f32x4_le(dist, vMaxDist),
+            wasm_f32x4_ge(dist, vEpsilon));
+
+        const v128_t fx = wasm_v128_bitselect(wasm_f32x4_mul(dx, scale), vZero, validMask);
+        const v128_t fy = wasm_v128_bitselect(wasm_f32x4_mul(dy, scale), vZero, validMask);
+        const v128_t fz = wasm_v128_bitselect(wasm_f32x4_mul(dz, scale), vZero, validMask);
+
+        storeVec3x4(out + base, fx, fy, fz);
+    }
+
+    computeForceFieldsBatchScalar(positions, strengths, out, count,
+                                  fieldX, fieldY, fieldZ, falloffExp, minDist, maxDist,
+                                  softening, i);
+}
+#endif // __wasm_simd128__
+
 /**
  * Batched force-field evaluation writing directly into a HEAPF32 buffer.
  *
@@ -231,17 +453,13 @@ void computeForceFieldsBatch(uintptr_t positionsPtr, uintptr_t strengthsPtr,
     float* strengths = reinterpret_cast<float*>(strengthsPtr);
     float* out       = reinterpret_cast<float*>(outPtr);
 
-    for (int i = 0; i < count; ++i) {
-        const int base = i * 3;
-        float fx, fy, fz;
-        computeForceFieldVec(fieldX, fieldY, fieldZ,
-                             positions[base], positions[base + 1], positions[base + 2],
-                             strengths[i], falloffExp, minDist, maxDist, softening,
-                             fx, fy, fz);
-        out[base]     = fx;
-        out[base + 1] = fy;
-        out[base + 2] = fz;
-    }
+#ifdef __wasm_simd128__
+    computeForceFieldsBatchSimd(positions, strengths, out, count,
+                                fieldX, fieldY, fieldZ, falloffExp, minDist, maxDist, softening);
+#else
+    computeForceFieldsBatchScalar(positions, strengths, out, count,
+                                  fieldX, fieldY, fieldZ, falloffExp, minDist, maxDist, softening);
+#endif
 }
 
 // ── Spring / Constraint Force ─────────────────────────────────────────────────
@@ -455,6 +673,7 @@ EMSCRIPTEN_BINDINGS(marble_physics) {
     emscripten::function("vec3Dot",                &vec3Dot);
     emscripten::function("vec3Length",             &vec3Length);
     emscripten::function("vec3Normalize",          &vec3Normalize);
+    emscripten::function("computeDopplerRate",     &computeDopplerRate);
 
     // Physics helpers
     emscripten::function("applyVelocityDamping",          &applyVelocityDamping);

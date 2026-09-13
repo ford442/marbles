@@ -21,6 +21,15 @@ export function isWebGPUNoiseRequested() {
 }
 
 /**
+ * @returns {boolean}
+ */
+export function isWebGPUDepthTestRequested() {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    return params.get('webgpuDepthTest') === '1';
+}
+
+/**
  * @returns {Promise<boolean>}
  */
 export async function isWebGPUAvailable() {

@@ -20,6 +20,12 @@ Stress / benchmark burst (emits ~8000 sparks at level start):
 ?webgpuParticles=1&webgpuStress=1
 ```
 
+Physics-based scene occlusion (particles hidden behind solid geometry):
+
+```
+?webgpuParticles=1&webgpuDepthTest=1
+```
+
 ## Requirements
 
 - Chrome 113+, Edge 113+, Firefox 110+, or Safari 18+ with WebGPU enabled
@@ -44,9 +50,34 @@ Stress / benchmark burst (emits ~8000 sparks at level start):
 | `src/webgpu/shaders/particle-integrate.wgsl` | Compute pass: gravity, drag, lifetime, active flag |
 | `src/webgpu/shaders/particle-render.wgsl` | Billboard vertex/fragment overlay shader |
 | `src/webgpu/noise-texture.js` | Optional 256² FBM noise via compute |
+| `src/webgpu/occlusion.js` | Physics-raycast scene occlusion (`?webgpuDepthTest=1`) |
 | `src/particle-system.js` | CPU fallback; delegates sim when GPU ready |
 
 Particle cap with WebGPU: **8192** slots (target 5k–10k at 60 FPS on mid desktop).
+
+### Scene occlusion (`?webgpuDepthTest=1`)
+
+Particles rendered on the WebGPU overlay draw over the *entire* Filament frame —
+there's no shared depth buffer between the two contexts, so without this flag a
+spark behind a wall still renders in front of it.
+
+**Why this isn't a real GPU depth-buffer share:** `GPUDevice.importExternalTexture`
+only accepts video frames (`HTMLVideoElement`/`VideoFrame`), not arbitrary WebGL
+renderbuffers — no browser ships a standardized way to hand a WebGL2 depth
+attachment to a separate WebGPU context (no `EXT_external_objects` /
+`WEBGL_shared_sources` equivalent exists). Filament's WASM bindings used here
+(`node_modules/filament/filament.d.ts`) also expose no `readPixels`/depth-texture
+readback, so there's no depth image to copy out even via a slow CPU round trip.
+
+**What's implemented instead:** since rendered geometry mirrors the Rapier
+physics world 1:1 in this game, `src/webgpu/occlusion.js` approximates
+per-particle occlusion with a `world.castRay()` from the camera eye to each
+particle each frame — if a solid (non-sensor) collider blocks the ray first,
+the particle is hidden. This is coarser than a real per-pixel depth test (a
+particle is either fully visible or fully hidden, never partially clipped) but
+satisfies the same practical goal for billboard particles. Raycasts are capped
+at `OCCLUSION_RAYCAST_BUDGET` (512) per frame, prioritizing the particles
+nearest the camera when the active count exceeds that.
 
 ### CPU/GPU consistency
 
@@ -73,6 +104,7 @@ See also: `docs/backups/unused-game-modules/misc/webgpu-evaluation.md` for the o
 4. Confirm console: `[WebGPU] Particle backend ready (8192 slots)`
 5. Open FPS overlay (`?perf=1`, press F2) — aim for ~60 FPS with thousands of visible particles
 6. Remove `webgpuParticles` — game should behave as before (CPU path)
+7. Add `&webgpuDepthTest=1`, emit particles behind a wall/platform (e.g. fire a missile into a solid surface) — sparks on the far side of the surface from the camera should disappear instead of drawing through it
 
 ## Does not block boot
 

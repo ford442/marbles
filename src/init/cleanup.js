@@ -34,6 +34,7 @@ export class InitCleanup {
         this.trackLodManager?.reset()
         audio?.stopMusic?.()
         audio?.stopAllRolling?.()
+        audio?.clearReverbZones?.()
 
         for (const entity of this.staticEntities) {
             this.scene.remove(entity)

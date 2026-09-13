@@ -101,6 +101,43 @@ test('length(3,4,0) = 5', jsFallback.vec3Length(3, 4, 0), 5);
 test('normalize(3,0,0) = (1,0,0)', jsFallback.vec3Normalize(3, 0, 0), { x: 1, y: 0, z: 0 });
 test('normalize(0,0,0) = (0,0,0)', jsFallback.vec3Normalize(0, 0, 0), { x: 0, y: 0, z: 0 });
 
+// computeDopplerRate
+console.log('\ncomputeDopplerRate');
+// Marble at origin moving toward the camera at (10,0,0): rate > 1 (pitch up).
+test(
+    'approaching source raises rate',
+    jsFallback.computeDopplerRate(5, 0, 0, 10, 0, 0, 0, 0, 0, 20, 0.3) > 1,
+    true
+);
+// Marble moving away from the camera: rate < 1 (pitch down).
+test(
+    'receding source lowers rate',
+    jsFallback.computeDopplerRate(-5, 0, 0, 10, 0, 0, 0, 0, 0, 20, 0.3) < 1,
+    true
+);
+// Stationary source: no shift.
+test('stationary source = 1', jsFallback.computeDopplerRate(0, 0, 0, 10, 0, 0, 0, 0, 0, 20, 0.3), 1);
+// Velocity purely perpendicular to the listener axis: no radial component.
+test(
+    'perpendicular motion = 1',
+    jsFallback.computeDopplerRate(0, 5, 0, 10, 0, 0, 0, 0, 0, 20, 0.3),
+    1
+);
+// Extreme approach speed clamps to 1 + maxShift.
+test(
+    'clamps to +maxShift',
+    jsFallback.computeDopplerRate(1000, 0, 0, 10, 0, 0, 0, 0, 0, 20, 0.3),
+    1.3
+);
+// Extreme recede speed clamps to 1 - maxShift.
+test(
+    'clamps to -maxShift',
+    jsFallback.computeDopplerRate(-1000, 0, 0, 10, 0, 0, 0, 0, 0, 20, 0.3),
+    0.7
+);
+// Degenerate zero-distance case falls back to 1 rather than dividing by zero.
+test('zero distance = 1', jsFallback.computeDopplerRate(5, 0, 0, 0, 0, 0, 0, 0, 0, 20, 0.3), 1);
+
 // applyVelocityDamping
 console.log('\napplyVelocityDamping');
 const dv = jsFallback.applyVelocityDamping(10, 0, 0, 0.5, 0.016, 0);

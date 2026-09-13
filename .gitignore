@@ -31,6 +31,7 @@ __pycache__/
 
 # MarblePhysics WASM module build outputs
 /wasm/build/
+/wasm/build-debug/
 # Runtime artifacts are committed so local unit parity never consumes stale glue.
 !/public/wasm/
 !/public/wasm/marble_physics.js

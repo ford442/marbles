@@ -20,6 +20,7 @@ import {
 } from './audio/procedural-sfx.js';
 import { RollingSoundManager } from './audio/rolling-sound.js';
 import { playSpatialBuffer } from './audio/spatial-audio.js';
+import { ReverbZoneManager } from './audio/reverb-zones.js';
 
 const ABILITY_SOUND_IDS = {
     bomb: 'ability_bomb',
@@ -61,6 +62,7 @@ export class MarbleAudio {
         this._paused = false;
         this._focusActive = false;
         this._savedMasterVolume = null;
+        this.reverbZones = new ReverbZoneManager();
     }
 
     /** @returns {GainNode | null} SFX output bus */
@@ -131,6 +133,12 @@ export class MarbleAudio {
         this.sfxGain.connect(this.masterFilter);
         this.musicGain.connect(this.masterFilter);
 
+        // Parallel wet send for per-zone convolution reverb. The dry path
+        // above (sfxGain -> masterFilter) is untouched; this send starts
+        // silent and is only opened while the listener is inside a zone
+        // with a `reverb` config (see ReverbZoneManager).
+        this.reverbZones.attach(this.ctx, this.sfxGain, this.masterFilter);
+
         this.musicManager = new MusicManager(this.ctx, this.musicGain);
         this.enabled = true;
 
@@ -190,10 +198,11 @@ export class MarbleAudio {
      * @param {number} velocity - Impact velocity (0-20)
      * @param {number} [radius=0.5] - Marble radius (0.3-0.8) - affects pitch
      * @param {string} [id='default'] - Marble identifier for cooldown tracking
+     * @param {number} [dopplerRate=1] - Playback-rate multiplier from relative marble/camera motion
      */
-    playClink(velocity, radius = 0.5, id = 'default') {
+    playClink(velocity, radius = 0.5, id = 'default', dopplerRate = 1) {
         if (!this.enabled || !this.ctx) return;
-        synthesizeClink(this.ctx, this.sfxBus, this.cooldowns, velocity, radius, id);
+        synthesizeClink(this.ctx, this.sfxBus, this.cooldowns, velocity, radius, id, dopplerRate);
     }
 
     /**
@@ -332,8 +341,37 @@ export class MarbleAudio {
     }
 
     /**
+     * Register a spherical convolution-reverb trigger volume. The listener
+     * must be within `radius` of `center` for `config` (decay/wetMix/preDelay)
+     * to apply.
+     * @param {{ x: number, y: number, z: number }} center
+     * @param {number} radius
+     * @param {{ decay: number, wetMix: number, preDelay?: number }} config
+     */
+    registerReverbZone(center, radius, config) {
+        this.reverbZones.registerZone(center, radius, config);
+    }
+
+    /**
+     * Re-evaluate which reverb zone (if any) the listener is inside and
+     * crossfade the wet send accordingly. Call once per frame with the
+     * camera/listener position.
+     * @param {number} x
+     * @param {number} y
+     * @param {number} z
+     */
+    updateReverbZone(x, y, z) {
+        this.reverbZones.update(x, y, z);
+    }
+
+    /** Drop all registered reverb zones (call on level unload). */
+    clearReverbZones() {
+        this.reverbZones.unregisterAll();
+    }
+
+    /**
      * Material-aware collision with pitch variance from sound bank / matrix.
-     * @param {{ velocity: number, radius?: number, marbleMaterial?: string, surfaceMaterial?: string, id?: string, position?: { x: number, y: number, z: number } | null }} options
+     * @param {{ velocity: number, radius?: number, marbleMaterial?: string, surfaceMaterial?: string, id?: string, position?: { x: number, y: number, z: number } | null, dopplerRate?: number }} options
      */
     playCollision({
         velocity,
@@ -342,6 +380,7 @@ export class MarbleAudio {
         surfaceMaterial = 'wood',
         id = 'collision',
         position = null,
+        dopplerRate = 1,
     }) {
         if (!this.enabled || !this.ctx || this.muted) return;
 
@@ -366,9 +405,10 @@ export class MarbleAudio {
                 position,
                 maxDistance: props.maxDistance,
                 id,
+                dopplerRate,
             });
         } else {
-            this._playSurfaceHitInternal(velocity, radius, profile, id, pitch * props.volume);
+            this._playSurfaceHitInternal(velocity, radius, profile, id, pitch * props.volume, dopplerRate);
         }
 
         this.cooldowns.set(id, now);
@@ -469,12 +509,13 @@ export class MarbleAudio {
      * @param {string} surfaceMaterial
      * @param {string} id
      * @param {number} [volumeScale=1]
+     * @param {number} [dopplerRate=1]
      */
-    _playSurfaceHitInternal(velocity, radius, surfaceMaterial, id, volumeScale = 1) {
+    _playSurfaceHitInternal(velocity, radius, surfaceMaterial, id, volumeScale = 1, dopplerRate = 1) {
         const token = { id };
         if (!this.voicePool.tryAcquire(token)) return;
         try {
-            this._synthesizeSurfaceHit(velocity, radius, surfaceMaterial, volumeScale);
+            this._synthesizeSurfaceHit(velocity, radius, surfaceMaterial, volumeScale, dopplerRate);
         } finally {
             setTimeout(() => this.voicePool.release(token), 350);
         }
@@ -486,8 +527,9 @@ export class MarbleAudio {
      * @param {number} [radius=0.5] - Marble radius (affects pitch)
      * @param {string} [surfaceMaterial='wood'] - 'wood', 'metal', 'concrete', 'glass'
      * @param {string} [id='surface'] - Collision ID for cooldown
+     * @param {number} [dopplerRate=1] - Playback-rate multiplier from relative marble/camera motion
      */
-    playSurfaceHit(velocity, radius = 0.5, surfaceMaterial = 'wood', id = 'surface') {
+    playSurfaceHit(velocity, radius = 0.5, surfaceMaterial = 'wood', id = 'surface', dopplerRate = 1) {
         if (this.soundDefs) {
             this.playCollision({
                 velocity,
@@ -495,15 +537,16 @@ export class MarbleAudio {
                 marbleMaterial: 'glass',
                 surfaceMaterial,
                 id,
+                dopplerRate,
             });
             return;
         }
-        this._playSurfaceHitInternal(velocity, radius, surfaceMaterial, id);
+        this._playSurfaceHitInternal(velocity, radius, surfaceMaterial, id, 1, dopplerRate);
     }
 
-    _synthesizeSurfaceHit(velocity, radius, surfaceMaterial, volumeScale = 1) {
+    _synthesizeSurfaceHit(velocity, radius, surfaceMaterial, volumeScale = 1, dopplerRate = 1) {
         if (!this.enabled || !this.ctx || this.muted) return;
-        synthesizeSurfaceHit(this.ctx, this.sfxBus, velocity, radius, surfaceMaterial, volumeScale);
+        synthesizeSurfaceHit(this.ctx, this.sfxBus, velocity, radius, surfaceMaterial, volumeScale, dopplerRate);
     }
 
     /**
@@ -522,9 +565,10 @@ export class MarbleAudio {
      * @param {string} id - Marble identifier
      * @param {number} velocity - Current velocity
      * @param {number} [angularVel=0] - Angular velocity (for texture variation)
+     * @param {number} [dopplerRate=1] - Playback-rate multiplier from relative marble/camera motion
      */
-    updateRolling(id, velocity, angularVel = 0) {
-        this.rollingManager.updateRolling(this.ctx, id, velocity, angularVel);
+    updateRolling(id, velocity, angularVel = 0, dopplerRate = 1) {
+        this.rollingManager.updateRolling(this.ctx, id, velocity, angularVel, dopplerRate);
     }
 
     /**

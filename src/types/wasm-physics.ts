@@ -7,6 +7,19 @@ export interface MarblePhysicsApi {
     vec3Dot(ax: number, ay: number, az: number, bx: number, by: number, bz: number): number;
     vec3Length(x: number, y: number, z: number): number;
     vec3Normalize(x: number, y: number, z: number): Vec3;
+    computeDopplerRate(
+        vx: number,
+        vy: number,
+        vz: number,
+        camX: number,
+        camY: number,
+        camZ: number,
+        marbleX: number,
+        marbleY: number,
+        marbleZ: number,
+        speedOfSound: number,
+        maxShift: number,
+    ): number;
     applyVelocityDamping(
         vx: number,
         vy: number,
@@ -239,6 +252,19 @@ export interface MarblePhysicsWasmModule {
     vec3Dot(ax: number, ay: number, az: number, bx: number, by: number, bz: number): number;
     vec3Length(x: number, y: number, z: number): number;
     vec3Normalize(x: number, y: number, z: number): Vec3;
+    computeDopplerRate(
+        vx: number,
+        vy: number,
+        vz: number,
+        camX: number,
+        camY: number,
+        camZ: number,
+        marbleX: number,
+        marbleY: number,
+        marbleZ: number,
+        speedOfSound: number,
+        maxShift: number,
+    ): number;
     applyVelocityDamping(
         vx: number,
         vy: number,

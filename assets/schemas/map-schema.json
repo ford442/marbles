@@ -270,6 +270,17 @@
         "checkpoint": {
           "type": "integer",
           "description": "Checkpoint id when type is checkpoint"
+        },
+        "reverb": {
+          "type": "object",
+          "description": "Convolution reverb applied while the listener is within `radius` of this zone's pos",
+          "required": ["decay", "wetMix"],
+          "properties": {
+            "decay": { "type": "number", "minimum": 0.1, "maximum": 8, "description": "Reverb tail length in seconds" },
+            "wetMix": { "type": "number", "minimum": 0, "maximum": 1, "description": "Wet-signal gain, 0 = dry, 1 = fully wet" },
+            "preDelay": { "type": "number", "minimum": 0, "maximum": 0.5, "description": "Silence before the tail starts, in seconds" },
+            "radius": { "type": "number", "minimum": 0, "description": "Trigger radius around pos (default 20)" }
+          }
         }
       }
     }

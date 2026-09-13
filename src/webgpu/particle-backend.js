@@ -3,11 +3,13 @@
  * Opt-in via ?webgpuParticles=1; CPU ParticleSystem remains the fallback.
  */
 
+import RAPIER from '@dimforge/rapier3d-compat';
 import integrateShader from './shaders/particle-integrate.wgsl?raw';
 import renderShader from './shaders/particle-render.wgsl?raw';
-import { WEBGPU_PARTICLE_CAP } from './detect.js';
+import { WEBGPU_PARTICLE_CAP, isWebGPUDepthTestRequested } from './detect.js';
 import { buildViewProjection } from './camera-math.js';
 import { packParticle, PARTICLE_STRIDE } from './particle-data.js';
+import { updateParticleOcclusion } from './occlusion.js';
 
 export { packParticle, PARTICLE_STRIDE } from './particle-data.js';
 
@@ -24,6 +26,8 @@ export class WebGPUParticleBackend {
         this.stats = { activeCount: 0, backend: 'webgpu' };
         this._dirtyIndices = new Set();
         this._cpuScratch = new Float32Array(this.maxParticles * 16);
+        this._depthTestEnabled = isWebGPUDepthTestRequested();
+        this._occlusionScratch = new Float32Array(this.maxParticles).fill(1);
         this._readbackPending = false;
         this._pendingDispose = false;
         this._resizePending = false;
@@ -95,6 +99,15 @@ export class WebGPUParticleBackend {
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
 
+        // Per-particle visibility against Filament scene geometry (see occlusion.js
+        // for why this is a physics raycast rather than a shared GPU depth buffer).
+        // Defaults to all-visible; only written to when ?webgpuDepthTest=1.
+        this.occlusionBuffer = this.device.createBuffer({
+            size: this.maxParticles * 4,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        });
+        this.device.queue.writeBuffer(this.occlusionBuffer, 0, this._occlusionScratch);
+
         const computeModule = this.device.createShaderModule({ code: integrateShader });
         this.computePipeline = this.device.createComputePipeline({
             layout: 'auto',
@@ -141,6 +154,7 @@ export class WebGPUParticleBackend {
             entries: [
                 { binding: 0, resource: { buffer: this.particleBuffer } },
                 { binding: 1, resource: { buffer: this.cameraBuffer } },
+                { binding: 2, resource: { buffer: this.occlusionBuffer } },
             ],
         });
 
@@ -304,6 +318,30 @@ export class WebGPUParticleBackend {
     }
 
     /**
+     * Recomputes per-particle scene occlusion via physics raycast (opt-in, see occlusion.js).
+     * No-op when ?webgpuDepthTest=1 wasn't requested — the occlusion buffer stays all-visible.
+     * @param {{ eye: number[] } | null} cameraState
+     */
+    updateOcclusion(cameraState) {
+        if (!this.ready || !this._depthTestEnabled) return;
+        const world = this.game.world;
+        const eye = cameraState?.eye;
+        if (!world || !eye) return;
+
+        updateParticleOcclusion(
+            (ox, oy, oz, dx, dy, dz, maxToi) => {
+                const ray = new RAPIER.Ray({ x: ox, y: oy, z: oz }, { x: dx, y: dy, z: dz });
+                const hit = world.castRay(ray, maxToi, true);
+                return !!hit && !hit.collider.isSensor();
+            },
+            eye,
+            this.particleSystem.activeParticles,
+            this._occlusionScratch
+        );
+        this.device.queue.writeBuffer(this.occlusionBuffer, 0, this._occlusionScratch);
+    }
+
+    /**
      * @param {{ eye: number[], target: number[] } | null} cameraState
      * @param {number} fovDeg
      * @param {number} aspect
@@ -311,6 +349,7 @@ export class WebGPUParticleBackend {
     render(cameraState, fovDeg, aspect) {
         if (!this.ready || !cameraState) return;
 
+        this.updateOcclusion(cameraState);
         this._resize();
         const viewProj = buildViewProjection(cameraState, fovDeg, aspect);
         const camData = new ArrayBuffer(96);
@@ -367,6 +406,7 @@ export class WebGPUParticleBackend {
         try { this.readbackBuffer?.destroy(); } catch {}
         try { this.simParamsBuffer?.destroy(); } catch {}
         try { this.cameraBuffer?.destroy(); } catch {}
+        try { this.occlusionBuffer?.destroy(); } catch {}
         try { this.device?.destroy(); } catch {}
         this.device = null;
     }

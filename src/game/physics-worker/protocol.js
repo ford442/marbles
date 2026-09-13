@@ -129,6 +129,34 @@ export function readBodyTransform(u32, f32, slot, bodyIndex) {
 }
 
 /**
+ * Blends two body transforms for render-time interpolation between physics
+ * ticks. Rotation uses nlerp (shortest-path lerp + renormalize) rather than
+ * full slerp — cheap, and accurate enough given how small the angular delta
+ * between consecutive ticks is.
+ * @param {{x:number,y:number,z:number,qx:number,qy:number,qz:number,qw:number}} prev
+ * @param {{x:number,y:number,z:number,qx:number,qy:number,qz:number,qw:number}} curr
+ * @param {number} alpha
+ */
+export function lerpBodyTransform(prev, curr, alpha) {
+    const t = alpha < 0 ? 0 : alpha > 1 ? 1 : alpha;
+    const x = prev.x + (curr.x - prev.x) * t;
+    const y = prev.y + (curr.y - prev.y) * t;
+    const z = prev.z + (curr.z - prev.z) * t;
+
+    let cx = curr.qx, cy = curr.qy, cz = curr.qz, cw = curr.qw;
+    const dot = prev.qx * cx + prev.qy * cy + prev.qz * cz + prev.qw * cw;
+    if (dot < 0) { cx = -cx; cy = -cy; cz = -cz; cw = -cw; }
+
+    const qx = prev.qx + (cx - prev.qx) * t;
+    const qy = prev.qy + (cy - prev.qy) * t;
+    const qz = prev.qz + (cz - prev.qz) * t;
+    const qw = prev.qw + (cw - prev.qw) * t;
+    const len = Math.sqrt(qx * qx + qy * qy + qz * qz + qw * qw) || 1;
+
+    return { x, y, z, qx: qx / len, qy: qy / len, qz: qz / len, qw: qw / len };
+}
+
+/**
  * @param {Uint32Array} cmdU32
  * @param {Float32Array} cmdF32
  * @param {number} op

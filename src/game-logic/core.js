@@ -1,5 +1,6 @@
 import { audio } from '../audio.js';
 import { getLevel } from '../levels/catalog.js';
+import { computeMarbleDopplerRate } from '../game/systems/marble-registry.js';
 
 export class GameLogicCore {
     checkGameLogic() {
@@ -216,7 +217,7 @@ export class GameLogicCore {
                 const radius = this.playerMarble.scale * 0.5 || 0.5
                 if (audio.startRolling && audio.updateRolling) {
                     audio.startRolling('wallride', radius, 'concrete')
-                    audio.updateRolling('wallride', horizSpeed, 0)
+                    audio.updateRolling('wallride', horizSpeed, 0, computeMarbleDopplerRate(this, rb))
                 }
             } else {
                 if (this.isWallRiding) {
@@ -239,7 +240,7 @@ export class GameLogicCore {
 
                     if (audio && audio.playClink) {
                         const radius = this.playerMarble.scale * 0.5 || 0.5
-                        audio.playClink(horizSpeed, radius, `bounce-${this.currentMarbleIndex}`)
+                        audio.playClink(horizSpeed, radius, `bounce-${this.currentMarbleIndex}`, computeMarbleDopplerRate(this, rb))
                     }
                 }
             }
@@ -408,8 +409,8 @@ export class GameLogicCore {
 
                         const playerRadius = this.playerMarble.scale * 0.5 || 0.5
                         const otherRadius = other.scale * 0.5 || 0.5
-                        audio.playClink(relSpeed, playerRadius, `player-${this.currentMarbleIndex}`)
-                        audio.playClink(relSpeed * 0.7, otherRadius, `other-${this.marbles.indexOf(other)}`)
+                        audio.playClink(relSpeed, playerRadius, `player-${this.currentMarbleIndex}`, computeMarbleDopplerRate(this, this.playerMarble.rigidBody))
+                        audio.playClink(relSpeed * 0.7, otherRadius, `other-${this.marbles.indexOf(other)}`, computeMarbleDopplerRate(this, other.rigidBody))
 
                         const nx = dx / dist
                         const ny = dy / dist
