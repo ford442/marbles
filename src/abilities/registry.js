@@ -181,8 +181,8 @@ export const ABILITY_REGISTRY = {
 /** All registered ability ids (default: all enabled). */
 export const ALL_ABILITY_IDS = /** @type {AbilityId[]} */ (Object.keys(ABILITY_REGISTRY));
 
-/** Input bitfields reserve bits 8–15 for registry abilities. */
-export const MAX_NETWORKED_ABILITY_IDS = 8;
+/** Input bitfields reserve bits 8 .. 7+MAX for registry abilities. */
+export const MAX_NETWORKED_ABILITY_IDS = 16;
 
 /**
  * @param {string} id

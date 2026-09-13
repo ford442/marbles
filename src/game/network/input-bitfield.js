@@ -9,7 +9,10 @@ export const MOVEMENT_KEY_CODES = [
     'KeyW', 'KeyS', 'KeyA', 'KeyD',
 ];
 
-const ABILITY_BIT_OFFSET = 8;
+export const MOVEMENT_BITS = 8;
+export const ABILITY_BIT_OFFSET = MOVEMENT_BITS;
+export const CHARGE_BIT = ABILITY_BIT_OFFSET + MAX_NETWORKED_ABILITY_IDS;
+export const GRAPPLE_BIT = CHARGE_BIT + 1;
 
 /**
  * @param {object} game
@@ -34,10 +37,10 @@ export function encodeInputSnapshot(game) {
     }
 
     if (game.charging || game.isChargingJump) {
-        bits |= 1 << 16;
+        bits |= 1 << CHARGE_BIT;
     }
     if (game.isGrappling) {
-        bits |= 1 << 17;
+        bits |= 1 << GRAPPLE_BIT;
     }
 
     const yawDeg = ((game.aimYaw || 0) * 180) / Math.PI;
@@ -56,6 +59,17 @@ export function encodeInputSnapshot(game) {
  */
 export function decodeMovementBits(bits) {
     return MOVEMENT_KEY_CODES.map((_, i) => Boolean(bits & (1 << i)));
+}
+
+/**
+ * @param {number} bits
+ * @returns {{ charging: boolean, isGrappling: boolean }}
+ */
+export function decodeStatusBits(bits) {
+    return {
+        charging: Boolean(bits & (1 << CHARGE_BIT)),
+        isGrappling: Boolean(bits & (1 << GRAPPLE_BIT)),
+    };
 }
 
 /**

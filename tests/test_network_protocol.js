@@ -14,6 +14,7 @@ import {
     encodeInputSnapshot,
     decodeMovementBits,
     decodeAbilityBits,
+    decodeStatusBits,
     decodeYaw,
     decodePitch,
     normalizeInputSnapshot,
