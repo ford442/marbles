@@ -12,7 +12,8 @@ const premiumMarbles = [
     { name: "Quantum Core", color: [0.1, 0.8, 1.0], offset: { x: 0.0, y: 5, z: 25 }, radius: 0.8, density: 10.0, restitution: 1.5, gravityScale: 1.0, friction: 0.0, clearCoat: 1.0, clearCoatRoughness: 0.0, materialType: "glass", emissive: true, lightIntensity: 75000.0, lightColor: [0.0, 1.0, 0.8] },
     { name: "Luminous Titan", color: [0.0, 1.0, 0.8], offset: { x: 0.0, y: 5, z: 30 }, radius: 1.5, density: 400.0, friction: 0.0, restitution: 2.0, gravityScale: 1.0, clearCoat: 1.0, clearCoatRoughness: 0.0, materialType: "glass", emissive: true, lightIntensity: 150000.0, lightColor: [0.0, 1.0, 0.8] },
     { name: "Ethereal Phantom", color: [0.0, 1.0, 0.8], offset: { x: 0.0, y: 5, z: 35 }, radius: 1.5, density: 500.0, friction: 0.0, restitution: 1.9, gravityScale: 1.5, clearCoat: 1.0, clearCoatRoughness: 0.0, materialType: "glass", emissive: true, lightIntensity: 200000.0, lightColor: [0.0, 1.0, 0.8] },
-    { name: "Solar Flare", color: [1.0, 0.3, 0.0], offset: { x: 0.0, y: 5, z: 40 }, radius: 1.0, density: 100.0, friction: 0.0, restitution: 1.8, gravityScale: 1.2, clearCoat: 1.0, clearCoatRoughness: 0.0, materialType: "glass", emissive: true, lightIntensity: 100000.0, lightColor: [1.0, 0.4, 0.1] }
+    { name: "Solar Flare", color: [1.0, 0.3, 0.0], offset: { x: 0.0, y: 5, z: 40 }, radius: 1.0, density: 100.0, friction: 0.0, restitution: 1.8, gravityScale: 1.2, clearCoat: 1.0, clearCoatRoughness: 0.0, materialType: "glass", emissive: true, lightIntensity: 100000.0, lightColor: [1.0, 0.4, 0.1] },
+    { name: "Aegis Core", color: [0.8, 0.2, 1.0], offset: { x: 0.0, y: 5, z: 45 }, radius: 1.2, density: 200.0, friction: 0.0, restitution: 1.9, clearCoat: 1.0, clearCoatRoughness: 0.0, materialType: "glass", emissive: true, lightIntensity: 150000.0, lightColor: [1.0, 0.5, 1.0] }
 ];
 
 export const marblesInfo = [

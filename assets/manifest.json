@@ -167,6 +167,10 @@
     "solar_flare": {
       "file": "marbles/solar_flare.json",
       "rarity": "legendary"
+    },
+    "aegis_core": {
+      "file": "marbles/aegis_core.json",
+      "rarity": "legendary"
     }
   },
   "sounds": {
