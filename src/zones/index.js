@@ -63,3 +63,4 @@ export { createZenGardenZone } from './zen-garden.js';
 export { createInfernoChamberZone } from './inferno-chamber.js';
 export { createAstralCascadeZone } from './astral-cascade.js';
 export { createNeonVortexZone } from './neon-vortex.js';
+export { createNeonDriftZone } from './neon-drift.js';

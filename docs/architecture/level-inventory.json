@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-09-05T11:34:35.747Z",
+  "generated_at": "2026-09-12T09:21:33.966Z",
   "counts": {
     "manifest": 24,
-    "dev_levels": 58,
+    "dev_levels": 59,
     "map_files": 28,
-    "unique_ids": 82,
+    "unique_ids": 83,
     "json_only": 20,
-    "code_only": 54,
+    "code_only": 55,
     "dual": 4,
     "orphan_json": 0,
     "archived_json": 4
@@ -578,6 +578,20 @@
     },
     {
       "id": "neon_dash",
+      "source": "code",
+      "in_manifest": false,
+      "in_dev_levels": true,
+      "on_disk": false,
+      "chapter": "neon",
+      "chapter_source": "heuristic:neon",
+      "zone_types": "(dev inline)",
+      "unknown_zones": "",
+      "migration_status": "dev-only",
+      "archive_reason": "",
+      "difficulty": ""
+    },
+    {
+      "id": "neon_drift_run",
       "source": "code",
       "in_manifest": false,
       "in_dev_levels": true,
