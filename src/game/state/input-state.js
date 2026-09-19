@@ -30,5 +30,11 @@ export function createInputState() {
         isChargingDash: false,
         dashCharge: 0,
         maxDashCharge: 1.0,
+        isChargingStomp: false,
+        stompChargeTime: 0,
+        stompStartAltitude: 0,
+        stompOldGravity: 1.0,
+        stompOldColor: null,
+        stompReleaseTime: 0,
     };
 }

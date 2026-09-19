@@ -69,6 +69,15 @@ export const ABILITY_REGISTRY = {
         input: { defaultCode: 'Space', trigger: 'charge', settingsKey: 'jump' },
         hudSlot: { barKey: 'jumpBarEl', mode: 'charge' },
     },
+    stomp: {
+        id: 'stomp',
+        name: 'Stomp',
+        category: 'movement',
+        cooldownMs: 2000,
+        lastUseKey: 'lastStompTime',
+        cooldownKey: 'stompCooldown',
+        input: { defaultCode: 'KeyZ', trigger: 'charge', settingsKey: 'stomp' },
+    },
     bomb: {
         id: 'bomb',
         name: 'Bomb',
