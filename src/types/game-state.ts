@@ -273,6 +273,12 @@ export interface InputState {
     isChargingDash: boolean;
     dashCharge: number;
     maxDashCharge: number;
+    isChargingStomp: boolean;
+    stompChargeTime: number;
+    stompStartAltitude: number;
+    stompOldGravity: number;
+    stompOldColor: number[] | null;
+    stompReleaseTime: number;
 }
 
 /** Score, combo, and HUD DOM references. */
