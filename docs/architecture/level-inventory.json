@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-09-12T09:21:33.966Z",
+  "generated_at": "2026-09-19T09:36:30.223Z",
   "counts": {
     "manifest": 24,
-    "dev_levels": 59,
+    "dev_levels": 60,
     "map_files": 28,
-    "unique_ids": 83,
+    "unique_ids": 84,
     "json_only": 20,
-    "code_only": 55,
+    "code_only": 56,
     "dual": 4,
     "orphan_json": 0,
     "archived_json": 4
@@ -186,6 +186,20 @@
     },
     {
       "id": "cyber_ice_track_run",
+      "source": "code",
+      "in_manifest": false,
+      "in_dev_levels": true,
+      "on_disk": false,
+      "chapter": "neon",
+      "chapter_source": "heuristic:neon",
+      "zone_types": "(dev inline)",
+      "unknown_zones": "",
+      "migration_status": "dev-only",
+      "archive_reason": "",
+      "difficulty": ""
+    },
+    {
+      "id": "cyber_matrix_run",
       "source": "code",
       "in_manifest": false,
       "in_dev_levels": true,
