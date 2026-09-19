@@ -267,11 +267,15 @@ function testClinkPitchTracksSpeed() {
     const outputNode = { connect() {} };
 
     const slowCtx = makeSynthMockContext();
-    synthesizeClink(slowCtx, outputNode, new Map(), 1.01, 0.5, 'slow');
+    const cooldowns = new Map();
+    cooldowns.set('slow', -1000);
+    cooldowns.set('fast', -1000);
+
+    synthesizeClink(slowCtx, outputNode, cooldowns, 1, 0.5, 'slow');
     const slowFundamental = slowCtx._oscillators[0].frequency.value;
 
     const fastCtx = makeSynthMockContext();
-    synthesizeClink(fastCtx, outputNode, new Map(), 20, 0.5, 'fast');
+    synthesizeClink(fastCtx, outputNode, cooldowns, 20, 0.5, 'fast');
     const fastFundamental = fastCtx._oscillators[0].frequency.value;
 
     assert.ok(

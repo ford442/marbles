@@ -86,7 +86,8 @@ export const marblesInfo = [
     { name: "Celestial Singularity", color: [0.8, 0.1, 0.9], offset: { x: 42.0, y: 5, z: 0 }, radius: 2.5, density: 1000.0, friction: 0.0, restitution: 3.5, clearCoat: 1.0, clearCoatRoughness: 0.0, emissive: true, lightIntensity: 300000.0, lightColor: [0.8, 0.1, 0.9], materialType: "glass" },
     { name: "Astral Behemoth", color: [1.0, 0.8, 0.2], offset: { x: 44.0, y: 5, z: 0 }, radius: 1.8, density: 400.0, friction: 0.0, restitution: 2.8, clearCoat: 1.0, clearCoatRoughness: 0.0, emissive: true, lightIntensity: 250000.0, lightColor: [1.0, 0.8, 0.2], materialType: "glass" },
     { name: "Aetherium Catalyst", color: [0.3, 1.0, 0.8], offset: { x: 46.0, y: 5, z: 0 }, radius: 1.2, density: 200.0, friction: 0.0, restitution: 3.5, clearCoat: 1.0, clearCoatRoughness: 0.0, emissive: true, lightIntensity: 180000.0, lightColor: [0.3, 1.0, 0.8], materialType: "glass" },
-    { name: "Vortex Annihilator", color: [0.9, 0.0, 1.0], offset: { x: 48.0, y: 5, z: 0 }, radius: 1.2, density: 1000.0, friction: 0.0, restitution: 4.0, gravityScale: 1.5, clearCoat: 1.0, clearCoatRoughness: 0.0, materialType: "glass", emissive: true, lightIntensity: 250000.0, lightColor: [0.8, 0.0, 1.0] }
+    { name: "Vortex Annihilator", color: [0.9, 0.0, 1.0], offset: { x: 48.0, y: 5, z: 0 }, radius: 1.2, density: 1000.0, friction: 0.0, restitution: 4.0, gravityScale: 1.5, clearCoat: 1.0, clearCoatRoughness: 0.0, materialType: "glass", emissive: true, lightIntensity: 250000.0, lightColor: [0.8, 0.0, 1.0] },
+    { name: "Astro Smasher", color: [1.0, 0.2, 0.2], offset: { x: 50.0, y: 5, z: 0 }, radius: 1.5, density: 5000.0, friction: 0.0, restitution: 2.0, clearCoat: 1.0, clearCoatRoughness: 0.05, thickness: 1.2, materialType: "glass", emissive: true, lightIntensity: 350000.0, lightColor: [1.0, 0.2, 0.2] }
 ];
 
 /** Append manifest marbles that are not already represented in the hard-coded roster. */
