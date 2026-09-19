@@ -20,7 +20,7 @@ export function synthesizeClink(ctx, outputNode, cooldowns, velocity, radius = 0
 
     // Cooldown to prevent audio spam (max 1 clink per 100ms per marble)
     const now = performance.now();
-    const lastPlayed = cooldowns.get(id) || 0;
+    const lastPlayed = cooldowns.get(id) ?? -1000;
     if (now - lastPlayed < 100) return;
     cooldowns.set(id, now);
 

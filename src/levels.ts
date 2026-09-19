@@ -8,6 +8,21 @@ import type { RuntimeLevel } from './types/map.ts';
 
 /** Code-only levels (experimental / not yet migrated to JSON). Shown when `?devLevels=1`. */
 export const DEV_LEVELS: Record<string, any> = {
+    cyber_matrix_run: {
+        name: 'Cyber Matrix',
+        description: 'Navigate the digital ice track and avoid the data packets!',
+        zones: [
+            { type: 'cyber_matrix', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: -2, z: 90 } }
+        ],
+        spawn: { x: 0, y: 5, z: -5 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [85, 95], y: [-15, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.0, 0.05, 0.0, 1.0]
+    },
     neon_drift_run: {
         name: 'Neon Drift',
         description: 'Drift along the icy cyan track and conquer the moving platforms!',
