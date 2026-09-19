@@ -244,7 +244,7 @@ function testSurfaceHitPitchTracksSpeed() {
     const outputNode = { connect() {} };
 
     const slowCtx = makeSynthMockContext();
-    synthesizeSurfaceHit(slowCtx, outputNode, 1, 0.5, 'metal', 1);
+    synthesizeSurfaceHit(slowCtx, outputNode, 1.1, 0.5, 'metal', 1);
     const slowFundamental = slowCtx._oscillators[0].frequency.value;
 
     const fastCtx = makeSynthMockContext();
@@ -258,7 +258,7 @@ function testSurfaceHitPitchTracksSpeed() {
 
     // Doppler rate is an additional multiplier on top of the speed-pitch effect.
     const dopplerCtx = makeSynthMockContext();
-    synthesizeSurfaceHit(dopplerCtx, outputNode, 1, 0.5, 'metal', 1, 1.3);
+    synthesizeSurfaceHit(dopplerCtx, outputNode, 1.1, 0.5, 'metal', 1, 1.3);
     const dopplerFundamental = dopplerCtx._oscillators[0].frequency.value;
     assert.ok(Math.abs(dopplerFundamental - slowFundamental * 1.3) < 1e-6);
 }
