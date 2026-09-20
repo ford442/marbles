@@ -16,8 +16,10 @@ from storage.services.marbles import (
     merge_campaign_save,
     merge_level_progress,
     validate_replay_blob,
+    validate_workshop_map_json,
 )
 from fastapi import HTTPException
+import json
 
 
 def _minimal_replay_blob(level_id: str = "tutorial") -> str:
@@ -82,6 +84,29 @@ class TestReplayValidation(unittest.TestCase):
         with self.assertRaises(HTTPException) as ctx:
             validate_replay_blob(blob, "tutorial")
         self.assertEqual(ctx.exception.status_code, 400)
+
+
+class TestWorkshopValidation(unittest.TestCase):
+    def test_accepts_valid_map_json(self):
+        map_json = json.dumps({"id": "my_map", "name": "My Map", "zones": [], "spawn": {"x": 0, "y": 0, "z": 0}})
+        data = validate_workshop_map_json(map_json)
+        self.assertEqual(data["id"], "my_map")
+
+    def test_rejects_invalid_json(self):
+        with self.assertRaises(HTTPException) as ctx:
+            validate_workshop_map_json("not json")
+        self.assertEqual(ctx.exception.status_code, 400)
+
+    def test_rejects_missing_zones_or_spawn(self):
+        with self.assertRaises(HTTPException) as ctx:
+            validate_workshop_map_json(json.dumps({"id": "x"}))
+        self.assertEqual(ctx.exception.status_code, 400)
+
+    def test_rejects_oversized_payload(self):
+        huge = json.dumps({"zones": ["x" * 3_000_000], "spawn": {}})
+        with self.assertRaises(HTTPException) as ctx:
+            validate_workshop_map_json(huge)
+        self.assertEqual(ctx.exception.status_code, 413)
 
 
 if __name__ == "__main__":

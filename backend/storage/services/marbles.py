@@ -1,11 +1,12 @@
 # Marbles cloud save / ghost / leaderboard GCS operations
 import base64
+import json
 import uuid
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
 
-from ..config import MARBLES_GHOST_MAX_BYTES, STORAGE_MAP
+from ..config import MARBLES_GHOST_MAX_BYTES, MARBLES_WORKSHOP_MAX_BYTES, STORAGE_MAP
 from ..io import run_io, _read_json_sync, _write_json_sync, INDEX_LOCK
 from ..models_marbles import CampaignSavePayload, GhostUploadPayload, LeaderboardEntry
 
@@ -32,6 +33,11 @@ def _ghost_meta_path(ghost_id: str) -> str:
 
 def _leaderboard_path(level_id: str) -> str:
     folder = STORAGE_MAP["marbles_board"]["folder"]
+    return f"{folder}{level_id}.json"
+
+
+def _workshop_path(level_id: str) -> str:
+    folder = STORAGE_MAP["marbles_workshop"]["folder"]
     return f"{folder}{level_id}.json"
 
 
@@ -223,6 +229,58 @@ async def get_ghost(ghost_id: str) -> dict:
     result = await run_io(_read)
     if not result:
         raise HTTPException(status_code=404, detail="Ghost not found")
+    return result
+
+
+def validate_workshop_map_json(map_json: str) -> dict:
+    """Cheap sanity check before persisting a published community level.
+
+    This intentionally does not run the full JSON-schema validation the
+    editor already ran client-side — just enough to reject garbage/oversized
+    payloads before they hit storage.
+    """
+    if len(map_json.encode("utf-8")) > MARBLES_WORKSHOP_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Workshop level exceeds size cap")
+
+    try:
+        data = json.loads(map_json)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid map JSON") from exc
+
+    if not isinstance(data, dict) or "zones" not in data or "spawn" not in data:
+        raise HTTPException(status_code=400, detail="Map JSON missing zones/spawn")
+
+    return data
+
+
+async def publish_workshop_level(user_id: str, map_json: str) -> dict:
+    data = validate_workshop_map_json(map_json)
+    level_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    record = {
+        "id": level_id,
+        "userId": user_id,
+        "name": str(data.get("name") or "Untitled Level")[:64],
+        "mapJson": map_json,
+        "publishedAt": now,
+    }
+
+    async with INDEX_LOCK:
+        def _store():
+            _write_json_sync(_workshop_path(level_id), record)
+            return record
+
+        return await run_io(_store)
+
+
+async def get_workshop_level(level_id: str) -> dict:
+    def _read():
+        data = _read_json_sync(_workshop_path(level_id))
+        return data if isinstance(data, dict) else None
+
+    result = await run_io(_read)
+    if not result:
+        raise HTTPException(status_code=404, detail="Workshop level not found")
     return result
 
 

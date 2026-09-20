@@ -17,7 +17,7 @@ import {
     cmdPlaceZone,
     cmdRotateZones,
 } from '../src/editor/map-commands.js';
-import { validateMap } from '../src/editor/map-validator.js';
+import { validateMap, collectWarnings } from '../src/editor/map-validator.js';
 import { createZoneFromStamp, STAMP_BY_ID } from '../src/editor/stamps.js';
 import { mapDefToLevel } from '../src/editor/map-document.js';
 import { roundTripSession } from '../src/editor/editor-session.js';
@@ -177,6 +177,31 @@ function testPlaytestSessionRoundTrip() {
     assert.equal(restored.camera.mode, 'topdown');
 }
 
+function testValidatorWarnsOnUnknownZoneType() {
+    const map = createEmptyMap();
+    map.zones.push({ type: 'not_a_real_zone_type', pos: { x: 0, y: 0, z: 0 } });
+    syncGoalsFromZones(map);
+    const payload = serializeMap(map);
+
+    const result = validateMap(payload);
+    assert.equal(result.valid, true, 'unknown zone type should not fail schema validation');
+    assert.ok(result.warnings.some((w) => w.includes('not_a_real_zone_type')));
+}
+
+function testValidatorWarnsOnModelZoneMissingModelRef() {
+    const map = createEmptyMap();
+    map.zones.push({ type: 'model', pos: { x: 0, y: 0, z: 0 } });
+    const warnings = collectWarnings(serializeMap(map));
+    assert.ok(warnings.some((w) => w.includes('no "model" reference')));
+}
+
+function testValidatorNoWarningsOnCleanMap() {
+    const map = createEmptyMap();
+    syncGoalsFromZones(map);
+    const result = validateMap(serializeMap(map));
+    assert.equal(result.warnings.length, 0);
+}
+
 function testWorkshopAssetPaths() {
     const map = createEmptyMap();
     map.zones.push(createZoneFromStamp(STAMP_BY_ID.model_neon_showcase, { x: 0, y: 0, z: 0 }));
@@ -196,4 +221,7 @@ testSchemaRoundTripV2Stamps();
 testSnapHelpers();
 testPlaytestSessionRoundTrip();
 testWorkshopAssetPaths();
+testValidatorWarnsOnUnknownZoneType();
+testValidatorWarnsOnModelZoneMissingModelRef();
+testValidatorNoWarningsOnCleanMap();
 console.log('Map editor tests passed');

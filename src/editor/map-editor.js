@@ -2,12 +2,14 @@ import { EditorCamera } from './camera.js';
 import {
     MapDocument,
     createEmptyMap,
+    cloneMap,
     downloadMapJson,
     loadDraft,
     PLAYTEST_LEVEL_ID,
     saveDraft,
     serializeMap,
     syncGoalsFromZones,
+    syncCheckpointsFromZones,
     parseMapJson,
 } from './map-document.js';
 import {
@@ -22,6 +24,7 @@ import {
 } from './map-commands.js';
 import { savePlaytestSession, restorePlaytestSession } from './editor-session.js';
 import { validateMap } from './map-validator.js';
+import { EditorPhysicsPreview } from './physics-preview.js';
 import {
     createZoneFromStamp,
     EDITOR_BUILTIN_STAMPS,
@@ -38,9 +41,13 @@ import {
     snapRotation,
     snapScalar,
 } from './snap.js';
-import { downloadWorkshopZip } from './workshop-export.js';
+import { downloadWorkshopZip, importWorkshopPackage, publishWorkshopLevel } from './workshop-export.js';
+import { createImportedGlbStamp } from './glb-import.js';
 import { registerCustomLevel } from '../levels/catalog.js';
+import { saveWorkshopLevel } from '../levels/workshop-store.js';
 import { quaternionToMat4 } from '../math.ts';
+
+const VALIDATION_DEBOUNCE_MS = 500;
 
 export class MapEditor {
     /** @param {object} game */
@@ -54,11 +61,16 @@ export class MapEditor {
         /** @type {number[]} */
         this.selectedIndices = [];
         this.camera = new EditorCamera(game);
+        this.physicsPreview = new EditorPhysicsPreview(game);
         this.spawnMarkerEntity = null;
         this._boundHandlers = null;
         this.snap = loadSnapSettings();
         this._movePendingDelta = null;
         this._moveRebuildTimer = null;
+        this._validationTimer = null;
+        /** @type {Record<string, object>} User-imported GLB stamps (keyed by stamp id). */
+        this.customStamps = {};
+        this._customStampCounter = 0;
         this.ui = {};
     }
 
@@ -74,10 +86,49 @@ export class MapEditor {
         this._showPanel();
         await this.rebuildPreview();
         this._syncUi();
+        this._runValidation();
     }
 
     _afterMutation() {
         this._syncUi();
+        this._scheduleValidation();
+    }
+
+    _scheduleValidation() {
+        if (this._validationTimer) clearTimeout(this._validationTimer);
+        this._validationTimer = setTimeout(() => {
+            this._validationTimer = null;
+            this._runValidation();
+        }, VALIDATION_DEBOUNCE_MS);
+    }
+
+    _runValidation() {
+        const clone = cloneMap(this.map);
+        syncGoalsFromZones(clone);
+        syncCheckpointsFromZones(clone);
+        const result = validateMap(serializeMap(clone));
+        this._renderValidation(result);
+        return result;
+    }
+
+    /** @param {{ valid: boolean, errors: string[], warnings: string[] }} result */
+    _renderValidation(result) {
+        const list = this.ui.validationList;
+        if (!list) return;
+        list.innerHTML = '';
+
+        const addItem = (text, className) => {
+            const item = document.createElement('div');
+            item.className = `editor-validation-item ${className}`;
+            item.textContent = text;
+            list.appendChild(item);
+        };
+
+        for (const err of result.errors) addItem(`⛔ ${err}`, 'editor-validation-error');
+        for (const warn of result.warnings) addItem(`⚠ ${warn}`, 'editor-validation-warning');
+        if (!result.errors.length && !result.warnings.length) {
+            addItem('✓ No issues found', 'editor-validation-ok');
+        }
     }
 
     _execute(command) {
@@ -102,6 +153,7 @@ export class MapEditor {
     }
 
     async playtest() {
+        this.physicsPreview.remove();
         syncGoalsFromZones(this.map);
         const payload = serializeMap(this.map);
         const result = validateMap(payload);
@@ -161,6 +213,50 @@ export class MapEditor {
         this._setStatus('Workshop ZIP downloaded');
     }
 
+    /** @param {File} file */
+    async importWorkshopFile(file) {
+        try {
+            const { mapDef, assetCount } = await importWorkshopPackage(file);
+            syncGoalsFromZones(mapDef);
+            this._execute(cmdReplaceMap(this.map, mapDef));
+            this.selectedIndices = [];
+            await this.rebuildPreview();
+            this._setStatus(`Imported ${file.name} (${assetCount} bundled asset${assetCount === 1 ? '' : 's'})`);
+        } catch (err) {
+            this._setStatus(`Workshop import failed: ${err.message}`, true);
+        }
+    }
+
+    /** Save the current map into the localStorage "Community Levels" collection. */
+    saveToCommunityLevels() {
+        syncGoalsFromZones(this.map);
+        const payload = serializeMap(this.map);
+        const result = validateMap(payload);
+        if (!result.valid) {
+            this._setStatus(`Cannot save: ${result.errors[0]}`, true);
+            return;
+        }
+        saveWorkshopLevel(payload);
+        this._setStatus(`Saved "${this.map.name}" to Community Levels`);
+    }
+
+    async publishToCloud() {
+        syncGoalsFromZones(this.map);
+        const payload = serializeMap(this.map);
+        const result = validateMap(payload);
+        if (!result.valid) {
+            this._setStatus(`Cannot publish: ${result.errors[0]}`, true);
+            return;
+        }
+        try {
+            this._setStatus('Publishing…');
+            const { shareUrl } = await publishWorkshopLevel(payload);
+            this._setStatus(`Published! Share URL: ${shareUrl}`);
+        } catch (err) {
+            this._setStatus(`Publish failed: ${err.message}`, true);
+        }
+    }
+
     saveDraftToStorage() {
         syncGoalsFromZones(this.map);
         saveDraft(this.map);
@@ -196,6 +292,21 @@ export class MapEditor {
         reader.readAsText(file);
     }
 
+    /** @param {File} file */
+    async importGlbFile(file) {
+        try {
+            const stamp = await createImportedGlbStamp(file, ++this._customStampCounter);
+            this.customStamps[stamp.id] = stamp;
+            this._appendStampButton(stamp, 'Imported GLB');
+            this.activeStampId = stamp.id;
+            this.tool = 'place';
+            this._highlightStampButtons();
+            this._setStatus(`Imported ${file.name} — click canvas to place`);
+        } catch (err) {
+            this._setStatus(`GLB import failed: ${err.message}`, true);
+        }
+    }
+
     undo() {
         if (this.doc.undo()) {
             this.rebuildPreview();
@@ -215,6 +326,18 @@ export class MapEditor {
     tick() {
         this.camera.apply();
         this._handleHeldKeys();
+        this.physicsPreview.tick();
+    }
+
+    /** Drop (or reset) the physics-preview test marble at the map's spawn point. */
+    dropTestMarble() {
+        this.physicsPreview.spawn(this.map.spawn);
+        this._setStatus('Test marble dropped — Space to reset, "Clear Marble" to remove');
+    }
+
+    clearTestMarble() {
+        this.physicsPreview.remove();
+        this._setStatus('Test marble cleared');
     }
 
     /** @param {number} index @param {MouseEvent} [e] */
@@ -278,7 +401,7 @@ export class MapEditor {
             return;
         }
 
-        const stamp = STAMP_BY_ID[this.activeStampId] || STAMP_BY_ID.floor;
+        const stamp = STAMP_BY_ID[this.activeStampId] || this.customStamps[this.activeStampId] || STAMP_BY_ID.floor;
         const zone = createZoneFromStamp(stamp, snapped);
         if (stamp.type === 'floor') {
             zone.pos.y = snapped.y + (zone.size?.y || 0.5) / 2 - 0.25;
@@ -338,6 +461,7 @@ export class MapEditor {
             panel,
             status: document.getElementById('editor-status'),
             zoneList: document.getElementById('editor-zone-list'),
+            validationList: document.getElementById('editor-validation-list'),
             stampList: document.getElementById('editor-stamp-list'),
             mapId: document.getElementById('editor-map-id'),
             mapName: document.getElementById('editor-map-name'),
@@ -388,24 +512,7 @@ export class MapEditor {
 
         if (this.ui.stampList && !this.ui.stampList.childElementCount) {
             const appendStampGroup = (label, stamps) => {
-                const heading = document.createElement('div');
-                heading.className = 'editor-stamp-group-label';
-                heading.textContent = label;
-                this.ui.stampList.appendChild(heading);
-                for (const stamp of stamps) {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'editor-stamp-btn';
-                    btn.dataset.stampId = stamp.id;
-                    btn.textContent = `${stamp.icon} ${stamp.label}`;
-                    btn.addEventListener('click', () => {
-                        this.activeStampId = stamp.id;
-                        this.tool = 'place';
-                        this._highlightStampButtons();
-                        this._setStatus(`Place: ${stamp.label}`);
-                    });
-                    this.ui.stampList.appendChild(btn);
-                }
+                for (const stamp of stamps) this._appendStampButton(stamp, label);
             };
 
             appendStampGroup('Built-in', EDITOR_BUILTIN_STAMPS);
@@ -413,6 +520,12 @@ export class MapEditor {
             appendStampGroup('GLB tracks', EDITOR_MODEL_STAMPS);
             appendStampGroup('Factory zones', EDITOR_FACTORY_STAMPS);
         }
+
+        document.getElementById('editor-import-glb')?.addEventListener('change', (e) => {
+            const file = /** @type {HTMLInputElement} */ (e.target).files?.[0];
+            if (file) this.importGlbFile(file);
+            /** @type {HTMLInputElement} */ (e.target).value = '';
+        });
 
         if (this.ui.snapEnabled) {
             this.ui.snapEnabled.checked = this.snap.enabled;
@@ -465,10 +578,19 @@ export class MapEditor {
             this.camera.toggleMode();
             this._setStatus(`Camera: ${this.camera.mode}`);
         });
+        document.getElementById('editor-drop-marble')?.addEventListener('click', () => this.dropTestMarble());
+        document.getElementById('editor-clear-marble')?.addEventListener('click', () => this.clearTestMarble());
         document.getElementById('editor-import')?.addEventListener('change', (e) => {
             const file = /** @type {HTMLInputElement} */ (e.target).files?.[0];
             if (file) this.importJsonFile(file);
         });
+        document.getElementById('editor-import-workshop')?.addEventListener('change', (e) => {
+            const file = /** @type {HTMLInputElement} */ (e.target).files?.[0];
+            if (file) this.importWorkshopFile(file);
+            /** @type {HTMLInputElement} */ (e.target).value = '';
+        });
+        document.getElementById('editor-save-community')?.addEventListener('click', () => this.saveToCommunityLevels());
+        document.getElementById('editor-publish-cloud')?.addEventListener('click', () => this.publishToCloud());
 
         for (const [axis, el] of Object.entries(this.ui.spawnFields)) {
             el?.addEventListener('change', () => {
@@ -640,6 +762,12 @@ export class MapEditor {
             }
             if (e.code === 'KeyR') this.rotateSelected();
             if (e.code === 'KeyC') this.camera.toggleMode();
+            if (e.code === 'Space') {
+                const activeTag = document.activeElement?.tagName;
+                if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
+                e.preventDefault();
+                this.dropTestMarble();
+            }
         };
 
         canvas.addEventListener('click', onClick);
@@ -767,6 +895,34 @@ export class MapEditor {
             });
         }
         this._highlightStampButtons();
+    }
+
+    /**
+     * @param {{ id: string, label: string, icon: string }} stamp
+     * @param {string} groupLabel
+     */
+    _appendStampButton(stamp, groupLabel) {
+        if (!this.ui.stampList) return;
+        let heading = this.ui.stampList.querySelector(`[data-stamp-group="${groupLabel}"]`);
+        if (!heading) {
+            heading = document.createElement('div');
+            heading.className = 'editor-stamp-group-label';
+            heading.dataset.stampGroup = groupLabel;
+            heading.textContent = groupLabel;
+            this.ui.stampList.appendChild(heading);
+        }
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'editor-stamp-btn';
+        btn.dataset.stampId = stamp.id;
+        btn.textContent = `${stamp.icon} ${stamp.label}`;
+        btn.addEventListener('click', () => {
+            this.activeStampId = stamp.id;
+            this.tool = 'place';
+            this._highlightStampButtons();
+            this._setStatus(`Place: ${stamp.label}`);
+        });
+        this.ui.stampList.appendChild(btn);
     }
 
     _highlightStampButtons() {

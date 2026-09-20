@@ -1,4 +1,5 @@
 import mapSchema from '../../assets/schemas/map-schema.json' with { type: 'json' };
+import { ZONE_HANDLERS } from '../zone-setup/registry.js';
 
 /**
  * @param {unknown} data
@@ -77,12 +78,40 @@ export function validateAgainstSchema(data, schema, path = 'map') {
 }
 
 /**
+ * Non-blocking semantic checks beyond schema shape: things that will load
+ * but likely won't play as intended (unknown zone type, model zone with no
+ * model reference, etc).
  * @param {unknown} mapDef
- * @returns {{ valid: boolean, errors: string[] }}
+ * @returns {string[]}
+ */
+export function collectWarnings(mapDef) {
+    const warnings = [];
+    const zones = /** @type {{ zones?: unknown[] }} */ (mapDef)?.zones;
+    if (!Array.isArray(zones)) return warnings;
+
+    zones.forEach((zone, index) => {
+        const z = /** @type {Record<string, unknown>} */ (zone);
+        const type = /** @type {string} */ (z?.type);
+        if (!type) return;
+        if (!(type in ZONE_HANDLERS)) {
+            warnings.push(`zones[${index}]: unknown type "${type}" — no zone handler registered`);
+        }
+        if (type === 'model' && !z.model) {
+            warnings.push(`zones[${index}]: model zone has no "model" reference — will render a fallback box`);
+        }
+    });
+
+    return warnings;
+}
+
+/**
+ * @param {unknown} mapDef
+ * @returns {{ valid: boolean, errors: string[], warnings: string[] }}
  */
 export function validateMap(mapDef) {
     const errors = validateAgainstSchema(mapDef, mapSchema);
-    return { valid: errors.length === 0, errors };
+    const warnings = collectWarnings(mapDef);
+    return { valid: errors.length === 0, errors, warnings };
 }
 
 export { mapSchema };

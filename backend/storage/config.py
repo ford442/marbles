@@ -20,9 +20,11 @@ STORAGE_MAP = {
     "marbles_progress": {"folder": "marbles/progress/", "index": None},
     "marbles_ghost":    {"folder": "marbles/ghosts/",   "index": None},
     "marbles_board":    {"folder": "marbles/leaderboards/", "index": None},
+    "marbles_workshop": {"folder": "marbles/workshop/", "index": None},
 }
 
 MARBLES_GHOST_MAX_BYTES = int(os.environ.get("MARBLES_GHOST_MAX_BYTES", "163840"))
+MARBLES_WORKSHOP_MAX_BYTES = int(os.environ.get("MARBLES_WORKSHOP_MAX_BYTES", "2097152"))
 ENABLE_LEGACY_MUSIC_API = os.environ.get("ENABLE_LEGACY_MUSIC_API", "1") == "1"
 
 # CORS Origins
