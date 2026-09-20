@@ -15,7 +15,7 @@ export {
     PLAYTEST_LEVEL_ID,
     DRAFT_STORAGE_KEY,
 } from './map-document.js';
-export { validateMap, validateAgainstSchema } from './map-validator.js';
+export { validateMap, validateAgainstSchema, collectWarnings } from './map-validator.js';
 export {
     EDITOR_STAMPS,
     EDITOR_GAMEPLAY_STAMPS,

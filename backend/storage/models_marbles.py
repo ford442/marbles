@@ -49,3 +49,19 @@ class LeaderboardEntry(BaseModel):
 class LeaderboardResponse(BaseModel):
     levelId: str
     entries: List[LeaderboardEntry] = Field(default_factory=list)
+
+
+class WorkshopLevelUploadPayload(BaseModel):
+    mapJson: str
+
+
+class WorkshopPublishResponse(BaseModel):
+    id: str
+    shareUrl: str
+
+
+class WorkshopLevelResponse(BaseModel):
+    id: str
+    name: str
+    mapJson: str
+    publishedAt: str

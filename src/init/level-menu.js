@@ -1,5 +1,6 @@
-import { LEVELS, getOrderedLevelIds, isDevLevelsEnabled } from '../levels/catalog.js';
+import { LEVELS, getOrderedLevelIds, isDevLevelsEnabled, registerCustomLevel } from '../levels/catalog.js';
 import { CampaignMenu } from '../levels/campaign-menu.js';
+import { listWorkshopLevels, deleteWorkshopLevel } from '../levels/workshop-store.js';
 
 export class InitLevelMenu {
     showLevelSelection() {
@@ -55,8 +56,49 @@ export class InitLevelMenu {
             this._renderFlatLevelList(levelGrid)
         }
 
+        this._renderCommunityLevels(levelGrid)
+
         // Set up menu camera position (distant overview)
         this.setMenuCamera()
+    }
+
+    _renderCommunityLevels(levelGrid) {
+        const entries = listWorkshopLevels()
+        if (!entries.length) return
+
+        const header = document.createElement('div')
+        header.className = 'campaign-chapter-desc community-levels-header'
+        header.textContent = '— Community Levels —'
+        levelGrid.appendChild(header)
+
+        entries.forEach((entry, index) => {
+            let mapDef
+            try {
+                mapDef = JSON.parse(entry.mapJson)
+            } catch {
+                return
+            }
+            const goalCount = mapDef.goals?.length || 0
+            const card = document.createElement('div')
+            card.className = 'level-card card-stagger community-level-card'
+            card.innerHTML = `
+                <button type="button" class="community-level-delete" title="Remove from Community Levels">✕</button>
+                <h3>${entry.name}</h3>
+                <p>${entry.description || ''}</p>
+                <span class="goals">${goalCount} Goal${goalCount !== 1 ? 's' : ''}</span>
+            `
+            card.querySelector('.community-level-delete').addEventListener('click', (ev) => {
+                ev.stopPropagation()
+                deleteWorkshopLevel(entry.id)
+                this.showLevelSelection()
+            })
+            card.addEventListener('click', () => {
+                registerCustomLevel(mapDef)
+                this.hideLevelSelection(() => this.loadLevel(mapDef.id))
+            })
+            levelGrid.appendChild(card)
+            setTimeout(() => card.classList.add('animate'), 50 + index * 50)
+        })
     }
 
     _renderFlatLevelList(levelGrid) {

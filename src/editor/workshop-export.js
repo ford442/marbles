@@ -1,5 +1,6 @@
-import { serializeMapJson } from './map-document.js';
+import { serializeMapJson, parseMapJson } from './map-document.js';
 import { resolveAssetModelPath } from '../assets/model-paths.js';
+import { getApiUrl, isCloudEnabled, getDeviceId } from '../game/network/cloud-client.ts';
 
 /**
  * Collect unique asset paths referenced by a map (models + LOD).
@@ -36,9 +37,10 @@ function crc32(data) {
 
 /**
  * Build a minimal ZIP archive (store method, no compression).
+ * Exported for tests that round-trip through parseWorkshopZip().
  * @param {{ name: string, data: Uint8Array }[]} files
  */
-function buildZip(files) {
+export function buildZip(files) {
     const chunks = [];
     const central = [];
     let offset = 0;
@@ -141,4 +143,165 @@ export async function downloadWorkshopZip(map) {
     anchor.download = `${map.id || 'map'}_workshop.zip`;
     anchor.click();
     URL.revokeObjectURL(url);
+}
+
+/**
+ * Locate the end-of-central-directory record in a ZIP buffer.
+ * @param {DataView} view
+ * @param {number} length
+ */
+function findEndOfCentralDirectory(view, length) {
+    for (let i = length - 22; i >= 0; i--) {
+        if (view.getUint32(i, true) === 0x06054b50) return i;
+    }
+    throw new Error('Not a valid ZIP file (missing end-of-central-directory record)');
+}
+
+/**
+ * Parse a ZIP archive built with the STORE (no compression) method — the
+ * only method downloadWorkshopZip() ever produces. Deflate-compressed
+ * entries are rejected rather than silently corrupted, since no inflate
+ * implementation is bundled.
+ * @param {ArrayBuffer | Uint8Array} buffer
+ * @returns {{ name: string, data: Uint8Array }[]}
+ */
+export function parseWorkshopZip(buffer) {
+    const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const eocd = findEndOfCentralDirectory(view, bytes.length);
+    const entryCount = view.getUint16(eocd + 10, true);
+    let pos = view.getUint32(eocd + 16, true);
+
+    const entries = [];
+    const decoder = new TextDecoder();
+    for (let i = 0; i < entryCount; i++) {
+        if (view.getUint32(pos, true) !== 0x02014b50) {
+            throw new Error('Corrupt ZIP central directory record');
+        }
+        const method = view.getUint16(pos + 10, true);
+        const compSize = view.getUint32(pos + 20, true);
+        const uncompSize = view.getUint32(pos + 24, true);
+        const nameLen = view.getUint16(pos + 28, true);
+        const extraLen = view.getUint16(pos + 30, true);
+        const commentLen = view.getUint16(pos + 32, true);
+        const localOffset = view.getUint32(pos + 42, true);
+        const name = decoder.decode(bytes.subarray(pos + 46, pos + 46 + nameLen));
+
+        if (method !== 0) {
+            throw new Error(`Unsupported compression for "${name}" — only uncompressed workshop ZIPs are supported`);
+        }
+
+        const localNameLen = view.getUint16(localOffset + 26, true);
+        const localExtraLen = view.getUint16(localOffset + 28, true);
+        const dataStart = localOffset + 30 + localNameLen + localExtraLen;
+        const size = compSize || uncompSize;
+        entries.push({ name, data: bytes.slice(dataStart, dataStart + size) });
+
+        pos += 46 + nameLen + extraLen + commentLen;
+    }
+    return entries;
+}
+
+/**
+ * @param {Uint8Array} bytes
+ * @param {string} mimeType
+ * @returns {string}
+ */
+function bytesToDataUrl(bytes, mimeType) {
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+    return `data:${mimeType};base64,${btoa(binary)}`;
+}
+
+/**
+ * Import a map from a workshop package: either a plain level `.json` file
+ * (no bundled assets) or a `.zip` produced by downloadWorkshopZip(). Bundled
+ * GLB assets are inlined as data: URLs and zone.model/lod[].model refs are
+ * rewritten to point at them, so the imported map is fully self-contained
+ * and playable without copying any files into assets/.
+ * @param {File | ArrayBuffer | string} input
+ * @returns {Promise<{ mapDef: import('../types/map.ts').MapDefinition, assetCount: number }>}
+ */
+export async function importWorkshopPackage(input) {
+    if (typeof input === 'string') {
+        return { mapDef: parseMapJson(input), assetCount: 0 };
+    }
+
+    let buffer;
+    let isZip;
+    if (typeof File !== 'undefined' && input instanceof File) {
+        isZip = input.name.toLowerCase().endsWith('.zip');
+        buffer = isZip ? await input.arrayBuffer() : await input.text();
+    } else {
+        isZip = true;
+        buffer = input;
+    }
+
+    if (!isZip) {
+        return { mapDef: parseMapJson(/** @type {string} */ (buffer)), assetCount: 0 };
+    }
+
+    const entries = parseWorkshopZip(buffer);
+    const jsonEntry = entries.find((e) => e.name.endsWith('.json') && !e.name.includes('/'));
+    if (!jsonEntry) throw new Error('Workshop package is missing its level JSON');
+    const mapDef = parseMapJson(new TextDecoder().decode(jsonEntry.data));
+
+    const assetEntries = entries.filter((e) => e.name.startsWith('assets/'));
+    const assetDataUrls = new Map();
+    for (const entry of assetEntries) {
+        const relPath = entry.name.replace(/^assets\//, '');
+        const mime = relPath.endsWith('.glb') ? 'model/gltf-binary' : 'application/octet-stream';
+        assetDataUrls.set(relPath, bytesToDataUrl(entry.data, mime));
+    }
+
+    const rewriteModelRef = (ref) => {
+        if (!ref) return ref;
+        const dataUrl = assetDataUrls.get(ref.replace(/^assets\//, ''));
+        return dataUrl || ref;
+    };
+    for (const zone of mapDef.zones || []) {
+        if (zone.model) zone.model = rewriteModelRef(zone.model);
+        if (Array.isArray(zone.lod)) {
+            for (const level of zone.lod) {
+                if (level.model) level.model = rewriteModelRef(level.model);
+            }
+        }
+    }
+
+    return { mapDef, assetCount: assetEntries.length };
+}
+
+/**
+ * Optionally publish a map to the cloud backend (when VITE_MARBLES_API_URL
+ * is configured and the player has opted into cloud sync) and get back a
+ * shareable id/URL that others can import with.
+ * @param {import('../types/map.ts').MapDefinition} map
+ * @returns {Promise<{ id: string, shareUrl: string }>}
+ */
+export async function publishWorkshopLevel(map) {
+    if (!isCloudEnabled()) {
+        throw new Error('Cloud publish requires cloud sync opt-in and VITE_MARBLES_API_URL to be configured');
+    }
+    const apiUrl = getApiUrl();
+    const deviceId = getDeviceId();
+    if (!deviceId) {
+        throw new Error('No device id available for cloud publish');
+    }
+
+    const response = await fetch(`${apiUrl}/v1/marbles/workshop`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${deviceId}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ mapJson: serializeMapJson(map) }),
+    });
+    if (!response.ok) {
+        throw new Error(`Publish failed: HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    return { id: data.id, shareUrl: data.shareUrl };
 }

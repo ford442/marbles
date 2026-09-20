@@ -24,6 +24,14 @@
         <div class="tool-row" style="margin-top:6px">
             <button type="button" id="editor-camera-toggle">Camera</button>
         </div>
+        <div class="tool-row" style="margin-top:6px">
+            <button type="button" id="editor-drop-marble">Drop Marble (Space)</button>
+            <button type="button" id="editor-clear-marble">Clear Marble</button>
+        </div>
+    </section>
+    <section>
+        <h3>Validation</h3>
+        <div id="editor-validation-list"></div>
     </section>
     <section>
         <h3>Snap</h3>
@@ -48,6 +56,9 @@
     <section>
         <h3>Stamps</h3>
         <div id="editor-stamp-list"></div>
+        <label style="margin-top:8px;display:block">Import GLB
+            <input type="file" id="editor-import-glb" accept=".glb,model/gltf-binary">
+        </label>
     </section>
     <section>
         <h3>Zones</h3>
@@ -150,8 +161,13 @@
             <button type="button" id="editor-playtest">Playtest</button>
         </div>
         <label style="margin-top:8px;display:block">Import <input type="file" id="editor-import" accept=".json,application/json"></label>
+        <label style="margin-top:8px;display:block">Import Workshop <input type="file" id="editor-import-workshop" accept=".json,.zip,application/json,application/zip"></label>
+        <div class="action-row" style="margin-top:6px">
+            <button type="button" id="editor-save-community">Save to Community</button>
+            <button type="button" id="editor-publish-cloud">Publish to Cloud</button>
+        </div>
         <button type="button" id="editor-exit" style="margin-top:8px;width:100%">Exit Editor</button>
     </section>
     <div id="editor-status">Ready</div>
-    <div id="editor-hint">Click place · Shift+click multi-select · Ctrl+Z undo · M return from playtest</div>
+    <div id="editor-hint">Click place · Shift+click multi-select · Ctrl+Z undo · Space drop test marble · M return from playtest</div>
 </div>
