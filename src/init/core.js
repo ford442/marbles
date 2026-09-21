@@ -7,6 +7,7 @@ import {
     resolveGraphicsQualityForInit,
 } from '../rendering-defaults.js';
 import { loadFilament } from './filament-loader.js';
+import { runWebGPUBootProbe } from '../webgpu/boot-probe.js';
 import { initMarblePhysicsWasm } from '../wasm-bridge.js';
 import {
     activatePhysicsBackendForLevel,
@@ -482,6 +483,21 @@ export class InitCore {
             console.log(`[INIT] MarblePhysics WASM ${ok ? 'active' : 'using JS fallbacks'}`)
         })
 
+        // WebGPU boot probe — required this phase. A single requestAdapter()/
+        // requestDevice() call for the whole session, made before Filament
+        // loads. A failed probe is fatal: no WebGL renderer fallback, no
+        // silently drawing anyway. See docs/WEBGPU_BOOT_PROBE.md.
+        console.log('[INIT] Running WebGPU boot probe...')
+        if (typeof window.updateLoadingProgress === 'function') {
+            window.updateLoadingProgress(22, 'Checking WebGPU support...')
+        }
+        const webgpuProbeResult = await runWebGPUBootProbe()
+        if (!webgpuProbeResult.ok) {
+            this._showWebGPURequiredError(window.webgpuProbe)
+            return
+        }
+        console.log('[INIT] WebGPU boot probe passed:', window.webgpuProbe)
+
         const rendererRequest = getRequestedRendererMode()
         this.rendererType = rendererRequest.type
         this.rendererFallbackReason = ''
@@ -722,5 +738,17 @@ export class InitCore {
         if (typeof window.updateLoadingProgress === 'function') {
             window.updateLoadingProgress(0, message)
         }
+    }
+
+    // Fatal, blocking failure for a failed WebGPU boot probe. This phase,
+    // WebGPU is required — the game does not fall back to a WebGL renderer
+    // and does not attempt a second requestAdapter()/requestDevice() call.
+    // The loading screen (#loading) already blocks the whole viewport, so
+    // reusing it satisfies the "blocking boot UI" requirement.
+    _showWebGPURequiredError(probe) {
+        const browser = probe?.browser || 'this browser'
+        const reason = probe?.error || 'WebGPU is unavailable'
+        console.error('[INIT] WebGPU boot probe failed — hard stop, no WebGL fallback this phase:', probe)
+        this._showInitError(`WebGPU is required to play Marbles 3D. ${browser}: ${reason}. See window.webgpuProbe for details.`)
     }
 }

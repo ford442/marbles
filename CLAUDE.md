@@ -258,11 +258,13 @@ npm run build                  # Production build to dist/
 - Three recently merged zones — Astral Cascade (`src/zones/astral-cascade.js`), Inferno Chamber (`src/zones/inferno-chamber.js`), and Aether Core (`src/zones/aether-core.js`) — are only registered as `DEV_LEVELS` entries in `src/levels.ts` (reachable via `?devLevels=1`), not added to the shipped 24-map `assets/manifest.json` that normal play uses. A fourth zone from the same run of feature PRs, Cyber Reactor (`cyber_run`), *did* make it into the live manifest. Unclear whether the other three are intentionally staged in dev-only limbo or just missed the manifest update — worth confirming before assuming they're live content.
 - `docs/backups/` (including the `_backup_*` files and `orphan-react-stack/`) is intentionally archived and excluded from `tsconfig.json` — not dead weight to clean up, already correctly documented in AGENTS.md's "Non-obvious gotchas".
 - `npm run lint` and `npm run typecheck` were re-verified clean as of this check (2026-09-07) — the doc's claim still holds.
+- Startup now hard-requires a passing WebGPU boot probe (`src/webgpu/boot-probe.js`, run from `InitCore.init()` before Filament loads) — see `docs/WEBGPU_BOOT_PROBE.md`. Filament still renders on WebGL2 under the hood; only the URL-forced WebGL debug renderer (`?renderer=simple`, `?webgl`, etc.) and the silent WebGPU-probe-failure fallback are disabled this phase. A real WebGL rendering fallback is deferred to a later wave.
 
 ## Resources
 
 - **Filament Docs**: https://google.github.io/filament/
 - **Rapier3D**: https://rapier.rs/
+- **WebGPU Boot Probe**: See `docs/WEBGPU_BOOT_PROBE.md`
 - **GPU Chores**: See `docs/GPU_CHORES.md`
 - **Asset Contributing**: See `docs/CONTRIBUTING.md`
 - **Game Design Analysis**: Historical snapshot — see `docs/GAME_ANALYSIS.md` (archived; 7-level era)

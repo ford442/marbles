@@ -7,6 +7,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import integrateShader from './shaders/particle-integrate.wgsl?raw';
 import renderShader from './shaders/particle-render.wgsl?raw';
 import { WEBGPU_PARTICLE_CAP, isWebGPUDepthTestRequested } from './detect.js';
+import { getProbedDevice } from './boot-probe.js';
 import { buildViewProjection } from './camera-math.js';
 import { packParticle, PARTICLE_STRIDE } from './particle-data.js';
 import { updateParticleOcclusion } from './occlusion.js';
@@ -47,28 +48,19 @@ export class WebGPUParticleBackend {
     }
 
     async init() {
-        if (!navigator.gpu) {
-            console.warn('[WebGPU] navigator.gpu unavailable');
+        // The boot probe (boot-probe.js) already made the session's one and
+        // only requestAdapter()/requestDevice() call before Filament even
+        // loaded. If it failed, the game never got this far; if it succeeded,
+        // this backend reuses that device rather than probing again.
+        this.device = getProbedDevice();
+        if (!this.device) {
+            console.warn('[WebGPU] no probed device available (boot probe did not run or failed)');
             return false;
         }
 
         this.canvas = document.getElementById('webgpu-particles-canvas');
         if (!this.canvas) {
             console.warn('[WebGPU] overlay canvas #webgpu-particles-canvas not found');
-            return false;
-        }
-
-        const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' })
-            ?? await navigator.gpu.requestAdapter({ powerPreference: 'low-power' });
-        if (!adapter) {
-            console.warn('[WebGPU] no adapter');
-            return false;
-        }
-
-        try {
-            this.device = await adapter.requestDevice();
-        } catch (deviceError) {
-            console.warn('[WebGPU] requestDevice failed:', deviceError);
             return false;
         }
 
@@ -492,7 +484,8 @@ export class WebGPUParticleBackend {
         try { this.simParamsBuffer?.destroy(); } catch {}
         try { this.cameraBuffer?.destroy(); } catch {}
         try { this.occlusionBuffer?.destroy(); } catch {}
-        try { this.device?.destroy(); } catch {}
+        // The device itself is the session's shared boot-probed device (see
+        // boot-probe.js) — this backend borrows it and must not destroy it.
         this.device = null;
     }
 }
