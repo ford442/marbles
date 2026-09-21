@@ -22,6 +22,7 @@ module.exports = {
         GPUBufferUsage: 'readonly',
         GPUMapMode: 'readonly',
         GPUTextureUsage: 'readonly',
+        GPUShaderStage: 'readonly',
     },
     rules: {
         'no-empty': ['error', { allowEmptyCatch: true }],
