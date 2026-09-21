@@ -143,11 +143,30 @@ function writeQueue(queue: QueueItem[]): void {
     writeStorage(CLOUD_QUEUE_KEY, JSON.stringify(queue.slice(-MAX_QUEUE)));
 }
 
+const BACKGROUND_SYNC_TAG = 'cloud-flush';
+
+/**
+ * Ask the service worker to wake us up via Background Sync once connectivity
+ * returns, in case the tab is backgrounded and misses the `online` event.
+ * No-ops silently where SW/Background Sync isn't supported (e.g. Safari).
+ */
+function registerBackgroundSync(): void {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready
+        .then((registration: any) => registration.sync?.register(BACKGROUND_SYNC_TAG))
+        .catch(() => {
+            // Background Sync unsupported/denied — the `online` listener below still covers it.
+        });
+}
+
 function enqueue(item: QueueItem): void {
     if (!isCloudEnabled()) return;
     const queue = readQueue();
     queue.push(item);
     writeQueue(queue);
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        registerBackgroundSync();
+    }
     scheduleQueueFlush();
 }
 

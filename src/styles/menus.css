@@ -112,3 +112,56 @@
     transform: translateY(-2px);
 }
 
+.install-banner {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    width: 90%;
+    max-width: 700px;
+    margin: 0 0 16px;
+    padding: 12px 20px;
+    border-radius: 10px;
+    background: rgba(233, 69, 96, 0.12);
+    border: 1px solid rgba(233, 69, 96, 0.4);
+}
+
+.install-banner.visible {
+    display: flex;
+}
+
+.install-banner-text {
+    color: #fff;
+    font-size: 0.9rem;
+}
+
+.install-banner-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.install-banner-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.install-banner-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.install-banner-btn.primary {
+    background: linear-gradient(135deg, #e94560 0%, #c73e54 100%);
+    border-color: transparent;
+}
+
+.install-banner-btn.primary:hover {
+    background: linear-gradient(135deg, #f05a74 0%, #e94560 100%);
+}
+

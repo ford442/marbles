@@ -7,6 +7,8 @@ import {
     medalEmoji,
 } from '../levels/campaign.js';
 import { getApiUrl } from '../game/network/cloud-client.ts';
+import { recordLevelPlayed } from '../pwa/pwa-state.js';
+import { recheckInstallBannerEligibility } from '../pwa/install-prompt.js';
 
 export class GameLogicLevelComplete {
     setupReplayShareButtons() {
@@ -109,6 +111,9 @@ export class GameLogicLevelComplete {
     showLevelCompleteModal(completionTime, newRecord) {
         const modal = document.getElementById('level-complete-modal')
         if (!modal) return
+
+        recordLevelPlayed(this.currentLevel)
+        recheckInstallBannerEligibility()
 
         const level = getLevel(this.currentLevel)
         const levelName = level?.name || this.currentLevel

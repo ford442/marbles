@@ -15,5 +15,44 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/menu-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Level select screen"
+    },
+    {
+      "src": "screenshots/gameplay-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Level complete summary with score breakdown"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Quick Play",
+      "short_name": "Quick Play",
+      "description": "Jump back into the last level you played",
+      "url": "./?shortcut=quickplay",
+      "icons": [{ "src": "icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Campaign",
+      "short_name": "Campaign",
+      "description": "Open the level select / campaign screen",
+      "url": "./?shortcut=campaign",
+      "icons": [{ "src": "icon.svg", "sizes": "any" }]
+    }
+  ],
+  "share_target": {
+    "action": "./",
+    "method": "GET",
+    "params": {
+      "url": "shared_workshop_url"
+    }
+  }
 }

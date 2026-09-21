@@ -28,7 +28,7 @@ export function installInitMethods(targetClass) {
         'isYAxisInverted', 'getScreenShakeIntensity',
     ]);
     installKnownMethods(targetClass, InitLevelMenu, [
-        'showLevelSelection', '_renderFlatLevelList', 'hideLevelSelection',
+        'showLevelSelection', '_renderFlatLevelList', '_renderCommunityLevels', 'hideLevelSelection',
         'returnToMenu', 'showLevelMenu', 'setMenuCamera', 'transitionCameraToGameplay',
     ]);
     installKnownMethods(targetClass, InitMultiplayerMenu, [

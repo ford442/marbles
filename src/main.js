@@ -29,6 +29,9 @@ import { InitCleanup } from './init/cleanup.js';
 import { assetRegistry } from './assets/AssetRegistry.js';
 import { getLevel } from './levels/catalog.js';
 import { registerServiceWorker } from './pwa/register-sw.js';
+import { initInstallPrompt } from './pwa/install-prompt.js';
+import { importSharedWorkshopLevel } from './pwa/share-target.js';
+import { applyLaunchShortcut } from './pwa/shortcuts.js';
 import { CampaignProgress } from './game/systems/campaign-progress.ts';
 import { GhostReplay } from './game/systems/ghost-replay.js';
 import { CloudClient } from './game/network/cloud-client.ts';
@@ -153,9 +156,15 @@ function installLegacyMethodGroups(targetClass) {
 installLegacyMethodGroups(MarblesGame);
 
 registerServiceWorker();
+initInstallPrompt();
 
 window.game = new MarblesGame();
-window.game.init().then(() => { window.gameReady = true; }).catch(err => {
+(async () => {
+    await importSharedWorkshopLevel();
+    await window.game.init();
+    window.gameReady = true;
+    applyLaunchShortcut(window.game);
+})().catch(err => {
     console.error('[FATAL] Game initialization failed:', err)
     const loading = document.getElementById('loading')
     if (loading) {
