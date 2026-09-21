@@ -14,6 +14,13 @@ function setRuntimeRendererGlobals(type, reason = '') {
     window.rendererFallbackReason = reason
 }
 
+// This phase, WebGPU is required at boot (see docs/WEBGPU_BOOT_PROBE.md) and
+// automatic/URL-forced selection of the WebGL debug renderer is disabled —
+// the flags below are unsupported until a later wave reintroduces WebGL as
+// an intentional fallback. `installSimpleDebugBackend` itself stays wired up:
+// InitCore still uses it as a last-resort recovery path when Filament fails
+// to load for reasons unrelated to WebGPU (that failure mode isn't in scope
+// here).
 export function getRequestedRendererMode() {
     const params = new URLSearchParams(window.location.search)
     const rendererParam = (params.get('renderer') || '').toLowerCase()
@@ -21,7 +28,7 @@ export function getRequestedRendererMode() {
     const mode = rendererParam || storedMode
 
     if (SIMPLE_RENDERER_VALUES.has(mode) || params.has('webgl') || params.has('simpleRenderer') || params.has('debugRenderer')) {
-        return { type: 'simple-webgl', explicit: Boolean(rendererParam || params.has('webgl') || params.has('simpleRenderer') || params.has('debugRenderer')) }
+        console.warn('[Renderer] WebGL debug renderer flags (?renderer=simple/webgl, ?webgl, ?simpleRenderer, ?debugRenderer) are unsupported this phase — WebGPU is required at boot. Ignoring and using Filament.')
     }
 
     return { type: 'filament', explicit: rendererParam === 'filament' || rendererParam === 'full' }
@@ -85,7 +92,9 @@ export function installRendererModeControls(activeType) {
     }
 
     addButton('Filament', 'filament')
-    addButton('Simple', 'simple-webgl')
+    // No "Simple" (WebGL debug) button this phase — getRequestedRendererMode()
+    // ignores the renderer=simple URL flag it would set, so the switch would
+    // silently no-op. See docs/WEBGPU_BOOT_PROBE.md.
 
     document.body.appendChild(panel)
 }
