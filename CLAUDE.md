@@ -51,6 +51,14 @@ Methods are organized into separate mixins applied via `apply*Methods` functions
 - `hud-manager.js` - HUD rendering and state display
 - `marble-management-methods.js` - Marble spawning and lifecycle
 
+**GPU Chores** (`src/gpu-chores/`)
+- Reusable, app-agnostic GPU jobs: `reduce_f32`, `compact_f32`, `batched_distance`
+- Single entry point: `runJob({ op, prefer: 'auto' })`; backends are WebGPU → WASM/JS
+- Adopts the particle backend's device — it never calls `requestDevice()` itself
+- Kill switch `?no_gpu_compute`; breadcrumbs on `window.gpuChoresBreadcrumbs`
+- Domain compute (particle integrate, noise, marble physics) stays outside this module
+- See `docs/GPU_CHORES.md`
+
 **Zones & Initialization**
 - `zone-setup-methods.js` - Zone loading and setup
 - `zones/` - Individual zone implementations (50+ levels)
@@ -255,6 +263,7 @@ npm run build                  # Production build to dist/
 
 - **Filament Docs**: https://google.github.io/filament/
 - **Rapier3D**: https://rapier.rs/
+- **GPU Chores**: See `docs/GPU_CHORES.md`
 - **Asset Contributing**: See `docs/CONTRIBUTING.md`
 - **Game Design Analysis**: Historical snapshot — see `docs/GAME_ANALYSIS.md` (archived; 7-level era)
 

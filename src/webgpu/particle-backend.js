@@ -10,6 +10,13 @@ import { WEBGPU_PARTICLE_CAP, isWebGPUDepthTestRequested } from './detect.js';
 import { buildViewProjection } from './camera-math.js';
 import { packParticle, PARTICLE_STRIDE } from './particle-data.js';
 import { updateParticleOcclusion } from './occlusion.js';
+import { pruneToAliveIndices } from './alive-prune.js';
+import {
+    adoptDevice as adoptChoresDevice,
+    getChoresBackend,
+    releaseDevice as releaseChoresDevice,
+    runJob,
+} from '../gpu-chores/index.js';
 
 export { packParticle, PARTICLE_STRIDE } from './particle-data.js';
 
@@ -29,6 +36,11 @@ export class WebGPUParticleBackend {
         this._depthTestEnabled = isWebGPUDepthTestRequested();
         this._occlusionScratch = new Float32Array(this.maxParticles).fill(1);
         this._readbackPending = false;
+        this._prunePending = false;
+        // Alive-slot compaction runs through gpu-chores; falls back to the
+        // full-flag readback below if the job ever errors out.
+        this._choresCompactEnabled = true;
+        this._aliveMask = new Uint8Array(this.maxParticles);
         this._pendingDispose = false;
         this._resizePending = false;
         this._resizeHandler = null;
@@ -59,6 +71,10 @@ export class WebGPUParticleBackend {
             console.warn('[WebGPU] requestDevice failed:', deviceError);
             return false;
         }
+
+        // gpu-chores runs its generic jobs on this same device — one live GPU
+        // API per session, no second requestDevice().
+        adoptChoresDevice(this.device);
 
         this.device.lost.then((info) => {
             console.warn(`[WebGPU] device lost: ${info.reason}`, info.message);
@@ -270,6 +286,8 @@ export class WebGPUParticleBackend {
         simView.setFloat32(16, 0, true);
         this.device.queue.writeBuffer(this.simParamsBuffer, 0, simParams);
 
+        const useChores = this._choresCompactAvailable();
+
         const encoder = this.device.createCommandEncoder();
         const pass = encoder.beginComputePass();
         pass.setPipeline(this.computePipeline);
@@ -277,10 +295,76 @@ export class WebGPUParticleBackend {
         pass.dispatchWorkgroups(Math.ceil(this.maxParticles / 256));
         pass.end();
 
-        encoder.copyBufferToBuffer(this.activeBuffer, 0, this.readbackBuffer, 0, this.readbackBuffer.size);
+        if (!useChores) {
+            // Legacy path: pull every alive flag back and scan it on the CPU.
+            encoder.copyBufferToBuffer(
+                this.activeBuffer, 0, this.readbackBuffer, 0, this.readbackBuffer.size
+            );
+        }
         this.device.queue.submit([encoder.finish()]);
 
-        this._scheduleReadback();
+        if (useChores) {
+            this._schedulePrune();
+        } else {
+            this._scheduleReadback();
+        }
+    }
+
+    /**
+     * Whether the alive-slot compaction can go through gpu-chores this frame.
+     * Requires the chores device (ours) and the `?no_gpu_compute` kill switch off.
+     *
+     * @returns {boolean}
+     */
+    _choresCompactAvailable() {
+        return this._choresCompactEnabled && getChoresBackend() === 'webgpu';
+    }
+
+    /**
+     * Compacts the alive-flag buffer on the GPU via gpu-chores and prunes the
+     * CPU-side active list from the resulting index list. Only the survivor
+     * count and that index list cross the bus — not all `maxParticles` flags.
+     */
+    _schedulePrune() {
+        if (this._prunePending) return;
+        this._prunePending = true;
+
+        runJob({
+            op: 'compact_f32',
+            prefer: 'auto',
+            data: this.activeBuffer,
+            count: this.maxParticles,
+            threshold: 0.5,
+        })
+            .then(({ indices, count }) => {
+                this._prunePending = false;
+                if (!this.ready || !this.particleSystem) {
+                    if (this._pendingDispose) this._destroyResources();
+                    return;
+                }
+                this._pruneToAliveIndices(indices, count);
+                if (this._pendingDispose) this._destroyResources();
+            })
+            .catch((err) => {
+                this._prunePending = false;
+                // One failure is enough: drop back to the flag readback for good.
+                this._choresCompactEnabled = false;
+                console.warn('[WebGPU] chores compact failed, using flag readback:', err);
+                if (this._pendingDispose) this._destroyResources();
+            });
+    }
+
+    /**
+     * @param {Uint32Array | null} indices Ascending alive pool slots.
+     * @param {number} count
+     */
+    _pruneToAliveIndices(indices, count) {
+        this.stats.activeCount = pruneToAliveIndices(
+            indices,
+            count,
+            this.particleSystem.activeParticles,
+            this._aliveMask
+        );
     }
 
     _scheduleReadback() {
@@ -392,7 +476,7 @@ export class WebGPUParticleBackend {
 
         if (this.canvas) this.canvas.style.opacity = '0';
 
-        if (this._readbackPending) {
+        if (this._readbackPending || this._prunePending) {
             this._pendingDispose = true;
             return;
         }
@@ -401,6 +485,7 @@ export class WebGPUParticleBackend {
     }
 
     _destroyResources() {
+        releaseChoresDevice();
         try { this.particleBuffer?.destroy(); } catch {}
         try { this.activeBuffer?.destroy(); } catch {}
         try { this.readbackBuffer?.destroy(); } catch {}

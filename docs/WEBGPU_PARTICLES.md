@@ -109,3 +109,14 @@ See also: `docs/backups/unused-game-modules/misc/webgpu-evaluation.md` for the o
 ## Does not block boot
 
 WebGPU init runs **after** Filament and `ParticleSystem` are created. Failure only logs a warning and keeps CPU simulation.
+
+## Alive-slot compaction via gpu-chores
+
+The alive-flag prune no longer reads all `WEBGPU_PARTICLE_CAP` flags back each
+frame. `WebGPUParticleBackend.step()` runs a `compact_f32` job over the alive
+buffer in place (`src/gpu-chores/`) and prunes the active list from the survivor
+index list, so only the count and that list cross the bus. The backend lends its
+device to chores — there is no second `requestDevice()`.
+
+`?no_gpu_compute` (or a single failed job) drops the prune back to the original
+full-flag readback. See `docs/GPU_CHORES.md`.
