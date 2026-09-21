@@ -15,11 +15,33 @@ function copyDirSync(src, dest) {
   }
 }
 
+function walkFilesSync(dir, base = dir, out = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walkFilesSync(full, base, out);
+    } else {
+      out.push(path.relative(base, full).split(path.sep).join('/'));
+    }
+  }
+  return out;
+}
+
+// Extensions the service worker should pre-cache on install so the game (WASM
+// physics/renderer, track/marble models, materials, skyboxes, level/asset
+// definitions) works fully offline after a single visit.
+const PRECACHE_EXTENSIONS = new Set([
+  '.wasm', '.glb', '.gltf', '.filmat', '.filament', '.mat',
+  '.ktx', '.ktx2', '.js', '.css', '.json',
+]);
+const PRECACHE_ALWAYS = new Set(['index.html', 'manifest.webmanifest', 'icon.svg']);
+
 function copyAssetsPlugin() {
   return {
     name: 'copy-game-assets',
     closeBundle() {
       const srcDir = path.resolve('assets');
+      const distDir = path.resolve('dist');
       const distAssetsDir = path.resolve('dist/assets');
       if (fs.existsSync(srcDir)) {
         copyDirSync(srcDir, distAssetsDir);
@@ -29,6 +51,20 @@ function copyAssetsPlugin() {
           fs.copyFileSync(manifestSrc, manifestDist);
         }
       }
+
+      if (!fs.existsSync(distDir)) return;
+      const base = process.env.VITE_BASE_PATH || '/marbles/';
+      const normalizedBase = base.endsWith('/') ? base : `${base}/`;
+
+      const relFiles = walkFilesSync(distDir).filter((rel) => (
+        PRECACHE_ALWAYS.has(rel) || PRECACHE_EXTENSIONS.has(path.extname(rel))
+      ));
+      const urls = [...new Set(relFiles.map((rel) => `${normalizedBase}${rel}`))].sort();
+      fs.writeFileSync(
+        path.join(distDir, 'precache-manifest.json'),
+        JSON.stringify(urls, null, 2)
+      );
+      console.log(`[precache] Wrote ${urls.length} entries to dist/precache-manifest.json`);
     }
   };
 }
