@@ -65,3 +65,4 @@ export { createAstralCascadeZone } from './astral-cascade.js';
 export { createNeonVortexZone } from './neon-vortex.js';
 export { createNeonDriftZone } from './neon-drift.js';
 export { createCyberMatrixZone } from './cyber-matrix.js';
+export { createNeonCityHeightsZone } from './neon-city-heights.js';
