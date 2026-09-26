@@ -105,25 +105,43 @@ export class GameLoopFrameInput {
                 }
                 this._lastAirDashKeyPressed = isAirDashKeyPressed;
 
-                if (this.keys['ShiftLeft'] || this.keys['ShiftRight']) {
-                    if (this.playerMarble && now - this.lastBoostTime > this.boostCooldown) {
-                        const force = 60.0
-                        const boostYaw = this.aimYaw
-                        const dirX = Math.sin(boostYaw)
-                        const dirZ = Math.cos(boostYaw)
-        
-                        this.playerMarble.rigidBody.applyImpulse({
-                            x: dirX * force,
-                            y: 0,
-                            z: dirZ * force
-                        }, true)
-        
-                        this.lastBoostTime = now
-                        audio.playBoost()
-        
-                        if (this.hudManager) this.hudManager.markAbilityUsed('boost')
+                // Ground dash — methods mixed in from src/abilities/dash.js via installAbilityMethods
+                const isDashKeyPressed = this.keys['ShiftLeft'] || this.keys['ShiftRight'];
+                const wasDashKeyPressed = this._lastDashKeyPressed;
+
+                if (isDashKeyPressed && !wasDashKeyPressed) {
+                    if (this.abilitySystem?.isEnabled('dash') !== false && this.playerMarble && !this.isChargingDash) {
+                        if (now - (this.lastDashTime || 0) > (this.dashCooldown || 1500)) {
+                            if (typeof this.beginDashCharge === 'function') {
+                                this.beginDashCharge(now);
+                            }
+                        }
+                    }
+                } else if (!isDashKeyPressed && wasDashKeyPressed) {
+                    if (this.isChargingDash && typeof this.releaseDash === 'function') {
+                        this.releaseDash(now);
                     }
                 }
+                this._lastDashKeyPressed = isDashKeyPressed;
+
+                // Stomp — methods mixed in from src/abilities/stomp.js via installAbilityMethods
+                const isStompKeyPressed = this.keys['KeyZ'];
+                const wasStompKeyPressed = this._lastStompKeyPressed;
+
+                if (isStompKeyPressed && !wasStompKeyPressed) {
+                    if (this.abilitySystem?.isEnabled('stomp') !== false && this.playerMarble && !this.isChargingStomp) {
+                        if (now - (this.lastStompTime || 0) > (this.stompCooldown || 2000)) {
+                            if (typeof this.beginStompCharge === 'function') {
+                                this.beginStompCharge(now);
+                            }
+                        }
+                    }
+                } else if (!isStompKeyPressed && wasStompKeyPressed) {
+                    if (this.isChargingStomp && typeof this.releaseStomp === 'function') {
+                        this.releaseStomp(now);
+                    }
+                }
+                this._lastStompKeyPressed = isStompKeyPressed;
         
                 if (shouldUpdateHUD && this.boostBarEl) {
                     const timeSince = now - this.lastBoostTime
@@ -137,10 +155,13 @@ export class GameLoopFrameInput {
                     }
                 }
         
+                if (this.isChargingDash) {
+                    // Increment charge - roughly 1.5 seconds to fully charge
+                    this.dashCharge = Math.min(this.maxDashCharge, this.dashCharge + (frameDeltaSec * 0.66))
+                }
+
                 if (shouldUpdateHUD && this.dashBarEl) {
                     if (this.isChargingDash) {
-                        // Increment charge - roughly 1.5 seconds to fully charge
-                        this.dashCharge = Math.min(this.maxDashCharge, this.dashCharge + (frameDeltaSec * 0.66))
                         this.dashBarEl.style.width = `${this.dashCharge * 100}%`
                         if (this.dashCharge >= this.maxDashCharge) {
                             this.dashBarEl.style.filter = 'brightness(1.5) drop-shadow(0 0 10px #ff0000)'
