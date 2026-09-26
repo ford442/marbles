@@ -102,6 +102,7 @@ const FACTORY_ZONE_HANDLERS = {
     astral_cascade: (game, _zone, offset) => zones.createAstralCascadeZone(game, offset),
     neon_drift: (game, _zone, offset) => zones.createNeonDriftZone(game, offset),
     cyber_matrix: (game, _zone, offset) => zones.createCyberMatrixZone(game, offset),
+    neon_city_heights: (game, _zone, offset) => zones.createNeonCityHeightsZone(game, offset),
 };
 
 /** @type {Record<string, ZoneHandler>} */
