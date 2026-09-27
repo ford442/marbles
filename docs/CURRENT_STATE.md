@@ -25,8 +25,8 @@ Counts from [architecture/level-inventory.json](architecture/level-inventory.jso
 | Metric | Count |
 |--------|------:|
 | Shipped (manifest) | 24 |
-| `DEV_LEVELS` entries | 60 |
-| Unique level ids | 84 |
+| `DEV_LEVELS` entries | 61 |
+| Unique level ids | 85 |
 | Map JSON files on disk | 28 (including 4 archived prototypes) |
 
 Policy: [architecture/level-pipeline.md](architecture/level-pipeline.md). Campaign content ships as JSON + manifest only.
