@@ -1,5 +1,5 @@
 import { installKnownMethods } from '../game/systems/method-installer.js';
-import { GameLoopLoop } from './loop.js';
+import { GameLoopLoop } from './loop.ts';
 import { GameLoopLogic } from './logic.js';
 import { GameLoopSpeedLines } from './speed-lines.js';
 import { GameLoopFrameInput } from './frame-input.js';

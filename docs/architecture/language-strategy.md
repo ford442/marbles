@@ -1,6 +1,6 @@
 # Language Strategy (ADR)
 
-**Status:** Accepted — July 2026  
+**Status:** Accepted — July 2026; type-checking rollout refreshed September 2026  
 **Scope:** Marbles 3D browser game (`index.html` → `src/main.js`)  
 **Related:** [architecture/README.md](./README.md), [PROJECT_STRUCTURE.md](../PROJECT_STRUCTURE.md)
 
@@ -12,14 +12,14 @@ The repo mixes JavaScript mixins, strict TypeScript config (unused on game JS), 
 
 | Layer | Language | Rationale |
 |-------|----------|-----------|
-| Game runtime core | **JavaScript → TypeScript (gradual)** | Mixin assembly stays until Phase B composition; new pure modules and migrated hot paths use `.ts` with strict types. |
-| UI / HUD | **Vanilla HTML + JS** | `index.html` + `hud-manager.js` ship today; no React in `package.json`. |
+| Game runtime core | **JavaScript → TypeScript (gradual)** | Phase B composition is done; the composed systems in `src/game/systems/` are `.ts`. Remaining mixin-installed slices (`game-loop/*`, `init/*`, zones) stay JS until touched. |
+| UI / HUD | **Vanilla HTML + TS** | `index.html` + `src/hud-manager.ts` ship today; no React in `package.json`. |
 | Orphan sequencer / importers | **Archived** | React TSX under `docs/backups/orphan-react-stack/` — not restored without a separate product decision. |
-| Numeric physics helpers | **C++ WASM + JS fallbacks** | `wasm/marble_physics.cpp` for batched kernels only; JS mirrors in `wasm-bridge.js`. |
+| Numeric physics helpers | **C++ WASM + JS fallbacks** | `wasm/marble_physics.cpp` for batched kernels only; JS mirrors in `wasm-bridge.js` (`@ts-check`, in `tsconfig.json` `include`). |
 | Filament / Rapier | **Vendor WASM (official npm)** | Do not fork or wrap in custom C++. |
 | Backend / cloud saves | **Python (optional)** | `storage/` FastAPI + GCS; not on the browser critical path. |
-| Shaders (main game) | **Filament materials** | `public/*.filmat`, `material-system.js`. |
-| WGSL / compute experiments | **Deferred** | Future GPU particles or post-FX only after Filament path is stable. |
+| Shaders (main game) | **Filament materials** | `public/*.filmat`, `material-system.ts`. |
+| WGSL / compute | **Opt-in, JS** | `src/webgpu/` (boot probe, particle backend) and `src/gpu-chores/`; GPU types come from the `@webgpu/types` devDependency. Filament still renders on WebGL2. |
 
 ## When to use C++
 
@@ -50,54 +50,62 @@ The repo mixes JavaScript mixins, strict TypeScript config (unused on game JS), 
 **Use `.ts` for:**
 
 - Shared types (`src/types/*`).
-- Pure functions with stable signatures (`math.ts`, future `game/systems/*`).
-- New subsystems in Phase B (`PhysicsWorld`, `LevelLoader`, etc.).
+- Pure functions with stable signatures (`math.ts`, `game/systems/*-pure.ts`).
+- Composed subsystems (`PhysicsWorld`, `InputSystem`, `RenderPipeline`, `HudController`, `LevelLoader`, `AbilitySystem`, physics backends). Each declares a narrow `*Host` interface for the slice of the game it touches; Filament handles cross that boundary as `FilamentHandle` / `FilamentModule` (`src/types/filament.ts`).
 - Public APIs consumed by multiple modules.
 
-**Keep `.js` (for now) for:**
+**Use `.js` + `// @ts-check` + JSDoc when** a file is stable but tied to browser/GPU globals or SharedArrayBuffer views (`wasm-bridge.js`, `webgpu/boot-probe.js`, `webgpu/particle-backend.js`, `game/state/*`, `levels/*`, `abilities/registry.js`, `game/network/protocol.js`). A plain `.js` file is **not** type-checked: `checkJs` is `false`, so JS is checked only when it is in `include` **and** carries `@ts-check`.
 
-- `MarblesGame` mixin methods still being decomposed.
+**Keep unchecked `.js` (for now) for:**
+
+- Filament-heavy runtime slices: `game-loop/sync.js` (last to migrate) and the other mixin-installed `game-loop/*`, `init/*`, `game-logic/*`, `zone-setup/*` files.
 - Zone factories (`src/zones/*.js`) — migrate per-zone only when touched for other reasons.
+- Numeric hot-loop WebGPU helpers (`webgpu/camera-math.js`, `occlusion.js`, `gpu-chores/cpu-jobs.js`, …): in `include`, but not `@ts-check` yet — `noUncheckedIndexedAccess` makes typed-array indexing noisy, so opt in per file when touched.
 - `index.html` inline scripts (none planned).
 
 **Type-checking rollout:**
 
-| Phase | `checkJs` / `include` scope | Status |
-|-------|-----------------------------|--------|
-| **Pilot** | `src/math.js` shim + all `src/**/*.ts` | ✅ `math.ts`, `types/geometry.ts` |
-| **Slice 1** | `+ src/wasm-bridge.js`, `src/game/state/*.js` | ✅ `@ts-check` + `types/game-state.ts`, `types/wasm-physics.ts` |
-| **Slice 2** | `+ src/game/systems/{ability-cooldown,trick-scoring,campaign-progress,replay-codec}.js` shims → `.ts` | ✅ Pure systems converted with `.js` re-export shims |
-| **Slice 3** | `+ src/levels/catalog.js`, `src/levels/campaign.js`, `src/types/map.ts`, `src/abilities/registry.js` | ✅ Level/ability catalog types — 2026-07-26 |
-| **Slice 4** | `+ physics-world-pure`, `physics-backend-pure`, `input-target-lock`, network protocol validators | ✅ Remaining stable pure systems — 2026-07-26 |
-| **Not yet** | `src/zones/**`, `src/game-loop/render.js` | Large files; type after subsystem split |
+| Phase | `include` scope | Status |
+|-------|-----------------|--------|
+| **Pilot** | `src/math.ts`, `types/geometry.ts` | ✅ (the old `math.js` re-export shim has been removed; import `../math.ts` directly) |
+| **Slice 1** | `src/wasm-bridge.js`, `src/game/state/*.js` | ✅ `@ts-check` + `types/game-state.ts`, `types/wasm-physics.ts` |
+| **Slice 2** | Pure systems → `.ts`: `ability-cooldown`, `trick-scoring`, `campaign-progress`, `replay-codec` | ✅ |
+| **Slice 3** | `levels/catalog.js`, `levels/campaign.js`, `types/map.ts`, `abilities/registry.js` | ✅ |
+| **Slice 4** | `physics-world-pure`, `physics-backend-pure`, `input-target-lock`, network protocol validators | ✅ |
+| **Slice 5** (Sept 2026) | Composed systems → `.ts`: `physics-world`, `input-system`, `render-pipeline`, `level-loader`, `hud-controller`, `ability-system`, `physics-backend`; `game-loop/{helpers,loop}.ts`; `HUDManager` typed against `HudHost`; `@ts-check` on `webgpu/boot-probe.js` and `webgpu/particle-backend.js` (real `GPUDevice`/`GPUCanvasContext` via `@webgpu/types`); `wasm-bridge.js`, `webgpu/**`, `gpu-chores/**` added to `include` | ✅ |
+| **Not yet** | `game-loop/sync.js` (Filament-heavy, migrate last), remaining `game-loop/*`, `src/zones/**`, other `@ts-check`-less JS in `webgpu/` and `gpu-chores/` | Type when touched |
 
-Current `tsconfig.json` `include` (July 2026):
+Current `tsconfig.json` `include` (kept in sync with the file — update both together):
 
 ```json
-"src/**/*.ts",
-"src/math.js",
-"src/wasm-bridge.js",
+"src/types/**/*.d.ts",
+"src/types/**/*.ts",
+"src/game/**/*.ts",
 "src/game/state/**/*.js",
-"src/game/systems/ability-cooldown.js",
-"src/game/systems/trick-scoring.js",
-"src/game/systems/campaign-progress.js",
-"src/game/systems/replay-codec.js",
+"src/game/systems/**/*.js",
+"src/game/network/**/*.js",
+"src/game/physics-worker/**/*.js",
+"src/game/level-behaviors/**/*.js",
+"src/hud-manager.ts",
+"src/material-system.ts",
+"src/levels.ts",
+"src/math.ts",
 "src/levels/catalog.js",
 "src/levels/campaign.js",
 "src/abilities/registry.js",
-"src/game/systems/physics-world-pure.js",
-"src/game/systems/physics-backend-pure.js",
-"src/game/systems/input-target-lock.js",
-"src/game/network/protocol.js"
+"src/game-loop/**/*.ts",
+"src/wasm-bridge.js",
+"src/webgpu/**/*.js",
+"src/gpu-chores/**/*.js"
 ```
 
-`npm run typecheck` must pass at each phase before widening `include`.
+`compilerOptions.types` is `["@webgpu/types"]`. `npm run typecheck` must pass at each phase before widening `include`.
 
 ## UI stack
 
 **Decision: stay vanilla for the shipped game.**
 
-- HUD: DOM in `index.html`, logic in `hud-manager.js`.
+- HUD: DOM in `index.html`, logic in `hud-manager.ts` (`HUDManager<Host extends HudHost>`).
 - No `react` / `react-dom` in root `package.json`.
 - If a music sequencer or shader gallery returns, it must be a **separate package** (e.g. `packages/sequencer/`) with its own deps and entry — not mixed into `src/main.js`.
 
@@ -133,36 +141,41 @@ First fully typed runtime module:
 
 - `src/types/geometry.ts` — `Vec3`, `Quat`, `Mat4`
 - `src/math.ts` — `quatFromEuler`, `quaternionToMat4`
-- `src/math.js` — thin re-export shim so existing JS imports unchanged
 
-Downstream JS (`game-loop/sync.js`, zones, abilities) imports `./math.js` and receives typed implementations via Vite + `tsc`.
+There is no `math.js` shim any more; JS and TS callers import `math.ts` directly (Vite and Node's type stripping both resolve the explicit `.ts` extension).
 
-## Typed state + pure systems (slices 1–4)
+## Typed state, pure systems, and composed systems
 
 - `src/types/game-state.ts` — `GameState`, `PhysicsState`, `AbilityState`, … factory return shapes
 - `src/types/wasm-physics.ts` — `MarblePhysicsApi` (used by `@ts-check` on `wasm-bridge.js`)
-- `src/types/global.d.ts` — `Window` extensions for game bootstrap flags
+- `src/types/global.d.ts` — `Window` extensions for game bootstrap flags (`webgpuProbe`, `webgpuParticlesReady`, …)
+- `src/types/filament.ts` — `FilamentModule` / `FilamentHandle` boundary aliases (deliberately `any`)
 - `src/game/state/*.js` — `@ts-check` factories; JSDoc `@returns` wired to `GameState` slices
-- Pure systems in `.ts` with `.js` shims (same pattern as `math.js`):
-  - `ability-cooldown.ts`, `trick-scoring.ts`, `campaign-progress.ts`, `replay-codec.ts`
-  - `physics-world-pure.ts`, `physics-backend-pure.ts`, `input-target-lock.ts`
+- Pure systems in `.ts`, imported directly (no `.js` shims): `ability-cooldown`, `trick-scoring`, `campaign-progress`, `replay-codec`, `physics-world-pure`, `physics-backend-pure`, `input-target-lock`
+- Composed systems in `.ts`, each exporting its `*Host` interface: `PhysicsWorldHost`, `InputSystemHost`, `RenderPipelineHost`, `HudControllerHost` (extends `HudHost`), `AbilityHost`, `PhysicsBackendHost`, `LevelLoaderDeps`. `main.js` (JS, unchecked) still wires them together, so these interfaces document the contract the game object must satisfy but are not enforced at the `new X(this)` call sites.
 - `src/types/map.ts` mirrors the declared map schema while retaining `unknown` extension fields used by legacy and specialized maps.
 - `src/levels/{catalog,campaign}.js` and `src/abilities/registry.js` are strict checked JavaScript with typed public catalog, chapter, registry, and mask APIs.
 - `src/game/network/protocol.js` remains strict checked JavaScript because the browser and Node 20 relay execute the same file; discriminated wire contracts live in `protocol-types.ts`.
 
-Intentional remaining exclusions are `src/game-loop/render.js`, `src/zones/**`, renderer/material implementations, editor implementation files, and non-pure Phase B systems. Their narrow `.d.ts` boundaries prevent stable pure modules from widening strict checking into those APIs before the subsystem split stabilizes.
+Tests run under Node's native type stripping, so `.ts` modules must stay erasable-syntax only (no enums, namespaces, or constructor parameter properties) and use explicit `.ts` import extensions.
+
+Intentional remaining exclusions are `game-loop/sync.js`, the other mixin-installed frame slices, `src/zones/**`, renderer/material implementations, and editor implementation files.
+
+## Compatibility shims
+
+The root `src/*-methods.js` deprecation shims (`ability-`, `init-`, `game-logic-`, `zone-setup-`, `marble-management-`, `physics-factory-`, `input-methods.js`) were **deleted** in September 2026 once no import remained; `main.js` imports the canonical `abilities/`, `init/`, `game-logic/`, and `zone-setup/` index modules directly. There are no `.js` re-export shims for the `.ts` systems. Do not add new ones.
 
 ## Consequences
 
 - **Positive:** Clear boundary for C++ vs JS vs TS; less accidental React/WebGPU scope creep; `typecheck` becomes meaningful as `include` grows.
-- **Negative:** Dual `.js` shims during migration; contributors must read this ADR before adding languages.
+- **Negative:** Contributors must read this ADR before adding languages; `@ts-check` files need JSDoc for anything TypeScript cannot infer.
 - **Neutral:** Python backend unchanged; Filament/Rapier versions follow upstream.
 
 ## Review triggers
 
 Revisit this ADR when:
 
-- Phase B replaces mixins with composed subsystems.
+- `game-loop/sync.js` or the zone factories are migrated to TypeScript.
 - Multiplayer or worker threads require SharedArrayBuffer physics sharing.
 - A second UI product (sequencer) is greenlit.
 - WebGPU post-processing ships inside the main game (not a side tool).

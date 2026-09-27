@@ -111,6 +111,7 @@ export function createRaycastViews(sab) {
  * @param {Float32Array} f32
  * @param {number} slot
  * @param {number} bodyIndex
+ * @returns {{x:number,y:number,z:number,qx:number,qy:number,qz:number,qw:number}}
  */
 export function readBodyTransform(u32, f32, slot, bodyIndex) {
     const baseFloat =

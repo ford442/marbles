@@ -69,8 +69,78 @@ export const ABILITY_METADATA: Record<string, AbilityMeta> = {
     chameleon: { icon: '🦎', key: 'K', name: 'Chameleon', color: '#00ff00' }
 };
 
-export class HUDManager {
-    game: any;
+/** Ability registry surface the HUD reads (see AbilitySystem). */
+export interface HudAbilitySource {
+    isEnabled(id: string): boolean;
+    tickHudIcons(hud: HUDManager, now: number): void;
+}
+
+/**
+ * The slice of the game runtime `HUDManager` reads. Every meter field is
+ * optional: `updateAllAbilities()` only draws a meter once the game has
+ * defined the field (`!== undefined`), so absent abilities are skipped.
+ */
+export interface HudHost {
+    abilitySystem?: HudAbilitySource | null;
+    /** Rewind ring buffer; its presence enables the rewind meter. */
+    _rewindBuffer?: unknown;
+    boostCooldown?: number;
+    buildEnergy?: number;
+    chameleonCooldown?: number;
+    dashCooldown?: number;
+    empCooldown?: number;
+    flipEnergy?: number;
+    focusEnergy?: number;
+    gliderEnergy?: number;
+    gravityPulseCooldown?: number;
+    hoverEnergy?: number;
+    iceEnergy?: number;
+    jetpackEnergy?: number;
+    lastBoostTime?: number;
+    lastChameleonTime?: number;
+    lastDashTime?: number;
+    lastEmpTime?: number;
+    lastGravityPulseTime?: number;
+    lastSizeShiftTime?: number;
+    lastTeleportTime?: number;
+    lastTremorTime?: number;
+    magnetPower?: number;
+    maxBuildEnergy?: number;
+    maxFlipEnergy?: number;
+    maxFocusEnergy?: number;
+    maxGliderEnergy?: number;
+    maxHoverEnergy?: number;
+    maxIceEnergy?: number;
+    maxJetpackEnergy?: number;
+    maxPhaseEnergy?: number;
+    maxRewindFrames?: number;
+    maxTimeStopEnergy?: number;
+    maxVioletEnergy?: number;
+    maxVortexEnergy?: number;
+    phaseEnergy?: number;
+    sizeShiftCooldown?: number;
+    teleportCooldown?: number;
+    timeStopEnergy?: number;
+    tremorCooldown?: number;
+    violetEnergy?: number;
+    vortexEnergy?: number;
+    _rewindCount?: number;
+    flipActive?: boolean;
+    focusActive?: boolean;
+    gliderActive?: boolean;
+    hoverActive?: boolean;
+    iceActive?: boolean;
+    isRewinding?: boolean;
+    jetpackActive?: boolean;
+    magnetActive?: boolean;
+    phaseActive?: boolean;
+    timeStopActive?: boolean;
+    violetActive?: boolean;
+    vortexActive?: boolean;
+}
+
+export class HUDManager<Host extends HudHost = HudHost> {
+    game: Host;
     abilityElements: Map<string, HTMLElement>;
     allAbilityElements: Map<string, HTMLElement>;
     abilityLastUsed: Map<string, number>;
@@ -79,7 +149,7 @@ export class HUDManager {
     categoryExpanded: Record<string, boolean>;
     _lastHudUpdate?: number;
 
-    constructor(game: any, { initialize = true }: { initialize?: boolean } = {}) {
+    constructor(game: Host, { initialize = true }: { initialize?: boolean } = {}) {
         this.game = game;
         this.abilityElements = new Map();
         this.allAbilityElements = new Map(); // Cache all-ability DOM elements

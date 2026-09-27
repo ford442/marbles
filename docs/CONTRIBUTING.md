@@ -158,7 +158,7 @@ Primitive zones (`floor`, `track`, `goal`, `slalom`, etc.) are handled by method
 
 - Add zone modules at `src/*_zone.js` (legacy layout removed)
 - Duplicate `switch` cases in multiple files — **`registry.js` is the only map**
-- Import zone factories from `zone-setup-methods.js` — use `zones/index.js` or `registry.js`
+- Import zone factories from `zone-setup/index.js` — use `zones/index.js` or `registry.js`
 
 
 ## Asset Structure

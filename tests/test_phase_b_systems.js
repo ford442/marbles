@@ -7,9 +7,9 @@ import {
 } from '../src/game/systems/physics-world-pure.ts';
 import { findBestLockOnTarget } from '../src/game/systems/input-target-lock.ts';
 import { extractMarbleMaterialFields } from '../src/game/systems/marble-material-fields.js';
-import { LevelLoader } from '../src/game/systems/level-loader.js';
-import { RenderPipeline } from '../src/game/systems/render-pipeline.js';
-import { HudController } from '../src/game/systems/hud-controller.js';
+import { LevelLoader } from '../src/game/systems/level-loader.ts';
+import { RenderPipeline } from '../src/game/systems/render-pipeline.ts';
+import { HudController } from '../src/game/systems/hud-controller.ts';
 import { installKnownMethods } from '../src/game/systems/method-installer.js';
 
 function testMaterialAliases() {

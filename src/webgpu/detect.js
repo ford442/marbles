@@ -2,7 +2,7 @@
 
 import { runWebGPUBootProbe } from './boot-probe.js';
 
-export const WEBGPU_PARTICLE_CAP = 8192;
+export { WEBGPU_PARTICLE_CAP } from './device-requirements.js';
 
 /**
  * @returns {boolean}

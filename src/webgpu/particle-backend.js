@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * WebGPU compute particle backend — overlays Filament WebGL2 (dual-renderer path).
  * Opt-in via ?webgpuParticles=1; CPU ParticleSystem remains the fallback.
@@ -7,7 +8,8 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import integrateShader from './shaders/particle-integrate.wgsl?raw';
 import renderShader from './shaders/particle-render.wgsl?raw';
 import { WEBGPU_PARTICLE_CAP, isWebGPUDepthTestRequested } from './detect.js';
-import { getProbedDevice } from './boot-probe.js';
+import { getProbedDevice, recoverWebGPUDevice } from './boot-probe.js';
+import { withValidationScope } from './error-scope.js';
 import { buildViewProjection } from './camera-math.js';
 import { packParticle, PARTICLE_STRIDE } from './particle-data.js';
 import { updateParticleOcclusion } from './occlusion.js';
@@ -21,13 +23,60 @@ import {
 
 export { packParticle, PARTICLE_STRIDE } from './particle-data.js';
 
+/**
+ * The slice of the game runtime this backend touches.
+ * @typedef {object} ParticleBackendHost
+ * @property {import('../particle-system.js').ParticleSystem} [particleSystem]
+ * @property {import('@dimforge/rapier3d-compat').World} [world] Physics world used for occlusion raycasts.
+ * @property {WebGPUParticleBackend | null} [webgpuParticles] The live overlay, if any.
+ */
+
+/**
+ * Placeholder for fields that init() assigns before `ready` flips true. Yields
+ * `undefined` at runtime; typed `never` so the field keeps its non-null GPU type.
+ * @returns {never}
+ */
+const unassigned = () => /** @type {never} */ (/** @type {unknown} */ (undefined));
+
 export class WebGPUParticleBackend {
+    // Assigned in init(); every method that touches them is gated on
+    // `this.ready`, which only flips true once init() has created them all.
+    /** @type {GPUDevice | null} Borrowed from the boot probe; nulled on dispose. */
+    device = null;
+    /** @type {HTMLCanvasElement} */
+    canvas = unassigned();
+    /** @type {GPUCanvasContext} */
+    context = unassigned();
+    /** @type {GPUTextureFormat} */
+    format = unassigned();
+    /** @type {GPUBuffer} */
+    particleBuffer = unassigned();
+    /** @type {GPUBuffer} */
+    activeBuffer = unassigned();
+    /** @type {GPUBuffer} */
+    readbackBuffer = unassigned();
+    /** @type {GPUBuffer} */
+    simParamsBuffer = unassigned();
+    /** @type {GPUBuffer} */
+    cameraBuffer = unassigned();
+    /** @type {GPUBuffer} */
+    occlusionBuffer = unassigned();
+    /** @type {GPUComputePipeline} */
+    computePipeline = unassigned();
+    /** @type {GPURenderPipeline} */
+    renderPipeline = unassigned();
+    /** @type {GPUBindGroup} */
+    computeBindGroup = unassigned();
+    /** @type {GPUBindGroup} */
+    renderBindGroup = unassigned();
+
     /**
-     * @param {object} game
-     * @param {import('../particle-system.js').ParticleSystem} particleSystem
+     * @param {ParticleBackendHost} game
+     * @param {import('../particle-system.js').ParticleSystem | null} particleSystem
      */
     constructor(game, particleSystem) {
         this.game = game;
+        /** Cleared by `ParticleSystem` on teardown, hence nullable. */
         this.particleSystem = particleSystem;
         this.maxParticles = WEBGPU_PARTICLE_CAP;
         this.ready = false;
@@ -44,65 +93,99 @@ export class WebGPUParticleBackend {
         this._aliveMask = new Uint8Array(this.maxParticles);
         this._pendingDispose = false;
         this._resizePending = false;
+        /** @type {(() => void) | null} */
         this._resizeHandler = null;
+        /** @type {((info: GPUDeviceLostInfo) => void) | null} Set by tryInitWebGPUParticles. */
+        this.onDeviceLost = null;
     }
 
     async init() {
-        // The boot probe (boot-probe.js) already made the session's one and
-        // only requestAdapter()/requestDevice() call before Filament even
-        // loaded. If it failed, the game never got this far; if it succeeded,
-        // this backend reuses that device rather than probing again.
-        this.device = getProbedDevice();
-        if (!this.device) {
+        // The boot probe (boot-probe.js) already made the session's
+        // requestAdapter()/requestDevice() call before Filament loaded. If it
+        // failed, there is no device and the CPU ParticleSystem keeps running;
+        // if it succeeded, this backend reuses that device.
+        const device = getProbedDevice();
+        this.device = device;
+        if (!device) {
             console.warn('[WebGPU] no probed device available (boot probe did not run or failed)');
             return false;
         }
 
-        this.canvas = document.getElementById('webgpu-particles-canvas');
-        if (!this.canvas) {
+        const canvas = document.getElementById('webgpu-particles-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) {
             console.warn('[WebGPU] overlay canvas #webgpu-particles-canvas not found');
+            return false;
+        }
+        this.canvas = canvas;
+
+        const context = canvas.getContext('webgpu');
+        if (!context) {
+            console.warn('[WebGPU] could not acquire webgpu context');
+            return false;
+        }
+        this.context = context;
+
+        this.format = navigator.gpu.getPreferredCanvasFormat();
+        this._configureContext();
+        this._resize();
+
+        try {
+            await withValidationScope(device, 'particle overlay resources', () => this._createResources(device));
+        } catch (err) {
+            console.warn('[WebGPU] particle overlay setup failed, staying on CPU particles:', err);
+            this.dispose();
             return false;
         }
 
         // gpu-chores runs its generic jobs on this same device — one live GPU
         // API per session, no second requestDevice().
-        adoptChoresDevice(this.device);
+        adoptChoresDevice(device);
 
-        this.device.lost.then((info) => {
+        device.lost.then((info) => {
+            if (this.device !== device || !this.ready) return;
             console.warn(`[WebGPU] device lost: ${info.reason}`, info.message);
             this.dispose();
+            this.onDeviceLost?.(info);
         });
 
-        this.context = this.canvas.getContext('webgpu');
-        if (!this.context) {
-            console.warn('[WebGPU] could not acquire webgpu context');
-            return false;
-        }
+        this._resizeHandler = () => this._scheduleResize();
+        window.addEventListener('resize', this._resizeHandler);
+        this.ready = true;
+        window.webgpuParticlesReady = true;
+        console.log(`[WebGPU] Particle backend ready (${this.maxParticles} slots)`);
+        return true;
+    }
 
-        this.format = navigator.gpu.getPreferredCanvasFormat();
-        this._resize();
+    /**
+     * Buffers, pipelines and bind groups. Runs inside one validation error
+     * scope so a bad shader or layout rejects init instead of surfacing later
+     * as an invalid dispatch.
+     *
+     * @param {GPUDevice} device
+     */
+    _createResources(device) {
 
-        this.particleBuffer = this.device.createBuffer({
+        this.particleBuffer = device.createBuffer({
             size: this.maxParticles * PARTICLE_STRIDE,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         });
 
-        this.activeBuffer = this.device.createBuffer({
+        this.activeBuffer = device.createBuffer({
             size: this.maxParticles * 4,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
         });
 
-        this.readbackBuffer = this.device.createBuffer({
+        this.readbackBuffer = device.createBuffer({
             size: this.maxParticles * 4,
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
         });
 
-        this.simParamsBuffer = this.device.createBuffer({
+        this.simParamsBuffer = device.createBuffer({
             size: 32,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
 
-        this.cameraBuffer = this.device.createBuffer({
+        this.cameraBuffer = device.createBuffer({
             size: 96,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
@@ -110,20 +193,20 @@ export class WebGPUParticleBackend {
         // Per-particle visibility against Filament scene geometry (see occlusion.js
         // for why this is a physics raycast rather than a shared GPU depth buffer).
         // Defaults to all-visible; only written to when ?webgpuDepthTest=1.
-        this.occlusionBuffer = this.device.createBuffer({
+        this.occlusionBuffer = device.createBuffer({
             size: this.maxParticles * 4,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         });
-        this.device.queue.writeBuffer(this.occlusionBuffer, 0, this._occlusionScratch);
+        device.queue.writeBuffer(this.occlusionBuffer, 0, this._occlusionScratch);
 
-        const computeModule = this.device.createShaderModule({ code: integrateShader });
-        this.computePipeline = this.device.createComputePipeline({
+        const computeModule = device.createShaderModule({ code: integrateShader });
+        this.computePipeline = device.createComputePipeline({
             layout: 'auto',
             compute: { module: computeModule, entryPoint: 'main' },
         });
 
-        const renderModule = this.device.createShaderModule({ code: renderShader });
-        this.renderPipeline = this.device.createRenderPipeline({
+        const renderModule = device.createShaderModule({ code: renderShader });
+        this.renderPipeline = device.createRenderPipeline({
             layout: 'auto',
             vertex: { module: renderModule, entryPoint: 'vs_main' },
             fragment: {
@@ -148,7 +231,7 @@ export class WebGPUParticleBackend {
             primitive: { topology: 'triangle-list' },
         });
 
-        this.computeBindGroup = this.device.createBindGroup({
+        this.computeBindGroup = device.createBindGroup({
             layout: this.computePipeline.getBindGroupLayout(0),
             entries: [
                 { binding: 0, resource: { buffer: this.particleBuffer } },
@@ -157,7 +240,7 @@ export class WebGPUParticleBackend {
             ],
         });
 
-        this.renderBindGroup = this.device.createBindGroup({
+        this.renderBindGroup = device.createBindGroup({
             layout: this.renderPipeline.getBindGroupLayout(0),
             entries: [
                 { binding: 0, resource: { buffer: this.particleBuffer } },
@@ -165,17 +248,35 @@ export class WebGPUParticleBackend {
                 { binding: 2, resource: { buffer: this.occlusionBuffer } },
             ],
         });
+    }
 
-        this._resizeHandler = () => this._scheduleResize();
-        window.addEventListener('resize', this._resizeHandler);
-        this.ready = true;
-        window.webgpuParticlesReady = true;
-        console.log(`[WebGPU] Particle backend ready (${this.maxParticles} slots)`);
-        return true;
+    /**
+     * Configures the overlay swap chain once; resizing the canvas afterwards
+     * needs no reconfigure (getCurrentTexture() follows the canvas size).
+     *
+     * The overlay is `premultiplied` so it composites over the Filament
+     * canvas underneath. Filament's own canvas stays `alpha: false`
+     * (rendering-defaults.js): it is the opaque bottom layer, and an alpha
+     * backbuffer there would let the page background bleed through. Both
+     * canvases present in sRGB, so particle colors match the scene.
+     */
+    _configureContext() {
+        const device = this.device;
+        if (!this.context || !device) return;
+        this.context.configure({
+            device,
+            format: this.format,
+            usage: GPUTextureUsage.RENDER_ATTACHMENT,
+            alphaMode: 'premultiplied',
+            colorSpace: 'srgb',
+            // Clamp to SDR; 'extended' would let HDR particle colors exceed the
+            // Filament layer they sit on.
+            toneMapping: { mode: 'standard' },
+        });
     }
 
     _resize() {
-        if (!this.canvas || !this.context || !this.device) return;
+        if (!this.canvas) return;
         const dpr = window.devicePixelRatio || 1;
         const w = Math.max(1, Math.floor((this.canvas.clientWidth || window.innerWidth) * dpr));
         const h = Math.max(1, Math.floor((this.canvas.clientHeight || window.innerHeight) * dpr));
@@ -183,11 +284,6 @@ export class WebGPUParticleBackend {
             this.canvas.width = w;
             this.canvas.height = h;
         }
-        this.context.configure({
-            device: this.device,
-            format: this.format,
-            alphaMode: 'premultiplied',
-        });
     }
 
     _scheduleResize() {
@@ -207,9 +303,11 @@ export class WebGPUParticleBackend {
     }
 
     uploadDirty() {
-        if (!this.ready || this._dirtyIndices.size === 0) return;
+        const device = this.device;
+        const particleSystem = this.particleSystem;
+        if (!this.ready || !device || !particleSystem || this._dirtyIndices.size === 0) return;
 
-        const pool = this.particleSystem.particles;
+        const pool = particleSystem.particles;
         const dirtyCount = this._dirtyIndices.size;
         const cap = Math.min(pool.length, this.maxParticles);
 
@@ -238,7 +336,7 @@ export class WebGPUParticleBackend {
 
             const byteOffset = rangeStart * PARTICLE_STRIDE;
             const byteSize = (rangeEnd - rangeStart + 1) * PARTICLE_STRIDE;
-            this.device.queue.writeBuffer(
+            device.queue.writeBuffer(
                 this.particleBuffer,
                 byteOffset,
                 this._cpuScratch.buffer,
@@ -253,12 +351,14 @@ export class WebGPUParticleBackend {
     }
 
     uploadAll() {
-        if (!this.ready) return;
+        const device = this.device;
+        if (!this.ready || !device || !this.particleSystem) return;
         const pool = this.particleSystem.particles;
         for (let i = 0; i < Math.min(pool.length, this.maxParticles); i++) {
-            packParticle(pool[i], i * PARTICLE_STRIDE, this._cpuScratch);
+            const particle = pool[i];
+            if (particle) packParticle(particle, i * PARTICLE_STRIDE, this._cpuScratch);
         }
-        this.device.queue.writeBuffer(this.particleBuffer, 0, this._cpuScratch);
+        device.queue.writeBuffer(this.particleBuffer, 0, this._cpuScratch);
         this._dirtyIndices.clear();
     }
 
@@ -266,7 +366,8 @@ export class WebGPUParticleBackend {
      * @param {number} deltaTime
      */
     step(deltaTime) {
-        if (!this.ready) return;
+        const device = this.device;
+        if (!this.ready || !device) return;
         this.uploadDirty();
 
         const simParams = new ArrayBuffer(32);
@@ -276,11 +377,11 @@ export class WebGPUParticleBackend {
         simView.setFloat32(8, 0, true);
         simView.setFloat32(12, -9.81, true);
         simView.setFloat32(16, 0, true);
-        this.device.queue.writeBuffer(this.simParamsBuffer, 0, simParams);
+        device.queue.writeBuffer(this.simParamsBuffer, 0, simParams);
 
         const useChores = this._choresCompactAvailable();
 
-        const encoder = this.device.createCommandEncoder();
+        const encoder = device.createCommandEncoder();
         const pass = encoder.beginComputePass();
         pass.setPipeline(this.computePipeline);
         pass.setBindGroup(0, this.computeBindGroup);
@@ -293,7 +394,7 @@ export class WebGPUParticleBackend {
                 this.activeBuffer, 0, this.readbackBuffer, 0, this.readbackBuffer.size
             );
         }
-        this.device.queue.submit([encoder.finish()]);
+        device.queue.submit([encoder.finish()]);
 
         if (useChores) {
             this._schedulePrune();
@@ -351,6 +452,7 @@ export class WebGPUParticleBackend {
      * @param {number} count
      */
     _pruneToAliveIndices(indices, count) {
+        if (!this.particleSystem) return;
         this.stats.activeCount = pruneToAliveIndices(
             indices,
             count,
@@ -376,7 +478,7 @@ export class WebGPUParticleBackend {
                 const active = this.particleSystem.activeParticles;
                 for (let i = active.length - 1; i >= 0; i--) {
                     const p = active[i];
-                    if (!p || flags[p._poolIndex] < 0.5) {
+                    if (!p || (flags[p._poolIndex] ?? 1) < 0.5) {
                         if (p) p.active = false;
                         active.splice(i, 1);
                     }
@@ -399,7 +501,8 @@ export class WebGPUParticleBackend {
      * @param {{ eye: number[] } | null} cameraState
      */
     updateOcclusion(cameraState) {
-        if (!this.ready || !this._depthTestEnabled) return;
+        const device = this.device;
+        if (!this.ready || !device || !this._depthTestEnabled || !this.particleSystem) return;
         const world = this.game.world;
         const eye = cameraState?.eye;
         if (!world || !eye) return;
@@ -414,7 +517,7 @@ export class WebGPUParticleBackend {
             this.particleSystem.activeParticles,
             this._occlusionScratch
         );
-        this.device.queue.writeBuffer(this.occlusionBuffer, 0, this._occlusionScratch);
+        device.queue.writeBuffer(this.occlusionBuffer, 0, this._occlusionScratch);
     }
 
     /**
@@ -423,7 +526,8 @@ export class WebGPUParticleBackend {
      * @param {number} aspect
      */
     render(cameraState, fovDeg, aspect) {
-        if (!this.ready || !cameraState) return;
+        const device = this.device;
+        if (!this.ready || !device || !cameraState) return;
 
         this.updateOcclusion(cameraState);
         this._resize();
@@ -431,14 +535,15 @@ export class WebGPUParticleBackend {
         const camData = new ArrayBuffer(96);
         new Float32Array(camData, 0, 16).set(viewProj);
         const camView = new DataView(camData);
-        camView.setFloat32(64, cameraState.eye[0], true);
-        camView.setFloat32(68, cameraState.eye[1], true);
-        camView.setFloat32(72, cameraState.eye[2], true);
+        const [eyeX = 0, eyeY = 0, eyeZ = 0] = cameraState.eye;
+        camView.setFloat32(64, eyeX, true);
+        camView.setFloat32(68, eyeY, true);
+        camView.setFloat32(72, eyeZ, true);
         camView.setFloat32(80, this.canvas.width, true);
         camView.setFloat32(84, this.canvas.height, true);
-        this.device.queue.writeBuffer(this.cameraBuffer, 0, camData);
+        device.queue.writeBuffer(this.cameraBuffer, 0, camData);
 
-        const encoder = this.device.createCommandEncoder();
+        const encoder = device.createCommandEncoder();
         const textureView = this.context.getCurrentTexture().createView();
         const pass = encoder.beginRenderPass({
             colorAttachments: [{
@@ -452,7 +557,7 @@ export class WebGPUParticleBackend {
         pass.setBindGroup(0, this.renderBindGroup);
         pass.draw(6, this.maxParticles);
         pass.end();
-        this.device.queue.submit([encoder.finish()]);
+        device.queue.submit([encoder.finish()]);
 
         this.canvas.style.opacity = this.stats.activeCount > 0 ? '1' : '0';
     }
@@ -477,7 +582,10 @@ export class WebGPUParticleBackend {
     }
 
     _destroyResources() {
-        releaseChoresDevice();
+        // Only let go of chores if they still hold *this* device — after a
+        // recovery they may already have adopted the replacement.
+        if (this.device) releaseChoresDevice(this.device);
+        try { this.context?.unconfigure(); } catch {}
         try { this.particleBuffer?.destroy(); } catch {}
         try { this.activeBuffer?.destroy(); } catch {}
         try { this.readbackBuffer?.destroy(); } catch {}
@@ -492,13 +600,40 @@ export class WebGPUParticleBackend {
 
 /**
  * Non-blocking init — does not delay Filament / game boot.
- * @param {object} game
+ * @param {ParticleBackendHost} game
  */
 export async function tryInitWebGPUParticles(game) {
     if (!game?.particleSystem) return null;
     const backend = new WebGPUParticleBackend(game, game.particleSystem);
     const ok = await backend.init();
     if (!ok) return null;
+    backend.onDeviceLost = () => { void recoverWebGPUParticles(game, backend); };
     game.particleSystem.enableWebGPU(backend);
+    game.webgpuParticles = backend;
     return backend;
+}
+
+/**
+ * After a device loss: take the boot probe's one recovery and rebuild the
+ * overlay on the new device, or drop the overlay for good and leave the CPU
+ * ParticleSystem running. Either way the session never keeps a dead overlay.
+ *
+ * @param {ParticleBackendHost} game
+ * @param {WebGPUParticleBackend} lostBackend
+ */
+async function recoverWebGPUParticles(game, lostBackend) {
+    const particleSystem = game.particleSystem;
+    particleSystem?.disableWebGPU(lostBackend);
+    if (game.webgpuParticles === lostBackend) game.webgpuParticles = null;
+
+    const { ok, error } = await recoverWebGPUDevice();
+    if (!ok) {
+        console.info(`[WebGPU] overlay disabled after device loss (${error}); CPU particles continue`);
+        return;
+    }
+    if (!game.particleSystem || game.particleSystem !== particleSystem) return;
+    const next = await tryInitWebGPUParticles(game);
+    console.info(next
+        ? '[WebGPU] particle overlay recovered on a new device'
+        : '[WebGPU] overlay could not be rebuilt after device loss; CPU particles continue');
 }

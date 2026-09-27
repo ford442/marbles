@@ -253,6 +253,20 @@ function testAdoptDeviceNeverCreatesOne() {
     assert.equal(getChoresBackend(), 'cpu');
 }
 
+function testStaleOwnerCannotReleaseReplacement() {
+    resetState();
+    const lostDevice = { lost: new Promise(() => {}) };
+    const replacement = { lost: new Promise(() => {}) };
+    adoptDevice(replacement);
+    // The disposed overlay from before a device-loss recovery lets go late.
+    releaseDevice(lostDevice);
+    assert.equal(_testExports.getAdoptedDevice(), replacement);
+    releaseDevice(null);
+    assert.equal(_testExports.getAdoptedDevice(), replacement);
+    releaseDevice(replacement);
+    assert.equal(_testExports.getAdoptedDevice(), null);
+}
+
 async function testGpuJobRoutesThroughAdoptedBackend() {
     resetState();
     adoptDevice({ lost: new Promise(() => {}) });
@@ -337,6 +351,7 @@ testCompactKernelParity();
 testReduceKernelParity();
 testKillSwitch();
 testAdoptDeviceNeverCreatesOne();
+testStaleOwnerCannotReleaseReplacement();
 testOpsList();
 
 await testRunJobFallsBackToCpuWithoutDevice();

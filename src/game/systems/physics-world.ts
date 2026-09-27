@@ -1,5 +1,7 @@
 import RAPIER from '@dimforge/rapier3d-compat';
-import { quatFromEuler, quaternionToMat4 } from '../../math.ts';
+import { quatFromEuler, type Quat, type Vec3 } from '../../math.ts';
+import { scaledTransform } from '../../game-loop/helpers.ts';
+import type { FilamentHandle, FilamentModule } from '../../types/filament.ts';
 import { audio } from '../../audio.js';
 import { applyFullPreset } from '../../material-system.ts';
 import { CUBE_VERTICES, CUBE_INDICES } from '../../cube-geometry.js';
@@ -19,28 +21,127 @@ import {
     getStaticBatchKey,
     isStaticBatchingEnabled,
     resolveStaticSurfacePreset,
+    type StaticSurfacePresetInput,
+    type SurfacePreset,
 } from './physics-world-pure.ts';
 
 const DEFAULT_SURFACE_ROUGHNESS = 0.4;
+
+type RGB = readonly number[];
+/** Rotation as either a quaternion object or an `[x, y, z, w]` tuple. */
+type RotationInput = Quat | readonly number[] | null | undefined;
+
+/** One queued box/decorative instance awaiting `flushStaticBatches()`. */
+export interface BatchInstance {
+    position: number[];
+    rotation: number[];
+    scale: number[];
+}
+
+interface BatchGroup {
+    key: string;
+    color: number[];
+    materialPreset: StaticSurfacePresetInput;
+    surfacePreset: SurfacePreset | null;
+    instances: BatchInstance[];
+}
+
+interface DecorativeBatchGroup extends BatchGroup {
+    primitiveType: string;
+}
+
+export interface StaticBatchStats {
+    groups: number;
+    boxes: number;
+    collapsedEntities: number;
+    decorative: { groups: number; instances: number; collapsedEntities: number };
+}
+
+/** Collider description accepted by `_createSimBody` (also forwarded to the physics worker). */
+export interface SimColliderSpec {
+    type: 'ball' | 'sensor_ball' | 'cuboid';
+    radius?: number;
+    halfExtents?: Vec3 | number[];
+    density?: number;
+    friction?: number;
+    restitution?: number;
+    collisionGroups?: number;
+}
+
+export interface SimBodyOptions {
+    gravityScale?: number;
+    linearDamping?: number;
+    angularDamping?: number;
+    canSleep?: boolean;
+}
+
+export interface NetworkMarbleEntry {
+    playerId: string;
+    rigidBody: RAPIER.RigidBody;
+    entity: FilamentHandle;
+    matInstance: FilamentHandle;
+    colorIndex: number;
+}
+
+/**
+ * The slice of the game runtime `PhysicsWorld` reads and writes. Rapier types
+ * are real; Filament handles are opaque (see `types/filament.ts`).
+ */
+export interface PhysicsWorldHost {
+    world: RAPIER.World;
+    physicsGravity?: Vec3;
+    physicsBackend?: {
+        isWorkerMode?(): boolean;
+        step(): void;
+        registerBody(desc: unknown): RAPIER.RigidBody;
+    } | null;
+    rendererType?: string;
+    hasProceduralMaterial?: boolean;
+    Filament: FilamentModule;
+    engine: FilamentHandle;
+    scene: FilamentHandle;
+    material: FilamentHandle;
+    vb: FilamentHandle;
+    ib: FilamentHandle;
+    sphereVb: FilamentHandle;
+    sphereIb: FilamentHandle;
+    staticBodies: unknown[];
+    staticEntities: unknown[];
+    staticBatchResources?: unknown[];
+    staticBatchStats?: StaticBatchStats;
+    dynamicObjects: unknown[];
+    dynamicBodies: Set<unknown>;
+    rotatingPlatforms: unknown[];
+    networkMarbles?: Map<string, NetworkMarbleEntry>;
+    _staticBoxBatchGroups?: Map<string, BatchGroup>;
+    _decorativeBatchGroups?: Map<string, DecorativeBatchGroup>;
+}
+
+/** Surface preset that glows: positive `emissiveIntensity` plus an `emissive` colour. */
+function hasEmissive(
+    preset: SurfacePreset | null,
+): preset is SurfacePreset & { emissive: readonly number[]; emissiveIntensity: number } {
+    return typeof preset?.emissiveIntensity === 'number' && preset.emissiveIntensity > 0 && Boolean(preset.emissive);
+}
 
 /**
  * Rapier world lifecycle + static/dynamic body factories (Phase B subsystem).
  */
 export class PhysicsWorld {
-    /** @param {object} game */
-    constructor(game) {
+    game: PhysicsWorldHost;
+
+    constructor(game: PhysicsWorldHost) {
         this.game = game;
     }
 
-    /** @param {{ x: number, y: number, z: number }} [gravity] */
-    init(gravity = { x: 0.0, y: -9.81, z: 0.0 }) {
+    init(gravity: Vec3 = { x: 0.0, y: -9.81, z: 0.0 }): RAPIER.World {
         const g = this.game;
         g.physicsGravity = gravity;
         g.world = new RAPIER.World(gravity);
         return g.world;
     }
 
-    step() {
+    step(): void {
         const backend = this.game.physicsBackend;
         if (backend?.isWorkerMode?.()) {
             backend.step();
@@ -49,36 +150,36 @@ export class PhysicsWorld {
         this.game.world?.step();
     }
 
-    _isWorkerMode() {
+    _isWorkerMode(): boolean {
         return Boolean(this.game.physicsBackend?.isWorkerMode?.());
     }
 
-    _rotationArray(rotation) {
-        if (rotation?.w != null) {
-            return [rotation.x, rotation.y, rotation.z, rotation.w];
-        }
-        return rotation || [0, 0, 0, 1];
+    _rotationArray(rotation: RotationInput): number[] {
+        if (!rotation) return [0, 0, 0, 1];
+        if (Array.isArray(rotation)) return [...rotation];
+        const q = rotation as Quat;
+        return [q.x, q.y, q.z, q.w];
     }
 
-    /**
-     * @param {'fixed'|'dynamic'|'kinematic'} type
-     * @param {{ x: number, y: number, z: number }} pos
-     * @param {object} rotation
-     * @param {object} collider
-     * @param {object} [options]
-     */
-    _createSimBody(type, pos, rotation, collider, options = {}) {
+    _createSimBody(
+        type: 'fixed' | 'dynamic' | 'kinematic',
+        pos: Vec3,
+        rotation: Quat,
+        collider: SimColliderSpec,
+        options: SimBodyOptions = {},
+    ): RAPIER.RigidBody {
         const g = this.game;
-        if (this._isWorkerMode()) {
+        if (g.physicsBackend && this._isWorkerMode()) {
+            const he = collider.halfExtents;
             return g.physicsBackend.registerBody({
                 type,
                 translation: [pos.x, pos.y, pos.z],
                 rotation: this._rotationArray(rotation),
                 collider: {
                     ...collider,
-                    halfExtents: collider.halfExtents?.x != null
-                        ? [collider.halfExtents.x, collider.halfExtents.y, collider.halfExtents.z]
-                        : collider.halfExtents,
+                    halfExtents: he && !Array.isArray(he) && (he as Vec3).x != null
+                        ? [(he as Vec3).x, (he as Vec3).y, (he as Vec3).z]
+                        : he,
                 },
                 gravityScale: options.gravityScale,
                 linearDamping: options.linearDamping,
@@ -87,7 +188,7 @@ export class PhysicsWorld {
             });
         }
 
-        let bodyDesc;
+        let bodyDesc: RAPIER.RigidBodyDesc;
         if (type === 'fixed') {
             bodyDesc = RAPIER.RigidBodyDesc.fixed()
                 .setTranslation(pos.x, pos.y, pos.z)
@@ -107,13 +208,13 @@ export class PhysicsWorld {
         }
 
         const body = g.world.createRigidBody(bodyDesc);
-        let colliderDesc;
+        let colliderDesc: RAPIER.ColliderDesc;
         if (collider.type === 'ball') {
             colliderDesc = RAPIER.ColliderDesc.ball(collider.radius ?? 0.5);
         } else if (collider.type === 'sensor_ball') {
             colliderDesc = RAPIER.ColliderDesc.ball(collider.radius ?? 0.5).setSensor(true);
         } else {
-            const h = collider.halfExtents;
+            const h = collider.halfExtents as Vec3;
             colliderDesc = RAPIER.ColliderDesc.cuboid(h.x, h.y, h.z);
         }
         if (collider.density != null) colliderDesc.setDensity(collider.density);
@@ -125,30 +226,38 @@ export class PhysicsWorld {
         return body;
     }
 
-    isStaticBatchingEnabled() {
+    isStaticBatchingEnabled(): boolean {
         const g = this.game;
         return isStaticBatchingEnabled({
-            rendererType: g.rendererType,
-            usingSimpleRenderer: typeof window !== 'undefined' ? window.usingSimpleRenderer : false,
+            ...(g.rendererType !== undefined && { rendererType: g.rendererType }),
+            usingSimpleRenderer: typeof window !== 'undefined' ? Boolean(window.usingSimpleRenderer) : false,
         });
     }
 
-    resolveStaticSurfacePreset(materialPreset) {
+    resolveStaticSurfacePreset(materialPreset: StaticSurfacePresetInput): SurfacePreset | null {
         return resolveStaticSurfacePreset(materialPreset);
     }
 
-    getStaticBatchKey(color, materialPreset, surfacePreset) {
+    getStaticBatchKey(
+        color: RGB,
+        materialPreset: StaticSurfacePresetInput,
+        surfacePreset: SurfacePreset | null,
+    ): string {
         return getStaticBatchKey(color, materialPreset, surfacePreset);
     }
 
-    createStaticMaterialInstance(color, materialPreset, surfacePreset = null) {
+    createStaticMaterialInstance(
+        color: RGB,
+        _materialPreset: StaticSurfacePresetInput,
+        surfacePreset: SurfacePreset | null = null,
+    ): FilamentHandle {
         const g = this.game;
         const matInstance = g.material.createInstance();
         const baseColor = surfacePreset?.baseColor ? surfacePreset.baseColor : color;
         matInstance.setColor3Parameter('baseColor', g.Filament['RgbType'].sRGB, baseColor);
 
         if (surfacePreset) {
-            applyFullPreset(matInstance, surfacePreset, g.hasProceduralMaterial, g.Filament);
+            applyFullPreset(matInstance, surfacePreset, Boolean(g.hasProceduralMaterial), g.Filament);
         } else {
             matInstance.setFloatParameter('roughness', DEFAULT_SURFACE_ROUGHNESS);
             if (g.hasProceduralMaterial) {
@@ -160,7 +269,14 @@ export class PhysicsWorld {
         return matInstance;
     }
 
-    queueStaticBoxBatch(pos, rotation, halfExtents, color, materialPreset, surfacePreset) {
+    queueStaticBoxBatch(
+        pos: Vec3,
+        rotation: Quat,
+        halfExtents: Vec3,
+        color: RGB,
+        materialPreset: StaticSurfacePresetInput,
+        surfacePreset: SurfacePreset | null,
+    ): void {
         const g = this.game;
         if (!g._staticBoxBatchGroups) g._staticBoxBatchGroups = new Map();
 
@@ -184,13 +300,23 @@ export class PhysicsWorld {
         });
     }
 
-    getDecorativeBatchKey(primitiveType, color, materialPreset, surfacePreset) {
+    getDecorativeBatchKey(
+        primitiveType: string,
+        color: RGB,
+        materialPreset: StaticSurfacePresetInput,
+        surfacePreset: SurfacePreset | null,
+    ): string {
         return `${primitiveType}|${getStaticBatchKey(color, materialPreset, surfacePreset)}`;
     }
 
-    queueDecorativeBatch(primitiveType, instances, color, materialPreset = null) {
+    queueDecorativeBatch(
+        primitiveType: string,
+        instances: BatchInstance[],
+        color: RGB,
+        materialPreset: StaticSurfacePresetInput = null,
+    ): void {
         const g = this.game;
-        if (!DECORATIVE_PRIMITIVES[primitiveType]) {
+        if (!(primitiveType in DECORATIVE_PRIMITIVES)) {
             console.warn(`[BATCH] unknown decorative primitive: ${primitiveType}`);
             return;
         }
@@ -213,17 +339,21 @@ export class PhysicsWorld {
         group.instances.push(...instances);
     }
 
-    queueDecorativeBoxes(instances, color, materialPreset = null) {
+    queueDecorativeBoxes(
+        instances: Partial<BatchInstance>[] | null | undefined,
+        color: RGB,
+        materialPreset: StaticSurfacePresetInput = null,
+    ): void {
         if (!instances?.length) return;
         const surfacePreset = resolveStaticSurfacePreset(materialPreset);
         for (const inst of instances) {
-            const pos = inst.position || [0, 0, 0];
-            const rot = inst.rotation || [0, 0, 0, 1];
-            const scl = inst.scale || [1, 1, 1];
+            const [px = 0, py = 0, pz = 0] = inst.position ?? [];
+            const [rx = 0, ry = 0, rz = 0, rw = 1] = inst.rotation ?? [];
+            const [sx = 1, sy = 1, sz = 1] = inst.scale ?? [];
             this.queueStaticBoxBatch(
-                { x: pos[0], y: pos[1], z: pos[2] },
-                { x: rot[0], y: rot[1], z: rot[2], w: rot[3] },
-                { x: scl[0] / 2, y: scl[1] / 2, z: scl[2] / 2 },
+                { x: px, y: py, z: pz },
+                { x: rx, y: ry, z: rz, w: rw },
+                { x: sx / 2, y: sy / 2, z: sz / 2 },
                 color,
                 materialPreset,
                 surfacePreset,
@@ -231,7 +361,7 @@ export class PhysicsWorld {
         }
     }
 
-    flushDecorativeBatches() {
+    flushDecorativeBatches(): StaticBatchStats['decorative'] {
         const g = this.game;
         const groups = g._decorativeBatchGroups;
         if (!groups || groups.size === 0) {
@@ -244,12 +374,12 @@ export class PhysicsWorld {
         let groupsBuilt = 0;
         for (const group of groups.values()) {
             if (!group.instances.length) continue;
-            const mesh = DECORATIVE_PRIMITIVES[group.primitiveType];
+            const mesh = DECORATIVE_PRIMITIVES[group.primitiveType as keyof typeof DECORATIVE_PRIMITIVES];
             const batch = batchGeometry(mesh.vertices, mesh.indices, group.instances, DECORATIVE_VERTEX_STRIDE);
             const { vb, ib } = buildBatchedBuffers(g.Filament, g.engine, batch, DECORATIVE_VERTEX_STRIDE);
             const matInstance = this.createStaticMaterialInstance(group.color, group.materialPreset, group.surfacePreset);
             const bounds = computeMeshBatchBounds(mesh.vertices, mesh.indices, group.instances, DECORATIVE_VERTEX_STRIDE);
-            const radius = Math.hypot(bounds.halfExtent[0], bounds.halfExtent[1], bounds.halfExtent[2]);
+            const radius = Math.hypot(...bounds.halfExtent);
             const entity = createBatchedRenderable(g.engine, g.scene, g.Filament, vb, ib, matInstance, bounds);
 
             g.staticEntities.push(entity);
@@ -275,7 +405,7 @@ export class PhysicsWorld {
         };
     }
 
-    flushStaticBatches() {
+    flushStaticBatches(): void {
         const g = this.game;
         const groups = g._staticBoxBatchGroups;
         if (!g.staticBatchResources) g.staticBatchResources = [];
@@ -289,7 +419,7 @@ export class PhysicsWorld {
                 const { vb, ib } = buildBatchedBuffers(g.Filament, g.engine, batch, 9);
                 const matInstance = this.createStaticMaterialInstance(group.color, group.materialPreset, group.surfacePreset);
                 const bounds = computeBatchBounds(group.instances);
-                const radius = Math.hypot(bounds.halfExtent[0], bounds.halfExtent[1], bounds.halfExtent[2]);
+                const radius = Math.hypot(...bounds.halfExtent);
                 const entity = createBatchedRenderable(g.engine, g.scene, g.Filament, vb, ib, matInstance, bounds);
 
                 g.staticEntities.push(entity);
@@ -320,7 +450,7 @@ export class PhysicsWorld {
         console.info('[BATCH] static boxes', g.staticBatchStats);
     }
 
-    createPhaseBox(pos, rotation, halfExtents, color, material = 'glass') {
+    createPhaseBox(pos: Vec3, rotation: Quat, halfExtents: Vec3, color: RGB, material = 'glass'): void {
         const g = this.game;
         const body = this._createSimBody('fixed', pos, rotation, {
             type: 'cuboid',
@@ -354,21 +484,44 @@ export class PhysicsWorld {
         const tcm = g.engine.getTransformManager();
         const inst = tcm.getInstance(entity);
 
-        const mat = quaternionToMat4(pos, rotation);
-        const sx = halfExtents.x * 2;
-        const sy = halfExtents.y * 2;
-        const sz = halfExtents.z * 2;
-
-        mat[0] *= sx; mat[1] *= sx; mat[2] *= sx;
-        mat[4] *= sy; mat[5] *= sy; mat[6] *= sy;
-        mat[8] *= sz; mat[9] *= sz; mat[10] *= sz;
+        const mat = scaledTransform(pos, rotation, {
+            x: halfExtents.x * 2,
+            y: halfExtents.y * 2,
+            z: halfExtents.z * 2,
+        });
 
         tcm.setTransform(inst, mat);
         g.scene.addEntity(entity);
         g.staticEntities.push(entity);
     }
 
-    createStaticBox(pos, rotation, halfExtents, color, materialPreset = null) {
+    /** Adds a point light above a box whose surface preset glows (no-op otherwise). */
+    private _addEmissiveSurfaceLight(pos: Vec3, halfExtents: Vec3, surfacePreset: SurfacePreset | null): void {
+        if (!hasEmissive(surfacePreset)) return;
+        const g = this.game;
+        const lightEntity = g.Filament.EntityManager.get().create();
+        const lightColor = surfacePreset.emissive;
+        const lightIntensity = surfacePreset.emissiveIntensity * 8000;
+        g.Filament.LightManager.Builder(g.Filament['LightManager$Type'].POINT)
+            .color(lightColor)
+            .intensity(lightIntensity)
+            .falloff(15.0)
+            .build(g.engine, lightEntity);
+        const ltcm = g.engine.getTransformManager();
+        const linst = ltcm.getInstance(lightEntity);
+        const lmat = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, pos.x, pos.y + halfExtents.y, pos.z, 1];
+        ltcm.setTransform(linst, lmat);
+        g.scene.addEntity(lightEntity);
+        g.staticEntities.push(lightEntity);
+    }
+
+    createStaticBox(
+        pos: Vec3,
+        rotation: Quat,
+        halfExtents: Vec3,
+        color: RGB,
+        materialPreset: StaticSurfacePresetInput = null,
+    ): void {
         const g = this.game;
         const body = this._createSimBody('fixed', pos, rotation, {
             type: 'cuboid',
@@ -383,22 +536,7 @@ export class PhysicsWorld {
         if (this.isStaticBatchingEnabled()) {
             this.queueStaticBoxBatch(pos, rotation, halfExtents, color, materialPreset, surfacePreset);
 
-            if (surfacePreset?.emissiveIntensity > 0 && surfacePreset.emissive) {
-                const lightEntity = g.Filament.EntityManager.get().create();
-                const lightColor = surfacePreset.emissive;
-                const lightIntensity = surfacePreset.emissiveIntensity * 8000;
-                g.Filament.LightManager.Builder(g.Filament['LightManager$Type'].POINT)
-                    .color(lightColor)
-                    .intensity(lightIntensity)
-                    .falloff(15.0)
-                    .build(g.engine, lightEntity);
-                const ltcm = g.engine.getTransformManager();
-                const linst = ltcm.getInstance(lightEntity);
-                const lmat = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, pos.x, pos.y + halfExtents.y, pos.z, 1];
-                ltcm.setTransform(linst, lmat);
-                g.scene.addEntity(lightEntity);
-                g.staticEntities.push(lightEntity);
-            }
+            this._addEmissiveSurfaceLight(pos, halfExtents, surfacePreset);
 
             return;
         }
@@ -417,38 +555,28 @@ export class PhysicsWorld {
         const tcm = g.engine.getTransformManager();
         const inst = tcm.getInstance(entity);
 
-        const mat = quaternionToMat4(pos, rotation);
-        const sx = halfExtents.x * 2;
-        const sy = halfExtents.y * 2;
-        const sz = halfExtents.z * 2;
-
-        mat[0] *= sx; mat[1] *= sx; mat[2] *= sx;
-        mat[4] *= sy; mat[5] *= sy; mat[6] *= sy;
-        mat[8] *= sz; mat[9] *= sz; mat[10] *= sz;
+        const mat = scaledTransform(pos, rotation, {
+            x: halfExtents.x * 2,
+            y: halfExtents.y * 2,
+            z: halfExtents.z * 2,
+        });
 
         tcm.setTransform(inst, mat);
         g.scene.addEntity(entity);
         g.staticEntities.push(entity);
 
-        if (surfacePreset?.emissiveIntensity > 0 && surfacePreset.emissive) {
-            const lightEntity = g.Filament.EntityManager.get().create();
-            const lightColor = surfacePreset.emissive;
-            const lightIntensity = surfacePreset.emissiveIntensity * 8000;
-            g.Filament.LightManager.Builder(g.Filament['LightManager$Type'].POINT)
-                .color(lightColor)
-                .intensity(lightIntensity)
-                .falloff(15.0)
-                .build(g.engine, lightEntity);
-            const ltcm = g.engine.getTransformManager();
-            const linst = ltcm.getInstance(lightEntity);
-            const lmat = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, pos.x, pos.y + halfExtents.y, pos.z, 1];
-            ltcm.setTransform(linst, lmat);
-            g.scene.addEntity(lightEntity);
-            g.staticEntities.push(lightEntity);
-        }
+        this._addEmissiveSurfaceLight(pos, halfExtents, surfacePreset);
     }
 
-    createDynamicBox(pos, rotation, halfExtents, color, density = 1.0, material = 'wood', gravityScale = 1.0) {
+    createDynamicBox(
+        pos: Vec3,
+        rotation: Quat,
+        halfExtents: Vec3,
+        color: RGB,
+        density = 1.0,
+        material = 'wood',
+        gravityScale = 1.0,
+    ): void {
         const g = this.game;
         const body = this._createSimBody('dynamic', pos, rotation, {
             type: 'cuboid',
@@ -485,7 +613,15 @@ export class PhysicsWorld {
         g.dynamicBodies.add(body);
     }
 
-    createRotatingBox(pos, halfExtents, color, axis = 'y', speed = 0.01, initialAngle = 0, material = 'metal') {
+    createRotatingBox(
+        pos: Vec3,
+        halfExtents: Vec3,
+        color: RGB,
+        axis = 'y',
+        speed = 0.01,
+        initialAngle = 0,
+        material = 'metal',
+    ): void {
         const g = this.game;
         const rotation = quatFromEuler(0, initialAngle, 0);
 
@@ -530,13 +666,8 @@ export class PhysicsWorld {
         });
     }
 
-    /**
-     * Spawn an authoritative network marble for host simulation (Phase 3).
-     * @param {string} playerId
-     * @param {{ x: number, y: number, z: number }} spawn
-     * @param {number} colorIndex
-     */
-    createNetworkMarble(playerId, spawn, colorIndex = 0) {
+    /** Spawn an authoritative network marble for host simulation (Phase 3). */
+    createNetworkMarble(playerId: string, spawn: Vec3, colorIndex = 0): NetworkMarbleEntry {
         const g = this.game;
         if (!g.networkMarbles) g.networkMarbles = new Map();
 
@@ -557,7 +688,7 @@ export class PhysicsWorld {
             [0.55, 1.0, 0.45],
             [1.0, 0.85, 0.25],
         ];
-        const color = palette[colorIndex % palette.length];
+        const color = palette[colorIndex % palette.length]!;
 
         const entity = g.Filament.EntityManager.get().create();
         const matInstance = g.material.createInstance();
@@ -580,14 +711,8 @@ export class PhysicsWorld {
         return entry;
     }
 
-    /**
-     * Apply decoded input snapshot to a network marble (host authority).
-     * @param {string} playerId
-     * @param {number} bits
-     * @param {number} yaw
-     * @param {number} pitch
-     */
-    applyInputToMarble(playerId, bits, yaw, pitch) {
+    /** Apply decoded input snapshot to a network marble (host authority). */
+    applyInputToMarble(playerId: string, bits: number, yaw: number, pitch: number): void {
         const g = this.game;
         const entry = g.networkMarbles?.get(playerId);
         if (!entry?.rigidBody) return;
@@ -607,7 +732,7 @@ export class PhysicsWorld {
         void pitch;
     }
 
-    removeNetworkMarbles() {
+    removeNetworkMarbles(): void {
         const g = this.game;
         if (!g.networkMarbles) return;
         for (const entry of g.networkMarbles.values()) {

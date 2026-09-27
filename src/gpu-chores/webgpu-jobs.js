@@ -11,6 +11,7 @@ import reduceShader from './shaders/reduce_f32.wgsl?raw';
 import compactShader from './shaders/compact_f32.wgsl?raw';
 import distanceShader from './shaders/batched_distance.wgsl?raw';
 import { CHORES_WORKGROUP_SIZE, breadcrumb } from './detect.js';
+import { withValidationScope } from '../webgpu/error-scope.js';
 
 const WG = CHORES_WORKGROUP_SIZE;
 
@@ -43,6 +44,8 @@ function bindGroupLayout(device, types) {
     });
 }
 
+/** @typedef {{ bindGroupLayout: GPUBindGroupLayout, pipelines: Record<string, GPUComputePipeline> }} PipelineSet */
+
 export class WebGPUChoresBackend {
     /** @param {GPUDevice} device */
     constructor(device) {
@@ -52,8 +55,11 @@ export class WebGPUChoresBackend {
         this._buffers = new Map();
         /** @type {Set<string>} Staging keys with a map in flight. */
         this._stagingBusy = new Set();
+        /** @type {Promise<PipelineSet> | null} */
         this._reduce = null;
+        /** @type {Promise<PipelineSet> | null} */
         this._compact = null;
+        /** @type {Promise<PipelineSet> | null} */
         this._distance = null;
     }
 
@@ -79,9 +85,20 @@ export class WebGPUChoresBackend {
      * @param {string} code
      * @param {Array<'read-only-storage' | 'storage' | 'uniform'>} types
      * @param {string[]} entryPoints
-     * @returns {{ bindGroupLayout: GPUBindGroupLayout, pipelines: Record<string, GPUComputePipeline> }}
+     * @returns {Promise<PipelineSet>} Rejects on a validation error (the job
+     *     then falls back to the CPU in `runJob`).
      */
     _buildPipelines(code, types, entryPoints) {
+        return withValidationScope(this.device, `gpu-chores ${entryPoints.join('/')}`, () => this._createPipelines(code, types, entryPoints));
+    }
+
+    /**
+     * @param {string} code
+     * @param {Array<'read-only-storage' | 'storage' | 'uniform'>} types
+     * @param {string[]} entryPoints
+     * @returns {PipelineSet}
+     */
+    _createPipelines(code, types, entryPoints) {
         const module = this.device.createShaderModule({ code });
         const layout = bindGroupLayout(this.device, types);
         const pipelineLayout = this.device.createPipelineLayout({
@@ -203,7 +220,7 @@ export class WebGPUChoresBackend {
     async reduceF32(job) {
         const { count } = job;
         const blocks = Math.max(1, Math.ceil(count / WG));
-        const { bindGroupLayout: layout, pipelines } = this._reducePipelines();
+        const { bindGroupLayout: layout, pipelines } = await this._reducePipelines();
 
         const dataBuffer = this._asStorage('reduce:data', job.data, count);
         const partials = this._scratch(
@@ -256,7 +273,7 @@ export class WebGPUChoresBackend {
     async compactF32(job) {
         const { count, threshold } = job;
         const blocks = Math.max(1, Math.ceil(count / WG));
-        const { bindGroupLayout: layout, pipelines } = this._compactPipelines();
+        const { bindGroupLayout: layout, pipelines } = await this._compactPipelines();
 
         const flags = this._asStorage('compact:flags', job.data, count);
         const localOffsets = this._scratch(
@@ -332,7 +349,7 @@ export class WebGPUChoresBackend {
     async batchedDistance(job) {
         const count = Math.floor(job.points.length / 3);
         if (count === 0) return new Float32Array(0);
-        const { bindGroupLayout: layout, pipelines } = this._distancePipelines();
+        const { bindGroupLayout: layout, pipelines } = await this._distancePipelines();
 
         const points = this._asStorage('dist:points', job.points, count * 3);
         const out = this._scratch(

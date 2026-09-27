@@ -6,6 +6,9 @@
             "DOM",
             "WebWorker"
         ],
+        "types": [
+            "@webgpu/types"
+        ],
         "module": "ESNext",
         "moduleResolution": "bundler",
         "ignoreDeprecations": "6.0",
@@ -45,7 +48,11 @@
         "src/math.ts",
         "src/levels/catalog.js",
         "src/levels/campaign.js",
-        "src/abilities/registry.js"
+        "src/abilities/registry.js",
+        "src/game-loop/**/*.ts",
+        "src/wasm-bridge.js",
+        "src/webgpu/**/*.js",
+        "src/gpu-chores/**/*.js"
     ],
     "exclude": [
         "node_modules",

@@ -27,5 +27,4 @@ Marbles 3D is a browser-based 3D marble roller game (Vite + Google Filament for 
 
 ### Known issues / blockers
 
-- `backend/core/app_storage_manager.py` and `backend/shared/hf/app_storage_manager.py` are duplicate, byte-identical copies of the same file — fixes to one won't reach the other. See `CLAUDE.md` for detail.
 - Astral Cascade, Inferno Chamber, and Aether Core zones (recently merged) are wired into `DEV_LEVELS` only, not the shipped `assets/manifest.json` — confirm whether that's intentional staging before assuming they're in the live level rotation. See `CLAUDE.md` for detail.

@@ -29,7 +29,12 @@ Physics-based scene occlusion (particles hidden behind solid geometry):
 ## Requirements
 
 - Chrome 113+, Edge 113+, Firefox 110+, or Safari 18+ with WebGPU enabled
-- If WebGPU is unavailable, init fails, or the device is lost, the game **falls back to the CPU `ParticleSystem`** with no blocking or errors
+- If WebGPU is unavailable or init fails (including a pipeline validation error), the game **falls back to the CPU `ParticleSystem`** with no blocking or errors. Filament keeps rendering on WebGL2 either way (see [WEBGPU_BOOT_PROBE.md](WEBGPU_BOOT_PROBE.md))
+- If the device is lost, the overlay takes the boot probe's **one** recovery (`recoverWebGPUDevice()`) and rebuilds on the new device; if that fails or was already used, the overlay is detached for the rest of the session and CPU particles continue
+
+### Overlay canvas
+
+`#webgpu-particles-canvas` is configured once with `usage: RENDER_ATTACHMENT`, `alphaMode: 'premultiplied'`, `colorSpace: 'srgb'`, and `toneMapping: { mode: 'standard' }`. Resizing only changes the canvas size; no reconfigure is needed. The Filament canvas beneath stays `alpha: false` — see [RENDERER_FALLBACK.md](RENDERER_FALLBACK.md#canvas-alpha).
 
 ## Architecture
 
@@ -84,7 +89,7 @@ nearest the camera when the active count exceeds that.
 The compute shader writes an `activeFlags` buffer each frame. The backend reads it back asynchronously and reconciles `particleSystem.activeParticles`, so:
 
 - CPU-side stats and pool reuse stay accurate while the GPU simulates.
-- If the WebGPU device is lost or the backend is disabled, the game falls back to the CPU `ParticleSystem` without a burst of zombie particles.
+- If the WebGPU device is lost or the backend is disabled, `ParticleSystem.disableWebGPU()` retires the particles that were being simulated on the GPU (their CPU copy only holds spawn state) and the CPU `ParticleSystem` continues, so there is no burst of zombie particles.
 
 ### Upload optimization
 
@@ -108,7 +113,7 @@ See also: `docs/backups/unused-game-modules/misc/webgpu-evaluation.md` for the o
 
 ## Does not block boot
 
-WebGPU init runs **after** Filament and `ParticleSystem` are created. Failure only logs a warning and keeps CPU simulation.
+WebGPU init runs **after** Filament and `ParticleSystem` are created. It reuses the boot-probed device (`requiredFeatures` / `requiredLimits` sized for this working set). Failure only logs a warning and keeps CPU simulation.
 
 ## Alive-slot compaction via gpu-chores
 

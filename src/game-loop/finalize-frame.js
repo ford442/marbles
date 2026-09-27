@@ -11,7 +11,7 @@ import {
     setColor3IfChanged,
     DOF_CAMERA_MODES,
     DOF_UPDATE_THRESHOLD,
-} from './helpers.js';
+} from './helpers.ts';
 
 export class GameLoopFinalize {
     finalizeFrame(now, culledPowerUps, culledCollectibles, shouldUpdateHUD = true) {

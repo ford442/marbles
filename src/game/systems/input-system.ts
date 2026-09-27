@@ -1,16 +1,80 @@
 import RAPIER from '@dimforge/rapier3d-compat';
-import { findBestLockOnTarget as findBestLockOnTargetPure } from './input-target-lock.ts';
+import { findBestLockOnTarget as findBestLockOnTargetPure, type LockOnTarget } from './input-target-lock.ts';
+import type { CameraState, InputState, PhysicsState } from '../../types/game-state.ts';
+import type { FilamentHandle } from '../../types/filament.ts';
+
+/** Marble as the input system sees it: a Rapier body plus an optional render scale. */
+export interface InputMarble extends LockOnTarget {
+    rigidBody: RAPIER.RigidBody;
+    scale?: number;
+}
+
+/**
+ * The slice of the game runtime `InputSystem` reads and writes. State field
+ * types come from the shared game-state interfaces.
+ */
+export interface InputSystemHost extends
+    Pick<CameraState, 'targetCamAngle' | 'targetCamRadius' | 'targetCamHeight' | 'cameraMode'
+        | 'isLockedOn' | 'lockOnTarget' | 'lastLockTime' | 'currentFov' | 'followDist'>,
+    Pick<InputState, 'gamepadState' | 'aimYaw' | 'pitchAngle' | 'chargePower' | 'charging'>,
+    Pick<PhysicsState, 'isGrappling' | 'isGrappleZipping' | 'grappleMaxDist'> {
+    canvas: HTMLCanvasElement;
+    isPaused: boolean;
+    isYAxisInverted?: boolean;
+    grappleRestLength?: number;
+    droneDist?: number;
+    world: RAPIER.World;
+    marbles: InputMarble[];
+    playerMarble: InputMarble | null;
+    view?: FilamentHandle;
+    camera?: FilamentHandle;
+    Filament?: FilamentHandle;
+    getMouseSensitivity?(): number;
+    startGrapple(): void;
+    stopGrapple(): void;
+    shootMarble(): void;
+}
+
+/**
+ * Per-pad edge-detection state: `buttons` by index, plus one boolean per
+ * synthesized axis key code (`ArrowLeft`, …).
+ */
+type PadState = { buttons: boolean[] } & Record<string, boolean | boolean[]>;
+
+const GAMEPAD_BUTTON_KEYS: Readonly<Record<number, string>> = {
+    0: 'Space',
+    1: 'KeyV',
+    2: 'KeyX',
+    3: 'KeyY',
+    4: 'KeyH',
+    5: 'KeyE',
+    6: 'KeyF',
+    7: 'ShiftLeft',
+    8: 'KeyR',
+    9: 'KeyM',
+    11: 'Digit0',
+    12: 'KeyL',
+    13: 'KeyU',
+    14: 'Digit6',
+    15: 'KeyG',
+};
+
+const GAMEPAD_AXIS_KEYS: Readonly<Record<number, { pos: string; neg: string }>> = {
+    0: { pos: 'ArrowRight', neg: 'ArrowLeft' },
+    1: { pos: 'ArrowDown', neg: 'ArrowUp' },
+};
 
 /**
  * Keyboard, mouse, gamepad input and marble contact queries (Phase B subsystem).
  */
 export class InputSystem {
-    /** @param {object} game */
-    constructor(game) {
+    game: InputSystemHost;
+
+    constructor(game: InputSystemHost) {
         this.game = game;
     }
 
-    initMouseControls() {
+    initMouseControls(): void {
         const g = this.game;
         g.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
@@ -135,7 +199,7 @@ export class InputSystem {
         });
     }
 
-    pollGamepads() {
+    pollGamepads(): void {
         const g = this.game;
         if (g.isPaused) return;
 
@@ -144,32 +208,15 @@ export class InputSystem {
             const gp = gamepads[i];
             if (!gp) continue;
 
-            const prevState = g.gamepadState[gp.index] || { buttons: [] };
-            const currState = { buttons: [] };
-
-            const buttonMap = {
-                0: 'Space',
-                1: 'KeyV',
-                2: 'KeyX',
-                3: 'KeyY',
-                4: 'KeyH',
-                5: 'KeyE',
-                6: 'KeyF',
-                7: 'ShiftLeft',
-                8: 'KeyR',
-                9: 'KeyM',
-                11: 'Digit0',
-                12: 'KeyL',
-                13: 'KeyU',
-                14: 'Digit6',
-                15: 'KeyG',
-            };
+            const prevState = (g.gamepadState[gp.index] as PadState | undefined) ?? { buttons: [] };
+            const currState: PadState = { buttons: [] };
 
             for (let b = 0; b < gp.buttons.length; b++) {
-                const pressed = gp.buttons[b].pressed || gp.buttons[b].value > 0.5;
+                const button = gp.buttons[b]!;
+                const pressed = button.pressed || button.value > 0.5;
                 currState.buttons[b] = pressed;
 
-                const keyCode = buttonMap[b];
+                const keyCode = GAMEPAD_BUTTON_KEYS[b];
                 if (keyCode) {
                     const wasPressed = prevState.buttons[b];
                     if (pressed && !wasPressed) {
@@ -181,18 +228,13 @@ export class InputSystem {
             }
 
             const deadzone = 0.2;
-            const axesMap = {
-                0: { pos: 'ArrowRight', neg: 'ArrowLeft' },
-                1: { pos: 'ArrowDown', neg: 'ArrowUp' },
-            };
-
             for (let a = 0; a <= 1; a++) {
-                const val = gp.axes[a];
-                const mapping = axesMap[a];
+                const val = gp.axes[a] ?? 0;
+                const mapping = GAMEPAD_AXIS_KEYS[a]!;
 
                 const posPressed = val > deadzone;
                 const posKeyCode = mapping.pos;
-                const posWasPressed = prevState[posKeyCode] || false;
+                const posWasPressed = Boolean(prevState[posKeyCode]);
                 currState[posKeyCode] = posPressed;
                 if (posPressed && !posWasPressed) {
                     window.dispatchEvent(new KeyboardEvent('keydown', { code: posKeyCode }));
@@ -202,7 +244,7 @@ export class InputSystem {
 
                 const negPressed = val < -deadzone;
                 const negKeyCode = mapping.neg;
-                const negWasPressed = prevState[negKeyCode] || false;
+                const negWasPressed = Boolean(prevState[negKeyCode]);
                 currState[negKeyCode] = negPressed;
                 if (negPressed && !negWasPressed) {
                     window.dispatchEvent(new KeyboardEvent('keydown', { code: negKeyCode }));
@@ -214,8 +256,8 @@ export class InputSystem {
             const camDeadzone = 0.1;
             const camSensitivity = 0.05;
 
-            const rx = gp.axes[2];
-            const ry = gp.axes[3];
+            const rx = gp.axes[2] ?? 0;
+            const ry = gp.axes[3] ?? 0;
 
             if (g.cameraMode !== 'orbit') {
                 if (Math.abs(rx) > camDeadzone) {
@@ -242,11 +284,11 @@ export class InputSystem {
         }
     }
 
-    isGrounded(marble) {
+    isGrounded(marble: { rigidBody?: RAPIER.RigidBody; scale?: number } | null | undefined): boolean {
         const g = this.game;
         if (!marble?.rigidBody) return false;
         const rb = marble.rigidBody;
-        const radius = marble.scale * 0.5 || 0.5;
+        const radius = (marble.scale ?? 0) * 0.5 || 0.5;
         const pos = rb.translation();
         const rayOrigin = { x: pos.x, y: pos.y, z: pos.z };
         const gravityDir = rb.gravityScale() < 0 ? 1 : -1;
@@ -265,11 +307,13 @@ export class InputSystem {
         return false;
     }
 
-    getWallContact(marble) {
+    getWallContact(
+        marble: { rigidBody?: RAPIER.RigidBody; scale?: number } | null | undefined,
+    ): { normal: { x: number; y: number; z: number } } | null {
         const g = this.game;
         if (!marble?.rigidBody) return null;
         const rb = marble.rigidBody;
-        const radius = marble.scale * 0.5 || 0.5;
+        const radius = (marble.scale ?? 0) * 0.5 || 0.5;
         const pos = rb.translation();
 
         const directions = [
@@ -305,7 +349,7 @@ export class InputSystem {
         return null;
     }
 
-    toggleTargetLockOn() {
+    toggleTargetLockOn(): void {
         const g = this.game;
         const now = Date.now();
         if (now - (g.lastLockTime || 0) < 300) return;
@@ -325,7 +369,7 @@ export class InputSystem {
         }
     }
 
-    findBestLockOnTarget() {
+    findBestLockOnTarget(): InputMarble | null {
         const g = this.game;
         return findBestLockOnTargetPure(g.marbles, g.playerMarble);
     }

@@ -1,8 +1,15 @@
-import { audio } from '../audio.js';
-import { quaternionToMat4 } from '../math.ts';
+/** Game surface the top-level rAF loop drives. */
+export interface GameLoopHost {
+    isPaused: boolean
+    mapEditor?: { isActive: boolean; isPlaytesting: boolean; tick(): void } | null
+    pollGamepads(): void
+    updateGameState(): void
+    renderAndSync(): void
+    loop(): void
+}
 
 export class GameLoopLoop {
-    loop() {
+    loop(this: GameLoopHost): void {
         // Always update gamepads for pause toggle detection
         this.pollGamepads()
 

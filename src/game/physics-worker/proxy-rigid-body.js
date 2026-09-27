@@ -2,7 +2,7 @@ import { serializeColliderDesc, serializeRigidBodyDesc } from './rapier-desc-ser
 
 /**
  * Rapier-shaped facade backed by SharedArrayBuffer + command ring.
- * @param {import('../systems/physics-backend.js').WorkerPhysicsBackend} backend
+ * @param {import('../systems/physics-backend.ts').WorkerPhysicsBackend} backend
  * @param {number} bodyIndex
  */
 export function createProxyRigidBody(backend, bodyIndex) {
@@ -59,7 +59,7 @@ export function createProxyRigidBody(backend, bodyIndex) {
 }
 
 /**
- * @param {import('../systems/physics-backend.js').WorkerPhysicsBackend} backend
+ * @param {import('../systems/physics-backend.ts').WorkerPhysicsBackend} backend
  */
 export function createProxyWorld(backend) {
     return {

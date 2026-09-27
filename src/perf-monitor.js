@@ -1,6 +1,6 @@
 import { AutoQualityGovernor } from './auto-quality-governor.js'
 import { getPhysicsBackend } from './wasm-bridge.js'
-import { getRapierBackendMode } from './game/systems/physics-backend.js'
+import { getRapierBackendMode } from './game/systems/physics-backend.ts'
 
 const PERF_URL_FLAGS = ['fps', 'perf', 'debugPerf']
 const FRAME_BUDGET_60HZ = 16.67

@@ -7,7 +7,7 @@ Central registry for player abilities. Replaces scattered constructor fields, du
 | Piece | Path | Role |
 |-------|------|------|
 | Definitions | `src/abilities/registry.js` | `{ id, cooldown, input, activate, hudSlot, … }` |
-| Runtime | `src/game/systems/ability-system.js` | Masks, keybinds, unified HUD tick, `tryActivate` |
+| Runtime | `src/game/systems/ability-system.ts` | Masks, keybinds, unified HUD tick, `tryActivate` |
 | Implementations | `src/abilities/*.js` | Spawn/update logic (mixins until Phase B) |
 
 Migrated abilities (registry-driven):

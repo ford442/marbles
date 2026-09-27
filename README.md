@@ -18,11 +18,11 @@ See **[docs/CURRENT_STATE.md](docs/CURRENT_STATE.md)** for the full health dashb
 
 | Area | Status | Link |
 |------|--------|------|
-| Shipped levels | 14 JSON maps via manifest | [level-pipeline.md](docs/architecture/level-pipeline.md) |
-| Dev levels | ~58 via `?devLevels=1` | same |
+| Shipped levels | 24 JSON maps via manifest | [level-pipeline.md](docs/architecture/level-pipeline.md) |
+| Dev levels | 60 via `?devLevels=1` | same |
 | Phase A | Game loop consolidated in `src/game-loop/` | [architecture README](docs/architecture/README.md) |
-| Phase B | Started — `PhysicsWorld`, `InputSystem`, `MarbleRegistry` | same |
-| Phase C | In progress — pilot `.ts` systems + `@ts-check` state | [language-strategy.md](docs/architecture/language-strategy.md) |
+| Phase B | Complete — `PhysicsWorld`, `InputSystem`, `MarbleRegistry`, `RenderPipeline`, `HudController`, `LevelLoader` | same |
+| Phase C | In progress — composed systems in `.ts`; `@ts-check` state, WASM bridge, boot probe, particle backend | [language-strategy.md](docs/architecture/language-strategy.md) |
 | Multiplayer | Party relay optional | [multiplayer.md](docs/multiplayer.md) |
 | Backend | Optional cloud sync (not required to play) | [backend/README.md](backend/README.md) |
 | CI | Assets + unit + lint + typecheck + WASM build | [.github/workflows/debug_build.yml](.github/workflows/debug_build.yml) |

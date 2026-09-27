@@ -18,16 +18,16 @@ Everything under `src/` that ships in `npm run build` must be reachable from `sr
 
 | Area | Key files |
 |------|-----------|
-| Initialization | `init-methods.js`, `init/` |
-| Input | `input-methods.js` |
-| Zones | `zone-setup-methods.js`, `zone-setup/`, `zones/*.js`, legacy `*_zone.js` factories |
-| Physics | `physics-factory-methods.js`, `@dimforge/rapier3d-compat` |
-| Marbles | `marble-management-methods.js`, `marbles_data.js` |
-| Game logic | `game-logic-methods.js`, `game-logic/` |
-| Abilities | `ability-methods.js`, `abilities/` |
-| Loop | `game-loop/` (`loop.js`, `logic.js`, `render.js`, `sync.js`, …) |
-| Rendering | `material-system.js`, `rendering/`, `lighting-system.js`, `particle-system.js` |
-| HUD / perf | `hud-manager.js`, `perf-monitor.js`, `culling-manager.js`, `auto-quality-governor.js` |
+| Initialization | `init/` |
+| Input | `game/systems/input-system.ts` |
+| Zones | `zone-setup/`, `zones/*.js`, legacy `*_zone.js` factories |
+| Physics | `game/systems/physics-world.ts`, `game/systems/physics-backend.ts`, `@dimforge/rapier3d-compat` |
+| Marbles | `game/systems/marble-registry.js`, `marbles_data.js` |
+| Game logic | `game-logic/` |
+| Abilities | `abilities/`, `game/systems/ability-system.ts` |
+| Loop | `game-loop/` (`loop.ts`, `logic.js`, `sync.js`, …) |
+| Rendering | `material-system.ts`, `rendering/`, `lighting-system.js`, `particle-system.js` |
+| HUD / perf | `hud-manager.ts`, `game/systems/hud-controller.ts`, `perf-monitor.js`, `culling-manager.js`, `auto-quality-governor.js` |
 | Levels | `levels/catalog.js`, `assets/manifest.json`, `assets/maps/*.json`; dev-only `levels.js` |
 | WASM helpers | `wasm-bridge.js` → `public/wasm/marble_physics.{js,wasm}` |
 
@@ -39,7 +39,7 @@ Everything under `src/` that ships in `npm run build` must be reachable from `sr
 - **Dispatch**: `src/zone-setup/core.js` calls `dispatchZone()` — no duplicate switch statements.
 - **Factories**: `src/zones/<kebab-name>.js` export `create*Zone(game, offset)`; barrel re-export in `src/zones/index.js`.
 - **Primitives**: `floor`, `track`, `goal`, etc. use methods from `src/zones/methods/creation.js` via `BUILTIN_ZONE_HANDLERS`.
-- **Setup mixins**: `applyZoneSetupMethods` → `zone-setup/{core,assets,environment,grapple}.js` only (`zone-setup-methods.js` is a thin re-export).
+- **Setup mixins**: `applyZoneSetupMethods` → `zone-setup/{core,assets,environment,grapple}.js` only.
 
 ### Marble data
 
@@ -51,7 +51,7 @@ Premium marbles formerly in `marble_draft.js` are inlined at the top of `src/mar
 |------|---------|
 | `package.json` | Dependencies: Filament, Rapier, Vite. **No React.** |
 | `vite.config.js` | COOP/COEP headers, WASM assets |
-| `tsconfig.json` | Strict TypeScript; selective `checkJs` on pilot modules — see `docs/architecture/language-strategy.md` |
+| `tsconfig.json` | Strict TypeScript; `checkJs` is off — JS is checked only where a file is in `include` and has `// @ts-check` — see `docs/architecture/language-strategy.md` |
 | `index.html` | Game shell, HUD markup, loads `src/main.js` |
 
 ## Directory layout
@@ -61,7 +61,6 @@ Premium marbles formerly in `marble_draft.js` are inlined at the top of `src/mar
 ```
 src/
 ├── main.js                 # MarblesGame + mixin wiring
-├── *-methods.js            # Game system mixins
 ├── levels.js               # Declarative level catalog
 ├── marbles_data.js         # Marble definitions (incl. premium marbles)
 ├── zones/                  # All zone factories (create*Zone)
@@ -73,10 +72,9 @@ src/
 │   ├── core.js             # createZone → dispatchZone
 │   ├── assets.js, environment.js, grapple.js
 │   └── index.js            # applyZoneSetupMethods
-├── zone-setup-methods.js   # Thin re-export for main.js compatibility
 ├── game-logic/             # Scoring, checkpoints, collectibles
 ├── game/state/             # Grouped constructor state (physics, abilities, level, …)
-├── game/systems/           # Pure logic testable without Filament
+├── game/systems/           # Pure logic + composed subsystems (PhysicsWorld, InputSystem, …), mostly .ts
 ├── game-loop/              # loop, logic, camera, sync, render orchestrator
 ├── abilities/              # Individual ability implementations
 ├── init/                   # Init sub-steps (Filament, menus, settings)

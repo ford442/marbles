@@ -3,87 +3,112 @@ import {
     ALL_ABILITY_IDS,
     getAbilityDefinition,
     resolveAbilityMask,
+    type AbilityDefinition,
+    type AbilityGameContext,
 } from '../../abilities/registry.js';
+import type { AbilityMask } from '../../types/map.ts';
 import {
     cooldownFillRatio,
     isCooldownReady,
 } from './ability-cooldown.ts';
 
 /**
+ * The slice of the game runtime `AbilitySystem` uses. Cooldown, energy, and HUD
+ * element fields are looked up by the key names each registry entry declares
+ * (`lastUseKey`, `energyKey`, `barKey`, …), hence the index signature.
+ */
+export interface AbilityHost extends AbilityGameContext {
+    multiplayerMode?: boolean;
+    network?: { room?: unknown; sendAbility(id: string): void } | null;
+    jumpCharge?: number;
+    hudManager?: {
+        markAbilityUsed(id: string): void;
+        abilityElements: Map<string, HTMLElement>;
+    } | null;
+    [stateKey: string]: unknown;
+}
+
+/** What `tickHudIcons` needs from the HUD. */
+export interface AbilityHudIcons {
+    updateAbilityCooldown(abilityId: string, progress: number, isActive?: boolean): void;
+}
+
+/**
  * Unified ability cooldown/energy tick, input routing, level masks, and HUD bar binding.
  */
 export class AbilitySystem {
-    /** @param {object} game */
-    constructor(game) {
+    game: AbilityHost;
+    enabled: Set<string>;
+    _codeToAbility: Map<string, string>;
+    _keybindOverrides: Record<string, string>;
+
+    constructor(game: AbilityHost) {
         this.game = game;
-        /** @type {Set<string>} */
         this.enabled = new Set(ALL_ABILITY_IDS);
-        /** @type {Map<string, string>} */
         this._codeToAbility = new Map();
         this._keybindOverrides = {};
     }
 
-    init() {
+    /** Numeric game field named by a registry key, or `undefined` when unset / not a number. */
+    private _num(key: string | undefined): number | undefined {
+        if (!key) return undefined;
+        const value = this.game[key];
+        return typeof value === 'number' ? value : undefined;
+    }
+
+    /** HUD element stored on the game under a registry key. */
+    private _el(key: string | undefined): HTMLElement | null {
+        return key ? (this.game[key] as HTMLElement | null | undefined) ?? null : null;
+    }
+
+    /** Effective cooldown for a definition: the game's per-level override, else the registry default. */
+    private _cooldownMs(def: AbilityDefinition): number {
+        return this._num(def.cooldownKey) ?? def.cooldownMs ?? 0;
+    }
+
+    init(): void {
         this._syncCooldownDefaults();
         this._rebuildKeybindMap();
         this._applyHudVisibility();
     }
 
-    /**
-     * Load optional per-ability key overrides from saved settings.
-     * @param {Record<string, string> | undefined} keybinds
-     */
-    loadKeybinds(keybinds) {
+    /** Load optional per-ability key overrides from saved settings. */
+    loadKeybinds(keybinds: Record<string, string> | undefined): void {
         this._keybindOverrides = keybinds ? { ...keybinds } : {};
         this._rebuildKeybindMap();
     }
 
-    /**
-     * @returns {Record<string, string>}
-     */
-    exportKeybinds() {
-        const out = {};
+    exportKeybinds(): Record<string, string> {
+        const out: Record<string, string> = {};
         for (const id of ALL_ABILITY_IDS) {
             const def = getAbilityDefinition(id);
             if (!def?.input?.defaultCode) continue;
             const code = this.getKeyCode(id);
-            if (code !== def.input.defaultCode) {
+            if (code !== undefined && code !== def.input.defaultCode) {
                 out[id] = code;
             }
         }
         return out;
     }
 
-    /**
-     * @param {string} id
-     * @returns {string | undefined}
-     */
-    getKeyCode(id) {
-        if (this._keybindOverrides[id]) return this._keybindOverrides[id];
+    getKeyCode(id: string): string | undefined {
+        const override = this._keybindOverrides[id];
+        if (override) return override;
         return getAbilityDefinition(id)?.input?.defaultCode;
     }
 
-    /**
-     * @param {string} id
-     */
-    isEnabled(id) {
+    isEnabled(id: string): boolean {
         return this.enabled.has(id);
     }
 
-    /**
-     * Apply per-level ability subset from level JSON.
-     * @param {import('../../types/map.ts').AbilityMask | null | undefined} mask
-     */
-    applyLevelMask(mask) {
+    /** Apply per-level ability subset from level JSON. */
+    applyLevelMask(mask: AbilityMask | null | undefined): void {
         this.enabled = new Set(resolveAbilityMask(mask));
         this._applyHudVisibility();
     }
 
-    /**
-     * @param {string} code
-     * @returns {boolean} true when the code is owned by the registry (even if blocked)
-     */
-    handleKeyDown(code) {
+    /** @returns true when the code is owned by the registry (even if blocked) */
+    handleKeyDown(code: string): boolean {
         const id = this._codeToAbility.get(code);
         if (!id) return false;
 
@@ -96,11 +121,7 @@ export class AbilitySystem {
         return true;
     }
 
-    /**
-     * @param {string} id
-     * @returns {boolean}
-     */
-    tryActivate(id) {
+    tryActivate(id: string): boolean {
         if (!this.isEnabled(id)) return false;
 
         const def = getAbilityDefinition(id);
@@ -110,13 +131,13 @@ export class AbilitySystem {
         const now = Date.now();
 
         if (def.cooldownMs && def.lastUseKey) {
-            const lastUse = game[def.lastUseKey] ?? 0;
-            const cooldown = game[def.cooldownKey] ?? def.cooldownMs;
+            const lastUse = this._num(def.lastUseKey) ?? 0;
+            const cooldown = this._num(def.cooldownKey) ?? def.cooldownMs;
             if (!isCooldownReady(lastUse, cooldown, now)) return false;
         }
 
         if (def.energyKey && def.energyCost) {
-            const energy = game[def.energyKey] ?? 0;
+            const energy = this._num(def.energyKey) ?? 0;
             if (energy < def.energyCost) return false;
             game[def.energyKey] = energy - def.energyCost;
         }
@@ -130,23 +151,17 @@ export class AbilitySystem {
         return result !== false;
     }
 
-    /**
-     * @param {number} now
-     * @param {boolean} shouldUpdateHUD
-     */
-    tickHudBars(now, shouldUpdateHUD) {
+    tickHudBars(now: number, shouldUpdateHUD: boolean): void {
         if (!shouldUpdateHUD) return;
 
         for (const id of ALL_ABILITY_IDS) {
             const def = getAbilityDefinition(id);
             if (!def?.hudSlot) continue;
 
-            const barEl = def.hudSlot.barKey ? this.game[def.hudSlot.barKey] : null;
+            const barEl = this._el(def.hudSlot.barKey);
             if (!barEl) continue;
 
-            const containerEl = def.hudSlot.containerKey
-                ? this.game[def.hudSlot.containerKey]
-                : null;
+            const containerEl = this._el(def.hudSlot.containerKey);
             const enabled = this.isEnabled(id);
 
             if (containerEl) {
@@ -155,21 +170,21 @@ export class AbilitySystem {
             if (!enabled) continue;
 
             if (def.hudSlot.mode === 'charge') {
-                const charge = this.game.jumpCharge ?? 0;
+                const charge = this._num('jumpCharge') ?? 0;
                 barEl.style.width = `${charge * 100}%`;
                 continue;
             }
 
             if (def.hudSlot.mode === 'energy' && def.energyKey && def.maxEnergyKey) {
-                const energy = this.game[def.energyKey] ?? 0;
-                const max = this.game[def.maxEnergyKey] ?? 100;
+                const energy = this._num(def.energyKey) ?? 0;
+                const max = this._num(def.maxEnergyKey) ?? 100;
                 barEl.style.width = `${(energy / max) * 100}%`;
                 continue;
             }
 
             if (def.hudSlot.mode === 'cooldown' && def.lastUseKey) {
-                const lastUse = this.game[def.lastUseKey] ?? 0;
-                const cooldown = this.game[def.cooldownKey] ?? def.cooldownMs ?? 0;
+                const lastUse = this._num(def.lastUseKey) ?? 0;
+                const cooldown = this._cooldownMs(def);
                 const progress = cooldownFillRatio(lastUse, cooldown, now);
                 barEl.style.width = `${progress * 100}%`;
 
@@ -201,19 +216,15 @@ export class AbilitySystem {
         }
     }
 
-    /**
-     * Drive HUDManager icon cooldowns for registry abilities.
-     * @param {import('../../hud-manager.ts').HUDManager} hudManager
-     * @param {number} now
-     */
-    tickHudIcons(hudManager, now) {
+    /** Drive HUDManager icon cooldowns for registry abilities. */
+    tickHudIcons(hudManager: AbilityHudIcons, now: number): void {
         for (const id of ALL_ABILITY_IDS) {
             const def = getAbilityDefinition(id);
             if (!def?.hudIconId || !this.isEnabled(id)) continue;
 
             if (def.hudSlot?.mode === 'cooldown' && def.lastUseKey) {
-                const lastUse = this.game[def.lastUseKey] ?? 0;
-                const cooldown = this.game[def.cooldownKey] ?? def.cooldownMs ?? 0;
+                const lastUse = this._num(def.lastUseKey) ?? 0;
+                const cooldown = this._cooldownMs(def);
                 const progress = cooldownFillRatio(lastUse, cooldown, now);
                 const active = def.hudSlot.activeWhen
                     ? this._resolvePath(def.hudSlot.activeWhen) > 0
@@ -223,15 +234,15 @@ export class AbilitySystem {
         }
     }
 
-    _syncCooldownDefaults() {
-        for (const def of Object.values(ABILITY_REGISTRY)) {
+    _syncCooldownDefaults(): void {
+        for (const def of Object.values<AbilityDefinition>(ABILITY_REGISTRY)) {
             if (def.cooldownMs && def.cooldownKey && this.game[def.cooldownKey] === undefined) {
                 this.game[def.cooldownKey] = def.cooldownMs;
             }
         }
     }
 
-    _rebuildKeybindMap() {
+    _rebuildKeybindMap(): void {
         this._codeToAbility.clear();
         for (const id of ALL_ABILITY_IDS) {
             const code = this.getKeyCode(id);
@@ -239,16 +250,14 @@ export class AbilitySystem {
         }
     }
 
-    _applyHudVisibility() {
+    _applyHudVisibility(): void {
         for (const id of ALL_ABILITY_IDS) {
             const def = getAbilityDefinition(id);
             if (!def?.hudSlot) continue;
 
             const show = this.isEnabled(id);
-            const barEl = def.hudSlot.barKey ? this.game[def.hudSlot.barKey] : null;
-            const containerEl = def.hudSlot.containerKey
-                ? this.game[def.hudSlot.containerKey]
-                : null;
+            const barEl = this._el(def.hudSlot.barKey);
+            const containerEl = this._el(def.hudSlot.containerKey);
 
             if (containerEl) {
                 containerEl.style.display = show ? '' : 'none';
@@ -263,12 +272,11 @@ export class AbilitySystem {
         }
     }
 
-    /** @param {string} path - e.g. `activeBlackHoles.length` */
-    _resolvePath(path) {
-        const parts = path.split('.');
-        let value = this.game;
-        for (const part of parts) {
-            value = value?.[part];
+    /** @param path - e.g. `activeBlackHoles.length` */
+    _resolvePath(path: string): number {
+        let value: unknown = this.game;
+        for (const part of path.split('.')) {
+            value = (value as Record<string, unknown> | null | undefined)?.[part];
         }
         return typeof value === 'number' ? value : 0;
     }

@@ -76,8 +76,13 @@ export function adoptDevice(device) {
 /**
  * Drop the adopted device and tear down chores-owned GPU resources. The device
  * itself is left alone — its owner disposes it.
+ *
+ * @param {GPUDevice | null} [device] When given, only release if chores still
+ *     hold this device — a stale owner must not drop a replacement adopted
+ *     after a device-loss recovery.
  */
-export function releaseDevice() {
+export function releaseDevice(device) {
+    if (device !== undefined && device !== adoptedDevice) return;
     if (gpuBackend) {
         gpuBackend.dispose();
         gpuBackend = null;

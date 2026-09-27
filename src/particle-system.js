@@ -95,6 +95,22 @@ export class ParticleSystem {
         console.log(`[ParticleSystem] WebGPU backend enabled (${this.maxParticles} slots)`)
     }
 
+    /**
+     * Detach a WebGPU backend whose device was lost. Particles it was
+     * simulating only have stale CPU state (spawn position/velocity), so they
+     * are retired instead of replayed on the CPU path.
+     * @param {import('./webgpu/particle-backend.js').WebGPUParticleBackend} backend
+     */
+    disableWebGPU(backend) {
+        if (this.gpuBackend !== backend) return
+        this.gpuBackend = null
+        this.stats.backend = 'cpu'
+        for (const p of this.activeParticles) p.active = false
+        this.activeParticles.length = 0
+        this.stats.activeCount = 0
+        console.log('[ParticleSystem] WebGPU backend detached; CPU simulation resumed')
+    }
+
     _expandPool(targetSize) {
         if (targetSize <= this.maxParticles) return
         for (let i = this.particles.length; i < targetSize; i++) {

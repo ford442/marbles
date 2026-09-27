@@ -1,57 +1,97 @@
 # WebGPU Boot Probe
 
-This phase, WebGPU is required to boot Marbles 3D. This document covers the
-boot probe module, what it changes about startup, and what is explicitly
-*not* changing yet.
+Marbles 3D renders with Filament on **WebGL2**. WebGPU drives only the compute
+overlay (the opt-in `?webgpuParticles=1` particle backend and gpu-chores). This
+document covers the boot probe that creates the session's one `GPUDevice`, what
+that device is asked for, and what happens when WebGPU is missing or the device
+is lost.
 
 ## Background
 
-Marbles has a dual-renderer / WebGL history: Filament renders the whole game
-on WebGL2, and a separate opt-in overlay (`?webgpuParticles=1`, gpu-chores
-#407) adds WebGPU compute on top of it. Before this change, two different
-places in the code each made their own `requestAdapter()` / `requestDevice()`
-call (`src/webgpu/detect.js#isWebGPUAvailable` and
-`src/webgpu/particle-backend.js#WebGPUParticleBackend.init()`), and a failed
-WebGPU probe was never fatal — the game just quietly kept running without the
-compute overlay. That silently falling back to "the marble still draws" hid
-real WebGPU bugs, and let the two probes disagree with each other, and across
-browsers (e.g. Chrome vs. Edge), without anyone noticing.
+Before the probe, two places each made their own `requestAdapter()` /
+`requestDevice()` call (`src/webgpu/detect.js#isWebGPUAvailable` and
+`WebGPUParticleBackend.init()`), and they could disagree with each other and
+across browsers without anyone noticing. #408 fixed that with a single probe and
+briefly made a failed probe a hard stop. Since Filament never needed WebGPU,
+that blocked browsers that could run the real renderer, so the hard stop was
+replaced by the intentional, recorded fallback described below.
 
-## What changed
+## The probe
 
-- **One probe.** `src/webgpu/boot-probe.js` makes the session's single
-  `requestAdapter()` / `requestDevice()` call, once, before Filament loads.
-  Every other WebGPU consumer (`isWebGPUAvailable()`, the particle backend,
-  gpu-chores) reuses its cached adapter/device instead of probing again.
-- **Published result.** The probe's result — browser brand, adapter info
-  (vendor/architecture/device/description where available), supported
-  features, and any error — is written to `window.webgpuProbe` as plain JSON,
-  so it can be compared across browsers or attached to a bug report.
-- **Hard fail.** If the probe fails (`navigator.gpu` missing, no adapter, or
-  `requestDevice()` rejects), `InitCore.init()` stops before Filament is ever
-  loaded and shows a blocking fatal error on the loading screen
-  (`InitCore._showWebGPURequiredError`). There is no WebGL renderer fallback
-  for this failure, and no second probe attempt.
-- **No URL-forced GL renderer.** The debug `SimpleDebugRenderer` (WebGL2)
-  used to be selectable via `?renderer=simple`, `?webgl`, `?simpleRenderer`,
-  or `?debugRenderer`. Those flags are unsupported this phase —
-  `getRequestedRendererMode()` logs a warning and ignores them. The in-game
-  renderer-mode panel's "Simple" toggle button was removed for the same
-  reason (it would otherwise silently no-op).
+`src/webgpu/boot-probe.js` makes the session's `requestAdapter()` /
+`requestDevice()` call once, from `InitCore.init()`, before Filament loads.
+Every other WebGPU consumer (`isWebGPUAvailable()`, the particle backend,
+gpu-chores) reuses its cached adapter and device.
 
-## What did *not* change
+- **Power preference.** `InitCore` resolves the Filament WebGL options first
+  and passes their `powerPreference` to the probe
+  (`toWebGPUPowerPreference()` in `src/rendering-defaults.js`). Both APIs on
+  the page ask for the same GPU: `low-power` on `low` quality (the mobile
+  default), `high-performance` on medium and above. `?glPowerPreference=`
+  overrides both. `default` means no preference.
+- **Device descriptor.** `buildDeviceDescriptor()`
+  (`src/webgpu/device-requirements.js`) builds the `requestDevice()` call:
+  - `label: 'marbles-boot'`, plus a labelled default queue.
+  - `requiredFeatures` is the adapter's features intersected with the ones we
+    can use: `timestamp-query`, `shader-f16`, `subgroups`,
+    `dual-source-blending`. All are optional. `bgra8unorm-storage` is not
+    requested because nothing writes storage into the swap-chain format.
+  - `requiredLimits` come from the working set (8192 particles ×
+    64-byte stride = 512 KiB largest buffer, 4 storage buffers per stage for
+    `compact_f32`, 256-wide integrate workgroups), not from the adapter
+    maximum. If an adapter reports less, the limit is clamped and the
+    shortfall is logged in `limitShortfalls`.
+- **Published result.** `window.webgpuProbe` is plain JSON containing the
+  browser brand, power preference, adapter info, adapter `features`, the
+  `requiredFeatures` / `requiredLimits` that were requested, `error`,
+  `lastError` (from `uncapturederror`), `deviceLost`, and `recovered`.
 
-- **Filament still renders on WebGL2.** The boot probe gates *startup*, not
-  the rendering pipeline — Filament has no WebGPU backend here, and swapping
-  it is out of scope for this phase. Non-goals: new WebGL materials/post,
-  dual-live GPU contexts, netcode changes.
-- **`installSimpleDebugBackend` / `SimpleDebugRenderer` still exist** as
-  `InitCore`'s last-resort recovery path when Filament itself fails to load
-  or fails to create an engine for reasons unrelated to WebGPU. That failure
-  mode is pre-existing and out of scope here.
+## When the probe fails
 
-## Deferred: WebGL fallback
+This covers a missing `navigator.gpu`, no adapter, or a rejected
+`requestDevice()`.
 
-A later wave will reintroduce WebGL as an intentional, explicit fallback
-(rather than a silent one) for browsers without WebGPU. Until then, a failed
-probe is a hard stop.
+- Boot continues. Filament renders on WebGL2 as usual.
+- `window.webgpuProbe.ok === false`, and `window.rendererFallbackReason`
+  records why (for example `WebGPU unavailable (navigator.gpu is unavailable in
+  this browser); WebGL2 only, GPU compute on CPU`).
+- The particle overlay does not start and the CPU `ParticleSystem` simulates.
+  gpu-chores have no adopted device, so every job runs on the CPU.
+
+## Device loss
+
+- The probe listens to `device.lost`, drops the cached device, and records
+  `deviceLost: { reason, message }`.
+- The particle backend disposes itself and calls `recoverWebGPUDevice()`.
+  That function requests a fresh adapter and device **once per session**, and
+  concurrent callers share the same attempt. On success the overlay is rebuilt
+  on the new device and gpu-chores adopt it. If the recovery fails, is already
+  spent, or the loss was an intentional `destroy()`, the overlay stays off,
+  `ParticleSystem.disableWebGPU()` retires the GPU-simulated particles, and
+  the CPU path continues. A dead overlay is never left attached.
+- A stale owner can't release a replacement device from gpu-chores:
+  `releaseDevice(device)` only lets go if chores still hold that exact device.
+
+## Validation errors
+
+- `device.addEventListener('uncapturederror')` writes the message to
+  `window.webgpuProbe.lastError`.
+- Pipeline creation runs inside a `validation` error scope
+  (`withValidationScope()` in `src/webgpu/error-scope.js`). This covers the
+  particle overlay's resources, the gpu-chores pipelines, and the noise
+  kernel. A bad shader or layout then rejects: the overlay stays on CPU, and a
+  chores job falls back to the CPU via `runJob`. Without the scope it would
+  surface later as an invalid dispatch.
+
+## Renderer selection
+
+The player default is always Filament. `?renderer=simple` (and `?webgl`,
+`?simpleRenderer`, `?debugRenderer`) selects the WebGL2 debug renderer for
+dev/e2e work only. See [RENDERER_FALLBACK.md](RENDERER_FALLBACK.md).
+
+## Later
+
+Filament's upstream WebGPU backend is not in the npm `filament` we pin
+(`^1.51.5`, WebGL2). Once it ships there, evaluate moving Filament onto the
+probed device so each session uses a single GPU API. Do not revive
+`docs/backups/experimental-wasm-renderer/`.

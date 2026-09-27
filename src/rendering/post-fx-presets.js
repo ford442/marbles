@@ -2,7 +2,7 @@
  * post-fx-presets.js
  *
  * Quality-tier presets for the post-processing pipeline.
- * Consumed by setupPostProcessing() (zone-setup-methods.js) and the live
+ * Consumed by setupPostProcessing() (zone-setup/) and the live
  * settings-update path (init/settings.js).
  *
  * Tiers: 'low' | 'medium' | 'high' | 'ultra'

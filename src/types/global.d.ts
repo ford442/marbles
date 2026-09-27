@@ -13,6 +13,9 @@ declare global {
         staticBatchStats?: unknown;
         game?: unknown;
         gameReady?: boolean;
+        /** Plain-JSON result of the WebGPU boot probe (src/webgpu/boot-probe.js). */
+        webgpuProbe?: unknown;
+        webgpuParticlesReady?: boolean;
         updateLoadingProgress?: (pct: number, msg: string) => void;
     }
 }

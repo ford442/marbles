@@ -194,6 +194,14 @@ export function buildBatchedBuffers(Filament, engine, batch, vertexStride) {
 /**
  * Create a single renderable entity from batched buffers.
  * This replaces `N` separate box entities with `1` entity.
+ *
+ * @param {any} engine
+ * @param {any} scene
+ * @param {any} Filament
+ * @param {any} vb
+ * @param {any} ib
+ * @param {any} materialInstance
+ * @param {{ center?: number[], halfExtent?: number[] } | null} [boundingBox]
  */
 export function createBatchedRenderable(engine, scene, Filament, vb, ib, materialInstance, boundingBox = null) {
     const entity = Filament.EntityManager.get().create()
@@ -214,6 +222,10 @@ export function createBatchedRenderable(engine, scene, Filament, vb, ib, materia
     return entity
 }
 
+/**
+ * @param {Array<{ position?: number[], rotation?: number[], scale?: number[] }>} instances
+ * @returns {{ center: [number, number, number], halfExtent: [number, number, number] }}
+ */
 export function computeBatchBounds(instances) {
     return computeMeshBatchBounds(null, null, instances, null, true)
 }
@@ -222,6 +234,13 @@ export function computeBatchBounds(instances) {
  * Compute an axis-aligned bounding box for batched mesh instances.
  * When base mesh data is provided, uses all transformed vertices; otherwise
  * falls back to a unit cube corner approximation (legacy box batching).
+ *
+ * @param {Float32Array | null} baseVertices
+ * @param {Uint16Array | null} baseIndices
+ * @param {Array<{ position?: number[], rotation?: number[], scale?: number[] }>} instances
+ * @param {number | null} [vertexStride]
+ * @param {boolean} [unitCubeFallback]
+ * @returns {{ center: [number, number, number], halfExtent: [number, number, number] }}
  */
 export function computeMeshBatchBounds(baseVertices, baseIndices, instances, vertexStride = 9, unitCubeFallback = false) {
     const min = [Infinity, Infinity, Infinity]

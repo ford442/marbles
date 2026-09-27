@@ -21,7 +21,7 @@ import {
     CMD_HEADER_TAIL,
 } from '../src/game/physics-worker/protocol.js';
 import { drainCommandRing } from '../src/game/physics-worker/command-drain.js';
-import { WorkerPhysicsBackend } from '../src/game/systems/physics-backend.js';
+import { WorkerPhysicsBackend } from '../src/game/systems/physics-backend.ts';
 
 function testWorkerSpikeLevel() {
     assert.equal(WORKER_SPIKE_LEVEL_ID, 'tutorial');

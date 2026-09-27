@@ -32,24 +32,24 @@ The `MarblesGame` class is the central hub that manages:
 - HUD and input systems
 - Game loop execution
 
-Methods are organized into separate mixins applied via `apply*Methods` functions:
+Phase B subsystems (`PhysicsWorld`, `InputSystem`, `MarbleRegistry`, `AbilitySystem`, `RenderPipeline`, `HudController`, `LevelLoader`) are composed classes that `main.js` delegates to; remaining legacy slices are attached through closed `install*Methods` allowlists. See `docs/architecture/README.md`.
 
 ### Game Systems (Mixins)
 
 **Physics & Rendering**
-- `physics-factory-methods.js` - Creates rigid bodies, colliders, and entities
-- `game-loop-sync-methods.js` - Synchronizes physics state with Filament entities
-- `game-loop-render-methods.js` - Filament rendering pipeline
+- `game/systems/physics-world.ts` - Creates rigid bodies, colliders, and entities (`PhysicsWorld`); `game/systems/physics-backend.ts` selects main-thread vs worker Rapier
+- `game-loop/sync.js` - Synchronizes physics state with Filament entities (driven by `RenderPipeline`)
+- `game/systems/render-pipeline.ts` - Frame ordering and Filament draw (`RenderPipeline`)
 
 **Game Logic**
-- `game-logic-methods.js` - Core gameplay systems (win conditions, checkpoints, collectibles)
-- `game-loop-methods.js` - Main game loop orchestration
-- `ability-methods.js` - Special abilities (bombs, missiles, black holes, holo platforms)
+- `game-logic/` - Core gameplay systems (win conditions, checkpoints, collectibles)
+- `game-loop/` - Main game loop orchestration
+- `abilities/` + `game/systems/ability-system.ts` - Special abilities (bombs, missiles, black holes, holo platforms)
 
 **Input & UI**
-- `input-methods.js` - Marble movement and camera control
-- `hud-manager.js` - HUD rendering and state display
-- `marble-management-methods.js` - Marble spawning and lifecycle
+- `game/systems/input-system.ts` - Marble movement and camera control (`InputSystem`)
+- `hud-manager.ts` + `game/systems/hud-controller.ts` - HUD rendering and state display (`HUDManager` is typed against a narrow `HudHost`)
+- `game/systems/marble-registry.js` - Marble spawning and lifecycle (`MarbleRegistry`)
 
 **GPU Chores** (`src/gpu-chores/`)
 - Reusable, app-agnostic GPU jobs: `reduce_f32`, `compact_f32`, `batched_distance`
@@ -60,10 +60,10 @@ Methods are organized into separate mixins applied via `apply*Methods` functions
 - See `docs/GPU_CHORES.md`
 
 **Zones & Initialization**
-- `zone-setup-methods.js` - Zone loading and setup
+- `zone-setup/` - Zone loading and setup
 - `zones/` - Individual zone implementations (50+ levels)
 - `zones/methods/` - Zone utility functions
-- `init-methods.js` - Filament engine initialization and asset loading
+- `init/` - Filament engine initialization and asset loading
 
 ### Asset System
 
@@ -82,12 +82,12 @@ Methods are organized into separate mixins applied via `apply*Methods` functions
 ### Rendering Pipeline
 
 **Filament Integration** (WebGL2/WASM)
-- Loaded via UMD pattern in `init-methods.js`
+- Loaded via UMD pattern in `src/init/`
 - Requires COOP/COEP headers for SharedArrayBuffer (configured in vite.config.js)
 - Assets (GLTF, materials) loaded through Filament's asset pipeline
 - Transform matrices sync physics positions to render entities
 
-**Materials System** (`material-system.js`)
+**Materials System** (`material-system.ts`)
 - Manages marble appearance (color, roughness, metallic)
 - Creates instances for rendering variations
 
@@ -95,7 +95,7 @@ Methods are organized into separate mixins applied via `apply*Methods` functions
 
 **Rapier3D Setup**
 - Gravity: -9.81 m/s²
-- World created in `init-methods.js`
+- World created in `src/init/`
 - Step rate: configurable (typically 60 FPS)
 - Static bodies for floors, walls, platforms
 - Dynamic bodies for marbles with properties:
@@ -192,7 +192,7 @@ Output: `public/wasm/marble_physics.{js,wasm}`
 ## Key Implementation Details
 
 ### Transform Conversion
-Rapier uses quaternions for rotation; Filament uses 4x4 matrices. The `quaternionToMat4()` function (in game-loop-sync-methods.js) handles this conversion for each frame.
+Rapier uses quaternions for rotation; Filament uses 4x4 matrices. The `quaternionToMat4()` function (in `math.ts`) handles this conversion for each frame.
 
 ### Game Loop Structure
 1. **Physics**: `world.step()` advances simulation
@@ -254,11 +254,11 @@ npm run build                  # Production build to dist/
 
 ## Known issues / blockers
 
-- `backend/core/app_storage_manager.py` and `backend/shared/hf/app_storage_manager.py` are byte-for-byte identical (43,844 bytes, same content) — two copies of the same module living in two places with no import/re-export relationship between them. Nothing enforces they stay in sync; a fix applied to one silently won't reach the other. Worth picking one canonical location and having the other import from it (or deleting the duplicate).
 - Three recently merged zones — Astral Cascade (`src/zones/astral-cascade.js`), Inferno Chamber (`src/zones/inferno-chamber.js`), and Aether Core (`src/zones/aether-core.js`) — are only registered as `DEV_LEVELS` entries in `src/levels.ts` (reachable via `?devLevels=1`), not added to the shipped 24-map `assets/manifest.json` that normal play uses. A fourth zone from the same run of feature PRs, Cyber Reactor (`cyber_run`), *did* make it into the live manifest. Unclear whether the other three are intentionally staged in dev-only limbo or just missed the manifest update — worth confirming before assuming they're live content.
 - `docs/backups/` (including the `_backup_*` files and `orphan-react-stack/`) is intentionally archived and excluded from `tsconfig.json` — not dead weight to clean up, already correctly documented in AGENTS.md's "Non-obvious gotchas".
-- `npm run lint` and `npm run typecheck` were re-verified clean as of this check (2026-09-07) — the doc's claim still holds.
-- Startup now hard-requires a passing WebGPU boot probe (`src/webgpu/boot-probe.js`, run from `InitCore.init()` before Filament loads) — see `docs/WEBGPU_BOOT_PROBE.md`. Filament still renders on WebGL2 under the hood; only the URL-forced WebGL debug renderer (`?renderer=simple`, `?webgl`, etc.) and the silent WebGPU-probe-failure fallback are disabled this phase. A real WebGL rendering fallback is deferred to a later wave.
+- `npm run lint` and `npm run typecheck` were re-verified clean as of this check (2026-09-26) — the doc's claim still holds. `typecheck` covers the composed systems (`src/game/systems/*.ts`), `wasm-bridge.js`, `src/webgpu/**`, and `src/gpu-chores/**`; JS is only checked where a file has `// @ts-check` (see `docs/architecture/language-strategy.md`).
+- `backend/core/app_storage_manager.py` is the single copy of the legacy monolithic storage module (the byte-identical `backend/shared/hf/` duplicate was removed 2026-09-26; nothing imported either). The live API is `backend/storage/` (`uvicorn storage.main:app`).
+- The WebGPU boot probe (`src/webgpu/boot-probe.js`, run from `InitCore.init()` before Filament loads) is **not** a hard requirement: on failure Filament still boots on WebGL2, `window.webgpuProbe.ok === false`, `window.rendererFallbackReason` is set, and particles/gpu-chores run on the CPU. The probe requests a descriptor sized to the particle + chores working set, matches the WebGL `powerPreference`, and allows one device recovery after a loss. `?renderer=simple` is a dev/e2e-only flag. See `docs/WEBGPU_BOOT_PROBE.md` and `docs/RENDERER_FALLBACK.md`.
 
 ## Resources
 

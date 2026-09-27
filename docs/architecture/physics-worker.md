@@ -129,7 +129,7 @@ Record `window.perfMonitor.getLevelSummary()` and `latestSyncWork.physicsStepMs`
 | [`src/game/physics-worker/protocol.js`](../../src/game/physics-worker/protocol.js) | Buffer layout, op codes |
 | [`src/game/physics-worker/command-drain.js`](../../src/game/physics-worker/command-drain.js) | Command ring drain (worker + tests) |
 | [`src/game/physics-worker/rapier-desc-serializer.js`](../../src/game/physics-worker/rapier-desc-serializer.js) | Rapier desc → JSON for worker |
-| [`src/game/systems/physics-backend.js`](../../src/game/systems/physics-backend.js) | Backend selection, main/worker implementations |
+| [`src/game/systems/physics-backend.ts`](../../src/game/systems/physics-backend.ts) | Backend selection, main/worker implementations |
 | [`src/game/physics-worker/physics-worker.js`](../../src/game/physics-worker/physics-worker.js) | Worker entry |
 | [`src/game/physics-worker/world-builder.js`](../../src/game/physics-worker/world-builder.js) | Build Rapier world from descriptors |
 

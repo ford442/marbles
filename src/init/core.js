@@ -5,6 +5,7 @@ import { mergeRegistryMarbles } from '../marbles_data.js';
 import {
     resolveWebGLContextOptions,
     resolveGraphicsQualityForInit,
+    toWebGPUPowerPreference,
 } from '../rendering-defaults.js';
 import { loadFilament } from './filament-loader.js';
 import { runWebGPUBootProbe } from '../webgpu/boot-probe.js';
@@ -12,7 +13,7 @@ import { initMarblePhysicsWasm } from '../wasm-bridge.js';
 import {
     activatePhysicsBackendForLevel,
     createPhysicsBackend,
-} from '../game/systems/physics-backend.js';
+} from '../game/systems/physics-backend.ts';
 import { ParticleSystem } from '../particle-system.js';
 import { scheduleWebGPUExperiments } from '../webgpu/index.js';
 import { LightingSystem } from '../lighting-system.js';
@@ -483,24 +484,36 @@ export class InitCore {
             console.log(`[INIT] MarblePhysics WASM ${ok ? 'active' : 'using JS fallbacks'}`)
         })
 
-        // WebGPU boot probe — required this phase. A single requestAdapter()/
-        // requestDevice() call for the whole session, made before Filament
-        // loads. A failed probe is fatal: no WebGL renderer fallback, no
-        // silently drawing anyway. See docs/WEBGPU_BOOT_PROBE.md.
+        // WebGL options are resolved first so the WebGPU adapter asks for the
+        // same GPU (powerPreference) as the Filament context on this page.
+        const glOptions = resolveWebGLContextOptions({
+            quality: resolveGraphicsQualityForInit(),
+        })
+
+        // WebGPU boot probe — the session's one requestAdapter()/requestDevice()
+        // call, made before Filament loads. WebGPU only drives the compute
+        // overlay (particles, gpu-chores); Filament renders on WebGL2 either
+        // way, so a failed probe is an intentional, recorded fallback — not a
+        // hard stop. See docs/WEBGPU_BOOT_PROBE.md.
         console.log('[INIT] Running WebGPU boot probe...')
         if (typeof window.updateLoadingProgress === 'function') {
             window.updateLoadingProgress(22, 'Checking WebGPU support...')
         }
-        const webgpuProbeResult = await runWebGPUBootProbe()
-        if (!webgpuProbeResult.ok) {
-            this._showWebGPURequiredError(window.webgpuProbe)
-            return
+        const webgpuProbeResult = await runWebGPUBootProbe({
+            powerPreference: toWebGPUPowerPreference(glOptions.powerPreference),
+        })
+        const webgpuFallbackReason = webgpuProbeResult.ok
+            ? ''
+            : `WebGPU unavailable (${webgpuProbeResult.error}); WebGL2 only, GPU compute on CPU`
+        if (webgpuProbeResult.ok) {
+            console.log('[INIT] WebGPU boot probe passed:', window.webgpuProbe)
+        } else {
+            console.warn(`[INIT] ${webgpuFallbackReason}`, window.webgpuProbe)
         }
-        console.log('[INIT] WebGPU boot probe passed:', window.webgpuProbe)
 
         const rendererRequest = getRequestedRendererMode()
         this.rendererType = rendererRequest.type
-        this.rendererFallbackReason = ''
+        this.rendererFallbackReason = webgpuFallbackReason
         setRuntimeRendererGlobals(this.rendererType, this.rendererFallbackReason)
 
         console.log(`[INIT] Initializing ${rendererRequest.type === 'simple-webgl' ? 'Simple WebGL2 debug' : 'Filament'} rendering...`)
@@ -520,7 +533,7 @@ export class InitCore {
         console.log(`[INIT] Canvas sized to ${width}x${height} (css ${cssWidth}x${cssHeight}, renderScale ${scale})`)
 
         if (rendererRequest.type === 'simple-webgl') {
-            installSimpleDebugBackend(this)
+            installSimpleDebugBackend(this, webgpuFallbackReason)
             console.log('[INIT] Simple WebGL2 debug renderer ready')
         } else {
             try {
@@ -541,9 +554,6 @@ export class InitCore {
                 }
 
                 try {
-                    const glOptions = resolveWebGLContextOptions({
-                        quality: resolveGraphicsQualityForInit(),
-                    })
                     this.webglContextOptions = glOptions
                     console.log('[INIT] WebGL context options:', glOptions)
                     this.engine = this.Filament.Engine.create(this.canvas, glOptions)
@@ -552,7 +562,7 @@ export class InitCore {
                     this.renderer = this.engine.createRenderer()
                     this.rendererType = 'filament'
                     this.rendererModeLabel = 'Filament'
-                    setRuntimeRendererGlobals('filament', '')
+                    setRuntimeRendererGlobals('filament', webgpuFallbackReason)
                 } catch (engineError) {
                     const message = engineError?.message || 'Unknown rendering error'
                     console.error('[INIT] Failed to create Filament engine, falling back to simple renderer:', engineError)
@@ -738,17 +748,5 @@ export class InitCore {
         if (typeof window.updateLoadingProgress === 'function') {
             window.updateLoadingProgress(0, message)
         }
-    }
-
-    // Fatal, blocking failure for a failed WebGPU boot probe. This phase,
-    // WebGPU is required — the game does not fall back to a WebGL renderer
-    // and does not attempt a second requestAdapter()/requestDevice() call.
-    // The loading screen (#loading) already blocks the whole viewport, so
-    // reusing it satisfies the "blocking boot UI" requirement.
-    _showWebGPURequiredError(probe) {
-        const browser = probe?.browser || 'this browser'
-        const reason = probe?.error || 'WebGPU is unavailable'
-        console.error('[INIT] WebGPU boot probe failed — hard stop, no WebGL fallback this phase:', probe)
-        this._showInitError(`WebGPU is required to play Marbles 3D. ${browser}: ${reason}. See window.webgpuProbe for details.`)
     }
 }

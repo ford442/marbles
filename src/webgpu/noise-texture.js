@@ -3,6 +3,8 @@
  * Used for procedural marble / surface variation when ?webgpuNoise=1.
  */
 
+import { withValidationScope } from './error-scope.js';
+
 const NOISE_WGSL = `
 struct Params { seed: f32, scale: f32, octaves: u32, pad: u32 };
 @group(0) @binding(0) var<uniform> params: Params;
@@ -72,11 +74,10 @@ export async function generateNoiseTexture(device, options = {}) {
     view.setUint32(8, octaves, true);
     device.queue.writeBuffer(paramsBuffer, 0, params);
 
-    const module = device.createShaderModule({ code: NOISE_WGSL });
-    const pipeline = device.createComputePipeline({
+    const pipeline = await withValidationScope(device, 'noise pipeline', () => device.createComputePipeline({
         layout: 'auto',
-        compute: { module, entryPoint: 'main' },
-    });
+        compute: { module: device.createShaderModule({ code: NOISE_WGSL }), entryPoint: 'main' },
+    }));
 
     const bindGroup = device.createBindGroup({
         layout: pipeline.getBindGroupLayout(0),

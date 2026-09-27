@@ -26,76 +26,133 @@ import {
     shouldUsePhysicsWorker,
 } from './physics-backend-pure.ts';
 
+import type { Vec3, Quat } from '../../types/geometry.ts';
+
 export { shouldUsePhysicsWorker, resolvePhysicsHzFromSearch, WORKER_SPIKE_LEVEL_ID } from './physics-backend-pure.ts';
 export { MANIFEST_LEVEL_IDS, isManifestLevel } from './manifest-level-ids.js';
+
+/** Rigid-body description handed to `registerBody` (also the worker's `ADD_BODY` payload). */
+export interface BodyDescriptor {
+    type?: string;
+    translation?: readonly number[];
+    rotation?: readonly number[];
+    linvel?: readonly number[];
+    gravityScale?: number | null;
+    collider?: unknown;
+    [key: string]: unknown;
+}
+
+/** Shape shared by both backends; the game holds one as `game.physicsBackend`. */
+export interface PhysicsBackend {
+    isWorkerMode(): boolean;
+    getMode(): 'main' | 'worker';
+    beginLevel(levelId?: string): void;
+    commitWorldBuild(): Promise<unknown>;
+    resetWorld(): void;
+    step(): void;
+    setTimestep(value: number): void;
+    removeRigidBody(body: unknown): void;
+    destroy(): void;
+}
+
+/** The slice of the game runtime the physics backends read and write. */
+export interface PhysicsBackendHost {
+    /** Rapier world on the main thread, or the worker proxy while a worker level is active. */
+    world?: { timestep: number; removeRigidBody(body: unknown): void } | null;
+    physicsWorld: { step(): void; init(gravity: Vec3): unknown };
+    physicsGravity?: Vec3;
+    physicsBackend?: PhysicsBackend | null;
+    mainPhysicsBackend?: MainThreadPhysicsBackend;
+    workerPhysicsBackend?: WorkerPhysicsBackend | null;
+    multiplayerMode?: boolean;
+    hostAuthorityMode?: boolean;
+}
+
+export interface CreatePhysicsBackendOptions {
+    editorMode?: boolean;
+    levelId?: string | null;
+    gravity?: Vec3;
+}
+
+/** Ray query forwarded to the physics worker. */
+export interface WorkerRaycastSpec {
+    ray: unknown;
+    maxDist: number;
+    solid: boolean;
+    filterExcludeRigidBody?: { handle?: number; _bodyIndex?: number } | null;
+}
 
 /**
  * Main-thread Rapier backend (default).
  */
-export class MainThreadPhysicsBackend {
-    /** @param {object} game */
-    constructor(game) {
+export class MainThreadPhysicsBackend implements PhysicsBackend {
+    game: PhysicsBackendHost;
+    mode: 'main';
+    timestep: number;
+    lastStepMs: number;
+    lastWaitMs: number;
+    gravity: Vec3 | undefined;
+
+    constructor(game: PhysicsBackendHost) {
         this.game = game;
+        this.gravity = undefined;
         this.mode = 'main';
         this.timestep = 1 / 60;
         this.lastStepMs = 0;
         this.lastWaitMs = 0;
     }
 
-    isWorkerMode() {
+    isWorkerMode(): boolean {
         return false;
     }
 
-    getMode() {
+    getMode(): 'main' {
         return 'main';
     }
 
-    /** @param {{ x: number, y: number, z: number }} gravity */
-    init(gravity) {
+    init(gravity: Vec3): void {
         this.gravity = gravity;
     }
 
-    beginLevel() {
+    beginLevel(): void {
         // no-op
     }
 
-    async commitWorldBuild() {
+    async commitWorldBuild(): Promise<void> {
         // no-op
     }
 
-    resetWorld() {
+    resetWorld(): void {
         // no-op
     }
 
-    step() {
+    step(): void {
         const start = performance.now();
         this.game.physicsWorld.step();
         this.lastStepMs = performance.now() - start;
         this.lastWaitMs = 0;
     }
 
-    setTimestep(value) {
+    setTimestep(value: number): void {
         this.timestep = value;
         if (this.game.world) {
             this.game.world.timestep = value;
         }
     }
 
-    /**
-     * @param {object} desc
-     */
-    registerBody(desc) {
+    /** Main-thread bodies are created directly in Rapier; nothing to register. */
+    registerBody(_desc?: BodyDescriptor): null {
         return null;
     }
 
-    removeRigidBody(body) {
+    removeRigidBody(body: unknown): void {
         const g = this.game;
         if (g.world && body) {
             g.world.removeRigidBody(body);
         }
     }
 
-    destroy() {
+    destroy(): void {
         // no-op
     }
 }
@@ -103,10 +160,42 @@ export class MainThreadPhysicsBackend {
 /**
  * Worker-thread Rapier backend (tutorial spike).
  */
-export class WorkerPhysicsBackend {
-    /** @param {object} game */
-    constructor(game) {
+export class WorkerPhysicsBackend implements PhysicsBackend {
+    game: PhysicsBackendHost;
+    mode: 'worker';
+    timestep: number;
+    physicsHz: number;
+    lastStepMs: number;
+    lastWaitMs: number;
+    gravity: Vec3 | undefined;
+    _ready: boolean;
+    _active: boolean;
+    _descriptors: BodyDescriptor[];
+    _descriptorSlots: (BodyDescriptor | null)[];
+    _proxies: Map<number, unknown>;
+    _linvelCache: Map<number, { x: number; y: number; z: number }>;
+    _gravityScaleCache: Map<number, number>;
+    _pendingFrame: { resolve(frameTick: number): void } | null;
+    _initPromise: Promise<unknown> | null;
+    _worldCommitted: boolean;
+    _pendingBodies: Map<number, BodyDescriptor>;
+    _lastTick: number;
+    _lastTickAt: number;
+    _nextBodyIndex: number;
+    // Created by init(); the worker path is only entered once `_ready` is true.
+    worker: Worker | null;
+    transformSab!: SharedArrayBuffer;
+    commandSab!: SharedArrayBuffer;
+    raycastSab!: SharedArrayBuffer;
+    transformViews!: ReturnType<typeof createTransformViews>;
+    commandViews!: ReturnType<typeof createCommandViews>;
+    raycastViews!: ReturnType<typeof createRaycastViews>;
+
+    constructor(game: PhysicsBackendHost) {
         this.game = game;
+        this.gravity = undefined;
+        this.worker = null;
+        this._nextBodyIndex = 0;
         this.mode = 'worker';
         this.timestep = 1 / 120;
         this.physicsHz = 120;
@@ -127,16 +216,21 @@ export class WorkerPhysicsBackend {
         this._lastTickAt = 0;
     }
 
-    isWorkerMode() {
+    isWorkerMode(): boolean {
         return this._active && this._ready;
     }
 
-    getMode() {
+    /** The physics worker; only valid between `init()` and `destroy()`. */
+    private _requireWorker(): Worker {
+        if (!this.worker) throw new Error('[PhysicsWorker] worker not initialized');
+        return this.worker;
+    }
+
+    getMode(): 'main' | 'worker' {
         return this.isWorkerMode() ? 'worker' : 'main';
     }
 
-    /** @param {{ x: number, y: number, z: number }} gravity */
-    async init(gravity) {
+    async init(gravity: Vec3): Promise<void> {
         this.gravity = gravity;
         if (typeof SharedArrayBuffer === 'undefined') {
             throw new Error('SharedArrayBuffer unavailable');
@@ -155,28 +249,29 @@ export class WorkerPhysicsBackend {
         this.commandViews = createCommandViews(this.commandSab);
         this.raycastViews = createRaycastViews(this.raycastSab);
 
-        this.worker = new Worker(
+        const worker = new Worker(
             new URL('../physics-worker/physics-worker.js', import.meta.url),
             { type: 'module' },
         );
+        this.worker = worker;
 
         this._initPromise = new Promise((resolve, reject) => {
-            const onMessage = (event) => {
+            const onMessage = (event: MessageEvent) => {
                 const msg = event.data;
                 if (msg.type === WORKER_MSG.WORKER_READY) {
                     this._ready = true;
-                    this.worker.removeEventListener('message', onMessage);
+                    worker.removeEventListener('message', onMessage);
                     resolve(true);
                 } else if (msg.type === WORKER_MSG.INIT_ERROR) {
-                    this.worker.removeEventListener('message', onMessage);
+                    worker.removeEventListener('message', onMessage);
                     reject(new Error(msg.message || 'Worker init failed'));
                 }
             };
-            this.worker.addEventListener('message', onMessage);
-            this.worker.onerror = (err) => reject(err);
+            worker.addEventListener('message', onMessage);
+            worker.onerror = (err) => reject(err);
         });
 
-        this.worker.postMessage({
+        worker.postMessage({
             type: WORKER_MSG.INIT_BUFFERS,
             transformSab: this.transformSab,
             commandSab: this.commandSab,
@@ -186,7 +281,7 @@ export class WorkerPhysicsBackend {
 
         await this._initPromise;
 
-        this.worker.addEventListener('message', (event) => {
+        worker.addEventListener('message', (event: MessageEvent) => {
             const msg = event.data;
             if (msg.type === WORKER_MSG.FRAME_READY && this._pendingFrame) {
                 this._pendingFrame.resolve(msg.frameTick);
@@ -195,7 +290,7 @@ export class WorkerPhysicsBackend {
         });
     }
 
-    beginLevel(levelId) {
+    beginLevel(_levelId?: string): void {
         this._descriptors = [];
         this._descriptorSlots = [];
         this._proxies.clear();
@@ -208,7 +303,7 @@ export class WorkerPhysicsBackend {
         this.game.world = createProxyWorld(this);
     }
 
-    reserveBodyIndex() {
+    reserveBodyIndex(): number {
         return this._nextBodyIndex++;
     }
 
@@ -216,7 +311,7 @@ export class WorkerPhysicsBackend {
      * @param {number} bodyIndex
      * @param {object} stored
      */
-    _storeDescriptorSlot(bodyIndex, stored) {
+    _storeDescriptorSlot(bodyIndex: number, stored: BodyDescriptor): void {
         while (this._descriptorSlots.length <= bodyIndex) {
             this._descriptorSlots.push(null);
         }
@@ -227,7 +322,7 @@ export class WorkerPhysicsBackend {
      * @param {number} bodyIndex
      * @param {object} desc
      */
-    finalizeBodyDescriptor(bodyIndex, desc) {
+    finalizeBodyDescriptor(bodyIndex: number, desc: BodyDescriptor): void {
         const stored = {
             ...desc,
             translation: [...(desc.translation || [0, 0, 0])],
@@ -240,9 +335,9 @@ export class WorkerPhysicsBackend {
         }
         if (desc.linvel) {
             this._linvelCache.set(bodyIndex, {
-                x: desc.linvel[0],
-                y: desc.linvel[1],
-                z: desc.linvel[2],
+                x: desc.linvel[0] ?? 0,
+                y: desc.linvel[1] ?? 0,
+                z: desc.linvel[2] ?? 0,
             });
         } else {
             this._linvelCache.set(bodyIndex, { x: 0, y: 0, z: 0 });
@@ -253,7 +348,7 @@ export class WorkerPhysicsBackend {
             return;
         }
 
-        this.worker.postMessage({
+        this._requireWorker().postMessage({
             type: WORKER_MSG.ADD_BODY,
             bodyIndex,
             descriptor: stored,
@@ -263,7 +358,7 @@ export class WorkerPhysicsBackend {
     /**
      * @param {object} desc
      */
-    registerBody(desc) {
+    registerBody(desc: BodyDescriptor): unknown {
         const bodyIndex = this.reserveBodyIndex();
         const stored = {
             ...desc,
@@ -273,7 +368,7 @@ export class WorkerPhysicsBackend {
         if (!this._worldCommitted) {
             this._storeDescriptorSlot(bodyIndex, stored);
         } else {
-            this.worker.postMessage({
+            this._requireWorker().postMessage({
                 type: WORKER_MSG.ADD_BODY,
                 bodyIndex,
                 descriptor: stored,
@@ -286,9 +381,9 @@ export class WorkerPhysicsBackend {
         }
         if (desc.linvel) {
             this._linvelCache.set(bodyIndex, {
-                x: desc.linvel[0],
-                y: desc.linvel[1],
-                z: desc.linvel[2],
+                x: desc.linvel[0] ?? 0,
+                y: desc.linvel[1] ?? 0,
+                z: desc.linvel[2] ?? 0,
             });
         } else {
             this._linvelCache.set(bodyIndex, { x: 0, y: 0, z: 0 });
@@ -296,27 +391,28 @@ export class WorkerPhysicsBackend {
         return createProxyRigidBody(this, bodyIndex);
     }
 
-    registerProxy(bodyIndex, proxy) {
+    registerProxy(bodyIndex: number, proxy: unknown): void {
         this._proxies.set(bodyIndex, proxy);
     }
 
-    async commitWorldBuild() {
+    async commitWorldBuild(): Promise<boolean> {
         if (!this._active || !this._ready) return false;
 
+        const worker = this._requireWorker();
         return new Promise((resolve, reject) => {
-            const onMessage = (event) => {
+            const onMessage = (event: MessageEvent) => {
                 const msg = event.data;
                 if (msg.type === WORKER_MSG.INIT_OK) {
-                    this.worker.removeEventListener('message', onMessage);
+                    worker.removeEventListener('message', onMessage);
                     this._worldCommitted = true;
                     resolve(true);
                 } else if (msg.type === WORKER_MSG.INIT_ERROR) {
-                    this.worker.removeEventListener('message', onMessage);
+                    worker.removeEventListener('message', onMessage);
                     reject(new Error(msg.message || 'World build failed'));
                 }
             };
-            this.worker.addEventListener('message', onMessage);
-            this.worker.postMessage({
+            worker.addEventListener('message', onMessage);
+            worker.postMessage({
                 type: WORKER_MSG.INIT_WORLD,
                 gravity: this.gravity,
                 descriptors: this._descriptorSlots.slice(0, this._nextBodyIndex),
@@ -324,7 +420,7 @@ export class WorkerPhysicsBackend {
         });
     }
 
-    resetWorld() {
+    resetWorld(): void {
         if (this.worker && this._ready) {
             this.worker.postMessage({ type: WORKER_MSG.RESET_WORLD });
         }
@@ -342,17 +438,17 @@ export class WorkerPhysicsBackend {
         }
     }
 
-    step() {
+    step(): void {
         if (!this.isWorkerMode()) return;
 
         const waitStart = performance.now();
-        this.worker.postMessage({ type: WORKER_MSG.STEP });
+        this._requireWorker().postMessage({ type: WORKER_MSG.STEP });
 
         Atomics.load(this.transformViews.u32, TRANSFORM_HEADER_U32);
-        this.lastStepMs = this.transformViews.f32[TRANSFORM_HEADER_STEP_MS];
+        this.lastStepMs = this.transformViews.f32[TRANSFORM_HEADER_STEP_MS] ?? 0;
         this.lastWaitMs = performance.now() - waitStart;
 
-        const tick = this.transformViews.u32[TRANSFORM_HEADER_FRAME_TICK];
+        const tick = this.transformViews.u32[TRANSFORM_HEADER_FRAME_TICK] ?? 0;
         if (tick !== this._lastTick) {
             this._lastTick = tick;
             this._lastTickAt = waitStart;
@@ -360,7 +456,7 @@ export class WorkerPhysicsBackend {
     }
 
     /** Progress [0,1] between the last observed physics tick and the next one, for render interpolation. */
-    getInterpolationAlpha() {
+    getInterpolationAlpha(): number {
         const intervalMs = 1000 / this.physicsHz;
         if (!intervalMs) return 1;
         const alpha = (performance.now() - this._lastTickAt) / intervalMs;
@@ -373,7 +469,7 @@ export class WorkerPhysicsBackend {
      * @param {number} bodyIndex
      * @param {number} [alpha]
      */
-    getInterpolatedTransform(bodyIndex, alpha = this.getInterpolationAlpha()) {
+    getInterpolatedTransform(bodyIndex: number, alpha = this.getInterpolationAlpha()) {
         const { u32, f32 } = this.transformViews;
         const currentSlot = Atomics.load(u32, TRANSFORM_HEADER_U32);
         const curr = readBodyTransform(u32, f32, currentSlot, bodyIndex);
@@ -385,7 +481,7 @@ export class WorkerPhysicsBackend {
         };
     }
 
-    setTimestep(value) {
+    setTimestep(value: number): void {
         this.timestep = value;
         enqueueCommand(
             this.commandViews.u32,
@@ -396,31 +492,31 @@ export class WorkerPhysicsBackend {
         );
     }
 
-    getTranslation(bodyIndex) {
+    getTranslation(bodyIndex: number): Vec3 {
         const slot = Atomics.load(this.transformViews.u32, TRANSFORM_HEADER_U32);
         const t = readBodyTransform(this.transformViews.u32, this.transformViews.f32, slot, bodyIndex);
         return { x: t.x, y: t.y, z: t.z };
     }
 
-    getRotation(bodyIndex) {
+    getRotation(bodyIndex: number): Quat {
         const slot = Atomics.load(this.transformViews.u32, TRANSFORM_HEADER_U32);
         const t = readBodyTransform(this.transformViews.u32, this.transformViews.f32, slot, bodyIndex);
         return { x: t.qx, y: t.qy, z: t.qz, w: t.qw };
     }
 
-    getLinvel(bodyIndex) {
+    getLinvel(bodyIndex: number): { x: number; y: number; z: number } {
         return this._linvelCache.get(bodyIndex) || { x: 0, y: 0, z: 0 };
     }
 
-    getAngvel() {
+    getAngvel(): Vec3 {
         return { x: 0, y: 0, z: 0 };
     }
 
-    getGravityScale(bodyIndex) {
+    getGravityScale(bodyIndex: number): number {
         return this._gravityScaleCache.get(bodyIndex) ?? 1;
     }
 
-    queueImpulse(bodyIndex, force, wake = true) {
+    queueImpulse(bodyIndex: number, force: Vec3, wake = true): void {
         enqueueCommand(
             this.commandViews.u32,
             this.commandViews.f32,
@@ -438,7 +534,7 @@ export class WorkerPhysicsBackend {
         this._linvelCache.set(bodyIndex, lv);
     }
 
-    queueTorque(bodyIndex, torque, wake = true) {
+    queueTorque(bodyIndex: number, torque: Vec3, wake = true): void {
         enqueueCommand(
             this.commandViews.u32,
             this.commandViews.f32,
@@ -451,7 +547,7 @@ export class WorkerPhysicsBackend {
         );
     }
 
-    queueSetLinvel(bodyIndex, v, wake = true) {
+    queueSetLinvel(bodyIndex: number, v: Vec3, wake = true): void {
         enqueueCommand(
             this.commandViews.u32,
             this.commandViews.f32,
@@ -465,7 +561,7 @@ export class WorkerPhysicsBackend {
         this._linvelCache.set(bodyIndex, { x: v.x, y: v.y, z: v.z });
     }
 
-    queueSetAngvel(bodyIndex, v, wake = true) {
+    queueSetAngvel(bodyIndex: number, v: Vec3, wake = true): void {
         enqueueCommand(
             this.commandViews.u32,
             this.commandViews.f32,
@@ -478,7 +574,7 @@ export class WorkerPhysicsBackend {
         );
     }
 
-    queueSetGravityScale(bodyIndex, scale, wake = true) {
+    queueSetGravityScale(bodyIndex: number, scale: number, wake = true): void {
         enqueueCommand(
             this.commandViews.u32,
             this.commandViews.f32,
@@ -492,7 +588,7 @@ export class WorkerPhysicsBackend {
         this._gravityScaleCache.set(bodyIndex, scale);
     }
 
-    queueKinematicTranslation(bodyIndex, t) {
+    queueKinematicTranslation(bodyIndex: number, t: Vec3): void {
         enqueueCommand(
             this.commandViews.u32,
             this.commandViews.f32,
@@ -505,7 +601,7 @@ export class WorkerPhysicsBackend {
         );
     }
 
-    queueKinematicRotation(bodyIndex, r) {
+    queueKinematicRotation(bodyIndex: number, r: Quat): void {
         enqueueCommand(
             this.commandViews.u32,
             this.commandViews.f32,
@@ -518,7 +614,7 @@ export class WorkerPhysicsBackend {
         );
     }
 
-    queueSetTranslation(bodyIndex, t, wake = true) {
+    queueSetTranslation(bodyIndex: number, t: Vec3, wake = true): void {
         enqueueCommand(
             this.commandViews.u32,
             this.commandViews.f32,
@@ -531,7 +627,7 @@ export class WorkerPhysicsBackend {
         );
     }
 
-    queueSetRotation(bodyIndex, r, wake = true) {
+    queueSetRotation(bodyIndex: number, r: Quat, wake = true): void {
         void wake;
         enqueueCommand(
             this.commandViews.u32,
@@ -545,7 +641,7 @@ export class WorkerPhysicsBackend {
         );
     }
 
-    removeRigidBody(body) {
+    removeRigidBody(body: { handle?: number; _bodyIndex?: number } | null | undefined): void {
         const index = body?.handle ?? body?._bodyIndex;
         if (index == null) return;
         enqueueCommand(
@@ -558,11 +654,12 @@ export class WorkerPhysicsBackend {
         this._proxies.delete(index);
     }
 
-    castRay(spec) {
-        if (!this.worker || !this.isWorkerMode()) return null;
+    castRay(spec: WorkerRaycastSpec) {
+        const worker = this.worker;
+        if (!worker || !this.isWorkerMode()) return null;
         const { i32, f32, u32 } = this.raycastViews;
         Atomics.store(i32, 0, RAYCAST_STATUS.PENDING);
-        this.worker.postMessage({
+        worker.postMessage({
             type: WORKER_MSG.RAYCAST,
             ray: spec.ray,
             maxDist: spec.maxDist,
@@ -577,20 +674,20 @@ export class WorkerPhysicsBackend {
             // spin wait — worker fills SAB synchronously on message
         }
         if (Atomics.load(i32, 0) !== RAYCAST_STATUS.READY) return null;
-        if (f32[RAYCAST_HIT_INDEX] < 0.5) return null;
+        if ((f32[RAYCAST_HIT_INDEX] ?? 0) < 0.5) return null;
 
-        const hitBodyIndex = u32[RAYCAST_BODY_INDEX];
+        const hitBodyIndex = u32[RAYCAST_BODY_INDEX] ?? 0xffffffff;
         const hitBody = hitBodyIndex !== 0xffffffff
             ? { handle: hitBodyIndex, _bodyIndex: hitBodyIndex }
             : null;
 
         return {
-            timeOfImpact: f32[RAYCAST_TOI_INDEX],
-            toi: f32[RAYCAST_TOI_INDEX],
+            timeOfImpact: f32[RAYCAST_TOI_INDEX] ?? 0,
+            toi: f32[RAYCAST_TOI_INDEX] ?? 0,
             normal: {
-                x: f32[RAYCAST_NORMAL_INDEX],
-                y: f32[RAYCAST_NORMAL_INDEX + 1],
-                z: f32[RAYCAST_NORMAL_INDEX + 2],
+                x: f32[RAYCAST_NORMAL_INDEX] ?? 0,
+                y: f32[RAYCAST_NORMAL_INDEX + 1] ?? 0,
+                z: f32[RAYCAST_NORMAL_INDEX + 2] ?? 0,
             },
             collider: {
                 parent() {
@@ -600,7 +697,7 @@ export class WorkerPhysicsBackend {
         };
     }
 
-    destroy() {
+    destroy(): void {
         this.resetWorld();
         this.worker?.terminate();
         this.worker = null;
@@ -608,11 +705,10 @@ export class WorkerPhysicsBackend {
     }
 }
 
-/**
- * @param {object} game
- * @param {object} [options]
- */
-export async function createPhysicsBackend(game, options = {}) {
+export async function createPhysicsBackend(
+    game: PhysicsBackendHost,
+    options: CreatePhysicsBackendOptions = {},
+): Promise<MainThreadPhysicsBackend> {
     const mainBackend = new MainThreadPhysicsBackend(game);
     game.mainPhysicsBackend = mainBackend;
 
@@ -621,8 +717,8 @@ export async function createPhysicsBackend(game, options = {}) {
         search,
         crossOriginIsolated: typeof window !== 'undefined' && typeof window.crossOriginIsolated !== 'undefined' ? window.crossOriginIsolated : false,
         hasSharedArrayBuffer: typeof SharedArrayBuffer !== 'undefined',
-        multiplayerMode: game.multiplayerMode,
-        hostAuthorityMode: game.hostAuthorityMode,
+        multiplayerMode: game.multiplayerMode ?? false,
+        hostAuthorityMode: game.hostAuthorityMode ?? false,
         editorMode: options.editorMode ?? false,
         levelId: options.levelId ?? null,
     });
@@ -640,25 +736,24 @@ export async function createPhysicsBackend(game, options = {}) {
         console.info('[Physics] Worker infrastructure ready (?physicsWorker=1 + manifest level)');
         return mainBackend;
     } catch (err) {
-        console.warn('[Physics] Worker init failed, using main thread:', err?.message || err);
+        console.warn('[Physics] Worker init failed, using main thread:', (err instanceof Error && err.message) || err);
         game.physicsBackend = mainBackend;
         return mainBackend;
     }
 }
 
-/**
- * Select backend for a level load.
- * @param {object} game
- * @param {string} levelId
- */
-export async function activatePhysicsBackendForLevel(game, levelId) {
+/** Select backend for a level load. */
+export async function activatePhysicsBackendForLevel(
+    game: PhysicsBackendHost,
+    levelId: string,
+): Promise<'worker' | 'main'> {
     const search = typeof window !== 'undefined' ? window.location.search : '';
     const useWorker = shouldUsePhysicsWorker({
         search,
         crossOriginIsolated: typeof window !== 'undefined' && typeof window.crossOriginIsolated !== 'undefined' ? window.crossOriginIsolated : false,
         hasSharedArrayBuffer: typeof SharedArrayBuffer !== 'undefined',
-        multiplayerMode: game.multiplayerMode,
-        hostAuthorityMode: game.hostAuthorityMode,
+        multiplayerMode: game.multiplayerMode ?? false,
+        hostAuthorityMode: game.hostAuthorityMode ?? false,
         editorMode: false,
         levelId,
     });
@@ -674,9 +769,6 @@ export async function activatePhysicsBackendForLevel(game, levelId) {
     return 'main';
 }
 
-/**
- * @param {object} game
- */
-export function getRapierBackendMode(game) {
+export function getRapierBackendMode(game: Pick<PhysicsBackendHost, 'physicsBackend'>): 'main' | 'worker' {
     return game.physicsBackend?.getMode?.() || 'main';
 }

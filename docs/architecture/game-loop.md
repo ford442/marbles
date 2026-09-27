@@ -7,12 +7,12 @@
 
 ```
 main.js
-  ├── RenderPipeline                      # game/systems/render-pipeline.js
+  ├── RenderPipeline                      # game/systems/render-pipeline.ts
   │     └── sync.js                       # transform/physics/draw runtime slice
-  ├── HudController                       # game/systems/hud-controller.js
+  ├── HudController                       # game/systems/hud-controller.ts
   │     └── hud-tick.js                   # legacy cooldown implementation
   └── installGameLoopMethods              # closed allowlist in game-loop/index.js
-        ├── loop.js, logic.js, speed-lines.js
+        ├── loop.ts, logic.js, speed-lines.js
         ├── frame-input.js, camera.js, dynamics-tick.js
         └── effects-tick.js, finalize-frame.js
 ```
@@ -22,13 +22,13 @@ main.js
 - `game-runtime-drafts/core.js.orig`, `core.js.broken` — old monolithic loop drafts
 - `unused-game-modules/unwired-game-loop/` — `abilities.js`, `camera.js`, `hud.js`, `input.js` never wired to `index.js`
 
-Root `game-loop-*-methods.js` shims were removed; import `game-loop/index.js` directly.
+Root `game-loop-*-methods.js` shims (and the later `*-methods.js` ones) were removed; import `game-loop/index.js` directly.
 
 ## Per-frame call order
 
 ```
-loop()                          [loop.js]
-  pollGamepads()                [input-methods.js — mixin]
+loop()                          [loop.ts]
+  pollGamepads()                [InputSystem — delegated from main.js]
   if paused → renderAndSync() only
   else:
     updateGameState()           [logic.js]
@@ -55,22 +55,22 @@ loop()                          [loop.js]
 
 | Phase | Primary module | Notes |
 |-------|----------------|-------|
-| Input poll | `input-methods.js` | Gamepad + pause; keyboard read in `frame-input.js` |
+| Input poll | `game/systems/input-system.ts` | Gamepad + pause; keyboard read in `frame-input.js` |
 | Logic / abilities (pre-step) | `logic.js` | Focus, time-stop, vortex, phase, ice, rewind, etc. |
 | Frame input + forces | `frame-input.js`, `effects-tick.js` | Impulses applied **before** `world.step()` |
 | Camera | `camera.js` | Uses adrenaline shake from `logic.js` |
 | Physics step | `sync.js` | `world.step()` once per frame |
 | Game rules | `sync.js` | `checkGameLogic()` after step |
 | Sync + render | `sync.js` | Transforms → Filament, `view.render()` |
-| HUD | `game/systems/hud-controller.js` | Single frame entry for bars, ability HUD, goal FX, desync display |
+| HUD | `game/systems/hud-controller.ts` | Single frame entry for bars, ability HUD, goal FX, desync display |
 
-Ability **spawn** handlers remain in `src/abilities/` (mixed in via `ability-methods.js`). Ability **per-frame tick** is split between `logic.js` (energy/state) and `effects-tick.js` (projectiles).
+Ability **spawn** handlers remain in `src/abilities/` (installed via `abilities/index.js`; `AbilitySystem` in `game/systems/ability-system.ts` routes input and HUD). Ability **per-frame tick** is split between `logic.js` (energy/state) and `effects-tick.js` (projectiles).
 
 ## Module responsibilities
 
 | File | Methods | Responsibility |
 |------|---------|----------------|
-| `loop.js` | `loop` | rAF scheduling, pause branch |
+| `loop.ts` | `loop` | rAF scheduling, pause branch |
 | `logic.js` | `updateGameState` | Ghost, adrenaline/FOV/shake, ability state machine |
 | `frame-input.js` | `tickFrameInput` | Key debounce, marble impulses, magnet |
 | `camera.js` | `updateCamera` | All camera modes + collision avoidance |
@@ -78,10 +78,10 @@ Ability **spawn** handlers remain in `src/abilities/` (mixed in via `ability-met
 | `hud-tick.js` | `tickHudCooldownBars` | Legacy runtime slice called only by `HudController` |
 | `effects-tick.js` | `tickActiveProjectiles` | Active bomb/missile/black-hole visuals + forces |
 | `finalize-frame.js` | `finalizeFrame` | Single HUD-controller entry + perf counters |
-| `game/systems/render-pipeline.js` | `renderAndSync` | Main-thread frame and draw orchestrator |
+| `game/systems/render-pipeline.ts` | `renderAndSync` | Main-thread frame and draw orchestrator |
 | `sync.js` | `syncTransformsAndRender` | Physics step, transform sync, Filament draw |
 | `speed-lines.js` | `init/update/renderSpeedLines` | Canvas overlay |
-| `helpers.js` | transform/color helpers | Shared by render-phase modules |
+| `helpers.ts` | transform/color helpers | Shared by render-phase modules |
 
 ## Rules for contributors
 

@@ -4,7 +4,7 @@ import {
     ALL_ABILITY_IDS,
     MAX_NETWORKED_ABILITY_IDS,
 } from '../src/abilities/registry.js';
-import { AbilitySystem } from '../src/game/systems/ability-system.js';
+import { AbilitySystem } from '../src/game/systems/ability-system.ts';
 
 function createMockGame(overrides = {}) {
     const game = {

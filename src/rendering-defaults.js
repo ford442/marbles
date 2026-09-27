@@ -100,6 +100,22 @@ export function getWebGLContextOptions(quality = DEFAULT_GRAPHICS_QUALITY, platf
 }
 
 /**
+ * WebGPU adapter power preference matching the WebGL context on the same page,
+ * so Filament and the WebGPU overlay land on the same GPU (e.g. both
+ * `low-power` on mobile / `low` quality). `default` means "let the browser
+ * choose" and maps to no preference.
+ *
+ * @param {unknown} glPowerPreference `powerPreference` from the WebGL options.
+ * @returns {GPUPowerPreference | undefined}
+ */
+export function toWebGPUPowerPreference(glPowerPreference) {
+    if (glPowerPreference === 'low-power' || glPowerPreference === 'high-performance') {
+        return glPowerPreference
+    }
+    return undefined
+}
+
+/**
  * Context options for the simple WebGL2 debug renderer (`?renderer=simple`).
  * Same tier matrix as Filament; keeps `preserveDrawingBuffer` for readback/screenshots.
  * @param {string} [quality]

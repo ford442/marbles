@@ -8,9 +8,9 @@ Last aligned with repo audit: July 2026.
 
 | Check | Status | Command / location |
 |-------|--------|-------------------|
-| Unit tests | ✅ | `npm run test:unit` (38 files, including rebuilt WASM parity) |
+| Unit tests | ✅ | `npm run test:unit` (46 files, including rebuilt WASM parity) |
 | Lint | ✅ | `npm run lint` |
-| Typecheck | ✅ | `npm run typecheck` (narrow `include`; widening is Phase C) |
+| Typecheck | ✅ | `npm run typecheck` (`include` covers the composed systems, `wasm-bridge.js`, `webgpu/`, `gpu-chores/`; JS is only checked where a file has `@ts-check`) |
 | Asset validation | ✅ | `npm run validate:assets` (CI + optional local hook) |
 | CI build | ✅ | [.github/workflows/debug_build.yml](../.github/workflows/debug_build.yml) — rebuilds WASM before unit/parity, then Vite |
 | E2E smoke | ⚠️ optional | `e2e-smoke` job, `continue-on-error: true`; local: `npm run test:e2e:smoke` |
@@ -25,8 +25,8 @@ Counts from [architecture/level-inventory.json](architecture/level-inventory.jso
 | Metric | Count |
 |--------|------:|
 | Shipped (manifest) | 24 |
-| `DEV_LEVELS` entries | 52 |
-| Unique level ids | 76 |
+| `DEV_LEVELS` entries | 60 |
+| Unique level ids | 84 |
 | Map JSON files on disk | 28 (including 4 archived prototypes) |
 
 Policy: [architecture/level-pipeline.md](architecture/level-pipeline.md). Campaign content ships as JSON + manifest only.
@@ -39,7 +39,7 @@ Canonical checklist: [architecture/README.md](architecture/README.md).
 |-------|-------|--------|
 | **A** | Single home per concern (`src/game-loop/`, thin re-exports) | ✅ largely complete |
 | **B** | Composition — explicit subsystem delegation + closed legacy method lists | ✅ complete |
-| **C** | TypeScript on pure systems + `@ts-check` state | In progress |
+| **C** | TypeScript on pure systems, composed systems (`game/systems/*.ts`), `@ts-check` state / WASM bridge / WebGPU boot probe + particle backend | In progress — `sync.js` and zones stay JS |
 
 Language boundaries (no React/three.js in game bundle): [architecture/language-strategy.md](architecture/language-strategy.md).
 
@@ -52,7 +52,7 @@ Only two npm **runtime** dependencies — keep it that way:
 | `filament` | WebGL2 PBR renderer |
 | `@dimforge/rapier3d-compat` | Physics |
 
-Dev tooling (Vite, Playwright, ESLint, TypeScript) stays in `devDependencies`.
+Dev tooling (Vite, Playwright, ESLint, TypeScript, `@webgpu/types`) stays in `devDependencies`.
 
 ## Backend scope
 
