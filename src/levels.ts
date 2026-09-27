@@ -81,6 +81,21 @@ export const DEV_LEVELS: Record<string, any> = {
         backgroundColor: [0.05, 0.02, 0.1, 1.0],
         environment: 'space_nebula'
     },
+    neon_city_heights_run: {
+        name: 'Neon City Heights',
+        description: 'Navigate the neon platforms, low-friction purple track, and moving hover cars!',
+        zones: [
+            { type: 'neon_city_heights', pos: { x: 0, y: 0, z: 0 } }
+        ],
+        spawn: { x: 0, y: 5, z: -30 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [110, 120], y: [5, 15] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.01, 0.01, 0.05, 1.0],
+        environment: 'neon_city'
+    },
     cyber_reactor_run: {
         name: 'Cyber Reactor Run',
         description: 'Brave the icy track and jump across the glowing red reactor cores!',
