@@ -41,6 +41,7 @@ export function createPhysicsState() {
         grappleAnchors: [],
         isGrappling: false,
         grappleTarget: null,
+        grappleTargetBody: null,
         grappleEntity: null,
         grappleInst: null,
         grappleMaxDist: 50.0,
