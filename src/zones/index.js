@@ -66,3 +66,4 @@ export { createNeonVortexZone } from './neon-vortex.js';
 export { createNeonDriftZone } from './neon-drift.js';
 export { createCyberMatrixZone } from './cyber-matrix.js';
 export { createNeonCityHeightsZone } from './neon-city-heights.js';
+export { createNeonPulseMatrixZone } from './neon-pulse-matrix.js';
