@@ -70,6 +70,7 @@ export interface PhysicsState {
     grappleAnchors: unknown[];
     isGrappling: boolean;
     grappleTarget: unknown;
+    grappleTargetBody: unknown;
     grappleEntity: unknown;
     grappleInst: unknown;
     grappleMaxDist: number;

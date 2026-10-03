@@ -93,6 +93,14 @@ export class ZoneSetupGrapple {
                 y: rayOrigin.y + rayDir.y * hit.toi,
                 z: rayOrigin.z + rayDir.z * hit.toi
             }
+
+            const parent = hit.collider.parent();
+            if (parent && parent.bodyType() === RAPIER.RigidBodyType.Dynamic) {
+                this.grappleTargetBody = parent;
+            } else {
+                this.grappleTargetBody = null;
+            }
+
             this.grappleRestLength = hit.toi * 0.8 // slightly pull them in initially
             this.isGrappling = true
             console.log("[GAME] Grapple attached at", this.grappleTarget)
@@ -129,6 +137,7 @@ export class ZoneSetupGrapple {
 
         this.isGrappling = false
         this.grappleTarget = null
+        this.grappleTargetBody = null
         this.isGrappleZipping = false
 
         if (this.grappleInst) {
@@ -147,6 +156,11 @@ export class ZoneSetupGrapple {
 
         const rb = this.playerMarble.rigidBody
         const pos = rb.translation()
+
+        if (this.grappleTargetBody) {
+            const bodyPos = this.grappleTargetBody.translation()
+            this.grappleTarget = { x: bodyPos.x, y: bodyPos.y, z: bodyPos.z }
+        }
         const target = this.grappleTarget
 
         const dx = target.x - pos.x
@@ -189,6 +203,14 @@ export class ZoneSetupGrapple {
                     y: _springForceScratch[1] * dt,
                     z: _springForceScratch[2] * dt
                 }, true)
+
+                if (this.grappleTargetBody) {
+                    this.grappleTargetBody.applyImpulse({
+                        x: -_springForceScratch[0] * dt,
+                        y: -_springForceScratch[1] * dt,
+                        z: -_springForceScratch[2] * dt
+                    }, true)
+                }
             }
         }
 
