@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-09-26T09:38:02.735Z",
+  "generated_at": "2026-10-03T09:37:09.622Z",
   "counts": {
     "manifest": 24,
-    "dev_levels": 61,
+    "dev_levels": 62,
     "map_files": 28,
-    "unique_ids": 85,
+    "unique_ids": 86,
     "json_only": 20,
-    "code_only": 57,
+    "code_only": 58,
     "dual": 4,
     "orphan_json": 0,
     "archived_json": 4
@@ -676,6 +676,20 @@
     },
     {
       "id": "neon_pulse_grid_run",
+      "source": "code",
+      "in_manifest": false,
+      "in_dev_levels": true,
+      "on_disk": false,
+      "chapter": "neon",
+      "chapter_source": "heuristic:neon",
+      "zone_types": "(dev inline)",
+      "unknown_zones": "",
+      "migration_status": "dev-only",
+      "archive_reason": "",
+      "difficulty": ""
+    },
+    {
+      "id": "neon_pulse_matrix_run",
       "source": "code",
       "in_manifest": false,
       "in_dev_levels": true,
