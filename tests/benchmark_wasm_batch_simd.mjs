@@ -3,8 +3,8 @@
  * benchmark_wasm_batch_simd.mjs
  *
  * Throughput benchmark for the SIMD-vectorized WASM batch kernels
- * (computeForceFieldsBatch, applyVelocityDampingBatch) against a 1000-entity
- * workload. Reports absolute throughput for the currently built
+ * (computeForceFieldsBatch, applyVelocityDampingBatch, computeSpringForcesBatch,
+ * closestPointsOnSegmentBatch) against a 1000-entity workload. Reports absolute throughput for the currently built
  * public/wasm/marble_physics.{js,wasm}, and — when --baseline-dir points at
  * a previously built copy of those files (e.g. checked out from git history
  * before a WASM change) — reports the improvement between the two.
@@ -19,6 +19,9 @@
  * Run:
  *   node tests/benchmark_wasm_batch_simd.mjs
  *   node tests/benchmark_wasm_batch_simd.mjs --baseline-dir /path/to/old/public/wasm
+ *   # fail unless the named kernels improve by >= 20% (min sample):
+ *   node tests/benchmark_wasm_batch_simd.mjs --baseline-dir ... \
+ *       --require computeSpringForcesBatch,closestPointsOnSegmentBatch
  */
 
 import { performance } from 'node:perf_hooks';
@@ -39,9 +42,10 @@ const ROUNDS = 40;
 const MIN_IMPROVEMENT_PCT = 20;
 
 function parseArgs(argv) {
-    const args = { baselineDir: null };
+    const args = { baselineDir: null, require: [] };
     for (let i = 0; i < argv.length; i++) {
         if (argv[i] === '--baseline-dir') args.baselineDir = argv[++i];
+        else if (argv[i] === '--require') args.require = argv[++i].split(',').filter(Boolean);
     }
     return args;
 }
@@ -103,6 +107,63 @@ function makeVelocityDampingFn(runner, count) {
     return () => runner.applyVelocityDampingBatch(velocities, out, count, 0.8, 1 / 60, 8);
 }
 
+function makeSpringDataset(count) {
+    const positions = new Float32Array(count * 3);
+    const anchors = new Float32Array(count * 3);
+    const velocities = new Float32Array(count * 3);
+    const restLengths = new Float32Array(count);
+    const stiffnesses = new Float32Array(count);
+    const dampings = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+        const base = i * 3;
+        positions[base] = Math.cos(i) * 6;
+        positions[base + 1] = (i % 5) * 0.4;
+        positions[base + 2] = Math.sin(i) * 6;
+        anchors[base] = positions[base] + 3 + (i % 7);
+        anchors[base + 1] = positions[base + 1] + 8;
+        anchors[base + 2] = positions[base + 2] - (i % 3);
+        velocities[base] = Math.sin(i * 0.7) * 4;
+        velocities[base + 1] = Math.cos(i * 1.3) * 4;
+        velocities[base + 2] = Math.sin(i * 0.3) * 4;
+        restLengths[i] = 4 + (i % 6);
+        stiffnesses[i] = 15;
+        dampings[i] = 2;
+    }
+    return { positions, anchors, velocities, restLengths, stiffnesses, dampings, out: new Float32Array(count * 3) };
+}
+
+function makeSegmentDataset(count) {
+    const p0 = new Float32Array(count * 3);
+    const p1 = new Float32Array(count * 3);
+    const q = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+        const base = i * 3;
+        p0[base] = i * 0.1; p0[base + 1] = 0; p0[base + 2] = -(i % 9);
+        p1[base] = p0[base] + 10; p1[base + 1] = (i % 4); p1[base + 2] = p0[base + 2] + 3;
+        q[base] = p0[base] + (i % 13) - 1; q[base + 1] = 2; q[base + 2] = p0[base + 2] + 1;
+    }
+    return { p0, p1, q, out: new Float32Array(count * 3) };
+}
+
+function makeSpringFn(runner, count) {
+    const d = makeSpringDataset(count);
+    return () => runner.computeSpringForcesBatch(
+        d.positions, d.anchors, d.velocities, d.restLengths, d.stiffnesses, d.dampings, d.out, count
+    );
+}
+
+function makeSegmentFn(runner, count) {
+    const { p0, p1, q, out } = makeSegmentDataset(count);
+    return () => runner.closestPointsOnSegmentBatch(p0, p1, q, out, count);
+}
+
+const KERNELS = [
+    ['computeForceFieldsBatch', makeForceFieldFn],
+    ['applyVelocityDampingBatch', makeVelocityDampingFn],
+    ['computeSpringForcesBatch', makeSpringFn],
+    ['closestPointsOnSegmentBatch', makeSegmentFn],
+];
+
 function warmup(fn, ms) {
     const end = performance.now() + ms;
     while (performance.now() < end) fn();
@@ -156,7 +217,7 @@ function fmtRow(label, result) {
 }
 
 async function main() {
-    const { baselineDir } = parseArgs(process.argv.slice(2));
+    const { baselineDir, require } = parseArgs(process.argv.slice(2));
 
     console.log(`MarblePhysics WASM batch-kernel throughput benchmark (${ENTITY_COUNT} entities)`);
     console.log(`Warmup: ${WARMUP_MS}ms/side, ${ROUNDS} interleaved ${SAMPLE_MS}ms samples/side\n`);
@@ -164,35 +225,31 @@ async function main() {
     const currentRunner = await loadRunner(currentWasmDir);
 
     if (!baselineDir) {
-        const ffFn = makeForceFieldFn(currentRunner, ENTITY_COUNT);
-        const vdFn = makeVelocityDampingFn(currentRunner, ENTITY_COUNT);
-        warmup(ffFn, WARMUP_MS);
-        warmup(vdFn, WARMUP_MS);
         console.log('Current build (public/wasm/):');
-        console.log(`  computeForceFieldsBatch:    ${sampleOnce(ffFn, 200).toFixed(4)} ms/call`);
-        console.log(`  applyVelocityDampingBatch:  ${sampleOnce(vdFn, 200).toFixed(4)} ms/call`);
+        for (const [name, makeFn] of KERNELS) {
+            const fn = makeFn(currentRunner, ENTITY_COUNT);
+            warmup(fn, WARMUP_MS);
+            console.log(`  ${(name + ':').padEnd(30)}${sampleOnce(fn, 200).toFixed(4)} ms/call`);
+        }
         console.log('\n(no --baseline-dir given — skipping before/after comparison)');
         return;
     }
 
     const baselineRunner = await loadRunner(baselineDir);
 
-    console.log('computeForceFieldsBatch (A = current, B = baseline):');
-    const ffResult = interleavedBenchmark(
-        makeForceFieldFn(currentRunner, ENTITY_COUNT),
-        makeForceFieldFn(baselineRunner, ENTITY_COUNT),
-    );
-    const ffMinPct = fmtRow('computeForceFieldsBatch', ffResult);
+    const improvements = new Map();
+    for (const [name, makeFn] of KERNELS) {
+        console.log(`\n${name} (A = current, B = baseline):`);
+        const result = interleavedBenchmark(
+            makeFn(currentRunner, ENTITY_COUNT),
+            makeFn(baselineRunner, ENTITY_COUNT),
+        );
+        improvements.set(name, fmtRow(name, result));
+    }
 
-    console.log('\napplyVelocityDampingBatch (A = current, B = baseline):');
-    const vdResult = interleavedBenchmark(
-        makeVelocityDampingFn(currentRunner, ENTITY_COUNT),
-        makeVelocityDampingFn(baselineRunner, ENTITY_COUNT),
-    );
-    const vdMinPct = fmtRow('applyVelocityDampingBatch', vdResult);
-
-    const pass = ffMinPct >= MIN_IMPROVEMENT_PCT && vdMinPct >= MIN_IMPROVEMENT_PCT;
-    console.log(`\n${pass ? '✅' : '❌'} Target: >= ${MIN_IMPROVEMENT_PCT}% min-sample improvement on both kernels`);
+    if (require.length === 0) return;
+    const pass = require.every((name) => (improvements.get(name) ?? -Infinity) >= MIN_IMPROVEMENT_PCT);
+    console.log(`\n${pass ? '✅' : '❌'} Target: >= ${MIN_IMPROVEMENT_PCT}% min-sample improvement on ${require.join(', ')}`);
     if (!pass) process.exitCode = 1;
 }
 

@@ -436,7 +436,7 @@ class WasmBatchRunner {
         this._mod = wasmModule;
         this._malloc = wasmModule._malloc;
         this._free = wasmModule._free;
-        this._heap = wasmModule.HEAPF32;
+        this._heapCache = wasmModule.HEAPF32;
         this._positionsPtr = 0;
         this._strengthsPtr = 0;
         this._forcesPtr = 0;
@@ -450,9 +450,32 @@ class WasmBatchRunner {
         this._qPtr = 0;
         this._capacity = 0;
         this._scalarOutPtr = this._malloc(12);
-        this._scalarOutView = new Float32Array(
+        this._scalarOutViewCache = new Float32Array(
             wasmModule.HEAPF32.buffer, this._scalarOutPtr, 3
         );
+    }
+
+    /**
+     * Current HEAPF32 view. With ALLOW_MEMORY_GROWTH, a `_malloc` that grows
+     * memory swaps `Module.HEAPF32` for a view over the new buffer and detaches
+     * the old one, so cached views are re-derived whenever the buffer changes.
+     */
+    get _heap() {
+        this._refreshViews();
+        return this._heapCache;
+    }
+
+    /** 3-float scratch output in WASM memory; valid until the next scalar call. */
+    get _scalarOutView() {
+        this._refreshViews();
+        return this._scalarOutViewCache;
+    }
+
+    _refreshViews() {
+        const heap = this._mod.HEAPF32;
+        if (heap.buffer === this._heapCache.buffer) return;
+        this._heapCache = heap;
+        this._scalarOutViewCache = new Float32Array(heap.buffer, this._scalarOutPtr, 3);
     }
 
     /**

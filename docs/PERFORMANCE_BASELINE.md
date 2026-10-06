@@ -147,7 +147,8 @@ Notes:
 - WASM HEAP batch pays a fixed copy + `_malloc` setup cost; hybrid routing keeps mid-size batches on JS until `WASM_HEAP_BATCH_MIN` (200).
 - Scalar WASM uses `*Out` / `compute*Into` HEAP writers instead of Embind `{x,y,z}` objects for magnet/black-hole paths with ≤8 targets.
 - Game hot paths using `computeForceFieldInto` / `computeSpringForceInto`: `effects-tick.js`, `frame-input.js` (magnet), `ability-sync.js` (remote black holes), `zone-setup/grapple.js` (spring).
-- CI: `npm run build:wasm` → `check:wasm` → `test:wasm:parity` before unit tests (Emscripten **3.1.50** — see `wasm/README.md`).
+- Game hot paths using `computeForceFieldsBatch` above `FORCE_BATCH_THRESHOLD`: `effects-tick.js` (black hole), `frame-input.js` (magnet), `game-loop/repel-pulse.js` (Shield + Violet Light, `falloffExp=0` constant-magnitude repel).
+- CI: `npm run build:wasm` → `check:wasm` → `git diff --exit-code public/wasm/` (the build is byte-reproducible, so committed artefacts must match the C++) → `test:wasm:parity` → Debug/ASan compile smoke, before unit tests (Emscripten **3.1.50** — see `wasm/README.md`).
 - Local dev without emsdk continues to use JS fallbacks silently (`npm run build:wasm` skips gracefully when Emscripten is absent).
 - Shared test vectors live in `tests/test_wasm_bridge.js` and `tests/test_wasm_bridge_wasm.js`.
 
@@ -202,5 +203,34 @@ See [architecture/physics-worker.md](./architecture/physics-worker.md).
 
 ### Spring / segment batch kernels
 
-- `computeSpringForcesBatch` and `closestPointsOnSegmentBatch` ship with JS fallbacks + WASM HEAP paths (same hybrid threshold as force fields).
-- Grapple uses scalar `computeSpringForce` via `src/zone-setup/grapple.js` (single spring per frame; batch not warranted yet).
+- `computeSpringForcesBatch` and `closestPointsOnSegmentBatch` ship with JS fallbacks + WASM HEAP paths (same hybrid threshold as force fields). Since 2026-10-05 both are SIMD128 (4 entities per iteration via `loadVec3x4`/`storeVec3x4`, scalar remainder for `count % 4`); parity is covered at 13 entities incl. coincident spring endpoints and zero-length segments.
+- No gameplay caller yet: grapple is one spring per local player (`src/zone-setup/grapple.js` keeps scalar `computeSpringForceInto`), and there is no rail-slide / per-frame segment projection. Wire them in when a multi-entity path exists (e.g. remote-player grapples).
+
+`npm run bench:wasm:batch -- --baseline-dir <pre-change public/wasm>` (1000 entities, includes the JS↔HEAP copies, min of 40 interleaved samples), 2026-10-05, Node v24:
+
+| Kernel | Before (ms) | After (ms) | Change |
+| --- | ---: | ---: | ---: |
+| `computeSpringForcesBatch` | 0.0129 | 0.0081 | −37% |
+| `closestPointsOnSegmentBatch` | 0.0112 | 0.0075 | −33% |
+| `computeForceFieldsBatch` | 0.0206 | 0.0221 | noise (±9% across runs) |
+| `applyVelocityDampingBatch` | 0.0042 | 0.0044 | noise (±5% across runs) |
+
+### WASM build flags (Release)
+
+Each flag was added cumulatively on top of the SIMD spring/segment kernels, built with Emscripten 3.1.50, and kept only if `npm run test:wasm:parity` passed and the JS glue did not grow. Sizes are bytes, raw / `gzip -9`.
+
+| Step | `marble_physics.js` | `marble_physics.wasm` | Kept? |
+| --- | ---: | ---: | --- |
+| Committed before this change (scalar spring/segment) | 14,766 / 6,323 | 21,974 / 9,468 | — |
+| + SIMD spring/segment kernels | 14,766 / 6,323 | 23,728 / 9,937 | yes |
+| + `-msimd128` on link line | 14,766 / 6,323 | 23,728 / 9,937 | yes (no change today; required if codegen ever moves to link time) |
+| + `-flto` (compile + link) | 14,781 / 6,332 | 23,792 / 9,929 | **no** — single TU, nothing to inline across; glue +15 B |
+| + `-sFILESYSTEM=0` | no change | no change | yes (guard) |
+| + `-sSUPPORT_LONGJMP=0` | no change | no change | yes (guard) |
+| + `-sMALLOC=emmalloc` | no change | −4,742 / −1,930 | yes |
+| + `-mnontrapping-fptoint` | no change | no change | yes (no float→int in hot loops today) |
+| + `-sMAXIMUM_MEMORY=64 MB` | −4 / +3 | −1 / −1 | yes |
+| + `-sSTRICT=1` (drops legacy `ELIMINATE_DUPLICATE_FUNCTIONS`) | byte-identical | byte-identical | yes (guard) |
+| **Final** | **14,762 / 6,326** | **18,921 / 8,007** | |
+
+Net vs. the previous committed build: wasm −14% raw / −15% gzip, glue −4 B, with two more SIMD kernels. The Debug/ASan target (`npm run build:wasm:debug`) compiles but is not `-Weverything`-clean (raw-pointer `-Wunsafe-buffer-usage`, Embind `-Wmissing-prototypes` / `-Wglobal-constructors`), so CI runs it as a compile smoke without `-Werror`.

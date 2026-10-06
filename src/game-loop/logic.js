@@ -1,6 +1,7 @@
 import { audio } from '../audio.js';
 import { quaternionToMat4 } from '../math.ts';
 import { tickLevelBehaviors } from '../game/level-behaviors/index.js';
+import { applyRepelPulse } from './repel-pulse.js';
 
 export class GameLoopLogic {
     updateGameState() {
@@ -461,30 +462,8 @@ export class GameLoopLogic {
             if (this.shieldEnergy < 0) this.shieldEnergy = 0
 
             if (this.playerMarble) {
-                const playerPos = this.playerMarble.rigidBody.translation()
-                const radius = 5.0
-                const force = 3.0
-
-                // Repel other dynamic bodies
-                const playerRb = this.playerMarble.rigidBody
-                for (const body of this.dynamicBodies) {
-                    if (body === playerRb) continue
-
-                    const bodyPos = body.translation()
-                    const dx = bodyPos.x - playerPos.x
-                    const dy = bodyPos.y - playerPos.y
-                    const dz = bodyPos.z - playerPos.z
-                    const distSq = dx * dx + dy * dy + dz * dz
-
-                    if (distSq < radius * radius && distSq > 0.001) {
-                        const dist = Math.sqrt(distSq)
-                        const fx = (dx / dist) * force * body.mass()
-                        const fy = (dy / dist) * force * body.mass() + 1.0 // slight upward pop
-                        const fz = (dz / dist) * force * body.mass()
-
-                        body.applyImpulse({ x: fx, y: fy, z: fz }, true)
-                    }
-                }
+                // Repel other dynamic bodies, with a slight upward pop
+                applyRepelPulse(this, 5.0, 3.0, 1.0)
 
                 // Visual feedback - tint cyan
                 const rcm = this.engine.getRenderableManager()
@@ -527,28 +506,9 @@ export class GameLoopLogic {
             if (this.playerMarble) {
                 const playerPos = this.playerMarble.rigidBody.translation()
                 const radius = 15.0
-                const force = 0.5
 
                 // Repel other dynamic bodies
-                const playerRb = this.playerMarble.rigidBody
-                for (const body of this.dynamicBodies) {
-                    if (body === playerRb) continue
-
-                    const bodyPos = body.translation()
-                    const dx = bodyPos.x - playerPos.x
-                    const dy = bodyPos.y - playerPos.y
-                    const dz = bodyPos.z - playerPos.z
-                    const distSq = dx * dx + dy * dy + dz * dz
-
-                    if (distSq < radius * radius && distSq > 0.001) {
-                        const dist = Math.sqrt(distSq)
-                        const fx = (dx / dist) * force * body.mass()
-                        const fy = (dy / dist) * force * body.mass()
-                        const fz = (dz / dist) * force * body.mass()
-
-                        body.applyImpulse({ x: fx, y: fy, z: fz }, true)
-                    }
-                }
+                applyRepelPulse(this, radius, 0.5, 0)
 
                 // Create or update Violet Light Entity
                 if (!this.violetLightEntity) {

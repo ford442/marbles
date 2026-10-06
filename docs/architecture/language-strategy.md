@@ -131,7 +131,7 @@ Previously lived at repo root `wasm_renderer/`; moved July 2026. Only referenced
 
 | Module | Path | Role |
 |--------|------|------|
-| MarblePhysics | `wasm/` → `public/wasm/` | Batched float kernels (force fields, damping) |
+| MarblePhysics | `wasm/` → `public/wasm/` | Batched float kernels (force fields, damping, springs, segment projection) |
 | Filament | `filament` npm | Primary renderer |
 | Rapier | `@dimforge/rapier3d-compat` | Physics simulation |
 

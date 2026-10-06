@@ -505,26 +505,12 @@ void computeSpringForceOut(uintptr_t outPtr,
                           out[0], out[1], out[2]);
 }
 
-/**
- * Batched spring forces. Buffer layout (float32):
- *   positions[i*3+0..2], anchors[i*3+0..2], velocities[i*3+0..2],
- *   restLengths[i], stiffnesses[i], dampings[i], out[i*3+0..2]
- */
-void computeSpringForcesBatch(uintptr_t positionsPtr, uintptr_t anchorsPtr,
-                              uintptr_t velocitiesPtr, uintptr_t restLengthsPtr,
-                              uintptr_t stiffnessesPtr, uintptr_t dampingsPtr,
-                              uintptr_t outPtr, int count) {
-    if (count <= 0) return;
-
-    float* positions    = reinterpret_cast<float*>(positionsPtr);
-    float* anchors      = reinterpret_cast<float*>(anchorsPtr);
-    float* velocities   = reinterpret_cast<float*>(velocitiesPtr);
-    float* restLengths  = reinterpret_cast<float*>(restLengthsPtr);
-    float* stiffnesses  = reinterpret_cast<float*>(stiffnessesPtr);
-    float* dampings     = reinterpret_cast<float*>(dampingsPtr);
-    float* out          = reinterpret_cast<float*>(outPtr);
-
-    for (int i = 0; i < count; ++i) {
+/** Scalar fallback: processes every entity one at a time. */
+inline void computeSpringForcesBatchScalar(const float* positions, const float* anchors,
+                                           const float* velocities, const float* restLengths,
+                                           const float* stiffnesses, const float* dampings,
+                                           float* out, int count, int startIndex = 0) {
+    for (int i = startIndex; i < count; ++i) {
         const int base = i * 3;
         float fx, fy, fz;
         computeSpringForceVec(
@@ -537,6 +523,94 @@ void computeSpringForcesBatch(uintptr_t positionsPtr, uintptr_t anchorsPtr,
         out[base + 1] = fy;
         out[base + 2] = fz;
     }
+}
+
+#ifdef __wasm_simd128__
+/**
+ * SIMD kernel: processes 4 springs per iteration (same AoS<->SoA approach as
+ * the force-field kernel). Lanes with dist < 1e-6 are masked to zero, so the
+ * inf/NaN produced by 1/dist in those lanes never reaches the output. The
+ * remainder (count % 4) falls back to the scalar kernel above.
+ */
+inline void computeSpringForcesBatchSimd(const float* positions, const float* anchors,
+                                         const float* velocities, const float* restLengths,
+                                         const float* stiffnesses, const float* dampings,
+                                         float* out, int count) {
+    const v128_t vEps  = wasm_f32x4_splat(1e-6f);
+    const v128_t vOne  = wasm_f32x4_splat(1.0f);
+    const v128_t vZero = wasm_f32x4_splat(0.0f);
+
+    const int simdCount = count - (count % 4);
+    int i = 0;
+    for (; i < simdCount; i += 4) {
+        const int base = i * 3;
+
+        v128_t px, py, pz, ax, ay, az, vx, vy, vz;
+        loadVec3x4(positions + base, px, py, pz);
+        loadVec3x4(anchors + base, ax, ay, az);
+        loadVec3x4(velocities + base, vx, vy, vz);
+        const v128_t rest  = wasm_v128_load(&restLengths[i]);
+        const v128_t stiff = wasm_v128_load(&stiffnesses[i]);
+        const v128_t damp  = wasm_v128_load(&dampings[i]);
+
+        const v128_t dx = wasm_f32x4_sub(ax, px);
+        const v128_t dy = wasm_f32x4_sub(ay, py);
+        const v128_t dz = wasm_f32x4_sub(az, pz);
+        const v128_t distSq = wasm_f32x4_add(
+            wasm_f32x4_add(wasm_f32x4_mul(dx, dx), wasm_f32x4_mul(dy, dy)),
+            wasm_f32x4_mul(dz, dz));
+        const v128_t dist    = wasm_f32x4_sqrt(distSq);
+        const v128_t invDist = wasm_f32x4_div(vOne, dist);
+
+        const v128_t nx = wasm_f32x4_mul(dx, invDist);
+        const v128_t ny = wasm_f32x4_mul(dy, invDist);
+        const v128_t nz = wasm_f32x4_mul(dz, invDist);
+
+        const v128_t extension    = wasm_f32x4_sub(dist, rest);
+        const v128_t velAlongAxis = wasm_f32x4_add(
+            wasm_f32x4_add(wasm_f32x4_mul(vx, nx), wasm_f32x4_mul(vy, ny)),
+            wasm_f32x4_mul(vz, nz));
+        const v128_t fMag = wasm_f32x4_sub(wasm_f32x4_mul(stiff, extension),
+                                           wasm_f32x4_mul(damp, velAlongAxis));
+
+        const v128_t validMask = wasm_f32x4_ge(dist, vEps);
+        storeVec3x4(out + base,
+                    wasm_v128_bitselect(wasm_f32x4_mul(nx, fMag), vZero, validMask),
+                    wasm_v128_bitselect(wasm_f32x4_mul(ny, fMag), vZero, validMask),
+                    wasm_v128_bitselect(wasm_f32x4_mul(nz, fMag), vZero, validMask));
+    }
+
+    computeSpringForcesBatchScalar(positions, anchors, velocities, restLengths,
+                                   stiffnesses, dampings, out, count, i);
+}
+#endif // __wasm_simd128__
+
+/**
+ * Batched spring forces. Buffer layout (float32):
+ *   positions[i*3+0..2], anchors[i*3+0..2], velocities[i*3+0..2],
+ *   restLengths[i], stiffnesses[i], dampings[i], out[i*3+0..2]
+ */
+void computeSpringForcesBatch(uintptr_t positionsPtr, uintptr_t anchorsPtr,
+                              uintptr_t velocitiesPtr, uintptr_t restLengthsPtr,
+                              uintptr_t stiffnessesPtr, uintptr_t dampingsPtr,
+                              uintptr_t outPtr, int count) {
+    if (count <= 0) return;
+
+    const float* positions   = reinterpret_cast<const float*>(positionsPtr);
+    const float* anchors     = reinterpret_cast<const float*>(anchorsPtr);
+    const float* velocities  = reinterpret_cast<const float*>(velocitiesPtr);
+    const float* restLengths = reinterpret_cast<const float*>(restLengthsPtr);
+    const float* stiffnesses = reinterpret_cast<const float*>(stiffnessesPtr);
+    const float* dampings    = reinterpret_cast<const float*>(dampingsPtr);
+    float* out               = reinterpret_cast<float*>(outPtr);
+
+#ifdef __wasm_simd128__
+    computeSpringForcesBatchSimd(positions, anchors, velocities, restLengths,
+                                 stiffnesses, dampings, out, count);
+#else
+    computeSpringForcesBatchScalar(positions, anchors, velocities, restLengths,
+                                   stiffnesses, dampings, out, count);
+#endif
 }
 
 /**
@@ -628,17 +702,11 @@ void closestPointOnSegmentOut(uintptr_t outPtr,
                              out[0], out[1], out[2]);
 }
 
-/** Batched closest-point-on-segment. p0, p1, q, out each hold count*3 floats. */
-void closestPointsOnSegmentBatch(uintptr_t p0Ptr, uintptr_t p1Ptr,
-                               uintptr_t qPtr, uintptr_t outPtr, int count) {
-    if (count <= 0) return;
-
-    float* p0  = reinterpret_cast<float*>(p0Ptr);
-    float* p1  = reinterpret_cast<float*>(p1Ptr);
-    float* q   = reinterpret_cast<float*>(qPtr);
-    float* out = reinterpret_cast<float*>(outPtr);
-
-    for (int i = 0; i < count; ++i) {
+/** Scalar fallback: processes every entity one at a time. */
+inline void closestPointsOnSegmentBatchScalar(const float* p0, const float* p1,
+                                              const float* q, float* out, int count,
+                                              int startIndex = 0) {
+    for (int i = startIndex; i < count; ++i) {
         const int base = i * 3;
         float ox, oy, oz;
         closestPointOnSegmentVec(
@@ -650,6 +718,71 @@ void closestPointsOnSegmentBatch(uintptr_t p0Ptr, uintptr_t p1Ptr,
         out[base + 1] = oy;
         out[base + 2] = oz;
     }
+}
+
+#ifdef __wasm_simd128__
+/**
+ * SIMD kernel: projects 4 query points per iteration. Degenerate segments
+ * (lenSq < 1e-12) get t = 0 *before* the clamp, because the 0/0 NaN in those
+ * lanes would otherwise propagate through f32x4 min/max. The remainder
+ * (count % 4) falls back to the scalar kernel above.
+ */
+inline void closestPointsOnSegmentBatchSimd(const float* p0, const float* p1,
+                                            const float* q, float* out, int count) {
+    const v128_t vEps  = wasm_f32x4_splat(1e-12f);
+    const v128_t vZero = wasm_f32x4_splat(0.0f);
+    const v128_t vOne  = wasm_f32x4_splat(1.0f);
+
+    const int simdCount = count - (count % 4);
+    int i = 0;
+    for (; i < simdCount; i += 4) {
+        const int base = i * 3;
+
+        v128_t ax, ay, az, bx, by, bz, qx, qy, qz;
+        loadVec3x4(p0 + base, ax, ay, az);
+        loadVec3x4(p1 + base, bx, by, bz);
+        loadVec3x4(q + base, qx, qy, qz);
+
+        const v128_t dx = wasm_f32x4_sub(bx, ax);
+        const v128_t dy = wasm_f32x4_sub(by, ay);
+        const v128_t dz = wasm_f32x4_sub(bz, az);
+        const v128_t lenSq = wasm_f32x4_add(
+            wasm_f32x4_add(wasm_f32x4_mul(dx, dx), wasm_f32x4_mul(dy, dy)),
+            wasm_f32x4_mul(dz, dz));
+        const v128_t proj = wasm_f32x4_add(
+            wasm_f32x4_add(wasm_f32x4_mul(wasm_f32x4_sub(qx, ax), dx),
+                           wasm_f32x4_mul(wasm_f32x4_sub(qy, ay), dy)),
+            wasm_f32x4_mul(wasm_f32x4_sub(qz, az), dz));
+
+        const v128_t validMask = wasm_f32x4_ge(lenSq, vEps);
+        v128_t t = wasm_v128_bitselect(wasm_f32x4_div(proj, lenSq), vZero, validMask);
+        t = wasm_f32x4_min(wasm_f32x4_max(t, vZero), vOne);
+
+        storeVec3x4(out + base,
+                    wasm_f32x4_add(ax, wasm_f32x4_mul(t, dx)),
+                    wasm_f32x4_add(ay, wasm_f32x4_mul(t, dy)),
+                    wasm_f32x4_add(az, wasm_f32x4_mul(t, dz)));
+    }
+
+    closestPointsOnSegmentBatchScalar(p0, p1, q, out, count, i);
+}
+#endif // __wasm_simd128__
+
+/** Batched closest-point-on-segment. p0, p1, q, out each hold count*3 floats. */
+void closestPointsOnSegmentBatch(uintptr_t p0Ptr, uintptr_t p1Ptr,
+                               uintptr_t qPtr, uintptr_t outPtr, int count) {
+    if (count <= 0) return;
+
+    const float* p0 = reinterpret_cast<const float*>(p0Ptr);
+    const float* p1 = reinterpret_cast<const float*>(p1Ptr);
+    const float* q  = reinterpret_cast<const float*>(qPtr);
+    float* out      = reinterpret_cast<float*>(outPtr);
+
+#ifdef __wasm_simd128__
+    closestPointsOnSegmentBatchSimd(p0, p1, q, out, count);
+#else
+    closestPointsOnSegmentBatchScalar(p0, p1, q, out, count);
+#endif
 }
 
 emscripten::val closestPointOnSegment(float p0x, float p0y, float p0z,
