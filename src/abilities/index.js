@@ -9,6 +9,7 @@ import { AbilityMissiles } from './missiles.js';
 import { AbilityBlackHole } from './black-hole.js';
 import { AbilityBomb } from './bomb.js';
 import { AbilityConstructs } from './constructs.js';
+import { AbilityDoubleJump } from './double-jump.js';
 
 export {
     ABILITY_REGISTRY,
@@ -21,7 +22,8 @@ export {
 
 /** Closed compatibility list for ability actions not yet registry-owned. */
 export function installAbilityMethods(targetClass) {
-        installKnownMethods(targetClass, AbilityAirDash, ['beginAirDashCharge', 'releaseAirDash']);
+    installKnownMethods(targetClass, AbilityDoubleJump, ['executeDoubleJump']);
+    installKnownMethods(targetClass, AbilityAirDash, ['beginAirDashCharge', 'releaseAirDash']);
     installKnownMethods(targetClass, AbilityDash, ['beginDashCharge', 'releaseDash']);
     installKnownMethods(targetClass, AbilityStomp, ['beginStompCharge', 'releaseStomp']);
     installKnownMethods(targetClass, AbilityBlink, ['triggerBlink', 'spawnBlinkParticle']);
