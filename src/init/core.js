@@ -106,24 +106,9 @@ export class InitCore {
                             this.hasDoubleJumped = false
                             audio.playJump()
                             if (typeof this.awardTrickPoints === 'function') this.awardTrickPoints('Wall Launch!', 75, '#ff00ff')
-                        } else if (!this.hasDoubleJumped) {
-                            const rb = this.playerMarble.rigidBody
-                            const linvel = rb.linvel()
-                            const gravityDir = rb.gravityScale() < 0 ? -1 : 1
-
-                            // Reset downward velocity depending on gravity direction, preserving upward (jumping) velocity
-                            const newVelY = gravityDir > 0
-                                ? Math.max(0, linvel.y)
-                                : Math.min(0, linvel.y);
-                            rb.setLinvel({ x: linvel.x, y: newVelY, z: linvel.z }, true)
-                            rb.applyImpulse({ x: 0, y: 15.0 * gravityDir, z: 0 }, true)
-
-                            this.hasDoubleJumped = true
-                            this.jumpCount = 2
-                            audio.playJump()
-
-                            if (typeof this.awardTrickPoints === 'function') {
-                                this.awardTrickPoints('Double Jump!', 20, '#00bfff')
+                        } else if (!this.hasDoubleJumped && this.abilitySystem?.isEnabled('doublejump')) {
+                            if (typeof this.executeDoubleJump === 'function') {
+                                this.executeDoubleJump()
                             }
 
                             // Visual effect for double jump (burst particle)
