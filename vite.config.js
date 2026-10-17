@@ -69,6 +69,24 @@ function copyAssetsPlugin() {
   };
 }
 
+// Emit the built entry/CSS URLs in index.html relative to the document so the
+// page survives being served from a different prefix or run through a deploy
+// step that relativizes leading-slash paths (which would double the base).
+// Runtime code still uses the absolute `base` via import.meta.env.BASE_URL.
+function relativeHtmlAssetsPlugin() {
+  return {
+    name: 'relative-html-assets',
+    apply: 'build',
+    enforce: 'post',
+    transformIndexHtml(html) {
+      const base = process.env.VITE_BASE_PATH || '/marbles/';
+      if (!base.startsWith('/')) return html;
+      const normalizedBase = base.endsWith('/') ? base : `${base}/`;
+      return html.split(`"${normalizedBase}`).join('"./');
+    }
+  };
+}
+
 const CROSS_ORIGIN_ISOLATION_HEADERS = {
   'Cross-Origin-Embedder-Policy': 'require-corp',
   'Cross-Origin-Opener-Policy': 'same-origin',
@@ -88,7 +106,7 @@ export default defineConfig({
     exclude: ['@dimforge/rapier3d-compat', 'filament']
   },
   assetsInclude: ['**/*.wasm', '**/*.filmat', '**/*.glb', '**/*.gltf', '**/*.wgsl'],
-  plugins: [copyAssetsPlugin()],
+  plugins: [copyAssetsPlugin(), relativeHtmlAssetsPlugin()],
   build: {
     rollupOptions: {
       // marble_physics.js is loaded dynamically by src/wasm-bridge.js when the
