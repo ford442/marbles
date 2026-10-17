@@ -10,6 +10,8 @@ import {
 import { loadFilament } from './filament-loader.js';
 import { runWebGPUBootProbe } from '../webgpu/boot-probe.js';
 import { initMarblePhysicsWasm } from '../wasm-bridge.js';
+import { applyVelocityChange } from '../game/systems/body-impulse.ts';
+import { JUMP_DV_MAX, JUMP_DV_MIN, WALL_LAUNCH_DV } from '../abilities/movement-tuning.js';
 import {
     activatePhysicsBackendForLevel,
     createPhysicsBackend,
@@ -90,17 +92,15 @@ export class InitCore {
                             rb.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true)
 
                             const gravityDir = rb.gravityScale() < 0 ? -1 : 1
-                            const upForce = 20.0 * gravityDir
-                            const pushForce = 25.0
+                            const { up, push, forward } = WALL_LAUNCH_DV
                             const forwardX = Math.sin(this.aimYaw)
                             const forwardZ = Math.cos(this.aimYaw)
-                            const forwardForce = 15.0
 
-                            rb.applyImpulse({
-                                x: wallContact.normal.x * pushForce + forwardX * forwardForce,
-                                y: upForce,
-                                z: wallContact.normal.z * pushForce + forwardZ * forwardForce
-                            }, true)
+                            applyVelocityChange(rb, {
+                                x: wallContact.normal.x * push + forwardX * forward,
+                                y: up * gravityDir,
+                                z: wallContact.normal.z * push + forwardZ * forward
+                            })
 
                             this.jumpCount = 1
                             this.hasDoubleJumped = false
@@ -253,41 +253,6 @@ export class InitCore {
                 this.vortexActive = true
                 if (this.hudManager) this.hudManager.markAbilityUsed('vortex')
             }
-            if (e.code === 'KeyN' && this.playerMarble && this.blinkCooldown <= 0) {
-                const maxDist = 20.0
-                const cosP = Math.cos(this.pitchAngle)
-                const sinP = Math.sin(this.pitchAngle)
-                const dirX = Math.sin(this.aimYaw) * cosP
-                const dirY = sinP
-                const dirZ = Math.cos(this.aimYaw) * cosP
-
-                const rb = this.playerMarble.rigidBody
-                const pos = rb.translation()
-                const pRadius = this.playerMarble.scale * 0.5 || 0.5
-
-                const ray = new RAPIER.Ray(pos, { x: dirX, y: dirY, z: dirZ })
-                const hit = this.world.castRay(ray, maxDist, true, 0xffffffff, undefined, undefined, undefined, rb)
-
-                let newPos
-                if (hit) {
-                    newPos = {
-                        x: pos.x + dirX * Math.max(0, hit.toi - pRadius - 0.1),
-                        y: pos.y + dirY * Math.max(0, hit.toi - pRadius - 0.1),
-                        z: pos.z + dirZ * Math.max(0, hit.toi - pRadius - 0.1)
-                    }
-                } else {
-                    newPos = {
-                        x: pos.x + dirX * maxDist,
-                        y: pos.y + dirY * maxDist,
-                        z: pos.z + dirZ * maxDist
-                    }
-                }
-
-                rb.setTranslation(newPos, true)
-                this.blinkCooldown = this.maxBlinkCooldown
-                this.awardTrickPoints('Blink!', 100, '#ff00ff')
-                if (typeof audio !== 'undefined' && audio.playTrick) audio.playTrick()
-            }
             if (e.code === 'KeyI' && this.playerMarble) {
                 const now = Date.now()
                 if (now - this.lastSizeShiftTime > this.sizeShiftCooldown) {
@@ -401,12 +366,13 @@ export class InitCore {
             }
             if (e.code === 'Space') {
                 if (this.isChargingJump && this.playerMarble) {
-                    let force = 5.0 + this.jumpCharge * 10.0
+                    let dv = JUMP_DV_MIN + this.jumpCharge * (JUMP_DV_MAX - JUMP_DV_MIN)
                     if (this.activeEffects.jump && Date.now() < this.activeEffects.jump) {
-                        force *= 2.0
+                        dv *= 2.0
                     }
-                    const gravityDir = this.playerMarble.rigidBody.gravityScale() < 0 ? -1 : 1
-                    this.playerMarble.rigidBody.applyImpulse({ x: 0, y: force * gravityDir, z: 0 }, true)
+                    const rb = this.playerMarble.rigidBody
+                    const gravityDir = rb.gravityScale() < 0 ? -1 : 1
+                    applyVelocityChange(rb, { x: 0, y: dv * gravityDir, z: 0 })
                     audio.playJump()
                     this.jumpCount = 1
                     if (this.multiplayerMode && this.network?.room) {

@@ -41,6 +41,15 @@ module.exports = {
         '@typescript-eslint/no-require-imports': 'off',
         '@typescript-eslint/no-explicit-any': 'off',
         '@typescript-eslint/ban-ts-comment': 'off',
+        // All ray queries go through the typed facade, which owns Rapier's
+        // castRay argument order and normalises timeOfImpact → toi.
+        'no-restricted-syntax': ['error', {
+            selector: 'CallExpression[callee.property.name=/^(castRay|castRayAndGetNormal|intersectionsWithRay)$/]'
+                + ':not([callee.object.property.name="physicsQueries"])'
+                + ':not([callee.object.name=/^(physicsQueries|queries)$/])',
+            message: 'Cast rays through game.physicsQueries (src/game/systems/physics-queries.ts), '
+                + 'not Rapier directly.',
+        }],
     },
     overrides: [
         {
@@ -49,6 +58,19 @@ module.exports = {
                 'no-dupe-keys': 'off',
                 'no-dupe-class-members': 'off',
             },
+        },
+        {
+            // The facade and the backends implement the queries.
+            files: [
+                'src/game/systems/physics-queries.ts',
+                'src/game/systems/physics-backend.ts',
+            ],
+            rules: { 'no-restricted-syntax': 'off' },
+        },
+        {
+            // `declare global { var … }` is the only way to type globals.
+            files: ['**/*.d.ts'],
+            rules: { 'no-var': 'off' },
         },
         {
             files: ['tests/**/*.js', 'scripts/**/*.js', 'scripts/**/*.cjs'],

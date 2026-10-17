@@ -5,6 +5,11 @@ import {
     MAX_NETWORKED_ABILITY_IDS,
 } from '../src/abilities/registry.js';
 import { AbilitySystem } from '../src/game/systems/ability-system.ts';
+import {
+    ABILITY_BIT_OFFSET,
+    decodeAbilityBits,
+    encodeInputSnapshot,
+} from '../src/game/network/input-bitfield.js';
 
 function createMockGame(overrides = {}) {
     const game = {
@@ -75,7 +80,49 @@ function testMaskPrecedenceAndUnknownIds() {
         disabled: ['jump'],
     });
 
-    assert.deepEqual([...game.abilitySystem.enabled], ['jump']);
+    // `enabled` wins for jump itself; double jump follows it (impliedBy).
+    assert.deepEqual([...game.abilitySystem.enabled], ['jump', 'doublejump']);
+}
+
+function testJumpMaskKeepsDoubleJump() {
+    // Shipped maps (tutorial, neon_showcase) use `enabled: ["jump"]`; they had
+    // double jump before it moved into the registry.
+    const game = createMockGame();
+    game.abilitySystem.applyLevelMask({ enabled: ['jump'] });
+    assert.equal(game.abilitySystem.isEnabled('doublejump'), true);
+
+    game.abilitySystem.applyLevelMask({ enabled: ['jump'], disabled: ['doublejump'] });
+    assert.equal(game.abilitySystem.isEnabled('jump'), true);
+    assert.equal(game.abilitySystem.isEnabled('doublejump'), false);
+
+    game.abilitySystem.applyLevelMask({ enabled: ['bomb'] });
+    assert.equal(game.abilitySystem.isEnabled('doublejump'), false);
+}
+
+function testNetworkBitsArePinned() {
+    // Bits on the wire must not move when abilities are added: this is the
+    // layout shipped since 2026-09-19 plus doublejump appended.
+    const expected = {
+        airdashing: 0, dash: 1, jump: 2, stomp: 3, bomb: 4,
+        missile: 5, blackhole: 6, holo: 7, blink: 8, doublejump: 9,
+    };
+    for (const [id, bit] of Object.entries(expected)) {
+        assert.equal(ABILITY_REGISTRY[id].netBit, bit, `netBit for ${id}`);
+    }
+    const bits = ALL_ABILITY_IDS.map((id) => ABILITY_REGISTRY[id].netBit);
+    assert.equal(new Set(bits).size, bits.length, 'netBits must be unique');
+    for (const bit of bits) {
+        assert.ok(Number.isInteger(bit) && bit >= 0 && bit < MAX_NETWORKED_ABILITY_IDS);
+    }
+}
+
+function testInputBitfieldUsesPinnedBits() {
+    const game = createMockGame();
+    game.keys = { KeyB: true }; // blink
+    const { bits } = encodeInputSnapshot(game);
+    assert.ok(bits & (1 << (ABILITY_BIT_OFFSET + 8)), 'blink is bit 8');
+    assert.deepEqual(decodeAbilityBits(bits), ['blink']);
+    assert.deepEqual(decodeAbilityBits(1 << (ABILITY_BIT_OFFSET + 9)), ['doublejump']);
 }
 
 function testActivateRespectsCooldown() {
@@ -106,6 +153,9 @@ function testHudBarTick() {
 testRegistryHasCoreAbilities();
 testTutorialMask();
 testMaskPrecedenceAndUnknownIds();
+testJumpMaskKeepsDoubleJump();
+testNetworkBitsArePinned();
+testInputBitfieldUsesPinnedBits();
 testActivateRespectsCooldown();
 testKeybindOverride();
 testHudBarTick();

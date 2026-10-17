@@ -27,6 +27,10 @@
  * @property {string} id
  * @property {string} name
  * @property {'movement' | 'combat' | 'utility'} category
+ * @property {number} netBit - pinned bit index in the multiplayer input bitfield
+ *   (`ABILITY_BIT_OFFSET + netBit`); unique, < `MAX_NETWORKED_ABILITY_IDS`, never reused
+ * @property {string} [impliedBy] - a level mask whose `enabled` list names this
+ *   ability id also enables this one (unless the mask's `disabled` list names it)
  * @property {number} [cooldownMs]
  * @property {string} [lastUseKey] - mirrored game field (e.g. `lastBombTime`)
  * @property {string} [cooldownKey] - mirrored game field for per-level overrides
@@ -46,6 +50,7 @@ export const ABILITY_REGISTRY = {
         id: 'airdashing',
         name: 'Air Dash',
         category: 'movement',
+        netBit: 0,
         cooldownMs: 2000,
         lastUseKey: 'lastAirDashTime',
         cooldownKey: 'airDashCooldown',
@@ -56,6 +61,7 @@ export const ABILITY_REGISTRY = {
         id: 'dash',
         name: 'Dash',
         category: 'movement',
+        netBit: 1,
         cooldownMs: 1500,
         lastUseKey: 'lastDashTime',
         cooldownKey: 'dashCooldown',
@@ -66,19 +72,15 @@ export const ABILITY_REGISTRY = {
         id: 'jump',
         name: 'Jump',
         category: 'movement',
+        netBit: 2,
         input: { defaultCode: 'Space', trigger: 'charge', settingsKey: 'jump' },
         hudSlot: { barKey: 'jumpBarEl', mode: 'charge' },
-    },
-    doublejump: {
-        id: 'doublejump',
-        name: 'Double Jump',
-        category: 'movement',
-        input: { defaultCode: 'Space', trigger: 'charge', settingsKey: 'doublejump' },
     },
     stomp: {
         id: 'stomp',
         name: 'Stomp',
         category: 'movement',
+        netBit: 3,
         cooldownMs: 2000,
         lastUseKey: 'lastStompTime',
         cooldownKey: 'stompCooldown',
@@ -88,6 +90,7 @@ export const ABILITY_REGISTRY = {
         id: 'bomb',
         name: 'Bomb',
         category: 'combat',
+        netBit: 4,
         cooldownMs: 5000,
         lastUseKey: 'lastBombTime',
         cooldownKey: 'bombCooldown',
@@ -108,6 +111,7 @@ export const ABILITY_REGISTRY = {
         id: 'missile',
         name: 'Missile',
         category: 'combat',
+        netBit: 5,
         cooldownMs: 1500,
         lastUseKey: 'lastMissileTime',
         cooldownKey: 'missileCooldown',
@@ -128,6 +132,7 @@ export const ABILITY_REGISTRY = {
         id: 'blackhole',
         name: 'Black Hole',
         category: 'combat',
+        netBit: 6,
         cooldownMs: 5000,
         lastUseKey: 'lastBlackHoleTime',
         cooldownKey: 'blackHoleCooldown',
@@ -150,6 +155,7 @@ export const ABILITY_REGISTRY = {
         id: 'holo',
         name: 'Holo Platform',
         category: 'utility',
+        netBit: 7,
         cooldownMs: 5000,
         lastUseKey: 'lastHoloTime',
         cooldownKey: 'holoCooldown',
@@ -172,6 +178,7 @@ export const ABILITY_REGISTRY = {
         id: 'blink',
         name: 'Blink',
         category: 'movement',
+        netBit: 8,
         cooldownMs: 2000,
         lastUseKey: 'lastBlinkTime',
         cooldownKey: 'blinkCooldown',
@@ -188,6 +195,15 @@ export const ABILITY_REGISTRY = {
             game.triggerBlink();
             return true;
         },
+    },
+    // Append new abilities here with the next free `netBit`; never reorder.
+    doublejump: {
+        id: 'doublejump',
+        name: 'Double Jump',
+        category: 'movement',
+        netBit: 9,
+        impliedBy: 'jump',
+        input: { defaultCode: 'Space', trigger: 'charge', settingsKey: 'doublejump' },
     },
 };
 
@@ -209,14 +225,25 @@ export function isAbilityId(id) {
 
 /**
  * Resolve a level mask to the registered ids it enables.
- * `enabled` takes precedence when both lists are present.
+ * `enabled` takes precedence when both lists are present; abilities with
+ * `impliedBy` follow their parent in an `enabled` list (so `["jump"]` keeps
+ * double jump) unless `disabled` names them explicitly.
  * @param {AbilityMask | null | undefined} mask
  * @returns {AbilityId[]}
  */
 export function resolveAbilityMask(mask) {
     if (!mask) return [...ALL_ABILITY_IDS];
     if (Array.isArray(mask.enabled)) {
-        return mask.enabled.filter(isAbilityId);
+        const enabled = new Set(mask.enabled.filter(isAbilityId));
+        const disabled = new Set(Array.isArray(mask.disabled) ? mask.disabled : []);
+        for (const id of ALL_ABILITY_IDS) {
+            /** @type {AbilityDefinition} */
+            const def = ABILITY_REGISTRY[id];
+            if (def.impliedBy && enabled.has(/** @type {AbilityId} */ (def.impliedBy)) && !disabled.has(id)) {
+                enabled.add(id);
+            }
+        }
+        return [...enabled];
     }
     if (Array.isArray(mask.disabled)) {
         const disabled = new Set(mask.disabled);

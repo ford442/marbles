@@ -1,7 +1,10 @@
-import RAPIER from '@dimforge/rapier3d-compat';
+// @ts-check
 import { audio } from '../audio.js';
 
+/** @typedef {import('../types/mixin-host.ts').GameMixinHost} GameMixinHost */
+
 export class AbilityBlink {
+    /** @this {GameMixinHost} */
     triggerBlink() {
         if (!this.playerMarble) return
         const now = Date.now()
@@ -18,20 +21,13 @@ export class AbilityBlink {
         const dirZ = Math.cos(this.aimYaw) * cosP
 
         const maxDist = 10.0
-        const rayOrigin = { x: pos.x, y: pos.y, z: pos.z }
         const rayDir = { x: dirX, y: dirY, z: dirZ }
-        const ray = new RAPIER.Ray(rayOrigin, rayDir)
 
         let blinkDist = maxDist
-        const hit = this.world.castRay(ray, maxDist, true, 0xffffffff, undefined, undefined, rb)
-
+        const hit = this.physicsQueries.castRay(pos, rayDir, maxDist, { excludeBody: rb })
         if (hit) {
-            const hitBody = hit.collider.parent()
-            // If the hit has no body (static world geometry) or the body is not the player
-            if (!hitBody || hitBody.handle !== rb.handle) {
-                const radius = this.playerMarble.scale * 0.5 || 0.5
-                blinkDist = Math.max(0, hit.toi - radius - 0.1)
-            }
+            const radius = this.playerMarble.scale * 0.5 || 0.5
+            blinkDist = Math.max(0, hit.toi - radius - 0.1)
         }
 
         const newPos = {
@@ -62,6 +58,11 @@ export class AbilityBlink {
         if (this.hudManager) this.hudManager.markAbilityUsed('blink')
     }
 
+    /**
+     * @this {GameMixinHost}
+     * @param {{ x: number, y: number, z: number }} pos
+     * @param {number[]} color
+     */
     spawnBlinkParticle(pos, color) {
         this.effectPool?.spawnVisualParticle({
             color,

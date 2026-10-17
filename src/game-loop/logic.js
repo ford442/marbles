@@ -1,6 +1,18 @@
 import { audio } from '../audio.js';
 import { quaternionToMat4 } from '../math.ts';
 import { tickLevelBehaviors } from '../game/level-behaviors/index.js';
+import { applyAcceleration } from '../game/systems/body-impulse.ts';
+
+/** Gravity (m/s²) the hover / glider / gravity-powerup lift is tuned against. */
+const GRAVITY = 9.81;
+
+/**
+ * Fraction to move toward a target this frame for a smoothing filter tuned as
+ * "`perFrame` of the remaining distance per 1/60 s".
+ */
+function blendPerFrame(perFrame, meter) {
+    return 1 - Math.pow(1 - perFrame, meter)
+}
 
 export class GameLoopLogic {
     updateGameState() {
@@ -10,7 +22,17 @@ export class GameLoopLogic {
             return
         }
 
-        tickLevelBehaviors(this, this.deltaTime || 1 / 60);
+        // Rates in this method are tuned per 1/60 s and scaled by elapsed time
+        // so behaviour is independent of display refresh rate:
+        //   meter — wall-clock seconds × 60: energy meters, timers, UI smoothing
+        //   step  — simulated seconds × 60: continuous impulses (0 on frames
+        //           where the fixed-step clock runs no physics step)
+        const dt = this.frameDt ?? 1 / 60
+        const simDt = this.simDt ?? 1 / 60
+        const meter = dt * 60
+        const step = simDt * 60
+
+        tickLevelBehaviors(this, simDt);
 
         // Note: gamepads are already polled once per frame in loop(); no need
         // to poll again here.
@@ -53,15 +75,15 @@ export class GameLoopLogic {
 
             if (speed > 15) {
                 // Increase adrenaline based on speed above 15
-                this.adrenaline = Math.min(this.maxAdrenaline, this.adrenaline + (speed - 15) * 0.05)
+                this.adrenaline = Math.min(this.maxAdrenaline, this.adrenaline + (speed - 15) * 0.05 * meter)
             } else {
                 // Decay adrenaline slowly
-                this.adrenaline = Math.max(0, this.adrenaline - 0.2)
+                this.adrenaline = Math.max(0, this.adrenaline - 0.2 * meter)
             }
 
             // Camera FOV target
             const targetFov = this.baseFov + (this.adrenaline / this.maxAdrenaline) * 20.0
-            this.currentFov = this.currentFov * 0.9 + targetFov * 0.1
+            this.currentFov += (targetFov - this.currentFov) * blendPerFrame(0.1, meter)
 
             // Generate Camera Shake (respect accessibility setting)
             const shakeMultiplier = this.getScreenShakeIntensity ? this.getScreenShakeIntensity() : 1.0
@@ -82,13 +104,14 @@ export class GameLoopLogic {
                 this.cameraShake.x += (Math.random() - 0.5) * tremorIntensity
                 this.cameraShake.y += (Math.random() - 0.5) * tremorIntensity
                 this.cameraShake.z += (Math.random() - 0.5) * tremorIntensity
-                this.tremorShakeTimer--
+                this.tremorShakeTimer = Math.max(0, this.tremorShakeTimer - meter)
             }
 
             // Stomp camera shake decay
-            this.cameraShake.x *= 0.9
-            this.cameraShake.y *= 0.9
-            this.cameraShake.z *= 0.9
+            const shakeDecay = Math.pow(0.9, meter)
+            this.cameraShake.x *= shakeDecay
+            this.cameraShake.y *= shakeDecay
+            this.cameraShake.z *= shakeDecay
 
             // Update Projection FOV each frame
             if (this.camera && this.view && this.Filament && this.Filament.Camera$Fov) {
@@ -117,7 +140,7 @@ export class GameLoopLogic {
         }
 
         // Sandbox Builder Logic
-        this.buildEnergy = Math.min(this.maxBuildEnergy, this.buildEnergy + 0.1)
+        this.buildEnergy = Math.min(this.maxBuildEnergy, this.buildEnergy + 0.1 * meter)
         if (this.buildbarEl) {
             const pct = (this.buildEnergy / this.maxBuildEnergy) * 100
             this.buildbarEl.style.width = `${pct}%`
@@ -136,27 +159,26 @@ export class GameLoopLogic {
             }
             this.focusActive = true
             const targetScale = 0.2
-            this.timeScale = this.timeScale * 0.9 + targetScale * 0.1
-            this.focusEnergy = Math.max(0, this.focusEnergy - 0.5)
+            this.timeScale += (targetScale - this.timeScale) * blendPerFrame(0.1, meter)
+            this.focusEnergy = Math.max(0, this.focusEnergy - 0.5 * meter)
         } else {
             this.focusActive = false
             const targetScale = 1.0
-            this.timeScale = this.timeScale * 0.9 + targetScale * 0.1
-            this.focusEnergy = Math.min(this.maxFocusEnergy, this.focusEnergy + 0.2)
+            this.timeScale += (targetScale - this.timeScale) * blendPerFrame(0.1, meter)
+            this.focusEnergy = Math.min(this.maxFocusEnergy, this.focusEnergy + 0.2 * meter)
         }
 
-        // Apply Time Scale to Physics
-        const backend = this.physicsBackend
-        const timestep = (1 / 60) * this.timeScale
-        if (backend?.isWorkerMode?.()) {
-            backend.setTimestep(timestep)
-        } else if (this.world) {
-            this.world.timestep = timestep
+        // Apply Time Scale to Physics: scales the fixed-step clock's
+        // accumulated time (both backends), never the step size.
+        if (this.physicsBackend?.setTimeScale) {
+            this.physicsBackend.setTimeScale(this.timeScale)
+        } else if (this.physicsClock) {
+            this.physicsClock.timeScale = this.timeScale
         }
 
         // Time Stop Mechanic Logic
         if (this.timeStopActive && this.timeStopEnergy > 0) {
-            this.timeStopEnergy = Math.max(0, this.timeStopEnergy - 0.5)
+            this.timeStopEnergy = Math.max(0, this.timeStopEnergy - 0.5 * meter)
 
             if (this.playerMarble) {
                 const playerRb = this.playerMarble.rigidBody
@@ -197,7 +219,7 @@ export class GameLoopLogic {
                 }
                 this.timeStopSavedStates.clear()
             }
-            this.timeStopEnergy = Math.min(this.maxTimeStopEnergy, this.timeStopEnergy + 0.2)
+            this.timeStopEnergy = Math.min(this.maxTimeStopEnergy, this.timeStopEnergy + 0.2 * meter)
         }
 
         if (this.timeStopbarContainerEl && this.timeStopbarEl) {
@@ -233,21 +255,6 @@ export class GameLoopLogic {
             } else {
                 this.empBarContainerEl.style.display = 'none'
                 this.empBarEl.style.width = '100%'
-            }
-        }
-
-        // Blink Cooldown Logic
-        if (this.blinkCooldown > 0) {
-            this.blinkCooldown--
-        }
-        if (this.teleportBarEl && this.teleportBarContainerEl) {
-            if (this.blinkCooldown > 0) {
-                this.teleportBarContainerEl.style.display = 'block'
-                const pct = ((this.maxBlinkCooldown - this.blinkCooldown) / this.maxBlinkCooldown) * 100
-                this.teleportBarEl.style.width = `${pct}%`
-                this.teleportBarEl.style.background = '#ff00ff'
-            } else {
-                this.teleportBarContainerEl.style.display = 'none'
             }
         }
 
@@ -315,8 +322,11 @@ export class GameLoopLogic {
             }
         }
 
+        // Rewind records and replays one entry per frame that ran physics, so
+        // history length and playback speed don't depend on refresh rate.
+        const physicsFrame = (this.physicsSubsteps ?? 1) > 0
         if (this.isRewinding && this.playerMarble) {
-            if (this._rewindCount > 0) {
+            if (this._rewindCount > 0 && physicsFrame) {
                 // Pop last frame from ring buffer
                 this._rewindCount--
                 this._rewindHead = (this._rewindHead - 1 + this.maxRewindFrames) % this.maxRewindFrames
@@ -333,7 +343,7 @@ export class GameLoopLogic {
                 // Tint red/orange
                 rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 0.2, 0.0])
             }
-        } else if (this.playerMarble) {
+        } else if (this.playerMarble && physicsFrame) {
              const rb = this.playerMarble.rigidBody
              const pos = rb.translation()
              const rot = rb.rotation()
@@ -364,11 +374,8 @@ export class GameLoopLogic {
                 this.gravityBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ffcc00)'
 
                 if (this.playerMarble) {
-                    // Apply counter-gravity impulse
-                    const mass = this.playerMarble.rigidBody.mass()
-                    // Counteract mostly gravity (-9.81 * mass * timestep)
-                    // Apply a steady upward force so it feels floaty
-                    this.playerMarble.rigidBody.applyImpulse({ x: 0, y: 0.16 * mass, z: 0 }, true)
+                    // Counteract most of gravity so it feels floaty
+                    applyAcceleration(this.playerMarble.rigidBody, { x: 0, y: 0.98 * GRAVITY, z: 0 }, simDt)
                 }
             } else {
                 this.gravityBarEl.style.width = `0%`
@@ -378,7 +385,7 @@ export class GameLoopLogic {
 
         // Vortex Mechanic
         if (this.vortexActive && this.vortexEnergy > 0) {
-            this.vortexEnergy = Math.max(0, this.vortexEnergy - 1.0)
+            this.vortexEnergy = Math.max(0, this.vortexEnergy - 1.0 * meter)
             if (this.playerMarble) {
                 const playerPos = this.playerMarble.rigidBody.translation()
                 const radius = 15.0
@@ -413,7 +420,11 @@ export class GameLoopLogic {
                         // Add a little upward force to lift them into the vortex
                         const liftForce = body.mass() * 0.5
 
-                        body.applyImpulse({ x: fx + tx, y: fy + ty + liftForce, z: fz + tz }, true)
+                        body.applyImpulse({
+                            x: (fx + tx) * step,
+                            y: (fy + ty + liftForce) * step,
+                            z: (fz + tz) * step,
+                        }, true)
                     }
                 }
 
@@ -426,7 +437,7 @@ export class GameLoopLogic {
                 }
             }
         } else {
-            this.vortexEnergy = Math.min(this.maxVortexEnergy, this.vortexEnergy + 0.5)
+            this.vortexEnergy = Math.min(this.maxVortexEnergy, this.vortexEnergy + 0.5 * meter)
 
             // Restore original color when not using vortex or out of energy
             if (!this.shieldActive && this.playerMarble && this.playerMarble.originalColor) {
@@ -457,7 +468,7 @@ export class GameLoopLogic {
         }
 
         if (this.shieldActive && this.shieldEnergy > 0) {
-            this.shieldEnergy -= 1.0
+            this.shieldEnergy -= 1.0 * meter
             if (this.shieldEnergy < 0) this.shieldEnergy = 0
 
             if (this.playerMarble) {
@@ -482,7 +493,7 @@ export class GameLoopLogic {
                         const fy = (dy / dist) * force * body.mass() + 1.0 // slight upward pop
                         const fz = (dz / dist) * force * body.mass()
 
-                        body.applyImpulse({ x: fx, y: fy, z: fz }, true)
+                        body.applyImpulse({ x: fx * step, y: fy * step, z: fz * step }, true)
                     }
                 }
 
@@ -495,7 +506,7 @@ export class GameLoopLogic {
                 }
             }
         } else {
-            this.shieldEnergy += 0.2
+            this.shieldEnergy += 0.2 * meter
             if (this.shieldEnergy > this.maxShieldEnergy) this.shieldEnergy = this.maxShieldEnergy
 
             // Restore original color when not shielding or out of energy
@@ -521,7 +532,7 @@ export class GameLoopLogic {
 
         // Violet Light Logic
         if (this.violetActive && this.violetEnergy > 0) {
-            this.violetEnergy -= 1.0
+            this.violetEnergy -= 1.0 * meter
             if (this.violetEnergy < 0) this.violetEnergy = 0
 
             if (this.playerMarble) {
@@ -546,7 +557,7 @@ export class GameLoopLogic {
                         const fy = (dy / dist) * force * body.mass()
                         const fz = (dz / dist) * force * body.mass()
 
-                        body.applyImpulse({ x: fx, y: fy, z: fz }, true)
+                        body.applyImpulse({ x: fx * step, y: fy * step, z: fz * step }, true)
                     }
                 }
 
@@ -577,7 +588,7 @@ export class GameLoopLogic {
                 }
             }
         } else {
-            this.violetEnergy += 0.2
+            this.violetEnergy += 0.2 * meter
             if (this.violetEnergy > this.maxVioletEnergy) this.violetEnergy = this.maxVioletEnergy
 
             // Destroy Violet Light Entity
@@ -616,39 +627,42 @@ export class GameLoopLogic {
             }
         }
 
+        // One grounding probe per frame, shared by the meters below.
+        const grounded = this.playerMarble ? this.isGrounded(this.playerMarble) : false
+
         if (this.hoverActive && this.hoverEnergy > 0) {
             if (this.playerMarble) {
-                const mass = this.playerMarble.rigidBody.mass()
-                const linvel = this.playerMarble.rigidBody.linvel()
-                const gravityDir = this.playerMarble.rigidBody.gravityScale() < 0 ? -1 : 1
+                const rb = this.playerMarble.rigidBody
+                const linvel = rb.linvel()
+                const gravityDir = rb.gravityScale() < 0 ? -1 : 1
                 if ((gravityDir > 0 && linvel.y < 0) || (gravityDir < 0 && linvel.y > 0)) {
-                    this.playerMarble.rigidBody.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true)
+                    rb.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true)
                 }
-                this.playerMarble.rigidBody.applyImpulse({ x: 0, y: 0.1635 * mass * gravityDir, z: 0 }, true)
+                applyAcceleration(rb, { x: 0, y: GRAVITY * gravityDir, z: 0 }, simDt)
             }
-            this.hoverEnergy = Math.max(0, this.hoverEnergy - 0.5)
+            this.hoverEnergy = Math.max(0, this.hoverEnergy - 0.5 * meter)
         } else {
-            if (this.playerMarble && this.isGrounded(this.playerMarble)) {
-                this.hoverEnergy = Math.min(this.maxHoverEnergy, this.hoverEnergy + 0.2)
+            if (grounded) {
+                this.hoverEnergy = Math.min(this.maxHoverEnergy, this.hoverEnergy + 0.2 * meter)
             }
         }
 
         // Passive Double Jump Reset
-        if (this.playerMarble && this.isGrounded(this.playerMarble)) {
+        if (grounded) {
             this.hasDoubleJumped = false;
         }
 
         // Glider Logic
         if (this.gliderActive && this.gliderEnergy > 0) {
             if (this.playerMarble) {
-                const mass = this.playerMarble.rigidBody.mass()
-                const linvel = this.playerMarble.rigidBody.linvel()
-                const gravityDir = this.playerMarble.rigidBody.gravityScale() < 0 ? -1 : 1
+                const rb = this.playerMarble.rigidBody
+                const linvel = rb.linvel()
+                const gravityDir = rb.gravityScale() < 0 ? -1 : 1
 
                 // Counteract some gravity to fall slower
                 if ((gravityDir > 0 && linvel.y < 0) || (gravityDir < 0 && linvel.y > 0)) {
-                    this.playerMarble.rigidBody.setLinvel({ x: linvel.x, y: linvel.y * 0.9, z: linvel.z }, true)
-                    this.playerMarble.rigidBody.applyImpulse({ x: 0, y: 0.1 * mass * gravityDir, z: 0 }, true)
+                    rb.setLinvel({ x: linvel.x, y: linvel.y * Math.pow(0.9, step), z: linvel.z }, true)
+                    applyAcceleration(rb, { x: 0, y: 6.0 * gravityDir, z: 0 }, simDt)
                 }
 
                 // Apply forward thrust based on view direction
@@ -658,21 +672,21 @@ export class GameLoopLogic {
                 const dirY = sinP // Allowing slight pitch to affect upward/downward glide
                 const dirZ = Math.cos(this.aimYaw) * cosP
 
-                const glideThrust = 0.5 * mass
-                this.playerMarble.rigidBody.applyImpulse({
+                const glideThrust = 30.0 // m/s²
+                applyAcceleration(rb, {
                     x: dirX * glideThrust,
                     y: dirY * glideThrust,
                     z: dirZ * glideThrust
-                }, true)
+                }, simDt)
 
                 if (audio && audio.playBoost && Math.random() < 0.1) {
                     audio.playBoost() // Play sound occasionally for feedback
                 }
             }
-            this.gliderEnergy = Math.max(0, this.gliderEnergy - 0.4)
+            this.gliderEnergy = Math.max(0, this.gliderEnergy - 0.4 * meter)
         } else {
-            if (this.playerMarble && this.isGrounded(this.playerMarble)) {
-                this.gliderEnergy = Math.min(this.maxGliderEnergy, this.gliderEnergy + 0.3)
+            if (grounded) {
+                this.gliderEnergy = Math.min(this.maxGliderEnergy, this.gliderEnergy + 0.3 * meter)
             }
         }
 
@@ -680,9 +694,7 @@ export class GameLoopLogic {
         if (this.jetpackActive && this.jetpackEnergy > 0) {
             if (this.playerMarble) {
                 const rb = this.playerMarble.rigidBody
-                const mass = rb.mass()
                 const cosP = Math.cos(this.pitchAngle)
-                const sinP = Math.sin(this.pitchAngle)
 
                 // Thrust vector aligned with camera aim, but mainly upwards
                 const dirX = Math.sin(this.aimYaw) * cosP
@@ -690,12 +702,12 @@ export class GameLoopLogic {
                 const dirZ = Math.cos(this.aimYaw) * cosP
 
                 // Apply continuous force while active
-                // Stronger than hover to actually ascend
-                rb.applyImpulse({
-                    x: dirX * mass * 0.1,
-                    y: dirY * mass * 0.25,
-                    z: dirZ * mass * 0.1
-                }, true)
+                // Stronger than hover (15 m/s² up vs 9.81) to actually ascend
+                applyAcceleration(rb, {
+                    x: dirX * 6.0,
+                    y: dirY * 15.0,
+                    z: dirZ * 6.0
+                }, simDt)
 
                 const pos = rb.translation()
                 const linvel = rb.linvel()
@@ -710,10 +722,10 @@ export class GameLoopLogic {
                     audio.playBoost()
                 }
             }
-            this.jetpackEnergy = Math.max(0, this.jetpackEnergy - 1.0) // Drains faster than hover
+            this.jetpackEnergy = Math.max(0, this.jetpackEnergy - 1.0 * meter) // Drains faster than hover
         } else {
-            if (this.playerMarble && this.isGrounded(this.playerMarble)) {
-                this.jetpackEnergy = Math.min(this.maxJetpackEnergy, this.jetpackEnergy + 0.5)
+            if (grounded) {
+                this.jetpackEnergy = Math.min(this.maxJetpackEnergy, this.jetpackEnergy + 0.5 * meter)
             }
         }
 
@@ -763,7 +775,7 @@ export class GameLoopLogic {
 
         // Gravity Flip Logic
         if (this.flipActive && this.flipEnergy > 0 && this.playerMarble) {
-            this.flipEnergy = Math.max(0, this.flipEnergy - 0.5)
+            this.flipEnergy = Math.max(0, this.flipEnergy - 0.5 * meter)
             this.playerMarble.rigidBody.setGravityScale(-this.playerMarble.baseGravityScale, true)
         } else if (this.flipActive && this.flipEnergy <= 0) {
             this.flipActive = false
@@ -771,7 +783,7 @@ export class GameLoopLogic {
                 this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
             }
         } else if (!this.flipActive) {
-            this.flipEnergy = Math.min(this.maxFlipEnergy, this.flipEnergy + 0.2)
+            this.flipEnergy = Math.min(this.maxFlipEnergy, this.flipEnergy + 0.2 * meter)
             if (this.playerMarble) {
                 this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
             }
@@ -796,7 +808,7 @@ export class GameLoopLogic {
 
         // Phase Shift Logic
         if (this.phaseActive && this.phaseEnergy > 1.0 && this.playerMarble) {
-            this.phaseEnergy = Math.max(0, this.phaseEnergy - 1.0)
+            this.phaseEnergy = Math.max(0, this.phaseEnergy - 1.0 * meter)
 
             if (!this.wasPhasing) {
                 this.wasPhasing = true
@@ -812,7 +824,7 @@ export class GameLoopLogic {
                 }
             }
         } else {
-            this.phaseEnergy = Math.min(this.maxPhaseEnergy, this.phaseEnergy + 0.5)
+            this.phaseEnergy = Math.min(this.maxPhaseEnergy, this.phaseEnergy + 0.5 * meter)
 
             if (this.wasPhasing && this.playerMarble) {
                 this.wasPhasing = false
@@ -852,7 +864,7 @@ export class GameLoopLogic {
 
         // Frost Bridge Logic
         if (this.iceActive && this.iceEnergy > 0 && this.playerMarble) {
-            this.iceEnergy = Math.max(0, this.iceEnergy - 0.5)
+            this.iceEnergy = Math.max(0, this.iceEnergy - 0.5 * meter)
 
             const now = Date.now()
             if (now - this.lastIceTime > this.iceCooldown) {
@@ -861,7 +873,7 @@ export class GameLoopLogic {
                 this.spawnIceBlock(pos)
             }
         } else {
-            this.iceEnergy = Math.min(this.maxIceEnergy, this.iceEnergy + 0.2)
+            this.iceEnergy = Math.min(this.maxIceEnergy, this.iceEnergy + 0.2 * meter)
         }
 
         if (this.icebarContainerEl && this.icebarEl) {

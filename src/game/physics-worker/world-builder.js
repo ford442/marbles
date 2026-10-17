@@ -1,4 +1,13 @@
 import RAPIER from '@dimforge/rapier3d-compat';
+import {
+    BODY_ANGVEL,
+    BODY_FLOATS,
+    BODY_LINVEL,
+    BODY_MASS,
+    BODY_TYPE,
+    BODY_VALID,
+    MAX_BODIES,
+} from './protocol.js';
 
 /**
  * @typedef {object} BodyDescriptor
@@ -11,6 +20,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
  * @property {number} [angularDamping]
  * @property {boolean} [canSleep]
  * @property {number[]} [linvel]
+ * @property {boolean} [ccd]
  */
 
 /**
@@ -35,6 +45,7 @@ function buildBodyDesc(desc) {
     if (desc.linearDamping != null) bodyDesc.setLinearDamping(desc.linearDamping);
     if (desc.angularDamping != null) bodyDesc.setAngularDamping(desc.angularDamping);
     if (desc.canSleep === false) bodyDesc.setCanSleep(false);
+    if (desc.ccd) bodyDesc.setCcdEnabled(true);
 
     return bodyDesc;
 }
@@ -42,15 +53,44 @@ function buildBodyDesc(desc) {
 /**
  * @param {BodyDescriptor['collider']} collider
  */
+function buildShapeDesc(collider) {
+    switch (collider.type) {
+        case 'ball':
+        case 'sensor_ball':
+            return RAPIER.ColliderDesc.ball(collider.radius ?? 0.5);
+        case 'cuboid': {
+            const h = collider.halfExtents || [0.5, 0.5, 0.5];
+            return RAPIER.ColliderDesc.cuboid(h[0], h[1], h[2]);
+        }
+        case 'capsule':
+            return RAPIER.ColliderDesc.capsule(collider.halfHeight, collider.radius);
+        case 'cylinder':
+            return RAPIER.ColliderDesc.cylinder(collider.halfHeight, collider.radius);
+        case 'cone':
+            return RAPIER.ColliderDesc.cone(collider.halfHeight, collider.radius);
+        case 'trimesh':
+            return RAPIER.ColliderDesc.trimesh(
+                new Float32Array(collider.vertices),
+                new Uint32Array(collider.indices),
+            );
+        default:
+            throw new Error(`[PhysicsWorker] unsupported collider type '${collider.type}'`);
+    }
+}
+
+/**
+ * @param {BodyDescriptor['collider']} collider
+ */
 function buildColliderDesc(collider) {
-    let colliderDesc;
-    if (collider.type === 'ball') {
-        colliderDesc = RAPIER.ColliderDesc.ball(collider.radius ?? 0.5);
-    } else if (collider.type === 'sensor_ball') {
-        colliderDesc = RAPIER.ColliderDesc.ball(collider.radius ?? 0.5).setSensor(true);
-    } else {
-        const h = collider.halfExtents || [0.5, 0.5, 0.5];
-        colliderDesc = RAPIER.ColliderDesc.cuboid(h[0], h[1], h[2]);
+    const colliderDesc = buildShapeDesc(collider);
+    if (collider.sensor || collider.type === 'sensor_ball') colliderDesc.setSensor(true);
+    if (collider.offset) {
+        const o = collider.offset;
+        colliderDesc.setTranslation(o[0], o[1], o[2]);
+    }
+    if (collider.offsetRotation) {
+        const r = collider.offsetRotation;
+        colliderDesc.setRotation({ x: r[0], y: r[1], z: r[2], w: r[3] });
     }
 
     if (collider.density != null) colliderDesc.setDensity(collider.density);
@@ -115,20 +155,30 @@ export function insertBodyAtIndex(world, bodies, desc, bodyIndex) {
  * @returns {number}
  */
 export function getBodySlotCount(bodies) {
-    return bodies.length;
+    return Math.min(bodies.length, MAX_BODIES);
 }
 
 /**
- * @param {import('@dimforge/rapier3d-compat').RigidBody[]} bodies
+ * Write each body's snapshot record (layout v2: pose, velocities, mass, type).
+ * Removed bodies are marked invalid. Bodies past `MAX_BODIES` are not
+ * published (they would overrun the slot).
+ * @param {Array<import('@dimforge/rapier3d-compat').RigidBody | null>} bodies
  * @param {Float32Array} outF32
  * @param {number} slotOffsetFloats
  */
 export function writeBodyTransforms(bodies, outF32, slotOffsetFloats) {
-    for (let i = 0; i < bodies.length; i++) {
-        if (!bodies[i]) continue;
-        const t = bodies[i].translation();
-        const r = bodies[i].rotation();
-        const base = slotOffsetFloats + i * 8;
+    const count = Math.min(bodies.length, MAX_BODIES);
+    for (let i = 0; i < count; i++) {
+        const body = bodies[i];
+        const base = slotOffsetFloats + i * BODY_FLOATS;
+        if (!body) {
+            outF32[base + BODY_VALID] = 0;
+            continue;
+        }
+        const t = body.translation();
+        const r = body.rotation();
+        const v = body.linvel();
+        const w = body.angvel();
         outF32[base] = t.x;
         outF32[base + 1] = t.y;
         outF32[base + 2] = t.z;
@@ -136,6 +186,14 @@ export function writeBodyTransforms(bodies, outF32, slotOffsetFloats) {
         outF32[base + 4] = r.y;
         outF32[base + 5] = r.z;
         outF32[base + 6] = r.w;
-        outF32[base + 7] = 1;
+        outF32[base + BODY_VALID] = 1;
+        outF32[base + BODY_LINVEL] = v.x;
+        outF32[base + BODY_LINVEL + 1] = v.y;
+        outF32[base + BODY_LINVEL + 2] = v.z;
+        outF32[base + BODY_ANGVEL] = w.x;
+        outF32[base + BODY_ANGVEL + 1] = w.y;
+        outF32[base + BODY_ANGVEL + 2] = w.z;
+        outF32[base + BODY_MASS] = body.mass();
+        outF32[base + BODY_TYPE] = body.bodyType();
     }
 }

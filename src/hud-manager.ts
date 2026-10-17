@@ -372,14 +372,11 @@ export class HUDManager<Host extends HudHost = HudHost> {
             abilitySystem.tickHudIcons(this, now);
         }
 
-        // Movement abilities
-        if (g.lastBoostTime !== undefined && g.boostCooldown) {
-            const progress = Math.min(1, (now - g.lastBoostTime) / g.boostCooldown);
-            this.updateAbilityCooldown('boost', progress);
-        }
-
+        // Movement abilities. Shift is the dash now, so the legacy boost icon
+        // mirrors the dash cooldown (nothing writes lastBoostTime any more).
         if (g.lastDashTime !== undefined && g.dashCooldown) {
             const progress = Math.min(1, (now - g.lastDashTime) / g.dashCooldown);
+            this.updateAbilityCooldown('boost', progress);
             this.updateAbilityCooldown('dash', progress);
         }
 

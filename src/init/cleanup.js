@@ -7,6 +7,8 @@ import { resetDesyncIndicator } from '../game/network/desync-indicator.js';
 export class InitCleanup {
     clearLevel() {
         unloadLevelBehaviors(this);
+        // Before marbles are removed: drops grapple/double-jump/charge state.
+        this.resetPlayerAbilityState()
         const workerActive = this.physicsBackend?.isWorkerMode?.();
 
         for (const m of this.marbles) {

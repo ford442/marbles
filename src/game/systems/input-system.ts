@@ -1,4 +1,5 @@
-import RAPIER from '@dimforge/rapier3d-compat';
+import type RAPIER from '@dimforge/rapier3d-compat';
+import type { PhysicsQueries } from './physics-queries.ts';
 import { findBestLockOnTarget as findBestLockOnTargetPure, type LockOnTarget } from './input-target-lock.ts';
 import type { CameraState, InputState, PhysicsState } from '../../types/game-state.ts';
 import type { FilamentHandle } from '../../types/filament.ts';
@@ -23,7 +24,7 @@ export interface InputSystemHost extends
     isYAxisInverted?: boolean;
     grappleRestLength?: number;
     droneDist?: number;
-    world: RAPIER.World;
+    physicsQueries: PhysicsQueries;
     marbles: InputMarble[];
     playerMarble: InputMarble | null;
     view?: FilamentHandle;
@@ -284,27 +285,22 @@ export class InputSystem {
         }
     }
 
+    /**
+     * True when solid ground is within 0.1 of the marble's surface along
+     * gravity. The probe starts at the marble's centre, so it must exclude
+     * the marble's own collider (a solid ray would otherwise hit it at toi 0).
+     */
     isGrounded(marble: { rigidBody?: RAPIER.RigidBody; scale?: number } | null | undefined): boolean {
         const g = this.game;
         if (!marble?.rigidBody) return false;
         const rb = marble.rigidBody;
         const radius = (marble.scale ?? 0) * 0.5 || 0.5;
-        const pos = rb.translation();
-        const rayOrigin = { x: pos.x, y: pos.y, z: pos.z };
         const gravityDir = rb.gravityScale() < 0 ? 1 : -1;
-        const rayDir = { x: 0, y: gravityDir, z: 0 };
-        const ray = new RAPIER.Ray(rayOrigin, rayDir);
-        const maxToi = radius + 0.1;
-        const hit = g.world.castRay(ray, maxToi, true);
-
-        if (hit) {
-            const otherBody = hit.collider.parent();
-            if (otherBody && otherBody.handle === rb.handle) {
-                return false;
-            }
-            return true;
-        }
-        return false;
+        const hit = g.physicsQueries.castRay(rb.translation(), { x: 0, y: gravityDir, z: 0 }, radius + 0.1, {
+            excludeBody: rb,
+            excludeSensors: true,
+        });
+        return hit !== null;
     }
 
     getWallContact(
@@ -334,16 +330,14 @@ export class InputSystem {
                 z: pos.z + ndir.z * startDist,
             };
 
-            const ray = new RAPIER.Ray(rayOrigin, ndir);
             const checkDist = 0.5;
-
-            const hit = g.world.castRay(ray, checkDist, true);
+            const hit = g.physicsQueries.castRay(rayOrigin, ndir, checkDist, {
+                excludeBody: rb,
+                excludeSensors: true,
+            });
 
             if (hit) {
-                const otherBody = hit.collider.parent();
-                if (otherBody && otherBody.handle !== rb.handle) {
-                    return { normal: { x: -ndir.x, y: 0, z: -ndir.z } };
-                }
+                return { normal: { x: -ndir.x, y: 0, z: -ndir.z } };
             }
         }
         return null;

@@ -19,6 +19,8 @@ import { LevelEffectBudget } from './level-effect-budget.js';
 import { LightingBudgetManager } from './lighting-budget.js';
 import { AbilitySystem } from './game/systems/ability-system.ts';
 import { PhysicsWorld } from './game/systems/physics-world.ts';
+import { GamePhysicsQueries } from './game/systems/physics-queries.ts';
+import { FixedStepClock } from './game/systems/fixed-step-clock.ts';
 import { InputSystem } from './game/systems/input-system.ts';
 import { MarbleRegistry } from './game/systems/marble-registry.js';
 import { RenderPipeline } from './game/systems/render-pipeline.ts';
@@ -79,6 +81,7 @@ const MARBLE_REGISTRY_METHODS = [
     'resetMarbles',
     'returnToMenu',
     'processCollisionEvents',
+    'resetPlayerAbilityState',
 ];
 
 const LEVEL_LOADER_METHODS = [
@@ -100,6 +103,11 @@ const RENDER_PIPELINE_METHODS = [
 class MarblesGame {
     constructor() {
         bindGameState(this, createGameState());
+
+        // Fixed-step simulation clock and the single ray-query entry point
+        // (see docs/architecture/game-loop.md).
+        this.physicsClock = new FixedStepClock();
+        this.physicsQueries = new GamePhysicsQueries(this);
 
         // Phase B composed subsystems
         this.physicsWorld = new PhysicsWorld(this);

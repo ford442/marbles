@@ -57,9 +57,11 @@ export class MarbleRegistry {
                 z: baseSpawn.z + info.offset.z,
             };
 
+            // CCD: boosted marbles move far enough per step to tunnel thin walls.
             const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
                 .setTranslation(pos.x, pos.y, pos.z)
-                .setCanSleep(false);
+                .setCanSleep(false)
+                .setCcdEnabled(true);
 
             if (info.gravityScale !== undefined) bodyDesc.setGravityScale(info.gravityScale);
             if (info.linearDamping !== undefined) bodyDesc.setLinearDamping(info.linearDamping);
@@ -84,6 +86,7 @@ export class MarbleRegistry {
                     linearDamping: info.linearDamping,
                     angularDamping: info.angularDamping,
                     canSleep: false,
+                    ccd: true,
                 });
             } else {
                 rigidBody = g.world.createRigidBody(bodyDesc);
@@ -266,6 +269,7 @@ export class MarbleRegistry {
         m.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
         m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
         m.scoredGoals.clear();
+        this.resetPlayerAbilityState();
 
         g._rewindHead = 0;
         g._rewindCount = 0;
@@ -293,6 +297,31 @@ export class MarbleRegistry {
         if (typeof audio !== 'undefined' && audio.playJump) {
             audio.playJump();
         }
+    }
+
+    /**
+     * Clear per-life movement/ability state: double-jump, charging jump /
+     * stomp / dash / air-dash (restoring gravity they suspended), and any
+     * active grapple. Called on respawn, reset and level clear.
+     */
+    resetPlayerAbilityState() {
+        const g = this.game;
+        const rb = g.playerMarble?.rigidBody;
+        if (rb && (g.isChargingStomp || g.isChargingAirDash)) {
+            const base = g.playerMarble.baseGravityScale ?? 1.0;
+            rb.setGravityScale(g.flipActive ? -base : base, true);
+        }
+
+        g.hasDoubleJumped = false;
+        g.jumpCount = 0;
+        g.isChargingJump = false;
+        g.jumpCharge = 0;
+        g.isChargingStomp = false;
+        g.isStomping = false;
+        g.isChargingDash = false;
+        g.dashCharge = 0;
+        g.isChargingAirDash = false;
+        if (g.isGrappling || g.grappleTargetBody) g.cancelGrapple?.();
     }
 
     resetMarbles() {
@@ -340,6 +369,7 @@ export class MarbleRegistry {
         if (g.combobarContainerEl) g.combobarContainerEl.style.display = 'none';
         if (g.combobarEl) g.combobarEl.style.width = '0%';
 
+        this.resetPlayerAbilityState();
         g.currentMarbleIndex = 0;
         g.playerMarble = g.marbles[0];
         g.selectedEl.textContent = `Selected: ${g.playerMarble ? g.playerMarble.name : 'None'}`;
@@ -426,24 +456,22 @@ export class MarbleRegistry {
             const radius = marble.scale * 0.5 || 0.5;
             const pos = rb.translation();
 
-            const rayOrigin = { x: pos.x, y: pos.y, z: pos.z };
             const rayDir = { x: 0, y: g.flipActive ? 1 : -1, z: 0 };
-            const ray = new RAPIER.Ray(rayOrigin, rayDir);
-            const maxToi = radius + 0.1;
-
-            const hit = g.world.castRay(ray, maxToi, true);
+            const hit = g.physicsQueries.castRay(pos, rayDir, radius + 0.1, {
+                excludeBody: rb,
+                excludeSensors: true,
+            });
             if (hit) {
-                const otherCollider = hit.collider;
-                const otherBody = otherCollider.parent();
+                const otherHandle = hit.bodyHandle;
 
-                if (otherBody && otherBody !== rb) {
-                    if (otherBody.bodyType() === RAPIER.RigidBodyType.Fixed) {
-                        const material = audio.getMaterial(otherBody.handle);
+                if (otherHandle != null) {
+                    if (hit.bodyType === 'fixed') {
+                        const material = audio.getMaterial(otherHandle);
                         const dopplerRate = computeMarbleDopplerRate(g, rb);
 
                         touchingSurfaces.set(i, { material, speed, angularSpeed, radius, dopplerRate });
 
-                        const collisionId = `${rb.handle}-${otherBody.handle}`;
+                        const collisionId = `${rb.handle}-${otherHandle}`;
                         if (!processedCollisions.has(collisionId) && speed > 2.5) {
                             processedCollisions.add(collisionId);
                             const marbleMat = marble.materialPresetName || 'glass';
