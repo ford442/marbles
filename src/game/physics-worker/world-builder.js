@@ -1,4 +1,5 @@
 import RAPIER from '@dimforge/rapier3d-compat';
+import { MAX_BODIES } from './protocol.js';
 
 /**
  * @typedef {object} BodyDescriptor
@@ -103,6 +104,9 @@ export function buildWorldFromDescriptors(gravity, descriptors) {
  * @param {number} bodyIndex
  */
 export function insertBodyAtIndex(world, bodies, desc, bodyIndex) {
+    if (bodyIndex >= MAX_BODIES) {
+        throw new RangeError(`[PhysicsWorker] bodyIndex ${bodyIndex} exceeds MAX_BODIES=${MAX_BODIES}`);
+    }
     while (bodies.length <= bodyIndex) {
         bodies.push(null);
     }
@@ -115,7 +119,7 @@ export function insertBodyAtIndex(world, bodies, desc, bodyIndex) {
  * @returns {number}
  */
 export function getBodySlotCount(bodies) {
-    return bodies.length;
+    return Math.min(bodies.length, MAX_BODIES);
 }
 
 /**
@@ -124,7 +128,8 @@ export function getBodySlotCount(bodies) {
  * @param {number} slotOffsetFloats
  */
 export function writeBodyTransforms(bodies, outF32, slotOffsetFloats) {
-    for (let i = 0; i < bodies.length; i++) {
+    const count = Math.min(bodies.length, MAX_BODIES);
+    for (let i = 0; i < count; i++) {
         if (!bodies[i]) continue;
         const t = bodies[i].translation();
         const r = bodies[i].rotation();

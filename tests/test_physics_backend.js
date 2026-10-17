@@ -22,6 +22,10 @@ import {
 } from '../src/game/physics-worker/protocol.js';
 import { drainCommandRing } from '../src/game/physics-worker/command-drain.js';
 import { WorkerPhysicsBackend } from '../src/game/systems/physics-backend.ts';
+import { MAX_BODIES, SAB_LAYOUT_VERSION } from '../src/game/physics-worker/protocol.js';
+import RAPIER from '@dimforge/rapier3d-compat';
+import { serializeRigidBodyDesc, serializeColliderDesc } from '../src/game/physics-worker/rapier-desc-serializer.js';
+import { createBodyFromDescriptor } from '../src/game/physics-worker/world-builder.js';
 
 function testWorkerSpikeLevel() {
     assert.equal(WORKER_SPIKE_LEVEL_ID, 'tutorial');
@@ -134,6 +138,67 @@ function testShouldUsePhysicsWorkerDisabledFlags() {
     );
 }
 
+function testShouldUsePhysicsWorkerDefaultOn() {
+    const capable = { crossOriginIsolated: true, hasSharedArrayBuffer: true, levelId: 'space_station' };
+    // No flag: on for capable desktops, off for low-power/mobile.
+    assert.equal(shouldUsePhysicsWorker({ ...capable, search: '' }), true);
+    assert.equal(shouldUsePhysicsWorker({ ...capable, search: '', lowPowerDevice: true }), false);
+    // ?physicsWorker=1 forces on for mobile A/B; =0 is the kill switch.
+    assert.equal(shouldUsePhysicsWorker({ ...capable, search: '?physicsWorker=1', lowPowerDevice: true }), true);
+    assert.equal(shouldUsePhysicsWorker({ ...capable, search: '?physicsWorker=0' }), false);
+    // Exclusions still apply without the flag.
+    assert.equal(shouldUsePhysicsWorker({ ...capable, search: '', crossOriginIsolated: false }), false);
+    assert.equal(shouldUsePhysicsWorker({ ...capable, search: '', hasSharedArrayBuffer: false }), false);
+    assert.equal(shouldUsePhysicsWorker({ ...capable, search: '', multiplayerMode: true }), false);
+    assert.equal(shouldUsePhysicsWorker({ ...capable, search: '', hostAuthorityMode: true }), false);
+    assert.equal(shouldUsePhysicsWorker({ ...capable, search: '', editorMode: true }), false);
+    assert.equal(shouldUsePhysicsWorker({ ...capable, search: '?devLevels=1', levelId: 'ice_bridges_run' }), false);
+}
+
+function testMaxBodiesGuard() {
+    assert.ok(SAB_LAYOUT_VERSION >= 2);
+    assert.equal(MAX_BODIES, 1024);
+    const backend = Object.create(WorkerPhysicsBackend.prototype);
+    backend._nextBodyIndex = MAX_BODIES - 1;
+    assert.equal(backend.reserveBodyIndex(), MAX_BODIES - 1);
+    assert.throws(() => backend.reserveBodyIndex(), RangeError);
+}
+
+async function testMissileDescriptorRoundTrip() {
+    await RAPIER.init();
+    // Mirrors src/abilities/missiles.js.
+    const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+        .setTranslation(1, 2, 3)
+        .setLinvel(40, 0, -20)
+        .setGravityScale(0);
+    const colliderDesc = RAPIER.ColliderDesc.ball(0.2)
+        .setRestitution(0.5)
+        .setFriction(0.5)
+        .setDensity(0.5);
+
+    const desc = { ...serializeRigidBodyDesc(bodyDesc), collider: serializeColliderDesc(colliderDesc) };
+    const wire = JSON.parse(JSON.stringify(desc)); // postMessage-safe
+    assert.deepEqual(wire, desc);
+    assert.equal(wire.type, 'dynamic');
+    assert.deepEqual(wire.translation, [1, 2, 3]);
+    assert.deepEqual(wire.linvel, [40, 0, -20]);
+    assert.equal(wire.gravityScale, 0);
+    assert.equal(wire.collider.type, 'ball');
+    assert.ok(Math.abs(wire.collider.radius - 0.2) < 1e-6);
+
+    const world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
+    const body = createBodyFromDescriptor(world, wire);
+    assert.deepEqual({ ...body.translation() }, { x: 1, y: 2, z: 3 });
+    assert.deepEqual({ ...body.linvel() }, { x: 40, y: 0, z: -20 });
+    assert.equal(body.gravityScale(), 0);
+    const collider = body.collider(0);
+    assert.ok(Math.abs(collider.radius() - 0.2) < 1e-6);
+    assert.equal(collider.restitution(), 0.5);
+    assert.equal(collider.friction(), 0.5);
+    assert.ok(Math.abs(collider.density() - 0.5) < 1e-6);
+    world.free();
+}
+
 function testResolvePhysicsHz() {
     assert.equal(resolvePhysicsHzFromSearch('?physicsHz=60'), 60);
     assert.equal(resolvePhysicsHzFromSearch('?physicsHz=120'), 120);
@@ -238,7 +303,10 @@ testManifestAllowlist();
 testShouldUsePhysicsWorkerEnabled();
 testShouldUsePhysicsWorkerInitWithoutLevel();
 testShouldUsePhysicsWorkerDisabledFlags();
+testShouldUsePhysicsWorkerDefaultOn();
 testResolvePhysicsHz();
+testMaxBodiesGuard();
+await testMissileDescriptorRoundTrip();
 testCommandRingEnqueue();
 testCommandRingDrain();
 testBufferSizes();

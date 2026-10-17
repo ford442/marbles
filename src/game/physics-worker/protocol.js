@@ -1,6 +1,12 @@
 /** Shared layout for physics worker SharedArrayBuffers (main + worker). */
 
-export const MAX_BODIES = 256;
+/**
+ * Bump SAB_LAYOUT_VERSION whenever MAX_BODIES or the per-body stride changes.
+ * v2: 256 -> 1024 bodies — body indices are not reused within a level, so
+ * missiles/bombs/holo platforms accumulate on top of the static course.
+ */
+export const SAB_LAYOUT_VERSION = 2;
+export const MAX_BODIES = 1024;
 export const BODY_FLOATS = 8;
 export const BODY_STRIDE_BYTES = BODY_FLOATS * 4;
 
