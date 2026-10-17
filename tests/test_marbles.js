@@ -88,6 +88,7 @@ try {
     run('Astral Juggernaut', ['color', 'radius', 'density', 'friction', 'restitution', 'clearCoat', 'clearCoatRoughness', 'emissive: true', 'lightIntensity', 'lightColor', 'materialType: "glass"']);
     run('Cosmic Singularity', ['color', 'radius', 'density', 'friction', 'restitution', 'gravityScale', 'clearCoat', 'clearCoatRoughness', 'thickness', 'emissive: true', 'lightIntensity', 'lightColor', 'materialType: "glass"']);
     run('Radiant Nova', ['color', 'radius', 'density', 'friction', 'restitution', 'clearCoat', 'clearCoatRoughness', 'thickness', 'emissive: true', 'lightIntensity', 'lightColor', 'materialType: "glass"']);
+    run('Nebula Smasher Core', ['color', 'radius', 'density', 'friction', 'restitution', 'clearCoat', 'clearCoatRoughness', 'thickness', 'emissive: true', 'lightIntensity', 'lightColor', 'materialType: "glass"']);
 
 
     if (!success) {
