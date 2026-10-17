@@ -75,6 +75,16 @@ export const ABILITY_REGISTRY = {
         category: 'movement',
         input: { defaultCode: 'Space', trigger: 'charge', settingsKey: 'doublejump' },
     },
+    hover: {
+        id: 'hover',
+        name: 'Hover',
+        category: 'movement',
+        cooldownMs: 3000,
+        lastUseKey: 'lastHoverTime',
+        cooldownKey: 'hoverCooldown',
+        input: { defaultCode: 'KeyH', trigger: 'hold', settingsKey: 'hover' },
+        hudSlot: { barKey: 'hoverBarEl', mode: 'charge' },
+    },
     stomp: {
         id: 'stomp',
         name: 'Stomp',
