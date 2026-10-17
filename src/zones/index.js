@@ -68,3 +68,4 @@ export { createCyberMatrixZone } from './cyber-matrix.js';
 export { createNeonCityHeightsZone } from './neon-city-heights.js';
 export { createNeonPulseMatrixZone } from './neon-pulse-matrix.js';
 export { createQuantumCoreZone } from './quantum-core.js';
+export { createNeonHologramZone } from './neon-hologram.js';

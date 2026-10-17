@@ -105,6 +105,7 @@ const FACTORY_ZONE_HANDLERS = {
     neon_city_heights: (game, _zone, offset) => zones.createNeonCityHeightsZone(game, offset),
     neon_pulse_matrix: (game, _zone, offset) => zones.createNeonPulseMatrixZone(game, offset),
     quantum_core: (game, _zone, offset) => zones.createQuantumCoreZone(game, offset),
+    neon_hologram: (game, _zone, offset) => zones.createNeonHologramZone(game, offset),
 };
 
 /** @type {Record<string, ZoneHandler>} */
