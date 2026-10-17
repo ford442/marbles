@@ -96,6 +96,22 @@ export const DEV_LEVELS: Record<string, any> = {
         backgroundColor: [0.05, 0.02, 0.1, 1.0],
         environment: 'space_nebula'
     },
+    neon_hologram_run: {
+        name: 'Neon Hologram',
+        description: 'Navigate the icy cyan hologram track, dodge magenta blockers, and launch to the exit!',
+        zones: [
+            { type: 'neon_hologram', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: 10, z: 75 } }
+        ],
+        spawn: { x: 0, y: 5, z: -10 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [70, 80], y: [5, 15] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.02, 0.02, 0.05, 1.0],
+        environment: 'neon_city'
+    },
     neon_city_heights_run: {
         name: 'Neon City Heights',
         description: 'Navigate the neon platforms, low-friction purple track, and moving hover cars!',
