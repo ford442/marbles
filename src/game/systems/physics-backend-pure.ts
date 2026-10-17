@@ -13,6 +13,8 @@ export interface PhysicsWorkerOptions {
     hostAuthorityMode?: boolean;
     editorMode?: boolean;
     levelId?: string | null;
+    /** From `detectPlatformProfile().prefersLowPower` (mobile or <=4 cores). */
+    lowPowerDevice?: boolean;
 }
 
 export function shouldUsePhysicsWorker(options: PhysicsWorkerOptions = {}): boolean {
@@ -24,11 +26,14 @@ export function shouldUsePhysicsWorker(options: PhysicsWorkerOptions = {}): bool
         hostAuthorityMode = false,
         editorMode = false,
         levelId = null,
+        lowPowerDevice = false,
     } = options;
 
-    const params = new URLSearchParams(search);
-    if (params.get('physicsWorker') === '0') return false;
-    if (params.get('physicsWorker') !== '1') return false;
+    // Default-on for capable desktops; `?physicsWorker=0` is the kill switch and
+    // `?physicsWorker=1` forces it on low-power/mobile devices for A/B testing.
+    const flag = new URLSearchParams(search).get('physicsWorker');
+    if (flag === '0') return false;
+    if (flag !== '1' && lowPowerDevice) return false;
     if (!crossOriginIsolated || !hasSharedArrayBuffer) return false;
     if (multiplayerMode || hostAuthorityMode || editorMode) return false;
     if (levelId != null && !isManifestLevel(levelId)) return false;

@@ -1,6 +1,6 @@
 # Physics Worker Architecture
 
-**Status:** Production opt-in — July 2026  
+**Status:** Default-on for capable desktops (manifest campaign) — October 2026  
 **Related:** [game-loop.md](./game-loop.md), [language-strategy.md](./language-strategy.md), [host-authority.md](./host-authority.md)
 
 ## Overview
@@ -21,8 +21,9 @@ Filament **must** remain on the main thread (WebGL context affinity).
 
 | URL flag | Effect |
 |----------|--------|
-| `?physicsWorker=1` | Opt in to worker backend on **manifest** campaign levels |
-| `?physicsWorker=0` | Force main-thread Rapier |
+| *(none)* | Worker on for **manifest** campaign levels when cross-origin isolated and not low-power (`detectPlatformProfile().prefersLowPower`: mobile UA or ≤4 cores) |
+| `?physicsWorker=1` | Force on, including low-power/mobile (A/B) — exclusions below still apply |
+| `?physicsWorker=0` | Kill switch: force main-thread Rapier |
 | `?physicsHz=60` | Override worker fixed tick (default **120**) |
 
 Requires cross-origin isolation (COOP/COEP). See [`vite.config.js`](../../vite.config.js) and [`docs/mobile-pwa.md`](../mobile-pwa.md). Without `SharedArrayBuffer`, the game falls back to main-thread physics silently.
@@ -36,7 +37,9 @@ Requires cross-origin isolation (COOP/COEP). See [`vite.config.js`](../../vite.c
 | Map editor (`?editor=1`) | Live body creation / inspection not wired through worker |
 | Dev-only levels (`?devLevels=1` entries not in manifest) | Opt-in spike scope; use manifest levels for worker A/B |
 
-All **24 manifest** levels (`assets/manifest.json`) are worker-eligible when `?physicsWorker=1` is set.
+All **24 manifest** levels (`assets/manifest.json`) are worker-eligible. Fallback to main thread on worker `INIT_ERROR` is unchanged. There is no settings-pane toggle yet; the URL flag is the only override.
+
+**Party Race limitation:** `HostSim` (`src/game/network/host-sim.js`) stays on main-thread Rapier until a dedicated issue moves it into the worker (or a headless Option C). Default-on does **not** apply to Party Race or `?hostAuth=1`.
 
 ## SharedArrayBuffer layout
 
@@ -52,7 +55,8 @@ Double-buffered body poses. Header + two slots.
 | 12 | `physicsStepMs` | `Float32` | Last step duration (perf) |
 | 16 + slot×N | `bodies[i]` | 8× `Float32` | `[px,py,pz, qx,qy,qz,qw, flags]` |
 
-- `MAX_BODIES = 256`, 32 bytes per body per slot.
+- `MAX_BODIES = 1024` (`SAB_LAYOUT_VERSION = 2`; was 256 in v1), 32 bytes per body per slot. Bump the layout version on any size/stride change.
+- Runtime bodies (missiles, bombs, black holes, holo platforms) go through the proxy world → `ADD_BODY`. Because indices are never reused within a level, each projectile permanently consumes a slot until the level reloads. `reserveBodyIndex()` throws a `RangeError` at the limit and the worker refuses out-of-range inserts — indices never wrap.
 - Main reads `writeIndex`, then copies poses for sync.
 - Body indices are **stable** across spawn/despawn; removed slots are nulled but indices are not reused in the same level session.
 
@@ -136,7 +140,9 @@ Record `window.perfMonitor.getLevelSummary()` and `latestSyncWork.physicsStepMs`
 ## Follow-up
 
 - Host-authoritative sim in worker ([host-authority.md](./host-authority.md))
-- Transform interpolation between physics frames
 - Map editor worker integration
-- Default-on desktop after broader soak testing
+- Body-index reuse (free list) so long sessions cannot exhaust `MAX_BODIES`
+- Settings-pane toggle for the worker
+- Real-GPU soak of all 24 manifest ids (`docs/PERFORMANCE_BASELINE.md`)
+- Party Race / `HostSim` in worker (separate issue)
 - `RenderPipeline` extraction (Phase B)
