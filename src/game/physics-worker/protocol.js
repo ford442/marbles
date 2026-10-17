@@ -1,16 +1,17 @@
 /** Shared layout for physics worker SharedArrayBuffers (main + worker). */
 
-export const MAX_BODIES = 256;
-
 /**
- * Snapshot layout version. Bump whenever the per-body record or header
- * changes; the worker stamps it into the header and the main thread refuses
- * a mismatched worker.
- *   v1: pose only (8 floats)
+ * Snapshot layout version. Bump whenever MAX_BODIES, the per-body record or
+ * the header changes; the worker stamps it into the header and the main
+ * thread refuses a mismatched worker.
+ *   v1: 256 bodies, pose only (8 floats)
  *   v2: pose + linvel + angvel + mass + body type (16 floats), step interval,
  *       applied-command counter
+ *   v3: 256 -> 1024 bodies — body indices are not reused within a level, so
+ *       missiles/bombs/holo platforms accumulate on top of the static course.
  */
-export const SNAPSHOT_LAYOUT_VERSION = 2;
+export const SNAPSHOT_LAYOUT_VERSION = 3;
+export const MAX_BODIES = 1024;
 
 /** Per-body record offsets (floats). */
 export const BODY_POS = 0;
@@ -178,7 +179,7 @@ export function bodyRecordOffset(slot, bodyIndex) {
 }
 
 /**
- * Velocity, mass and type half of a body record (layout v2).
+ * Velocity, mass and type half of a body record (layout v2+).
  * @param {Float32Array} f32
  * @param {number} slot
  * @param {number} bodyIndex

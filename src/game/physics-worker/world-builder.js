@@ -143,6 +143,9 @@ export function buildWorldFromDescriptors(gravity, descriptors) {
  * @param {number} bodyIndex
  */
 export function insertBodyAtIndex(world, bodies, desc, bodyIndex) {
+    if (bodyIndex >= MAX_BODIES) {
+        throw new RangeError(`[PhysicsWorker] bodyIndex ${bodyIndex} exceeds MAX_BODIES=${MAX_BODIES}`);
+    }
     while (bodies.length <= bodyIndex) {
         bodies.push(null);
     }
@@ -159,7 +162,7 @@ export function getBodySlotCount(bodies) {
 }
 
 /**
- * Write each body's snapshot record (layout v2: pose, velocities, mass, type).
+ * Write each body's snapshot record (pose, velocities, mass, type).
  * Removed bodies are marked invalid. Bodies past `MAX_BODIES` are not
  * published (they would overrun the slot).
  * @param {Array<import('@dimforge/rapier3d-compat').RigidBody | null>} bodies

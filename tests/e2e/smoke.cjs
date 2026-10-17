@@ -3,7 +3,10 @@ const { chromium } = require('playwright');
 const BASE_URL = process.env.BASE_URL || 'http://localhost:5173/';
 const GAME_TIMEOUT_MS = 30000;
 const FACTORY_LEVEL_ID = process.env.SMOKE_FACTORY_LEVEL || 'mushroom_hop';
+// Worker is default-on for capable desktops; PHYSICS_WORKER=1 forces + asserts it,
+// PHYSICS_WORKER=0 exercises the ?physicsWorker=0 kill switch and asserts main thread.
 const USE_PHYSICS_WORKER = process.env.PHYSICS_WORKER === '1';
+const FORCE_MAIN_THREAD = process.env.PHYSICS_WORKER === '0';
 
 (async () => {
   const browser = await chromium.launch({ headless: true });
@@ -20,6 +23,8 @@ const USE_PHYSICS_WORKER = process.env.PHYSICS_WORKER === '1';
     if (USE_PHYSICS_WORKER) {
       url.searchParams.set('physicsWorker', '1');
       url.searchParams.set('renderer', 'simple');
+    } else if (FORCE_MAIN_THREAD) {
+      url.searchParams.set('physicsWorker', '0');
     }
     console.log(`Navigating to ${url}...`);
     await page.goto(url.toString());
@@ -60,6 +65,8 @@ const USE_PHYSICS_WORKER = process.env.PHYSICS_WORKER === '1';
       const backend = await page.evaluate(() => window.game.physicsBackend?.getMode?.());
       console.log(`Physics backend after tutorial: ${backend}`);
       assertBackend(backend, 'worker');
+    } else if (FORCE_MAIN_THREAD) {
+      assertBackend(await page.evaluate(() => window.game.physicsBackend?.getMode?.()), 'main');
     }
 
     console.log('Returning to menu...');
@@ -77,6 +84,8 @@ const USE_PHYSICS_WORKER = process.env.PHYSICS_WORKER === '1';
       const backend = await page.evaluate(() => window.game.physicsBackend?.getMode?.());
       console.log(`Physics backend after ${FACTORY_LEVEL_ID}: ${backend}`);
       assertBackend(backend, 'worker');
+    } else if (FORCE_MAIN_THREAD) {
+      assertBackend(await page.evaluate(() => window.game.physicsBackend?.getMode?.()), 'main');
     }
 
     console.log('Returning to menu after factory level...');

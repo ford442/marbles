@@ -1,5 +1,6 @@
 import {
     CMD_OP,
+    MAX_BODIES,
     TRANSFORM_BUFFER_BYTES,
     CMD_RING_BYTES,
     RAYCAST_BUFFER_BYTES,
@@ -38,6 +39,7 @@ import {
     type RigidBodyLike,
 } from './physics-queries.ts';
 
+import { detectPlatformProfile } from '../../rendering-defaults.js';
 import type { Vec3, Quat } from '../../types/geometry.ts';
 
 export { shouldUsePhysicsWorker, resolvePhysicsHzFromSearch, WORKER_SPIKE_LEVEL_ID } from './physics-backend-pure.ts';
@@ -379,6 +381,10 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
     }
 
     reserveBodyIndex(): number {
+        // Indices are never reused within a level; refuse rather than overrun the SAB slot.
+        if (this._nextBodyIndex >= MAX_BODIES) {
+            throw new RangeError(`[PhysicsWorker] body limit reached (MAX_BODIES=${MAX_BODIES}, layout v${SNAPSHOT_LAYOUT_VERSION})`);
+        }
         return this._nextBodyIndex++;
     }
 
@@ -814,6 +820,7 @@ export async function createPhysicsBackend(
         hostAuthorityMode: game.hostAuthorityMode ?? false,
         editorMode: options.editorMode ?? false,
         levelId: options.levelId ?? null,
+        lowPowerDevice: detectPlatformProfile().prefersLowPower,
     });
 
     if (!wantWorker) {
@@ -826,7 +833,7 @@ export async function createPhysicsBackend(
         await workerBackend.init(options.gravity || { x: 0, y: -9.81, z: 0 });
         game.workerPhysicsBackend = workerBackend;
         game.physicsBackend = mainBackend;
-        console.info('[Physics] Worker infrastructure ready (?physicsWorker=1 + manifest level)');
+        console.info('[Physics] Worker infrastructure ready (manifest level; ?physicsWorker=0 disables)');
         return mainBackend;
     } catch (err) {
         console.warn('[Physics] Worker init failed, using main thread:', (err instanceof Error && err.message) || err);
@@ -849,6 +856,7 @@ export async function activatePhysicsBackendForLevel(
         hostAuthorityMode: game.hostAuthorityMode ?? false,
         editorMode: false,
         levelId,
+        lowPowerDevice: detectPlatformProfile().prefersLowPower,
     });
 
     if (useWorker && game.workerPhysicsBackend?._ready) {
