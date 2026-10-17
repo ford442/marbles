@@ -5,14 +5,15 @@ import {
 } from '../../abilities/registry.js';
 
 /**
- * Abilities with their pinned bitfield index. Bits come from each registry
- * entry's `netBit`, not its position, so adding an ability can't shift the
- * meaning of bits already on the wire.
+ * Abilities with their pinned bitfield index, derived from the registry. Bits
+ * come from each entry's `netBit`, not its position, so adding an ability
+ * can't shift the meaning of bits already on the wire; `netBit: null`
+ * entries are local-only and never encoded.
  * @type {{ id: string, bit: number }[]}
  */
-const NETWORKED_ABILITIES = ALL_ABILITY_IDS
-    .map((id) => ({ id, bit: ABILITY_REGISTRY[id].netBit }))
-    .filter(({ bit }) => bit >= 0 && bit < MAX_NETWORKED_ABILITY_IDS);
+export const NETWORKED_ABILITIES = ALL_ABILITY_IDS
+    .map((id) => ({ id, bit: /** @type {number | null} */ (ABILITY_REGISTRY[id].netBit) }))
+    .filter(/** @returns {e is { id: string, bit: number }} */ (e) => e.bit !== null && e.bit >= 0 && e.bit < MAX_NETWORKED_ABILITY_IDS);
 
 /** Movement keys in bit order [0:7]. */
 export const MOVEMENT_KEY_CODES = [
@@ -40,8 +41,8 @@ export function encodeInputSnapshot(game) {
     }
 
     for (const { id, bit } of NETWORKED_ABILITIES) {
-        const code = game.abilitySystem?.getKeyCode(id);
-        if (code && keys[code]) {
+        const codes = game.abilitySystem?.getKeyCodes?.(id) ?? [game.abilitySystem?.getKeyCode(id)];
+        if (codes.some((code) => code && keys[code])) {
             bits |= 1 << (ABILITY_BIT_OFFSET + bit);
         }
     }

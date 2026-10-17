@@ -1,0 +1,27 @@
+{
+  "id": "obsidian",
+  "name": "Obsidian",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0.05,
+      "g": 0.05,
+      "b": 0.05
+    },
+    "materialType": "obsidianMetal",
+    "shader": {
+      "bumpScale": 0.045,
+      "grainScale": 12,
+      "scratchesIntensity": 0.42,
+      "anisotropy": 0.8
+    }
+  },
+  "physics": {
+    "radius": 0.5,
+    "density": 4,
+    "friction": 0.1,
+    "restitution": 0.1
+  }
+}

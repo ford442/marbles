@@ -66,7 +66,8 @@ export interface MapCheckpointDefinition {
 
 export interface MapZoneDefinition {
     type: string;
-    pos: MapVec3;
+    /** Required for stamps; primitives define their own placement fields. */
+    pos?: MapVec3Input;
     size?: MapVec3;
     color?: RgbColor;
     rotY?: number;
@@ -93,11 +94,45 @@ export interface MapZoneDefinition {
     [key: string]: unknown;
 }
 
+/** v2 vectors may be written as [x, y, z]. */
+export type MapVec3Input = MapVec3 | [number, number, number];
+
+export interface MapGoalVolume {
+    pos: MapVec3Input;
+    size: MapVec3Input;
+}
+
+export interface MapBounds {
+    min: MapVec3Input;
+    max: MapVec3Input;
+}
+
+export interface MapSolutionSegment {
+    frames: number;
+    keys?: Array<'forward' | 'back' | 'left' | 'right' | 'jump'>;
+    yawDeg?: number;
+    /** 0 = JUMP_DV_MIN … 1 = JUMP_DV_MAX (default 1). */
+    jumpCharge?: number;
+}
+
+export interface MapSolution {
+    inputs: MapSolutionSegment[];
+    tolerance?: number;
+}
+
 export interface MapContentDefinition {
     name: string;
     zones: MapZoneDefinition[];
     spawn: MapVec3;
     goals: MapGoalDefinition[];
+    /** Level format version (default 1). */
+    schemaVersion?: 1 | 2;
+    /** Marble ids raced against; the level spawns 1 + rivals.length marbles. */
+    rivals?: string[];
+    bounds?: MapBounds;
+    solution?: MapSolution;
+    /** Free-roam map with no finish (sandbox); exempt from goal checks. */
+    goalless?: boolean;
     description?: string;
     difficulty?: Difficulty;
     chapter?: CampaignChapter;
@@ -115,8 +150,12 @@ export interface MapContentDefinition {
     ambientSounds?: string[];
 }
 
-export interface MapDefinition extends MapContentDefinition {
+export interface MapDefinition extends Omit<MapContentDefinition, 'goals' | 'spawn'> {
     id: string;
+    spawn: MapVec3Input;
+    /** v1 goal ranges; v2 maps may give `goal` instead. */
+    goals?: MapGoalDefinition[];
+    goal?: MapGoalVolume;
     version: string;
     author?: string;
     /** The JSON schema allows legacy and level-specific extension fields. */

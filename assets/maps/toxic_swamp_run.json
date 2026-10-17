@@ -1,0 +1,102 @@
+{
+  "id": "toxic_swamp_run",
+  "schemaVersion": 2,
+  "name": "Toxic Swamp Run",
+  "description": "Navigate the toxic swamp!",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "difficulty": "hard",
+  "chapter": "extreme",
+  "nightMode": true,
+  "backgroundColor": [0.01, 0.05, 0.01, 1],
+  "spawn": [0, 8, -12],
+  "goals": [
+    {
+      "id": 1,
+      "range": {
+        "x": [-5, 5],
+        "z": [110, 120],
+        "y": [-2, 5]
+      }
+    }
+  ],
+  "camera": {
+    "mode": "follow",
+    "height": 15,
+    "offset": -25
+  },
+  "zones": [
+    {
+      "type": "floor",
+      "pos": [0, -2, 0],
+      "size": [50, 0.5, 50]
+    },
+    {
+      "type": "track",
+      "pos": [0, 3, 0]
+    },
+    {
+      "type": "toxic_swamp",
+      "pos": [0, 0, 25]
+    }
+  ],
+  "medals": {
+    "goldTime": 17,
+    "silverTime": 25,
+    "bronzeTime": 38,
+    "parTime": 18
+  },
+  "solution": {
+    "inputs": [
+      { "frames": 14, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 35, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 19, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 29, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 84, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 180 },
+      { "frames": 2, "keys": [], "yawDeg": 180 },
+      { "frames": 13, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 11, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 50, "keys": [], "yawDeg": 180 },
+      { "frames": 2, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 27, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 13, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 39, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 37, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 37, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 41, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 39, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 38, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 39, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 38, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 39, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 38, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 39, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 38, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 12, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["jump"], "yawDeg": 0 },
+      { "frames": 26, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 34, "keys": [], "yawDeg": 180 }
+    ],
+    "tolerance": 0.35
+  }
+}

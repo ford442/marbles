@@ -53,6 +53,8 @@
         "src/abilities/double-jump.js",
         "src/abilities/constructs.js",
         "src/zone-setup/grapple.js",
+        "src/zone-setup/primitives.ts",
+        "src/zone-setup/primitive-host.js",
         "src/game-loop/**/*.ts",
         "src/game-loop/camera.js",
         "src/game-loop/effects-tick.js",

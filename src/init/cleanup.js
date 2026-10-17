@@ -27,6 +27,9 @@ export class InitCleanup {
         this.marbles = []
         this.playerMarble = null
 
+        // Everything the v2 primitive builder made (bodies, entities, material instances).
+        this.zoneScope?.dispose(this)
+
         for (const body of this.staticBodies) {
             if (!workerActive) this.world.removeRigidBody(body)
         }
@@ -79,6 +82,7 @@ export class InitCleanup {
         for (const obj of this.dynamicObjects) {
             if (!workerActive) this.world.removeRigidBody(obj.rigidBody)
             this.scene.remove(obj.entity)
+            if (obj.matInstance) this.engine.destroyMaterialInstance(obj.matInstance)
             this.engine.destroyEntity(obj.entity)
         }
         this.dynamicObjects = []
@@ -106,6 +110,7 @@ export class InitCleanup {
         for (const p of this.powerUps) {
             if (!workerActive) this.world.removeRigidBody(p.rigidBody)
             this.scene.remove(p.entity)
+            if (p.matInstance) this.engine.destroyMaterialInstance(p.matInstance)
             this.engine.destroyEntity(p.entity)
         }
         this.powerUps = []
@@ -114,6 +119,7 @@ export class InitCleanup {
         for (const platform of this.movingPlatforms) {
             if (!workerActive) this.world.removeRigidBody(platform.rigidBody)
             this.scene.remove(platform.entity)
+            if (platform.matInstance) this.engine.destroyMaterialInstance(platform.matInstance)
             this.engine.destroyEntity(platform.entity)
         }
         this.movingPlatforms = []
@@ -121,6 +127,7 @@ export class InitCleanup {
         for (const platform of this.rotatingPlatforms) {
             if (!workerActive) this.world.removeRigidBody(platform.rigidBody)
             this.scene.remove(platform.entity)
+            if (platform.matInstance) this.engine.destroyMaterialInstance(platform.matInstance)
             this.engine.destroyEntity(platform.entity)
         }
         this.rotatingPlatforms = []

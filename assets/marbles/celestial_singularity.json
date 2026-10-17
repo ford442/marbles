@@ -1,0 +1,29 @@
+{
+  "id": "celestial_singularity",
+  "name": "Celestial Singularity",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0.8,
+      "g": 0.1,
+      "b": 0.9
+    },
+    "clearCoat": 1,
+    "clearCoatRoughness": 0,
+    "materialType": "glass",
+    "emissive": {
+      "r": 0.8,
+      "g": 0.1,
+      "b": 0.9,
+      "intensity": 30
+    }
+  },
+  "physics": {
+    "radius": 2.5,
+    "density": 1000,
+    "friction": 0,
+    "restitution": 1
+  }
+}

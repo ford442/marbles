@@ -44,7 +44,9 @@ type PadState = { buttons: boolean[] } & Record<string, boolean | boolean[]>;
 
 const GAMEPAD_BUTTON_KEYS: Readonly<Record<number, string>> = {
     0: 'Space',
-    1: 'KeyV',
+    // 1 (B) is intentionally unbound: it used to send KeyV, which had no
+    // handler; missile moved to KeyV (#451), so it now rides button 12.
+    // 12 used to send KeyL, which fired the missile before the move.
     2: 'KeyX',
     3: 'KeyY',
     4: 'KeyH',
@@ -54,7 +56,7 @@ const GAMEPAD_BUTTON_KEYS: Readonly<Record<number, string>> = {
     8: 'KeyR',
     9: 'KeyM',
     11: 'Digit0',
-    12: 'KeyL',
+    12: 'KeyV',
     13: 'KeyU',
     14: 'Digit6',
     15: 'KeyG',

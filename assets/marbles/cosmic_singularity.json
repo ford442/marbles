@@ -1,0 +1,33 @@
+{
+  "id": "cosmic_singularity",
+  "name": "Cosmic Singularity",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "legendary",
+  "premium": true,
+  "unlock": "premium",
+  "appearance": {
+    "color": {
+      "r": 0.1,
+      "g": 0,
+      "b": 0.2
+    },
+    "clearCoat": 1,
+    "clearCoatRoughness": 0.02,
+    "thickness": 2.5,
+    "materialType": "glass",
+    "emissive": {
+      "r": 0.3,
+      "g": 0,
+      "b": 1,
+      "intensity": 45
+    }
+  },
+  "physics": {
+    "radius": 1.6,
+    "density": 8000,
+    "friction": 0,
+    "restitution": 1,
+    "gravityScale": 2
+  }
+}

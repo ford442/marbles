@@ -18,7 +18,7 @@ import {
     cmdRotateZones,
 } from '../src/editor/map-commands.js';
 import { validateMap, collectWarnings } from '../src/editor/map-validator.js';
-import { createZoneFromStamp, STAMP_BY_ID } from '../src/editor/stamps.js';
+import { createZoneFromStamp, STAMP_BY_ID, EDITOR_PRIMITIVE_STAMPS } from '../src/editor/stamps.js';
 import { mapDefToLevel } from '../src/editor/map-document.js';
 import { roundTripSession } from '../src/editor/editor-session.js';
 import {
@@ -210,6 +210,31 @@ function testWorkshopAssetPaths() {
     assert.ok(paths.includes('tracks/neon_showcase_lod1.glb'));
 }
 
+function testPrimitiveStampsAndV2RoundTrip() {
+    const doc = new MapDocument();
+    for (const stamp of EDITOR_PRIMITIVE_STAMPS) {
+        doc.execute(cmdPlaceZone(doc.map, createZoneFromStamp(stamp, { x: 1, y: 0, z: 2 })));
+    }
+    assert.equal(doc.map.schemaVersion, 2, 'placing a primitive upgrades the map to v2');
+    const ramp = doc.map.zones.findIndex((z) => z.type === 'ramp');
+    const mover = doc.map.zones.findIndex((z) => z.type === 'mover');
+    const fromBefore = { ...doc.map.zones[ramp].from };
+    doc.execute(cmdMoveZones(doc.map, [ramp, mover], { x: 3 }));
+    assert.equal(doc.map.zones[ramp].from.x, fromBefore.x + 3, 'moving a ramp shifts from/to');
+    assert.equal(doc.map.zones[mover].path[1].x, 1 + 6 + 3, 'moving a mover shifts its path');
+    doc.execute(cmdRotateZones(doc.map, [ramp], Math.PI / 2));
+    assert.ok(Math.abs(doc.map.zones[ramp].to.z - doc.map.zones[ramp].from.z) < 1e-9, 'a quarter turn swings the ramp onto +X');
+    const result = validateMap(serializeMap(doc.map));
+    assert.deepEqual(result.errors, [], 'primitive stamps export a schema-valid v2 map');
+
+    // Shipped v2 maps (array vec3s, a single `goal` volume) survive import → export.
+    const json = fs.readFileSync(path.join(__dirname, '..', 'assets', 'maps', 'quantum_core.json'), 'utf8');
+    const out = serializeMap(parseMapJson(json));
+    assert.ok(out.goal && !out.goals, 'keeps the v2 goal volume');
+    assert.ok(out.solution?.inputs.length, 'keeps the recorded solution');
+    assert.deepEqual(validateMap(out).errors, []);
+}
+
 testEmptyMapValidates();
 testBuildSimpleMapExport();
 testRotYFloorExport();
@@ -224,4 +249,5 @@ testWorkshopAssetPaths();
 testValidatorWarnsOnUnknownZoneType();
 testValidatorWarnsOnModelZoneMissingModelRef();
 testValidatorNoWarningsOnCleanMap();
+testPrimitiveStampsAndV2RoundTrip();
 console.log('Map editor tests passed');

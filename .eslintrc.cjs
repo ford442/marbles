@@ -1,3 +1,21 @@
+// All ray queries go through the typed facade, which owns Rapier's castRay
+// argument order and normalises timeOfImpact → toi.
+const CAST_RAY_RULE = {
+    selector: 'CallExpression[callee.property.name=/^(castRay|castRayAndGetNormal|intersectionsWithRay)$/]'
+        + ':not([callee.object.property.name="physicsQueries"])'
+        + ':not([callee.object.name=/^(physicsQueries|queries)$/])',
+    message: 'Cast rays through game.physicsQueries (src/game/systems/physics-queries.ts), '
+        + 'not Rapier directly.',
+};
+
+// quatFromEuler's positional (yaw, pitch, roll) actually rotate about Z, Y, X,
+// which banked "ramps" sideways in several zones. Zone code uses named axes.
+const EULER_RULE = {
+    selector: 'Identifier[name=/^quatFromEuler/]',
+    message: 'quatFromEuler is ambiguous (its "yaw" rotates about Z). Use '
+        + 'quatFromYawPitchRoll({ yaw, pitch, roll }) from src/math.ts.',
+};
+
 module.exports = {
     root: true,
     env: {
@@ -41,15 +59,7 @@ module.exports = {
         '@typescript-eslint/no-require-imports': 'off',
         '@typescript-eslint/no-explicit-any': 'off',
         '@typescript-eslint/ban-ts-comment': 'off',
-        // All ray queries go through the typed facade, which owns Rapier's
-        // castRay argument order and normalises timeOfImpact → toi.
-        'no-restricted-syntax': ['error', {
-            selector: 'CallExpression[callee.property.name=/^(castRay|castRayAndGetNormal|intersectionsWithRay)$/]'
-                + ':not([callee.object.property.name="physicsQueries"])'
-                + ':not([callee.object.name=/^(physicsQueries|queries)$/])',
-            message: 'Cast rays through game.physicsQueries (src/game/systems/physics-queries.ts), '
-                + 'not Rapier directly.',
-        }],
+        'no-restricted-syntax': ['error', CAST_RAY_RULE],
     },
     overrides: [
         {
@@ -66,6 +76,10 @@ module.exports = {
                 'src/game/systems/physics-backend.ts',
             ],
             rules: { 'no-restricted-syntax': 'off' },
+        },
+        {
+            files: ['src/zones/**/*.js', 'src/zones/**/*.ts'],
+            rules: { 'no-restricted-syntax': ['error', CAST_RAY_RULE, EULER_RULE] },
         },
         {
             // `declare global { var … }` is the only way to type globals.

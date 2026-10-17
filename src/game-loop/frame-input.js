@@ -86,68 +86,10 @@ export class GameLoopFrameInput {
                 }
         
 
-                // Air dash edge detection via Ability System and Keys
-                const airDashCode = 'KeyQ';
-                const isAirDashKeyPressed = this.keys[airDashCode];
-                const wasAirDashKeyPressed = this._lastAirDashKeyPressed;
+                // Charge abilities (air dash, dash, stomp): edge-detected from the
+                // held keys by their registry entries (src/abilities/registry.js).
+                this.abilitySystem?.tickChargeInputs(now)
 
-                if (isAirDashKeyPressed && !wasAirDashKeyPressed) {
-                    if (this.abilitySystem?.isEnabled('airdashing')) {
-                        if (this.playerMarble && !this.isGrounded(this.playerMarble) && !this.isChargingAirDash) {
-                            if (now - (this.lastAirDashTime || 0) > (this.airDashCooldown || 2000)) {
-                                if (typeof this.beginAirDashCharge === 'function') {
-                                    this.beginAirDashCharge(now);
-                                }
-                            }
-                        }
-                    }
-                } else if (!isAirDashKeyPressed && wasAirDashKeyPressed) {
-                    if (this.isChargingAirDash && this.playerMarble) {
-                        if (typeof this.releaseAirDash === 'function') {
-                            this.releaseAirDash(now);
-                        }
-                    }
-                }
-                this._lastAirDashKeyPressed = isAirDashKeyPressed;
-
-                // Ground dash — methods mixed in from src/abilities/dash.js via installAbilityMethods
-                const isDashKeyPressed = this.keys['ShiftLeft'] || this.keys['ShiftRight'];
-                const wasDashKeyPressed = this._lastDashKeyPressed;
-
-                if (isDashKeyPressed && !wasDashKeyPressed) {
-                    if (this.abilitySystem?.isEnabled('dash') !== false && this.playerMarble && !this.isChargingDash) {
-                        if (now - (this.lastDashTime || 0) > (this.dashCooldown || 1500)) {
-                            if (typeof this.beginDashCharge === 'function') {
-                                this.beginDashCharge(now);
-                            }
-                        }
-                    }
-                } else if (!isDashKeyPressed && wasDashKeyPressed) {
-                    if (this.isChargingDash && typeof this.releaseDash === 'function') {
-                        this.releaseDash(now);
-                    }
-                }
-                this._lastDashKeyPressed = isDashKeyPressed;
-
-                // Stomp — methods mixed in from src/abilities/stomp.js via installAbilityMethods
-                const isStompKeyPressed = this.keys['KeyZ'];
-                const wasStompKeyPressed = this._lastStompKeyPressed;
-
-                if (isStompKeyPressed && !wasStompKeyPressed) {
-                    if (this.abilitySystem?.isEnabled('stomp') !== false && this.playerMarble && !this.isChargingStomp) {
-                        if (now - (this.lastStompTime || 0) > (this.stompCooldown || 2000)) {
-                            if (typeof this.beginStompCharge === 'function') {
-                                this.beginStompCharge(now);
-                            }
-                        }
-                    }
-                } else if (!isStompKeyPressed && wasStompKeyPressed) {
-                    if (this.isChargingStomp && typeof this.releaseStomp === 'function') {
-                        this.releaseStomp(now);
-                    }
-                }
-                this._lastStompKeyPressed = isStompKeyPressed;
-        
                 // Shift is the dash now; the legacy boost bar shows its cooldown.
                 if (shouldUpdateHUD && this.boostBarEl) {
                     const timeSince = now - (this.lastDashTime || 0)

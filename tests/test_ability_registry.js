@@ -57,9 +57,10 @@ function testRegistryHasCoreAbilities() {
         assert.ok(ABILITY_REGISTRY[id], `missing registry entry: ${id}`);
     }
     assert.equal(ALL_ABILITY_IDS.length >= 6, true);
+    const networked = ALL_ABILITY_IDS.filter((id) => ABILITY_REGISTRY[id].netBit !== null);
     assert.ok(
-        ALL_ABILITY_IDS.length <= MAX_NETWORKED_ABILITY_IDS,
-        'registry abilities must fit in the reserved multiplayer bitfield',
+        networked.length <= MAX_NETWORKED_ABILITY_IDS,
+        'networked abilities must fit in the reserved multiplayer bitfield',
     );
 }
 
@@ -102,14 +103,19 @@ function testJumpMaskKeepsDoubleJump() {
 function testNetworkBitsArePinned() {
     // Bits on the wire must not move when abilities are added: this is the
     // layout shipped since 2026-09-19 plus doublejump appended.
+    // 10–15 (held movement modifiers) were added with #451.
     const expected = {
         airdashing: 0, dash: 1, jump: 2, stomp: 3, bomb: 4,
         missile: 5, blackhole: 6, holo: 7, blink: 8, doublejump: 9,
+        magnet_attract: 10, magnet_repel: 11, hover: 12, jetpack: 13, glider: 14, phase: 15,
     };
     for (const [id, bit] of Object.entries(expected)) {
         assert.equal(ABILITY_REGISTRY[id].netBit, bit, `netBit for ${id}`);
     }
-    const bits = ALL_ABILITY_IDS.map((id) => ABILITY_REGISTRY[id].netBit);
+    for (const id of ALL_ABILITY_IDS) {
+        if (!(id in expected)) assert.equal(ABILITY_REGISTRY[id].netBit, null, `${id} is local-only (bitfield full)`);
+    }
+    const bits = ALL_ABILITY_IDS.map((id) => ABILITY_REGISTRY[id].netBit).filter((b) => b !== null);
     assert.equal(new Set(bits).size, bits.length, 'netBits must be unique');
     for (const bit of bits) {
         assert.ok(Number.isInteger(bit) && bit >= 0 && bit < MAX_NETWORKED_ABILITY_IDS);

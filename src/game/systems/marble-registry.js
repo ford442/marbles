@@ -9,6 +9,13 @@ import {
 import { shouldUseMarbleProxyLight, LIGHT_OWNER } from '../../lighting-budget.js';
 import { extractMarbleMaterialFields } from './marble-material-fields.js';
 import { getMarblePhysics } from '../../wasm-bridge.js';
+import {
+    getSelectedMarbleId,
+    resolveSpawnRoster,
+    selectMarble,
+    SPAWN_SLOTS,
+} from '../../marbles/selection.js';
+import { mountMarblePicker } from '../../marbles/marble-picker.js';
 
 // Tuned for a musical pitch shift rather than a physically literal speed of sound
 // (marble speeds top out well under this).
@@ -42,19 +49,53 @@ export class MarbleRegistry {
     /** @param {object} game */
     constructor(game) {
         this.game = game;
+        this.picker = mountMarblePicker(this);
     }
 
-    createMarbles(spawnPos) {
+    /** Marble ids this player has been granted (campaign + premium). */
+    getUnlockedMarbleIds() {
+        return this.game.campaignProgress?.getUnlockedMarbles?.() ?? [];
+    }
+
+    /** The persisted player marble, falling back to the default if it is locked. */
+    getSelectedMarbleId() {
+        return getSelectedMarbleId({ catalog: marblesInfo, unlockedIds: this.getUnlockedMarbleIds() });
+    }
+
+    /**
+     * Choose the player marble for the next level. Locked / premium marbles
+     * the player hasn't been granted are refused here, not just in the UI.
+     * @param {string} id
+     */
+    selectMarble(id) {
+        return selectMarble(id, { catalog: marblesInfo, unlockedIds: this.getUnlockedMarbleIds() });
+    }
+
+    /**
+     * Spawn the player's selected marble (index 0) plus the level's `rivals`
+     * (≤ 6 marble ids from the map), in SPAWN_SLOTS around `spawnPos`.
+     * @param {{ x: number, y: number, z: number }} [spawnPos]
+     * @param {{ playerId?: string, rivals?: readonly string[] }} [options]
+     */
+    createMarbles(spawnPos, options = {}) {
         const g = this.game;
         const baseSpawn = spawnPos || { x: 0, y: 8, z: -12 };
+        const level = g.currentLevel ? g.levelLoader?.getLevel?.(g.currentLevel) : undefined;
+        const roster = resolveSpawnRoster({
+            catalog: marblesInfo,
+            playerId: options.playerId ?? this.getSelectedMarbleId(),
+            rivals: options.rivals ?? level?.rivals ?? [],
+        });
 
-        for (const info of marblesInfo) {
+        roster.forEach((info, slotIndex) => {
             const radius = info.radius || 0.5;
             const scale = radius / 0.5;
+            const slot = SPAWN_SLOTS[slotIndex] ?? SPAWN_SLOTS[0];
             const pos = {
-                x: baseSpawn.x + info.offset.x,
-                y: baseSpawn.y + info.offset.y,
-                z: baseSpawn.z + info.offset.z,
+                x: baseSpawn.x + slot.x,
+                // Larger marbles start higher so they don't spawn inside the floor.
+                y: baseSpawn.y + slot.y + Math.max(0, radius - 0.5),
+                z: baseSpawn.z + slot.z,
             };
 
             // CCD: boosted marbles move far enough per step to tunnel thin walls.
@@ -131,7 +172,9 @@ export class MarbleRegistry {
             g.scene.addEntity(entity);
 
             const marbleObj = {
+                id: info.id,
                 name: info.name || `Marble ${g.marbles.length + 1}`,
+                isRival: slotIndex > 0,
                 rigidBody,
                 collider,
                 entity,
@@ -172,11 +215,11 @@ export class MarbleRegistry {
             g.dynamicBodies.add(rigidBody);
             applyMarbleMaterialPreset(marbleObj, g, spawnTier);
             this._applyMarbleMaterialOverrides(marbleObj, info);
-        }
+        });
 
         g.currentMarbleIndex = 0;
         g.playerMarble = g.marbles[0];
-        g.selectedEl.textContent = `Selected: ${g.playerMarble.name}`;
+        if (g.selectedEl && g.playerMarble) g.selectedEl.textContent = `Selected: ${g.playerMarble.name}`;
         this.updateActiveMarbleLight();
     }
 

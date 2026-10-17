@@ -1,3 +1,7 @@
+import {
+    mapToRuntimeLevel, normalizeStampZone, PRIMITIVE_ZONE_TYPES, toVec3Object,
+} from '../levels/map-normalize.js';
+
 /** @typedef {{ x: number, y: number, z: number }} Vec3 */
 /** @typedef {{ type: string, pos: Vec3, size?: Vec3, color?: number[], rotY?: number }} MapZone */
 /** @typedef {import('../types/map.ts').MapDefinition} MapDefinition */
@@ -51,30 +55,12 @@ export function cloneMap(map) {
 }
 
 /**
- * Build runtime level object from a map definition (mirrors AssetRegistry.convertMapToLevel).
+ * Build runtime level object from a map definition (same conversion as
+ * AssetRegistry.convertMapToLevel).
  * @param {MapDefinition} mapDef
  */
 export function mapDefToLevel(mapDef) {
-    return {
-        name: mapDef.name,
-        description: mapDef.description || '',
-        difficulty: mapDef.difficulty,
-        zones: mapDef.zones,
-        spawn: mapDef.spawn,
-        goals: mapDef.goals,
-        checkpoints: mapDef.checkpoints,
-        camera: mapDef.camera || { mode: 'orbit', angle: 0, height: 10, radius: 25 },
-        nightMode: mapDef.nightMode,
-        backgroundColor: mapDef.backgroundColor,
-        environment: mapDef.environment,
-        colorGrade: mapDef.colorGrade,
-        abilities: mapDef.abilities,
-        medals: mapDef.medals,
-        collectiblesTotal: mapDef.collectiblesTotal,
-        chapter: mapDef.chapter,
-        behaviors: mapDef.behaviors,
-        source: 'editor',
-    };
+    return mapToRuntimeLevel(mapDef, 'editor');
 }
 
 /**
@@ -82,6 +68,8 @@ export function mapDefToLevel(mapDef) {
  * @param {MapDefinition} map
  */
 export function syncGoalsFromZones(map) {
+    // A v2 `goal` volume is authored explicitly; goal stamps are then visual only.
+    if (map.goal) return;
     const goalZones = map.zones.filter((z) => z.type === 'goal');
     if (goalZones.length === 0) {
         if (!map.goals?.length) {
@@ -145,6 +133,9 @@ export function recountCollectiblesTotal(map) {
  * @param {import('../types/map.ts').MapZoneDefinition} z
  */
 export function serializeZone(z) {
+    // v2 primitives are closed schemas (additionalProperties: false) holding
+    // only plain data: export them as authored.
+    if (PRIMITIVE_ZONE_TYPES.has(z.type)) return structuredClone(z);
     const zone = { type: z.type, pos: { ...z.pos } };
     if (z.size) zone.size = { ...z.size };
     if (z.color) zone.color = [...z.color];
@@ -179,14 +170,15 @@ export function serializeMap(map) {
         difficulty: map.difficulty,
         zones: map.zones.map(serializeZone),
         spawn: { ...map.spawn },
-        goals: map.goals.map((g) => ({
+        // v2 maps may use a single `goal` volume instead (never both).
+        ...(map.goal ? {} : { goals: (map.goals || []).map((g) => ({
             id: g.id,
             range: {
                 x: [...g.range.x],
                 y: [...g.range.y],
                 z: [...g.range.z],
             },
-        })),
+        })) }),
         camera: { ...map.camera },
     };
     if (map.abilities) out.abilities = structuredClone(map.abilities);
@@ -205,6 +197,12 @@ export function serializeMap(map) {
             } : {}),
         }));
     }
+    if (map.schemaVersion !== undefined) out.schemaVersion = map.schemaVersion;
+    if (map.goal) out.goal = structuredClone(map.goal);
+    if (map.rivals?.length) out.rivals = [...map.rivals];
+    if (map.bounds) out.bounds = structuredClone(map.bounds);
+    if (map.solution) out.solution = structuredClone(map.solution);
+    if (map.goalless) out.goalless = true;
     if (map.chapter) out.chapter = map.chapter;
     if (map.nightMode !== undefined) out.nightMode = map.nightMode;
     if (map.backgroundColor) out.backgroundColor = [...map.backgroundColor];
@@ -230,9 +228,12 @@ export function serializeMapJson(map) {
  */
 export function parseMapJson(json) {
     const data = JSON.parse(json);
-    if (!data.zones || !data.spawn || !data.goals) {
+    if (!data.zones || !data.spawn || !(data.goals || data.goal)) {
         throw new Error('Invalid map: missing zones, spawn, or goals');
     }
+    // The editor works on {x, y, z} objects; v2 files may use [x, y, z] arrays.
+    data.zones = data.zones.map(normalizeStampZone);
+    data.spawn = toVec3Object(data.spawn) ?? data.spawn;
     return data;
 }
 

@@ -42,20 +42,20 @@ export const ABILITY_CATEGORIES: Record<string, AbilityCategory> = {
 // Ability metadata for display
 export const ABILITY_METADATA: Record<string, AbilityMeta> = {
     boost: { icon: '⚡', key: 'Shift', name: 'Boost', color: '#f0f' },
-    dash: { icon: '💨', key: 'V', name: 'Dash', color: '#ff8c00' },
+    dash: { icon: '💨', key: 'Shift', name: 'Dash', color: '#ff8c00' },
     hover: { icon: '🛸', key: 'H', name: 'Hover', color: '#00ffcc' },
     jetpack: { icon: '🚀', key: 'J', name: 'Jetpack', color: '#ffaa00' },
     teleport: { icon: '✦', key: 'P', name: 'Teleport', color: '#cc00ff' },
     blink: { icon: '👁', key: 'B', name: 'Blink', color: '#ffcc00' },
     gravitypulse: { icon: '◉', key: 'G', name: 'Gravity Pulse', color: '#ffff00' },
-    glider: { icon: '🪂', key: 'N/A', name: 'Glider', color: '#00ff88' },
+    glider: { icon: '🪂', key: '7', name: 'Glider', color: '#00ff88' },
     bomb: { icon: '💣', key: 'X', name: 'Bomb', color: '#ff4500' },
-    missile: { icon: '🚀', key: 'L', name: 'Missile', color: '#ff8800' },
+    missile: { icon: '🚀', key: 'V', name: 'Missile', color: '#ff8800' },
     emp: { icon: '⚡', key: 'K', name: 'EMP', color: '#00ccff' },
-    groundslam: { icon: '💥', key: 'Digit0', name: 'Ground Slam', color: '#cd853f' },
+    groundslam: { icon: '💥', key: '0', name: 'Ground Slam', color: '#cd853f' },
     blackhole: { icon: '⚫', key: '9', name: 'Black Hole', color: '#aa00ff' },
     vortex: { icon: '🌀', key: 'Y', name: 'Vortex', color: '#ff00ff' },
-    timestop: { icon: '⏱', key: 'N/A', name: 'Time Stop', color: '#ffffff' },
+    timestop: { icon: '⏱', key: '8', name: 'Time Stop', color: '#ffffff' },
     rewind: { icon: '⏪', key: 'T', name: 'Rewind', color: '#ff4500' },
     holo: { icon: '👻', key: '`', name: 'Holo', color: '#00ffff' },
     ice: { icon: '❄', key: 'G', name: 'Frost Bridge', color: '#00ffff' },
@@ -63,15 +63,20 @@ export const ABILITY_METADATA: Record<string, AbilityMeta> = {
     flip: { icon: '↕', key: 'U', name: 'Gravity Flip', color: '#ff00ff' },
     size: { icon: '⬛', key: 'I', name: 'Size Shift', color: '#ff8800' },
     violet: { icon: '💜', key: 'O', name: 'Violet Light', color: '#ee82ee' },
-    build: { icon: '🔨', key: 'N/A', name: 'Build', color: '#32cd32' },
-    magnet: { icon: '🧲', key: 'E/Q', name: 'Magnet', color: '#00ffff' },
+    build: { icon: '🔨', key: '1/2/3', name: 'Build', color: '#32cd32' },
+    magnet: { icon: '🧲', key: 'E/-', name: 'Magnet', color: '#00ffff' },
     focus: { icon: '🎯', key: 'F', name: 'Focus', color: '#7b00ff' },
-    chameleon: { icon: '🦎', key: 'K', name: 'Chameleon', color: '#00ff00' }
+    chameleon: { icon: '🦎', key: '=', name: 'Chameleon', color: '#00ff00' }
 };
 
-/** Ability registry surface the HUD reads (see AbilitySystem). */
+/**
+ * Ability registry surface the HUD reads (see AbilitySystem). Icons are keyed
+ * by HUD icon id, which the registry maps to abilities (`hudIconId`).
+ */
 export interface HudAbilitySource {
     isEnabled(id: string): boolean;
+    isHudIconEnabled(iconId: string): boolean;
+    hudKeyLabel(iconId: string): string | undefined;
     tickHudIcons(hud: HUDManager, now: number): void;
 }
 
@@ -200,6 +205,11 @@ export class HUDManager<Host extends HudHost = HudHost> {
         }
     }
 
+    /** Current binding label from the registry, else the static metadata key. */
+    keyLabel(abilityId: string, meta: AbilityMeta): string {
+        return this.game.abilitySystem?.hudKeyLabel(abilityId) ?? meta.key;
+    }
+
     /**
      * Create a circular ability icon element
      */
@@ -212,7 +222,7 @@ export class HUDManager<Host extends HudHost = HudHost> {
         el.innerHTML = `
             ${meta.icon}
             <div class="ability-cooldown-overlay"></div>
-            <span class="ability-key">${meta.key}</span>
+            <span class="ability-key">${this.keyLabel(abilityId, meta)}</span>
             <div class="ability-tooltip">${meta.name}</div>
         `;
         el.style.display = 'none'; // Hidden by default
@@ -231,7 +241,7 @@ export class HUDManager<Host extends HudHost = HudHost> {
         el.innerHTML = `
             ${meta.icon}
             <div class="ability-cooldown-overlay"></div>
-            <span class="ability-key">${meta.key}</span>
+            <span class="ability-key">${this.keyLabel(abilityId, meta)}</span>
             <div class="ability-tooltip">${meta.name}</div>
         `;
         return el;
@@ -302,7 +312,8 @@ export class HUDManager<Host extends HudHost = HudHost> {
         const el = this.abilityElements.get(abilityId);
         if (!el) return;
 
-        if (this.game.abilitySystem && !this.game.abilitySystem.isEnabled(abilityId)) {
+        // Hidden when the level's ability mask disables every ability behind it.
+        if (this.game.abilitySystem && !this.game.abilitySystem.isHudIconEnabled(abilityId)) {
             el.style.display = 'none';
             this.abilityVisible.set(abilityId, false);
             return;

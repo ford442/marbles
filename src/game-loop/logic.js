@@ -153,7 +153,8 @@ export class GameLoopLogic {
         }
 
         // Focus Mechanic Logic
-        if (this.keys['KeyF'] && this.focusEnergy > 0) {
+        // Focus is the registry's `focus` entry (poll trigger; maps can disable it).
+        if (this.abilitySystem?.isHeld('focus') && this.focusEnergy > 0) {
             if (!this.focusActive && this.hudManager) {
                 this.hudManager.markAbilityUsed('focus')
             }

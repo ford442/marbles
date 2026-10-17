@@ -614,6 +614,7 @@ export class PhysicsWorld {
         g.dynamicObjects.push({
             rigidBody: body,
             entity,
+            matInstance,
             halfExtents,
         });
         g.dynamicBodies.add(body);
@@ -664,6 +665,7 @@ export class PhysicsWorld {
         g.rotatingPlatforms.push({
             rigidBody: body,
             entity,
+            matInstance,
             halfExtents,
             axis,
             speed,

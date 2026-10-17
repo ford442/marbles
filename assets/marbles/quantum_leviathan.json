@@ -1,0 +1,29 @@
+{
+  "id": "quantum_leviathan",
+  "name": "Quantum Leviathan",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0,
+      "g": 1,
+      "b": 0.5
+    },
+    "clearCoat": 1,
+    "clearCoatRoughness": 0,
+    "materialType": "glass",
+    "emissive": {
+      "r": 0,
+      "g": 1,
+      "b": 0.5,
+      "intensity": 15
+    }
+  },
+  "physics": {
+    "radius": 1.5,
+    "density": 300,
+    "friction": 0,
+    "restitution": 1
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "id": "purple_heavy",
+  "name": "Purple Heavy",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0.6,
+      "g": 0.1,
+      "b": 0.8
+    },
+    "roughness": 0.3,
+    "materialType": "stoneVein",
+    "shader": {
+      "bumpScale": 0.14,
+      "bumpFrequency": 22
+    }
+  },
+  "physics": {
+    "radius": 0.75,
+    "restitution": 1
+  }
+}

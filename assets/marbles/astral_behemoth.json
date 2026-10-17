@@ -1,0 +1,29 @@
+{
+  "id": "astral_behemoth",
+  "name": "Astral Behemoth",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 1,
+      "g": 0.8,
+      "b": 0.2
+    },
+    "clearCoat": 1,
+    "clearCoatRoughness": 0,
+    "materialType": "glass",
+    "emissive": {
+      "r": 1,
+      "g": 0.8,
+      "b": 0.2,
+      "intensity": 25
+    }
+  },
+  "physics": {
+    "radius": 1.8,
+    "density": 400,
+    "friction": 0,
+    "restitution": 1
+  }
+}
