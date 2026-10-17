@@ -12,7 +12,9 @@ Structured chapter-based level selection with localStorage persistence for times
 | Extreme | Hard hazards | 3 gold medals in Neon |
 | Expert | Master routes | 3 gold medals in Extreme |
 
-Levels are auto-assigned to chapters via `src/levels/campaign.js` heuristics, with explicit overrides for manifest JSON maps.
+Every shipped manifest map is listed, in play order, in exactly one chapter's `levels` array in `CAMPAIGN_CHAPTERS` (`src/levels/campaign.js`); `tests/test_campaign_chapters.js` enforces it. Unlisted levels (dev levels, workshop maps) fall back to the map's `chapter` field, then keyword/difficulty heuristics, and are appended after the listed ones.
+
+**In-chapter gating:** inside an unlocked chapter, the listed level at index *i* opens after *i* − `LEVEL_UNLOCK_SLACK` (2) completions in that chapter. The first three levels are open, and a stuck player can still go two levels past the one they're stuck on. Free play bypasses chapter and level gating.
 
 ## Save model (`localStorage` key: `marbles3d_campaign`)
 

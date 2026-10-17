@@ -1,0 +1,30 @@
+{
+  "id": "astro_smasher",
+  "name": "Astro Smasher",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 1,
+      "g": 0.2,
+      "b": 0.2
+    },
+    "clearCoat": 1,
+    "clearCoatRoughness": 0.05,
+    "thickness": 1.2,
+    "materialType": "glass",
+    "emissive": {
+      "r": 1,
+      "g": 0.2,
+      "b": 0.2,
+      "intensity": 35
+    }
+  },
+  "physics": {
+    "radius": 1.5,
+    "density": 5000,
+    "friction": 0,
+    "restitution": 1
+  }
+}

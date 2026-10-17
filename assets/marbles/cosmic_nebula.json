@@ -5,20 +5,35 @@
   "version": "5.0.0",
   "author": "Marble Game Team - Visual Overhaul",
   "rarity": "legendary",
+  "unlock": "campaign",
   "appearance": {
-    "color": {"r": 0.3, "g": 0.1, "b": 0.5},
+    "color": {
+      "r": 0.3,
+      "g": 0.1,
+      "b": 0.5
+    },
     "roughness": 0.15,
-    "metallic": 0.0,
-    "emissive": {"r": 0.7, "g": 0.2, "b": 1.0, "intensity": 2.5},
+    "metallic": 0,
+    "emissive": {
+      "r": 0.7,
+      "g": 0.2,
+      "b": 1,
+      "intensity": 2.5
+    },
     "clearCoat": 0.5,
     "clearCoatRoughness": 0.1,
-    "rimLightColor": {"r": 0.8, "g": 0.3, "b": 1.0},
-    "rimLightIntensity": 2.0,
+    "rimLightColor": {
+      "r": 0.8,
+      "g": 0.3,
+      "b": 1
+    },
+    "rimLightIntensity": 2,
     "subsurfaceScattering": 0.5,
     "reflectance": 0.4,
     "ambientOcclusion": 0.3,
     "texture": "procedural_starfield",
-    "particleEffect": "stellar_wind"
+    "particleEffect": "stellar_wind",
+    "materialType": "quantumCrystal"
   },
   "physics": {
     "radius": 0.65,
@@ -43,18 +58,43 @@
       "Agent 3: Holographic iridescence, 5000 volumetric stars, gravitational lensing, supernovas",
       "Agent 4: 4 particle systems, lens flare, volumetric fog, Supernova Burst ability"
     ],
-    "effects": ["holographic_shimmer", "gravitational_lensing", "plasma_dynamics", "supernova_events", "dimensional_refraction"],
+    "effects": [
+      "holographic_shimmer",
+      "gravitational_lensing",
+      "plasma_dynamics",
+      "supernova_events",
+      "dimensional_refraction"
+    ],
     "shader_uniforms": {
       "uIridescenceScale": 1.2,
       "uVolumeDensity": 0.4,
       "uLensStrength": 0.3,
       "uChromaticSeparation": 0.03
     },
-    "particle_systems": ["StellarWind", "SupernovaBoost", "NebulaImpact", "GravitationalWake"],
+    "particle_systems": [
+      "StellarWind",
+      "SupernovaBoost",
+      "NebulaImpact",
+      "GravitationalWake"
+    ],
     "post_process": {
-      "bloom": {"intensity": 3.0, "threshold": 0.25, "starburst": true},
-      "lensFlare": {"intensity": 0.6, "ghostCount": 6},
-      "volumetricFog": {"density": 0.15, "color": [0.2, 0.1, 0.4]},
+      "bloom": {
+        "intensity": 3,
+        "threshold": 0.25,
+        "starburst": true
+      },
+      "lensFlare": {
+        "intensity": 0.6,
+        "ghostCount": 6
+      },
+      "volumetricFog": {
+        "density": 0.15,
+        "color": [
+          0.2,
+          0.1,
+          0.4
+        ]
+      },
       "chromaticAberration": 0.04,
       "motionBlur": 0.5
     },
@@ -67,7 +107,10 @@
     "gameplay_modifiers": {
       "space_tracks_speed_boost": 0.15,
       "zero_g_bonus": 0.2,
-      "gravity_well": {"attraction": 0.05, "range": 5.0}
+      "gravity_well": {
+        "attraction": 0.05,
+        "range": 5
+      }
     },
     "special_ability": {
       "name": "Supernova Burst",
@@ -75,6 +118,11 @@
       "effect": "temporary_speed_boost_and_particle_shield",
       "duration": 5
     },
-    "lod_variants": ["high_stellar", "medium_stellar", "low_stellar", "impostor"]
+    "lod_variants": [
+      "high_stellar",
+      "medium_stellar",
+      "low_stellar",
+      "impostor"
+    ]
   }
 }

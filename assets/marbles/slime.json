@@ -1,0 +1,23 @@
+{
+  "id": "slime",
+  "name": "Slime",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0.4,
+      "g": 0.8,
+      "b": 0
+    },
+    "roughness": 0.8
+  },
+  "physics": {
+    "radius": 0.5,
+    "density": 1.5,
+    "friction": 2,
+    "restitution": 0,
+    "linearDamping": 0.5,
+    "angularDamping": 0.5
+  }
+}

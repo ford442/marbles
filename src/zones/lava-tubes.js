@@ -1,4 +1,3 @@
-import { quatFromEuler } from '../math.ts';
 import { createZoneLight } from './methods/visuals.js';
 import { decorateLavaTubes } from './methods/decorations.js';
 

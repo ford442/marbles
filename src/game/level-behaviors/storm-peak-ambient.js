@@ -7,6 +7,7 @@ import { registerBehavior } from './registry.js';
 /** @type {Array<{ remove?: () => void }>} */
 let ambientHandles = [];
 
+/** Legacy storm_peak stamp offset; the v2 map (assets/maps/storm_peak.json) builds at the origin. */
 function findStormPeakOffset(level) {
   const zone = level?.zones?.find((z) => z.type === 'storm_peak');
   const pos = zone?.pos || { x: 0, y: 0, z: 0 };

@@ -1,0 +1,29 @@
+{
+  "id": "celestial_juggernaut",
+  "name": "Celestial Juggernaut",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0.9,
+      "g": 1,
+      "b": 0.8
+    },
+    "clearCoat": 1,
+    "clearCoatRoughness": 0,
+    "materialType": "glass",
+    "emissive": {
+      "r": 0.9,
+      "g": 1,
+      "b": 0.8,
+      "intensity": 9.5
+    }
+  },
+  "physics": {
+    "radius": 0.95,
+    "density": 150,
+    "friction": 0,
+    "restitution": 1
+  }
+}

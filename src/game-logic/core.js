@@ -298,6 +298,7 @@ export class GameLogicCore {
                 m.scoredGoals.clear()
                 if (m === this.playerMarble) {
                     this._rewindHead = 0; this._rewindCount = 0
+                    this.resetPlayerAbilityState()
                 }
                 continue
             }

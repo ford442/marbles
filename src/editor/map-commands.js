@@ -6,6 +6,7 @@ import {
     syncCheckpointsFromZones,
     syncGoalsFromZones,
 } from './map-document.js';
+import { PRIMITIVE_ZONE_TYPES } from '../levels/map-normalize.js';
 
 /**
  * @param {import('../types/map.ts').MapDefinition} map
@@ -13,6 +14,8 @@ import {
  * @returns {number}
  */
 export function placeZone(map, zone) {
+    // v2 primitives need a v2 map (map-rules.js semanticChecks).
+    if (PRIMITIVE_ZONE_TYPES.has(zone.type)) map.schemaVersion = 2;
     map.zones.push(zone);
     const index = map.zones.length - 1;
     if (zone.type === 'goal') syncGoalsFromZones(map);
@@ -42,11 +45,13 @@ export function deleteZonesAt(map, indices) {
  */
 export function moveZonesAt(map, indices, delta) {
     for (const i of indices) {
-        const zone = map.zones[i];
+        const zone = /** @type {any} */ (map.zones[i]);
         if (!zone) continue;
-        if (delta.x) zone.pos.x += delta.x;
-        if (delta.y) zone.pos.y += delta.y;
-        if (delta.z) zone.pos.z += delta.z;
+        // v2 primitives place by pos, from/to (ramp) or path (mover); vec3s
+        // may be [x, y, z] arrays or {x, y, z} objects.
+        for (const v of [zone.pos, zone.from, zone.to, ...(zone.path || [])]) {
+            if (v) translateVec3(v, delta);
+        }
     }
     const movedGoal = indices.some((i) => map.zones[i]?.type === 'goal');
     const movedCheckpoint = indices.some((i) => map.zones[i]?.type === 'checkpoint');
@@ -61,10 +66,49 @@ export function moveZonesAt(map, indices, delta) {
  */
 export function rotateZonesAt(map, indices, deltaRad) {
     for (const i of indices) {
-        const zone = map.zones[i];
+        const zone = /** @type {any} */ (map.zones[i]);
         if (!zone) continue;
-        zone.rotY = ((zone.rotY || 0) + deltaRad) % (Math.PI * 2);
+        if (zone.type === 'ramp') {
+            // A ramp's orientation is its from → to line: swing `to` about `from`.
+            rotateAboutY(zone.to, zone.from, deltaRad);
+        } else if (PRIMITIVE_ZONE_TYPES.has(zone.type)) {
+            const yawDeg = ((zone.rot?.yawDeg || 0) + (deltaRad * 180) / Math.PI) % 360;
+            zone.rot = { ...zone.rot, yawDeg: Math.round(yawDeg * 1000) / 1000 };
+        } else {
+            zone.rotY = ((zone.rotY || 0) + deltaRad) % (Math.PI * 2);
+        }
     }
+}
+
+/**
+ * Where a zone sits for picking / the inspector: `pos`, a ramp's `from`, or a
+ * mover's first path point, as {x, y, z}.
+ * @param {any} zone
+ * @returns {{ x: number, y: number, z: number }}
+ */
+export function zoneAnchor(zone) {
+    const v = zone?.pos ?? zone?.from ?? zone?.path?.[0];
+    if (Array.isArray(v)) return { x: v[0], y: v[1], z: v[2] };
+    return v ? { x: v.x, y: v.y, z: v.z } : { x: 0, y: 0, z: 0 };
+}
+
+/** @param {any} v @param {{ x?: number, y?: number, z?: number }} d */
+function translateVec3(v, d) {
+    const keys = Array.isArray(v) ? [0, 1, 2] : ['x', 'y', 'z'];
+    v[keys[0]] += d.x || 0;
+    v[keys[1]] += d.y || 0;
+    v[keys[2]] += d.z || 0;
+}
+
+/** Rotate point `v` about the vertical axis through `c` (yaw: +Z toward +X). @param {any} v @param {any} c @param {number} rad */
+function rotateAboutY(v, c, rad) {
+    const [xk, zk] = Array.isArray(v) ? [0, 2] : ['x', 'z'];
+    const cx = Array.isArray(c) ? c[0] : c.x;
+    const cz = Array.isArray(c) ? c[2] : c.z;
+    const dx = v[xk] - cx;
+    const dz = v[zk] - cz;
+    v[xk] = cx + dx * Math.cos(rad) + dz * Math.sin(rad);
+    v[zk] = cz - dx * Math.sin(rad) + dz * Math.cos(rad);
 }
 
 /**

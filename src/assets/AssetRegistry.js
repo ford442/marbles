@@ -2,7 +2,10 @@
  * Central loader for JSON game assets declared in assets/manifest.json.
  */
 
-const REQUIRED_MAP_FIELDS = ['id', 'name', 'version', 'zones', 'spawn', 'goals'];
+import { mapToRuntimeLevel, structuralErrors } from '../levels/map-normalize.js';
+import { marbleDefToGameInfo } from '../marbles/catalog-format.js';
+
+const REQUIRED_MAP_FIELDS = ['id', 'name', 'version', 'zones', 'spawn'];
 const REQUIRED_MARBLE_FIELDS = ['id', 'name', 'version', 'appearance', 'physics'];
 const REQUIRED_SOUND_FIELDS = ['id', 'name', 'version', 'files'];
 
@@ -82,6 +85,14 @@ export class AssetRegistry {
         continue;
       }
 
+      if (label === 'map') {
+        const problems = structuralErrors(asset);
+        if (problems.length > 0) {
+          this.loadErrors.push(`map "${entryId}": ${problems.join('; ')}`);
+          continue;
+        }
+      }
+
       const id = asset.id || entryId;
       store.set(id, { ...asset, _manifestMeta: entry });
       console.log(`[AssetRegistry] Loaded ${label}: ${id}`);
@@ -147,64 +158,12 @@ export class AssetRegistry {
   }
 
   convertMapToLevel(mapDef) {
-    return {
-      name: mapDef.name,
-      description: mapDef.description || '',
-      difficulty: mapDef.difficulty,
-      zones: mapDef.zones,
-      spawn: mapDef.spawn,
-      goals: mapDef.goals,
-      checkpoints: mapDef.checkpoints,
-      camera: mapDef.camera || { mode: 'orbit', angle: 0, height: 10, radius: 25 },
-      nightMode: mapDef.nightMode,
-      backgroundColor: mapDef.backgroundColor,
-      environment: mapDef.environment,
-      colorGrade: mapDef.colorGrade,
-      abilities: mapDef.abilities,
-      medals: mapDef.medals,
-      collectiblesTotal: mapDef.collectiblesTotal,
-      chapter: mapDef.chapter,
-      behaviors: mapDef.behaviors,
-      source: 'json',
-    };
+    return mapToRuntimeLevel(mapDef, 'json');
   }
 
+  /** Same conversion the build-time generator uses (src/marbles/catalog-format.js). */
   convertMarbleToGameFormat(marbleDef) {
-    const appearance = marbleDef.appearance || {};
-    const physics = marbleDef.physics || {};
-    const color = appearance.color || { r: 0.5, g: 0.5, b: 0.5 };
-    const emissive = appearance.emissive;
-
-    const info = {
-      id: marbleDef.id,
-      name: marbleDef.name,
-      color: [color.r, color.g, color.b],
-      offset: { x: 0, y: 0, z: 0 },
-      radius: physics.radius ?? 0.5,
-      friction: physics.friction,
-      restitution: physics.restitution,
-      density: physics.density,
-      roughness: appearance.roughness,
-      metallic: appearance.metallic,
-      linearDamping: physics.linearDamping,
-      angularDamping: physics.angularDamping,
-      gravityScale: physics.gravityScale,
-      clearCoat: appearance.clearCoat,
-      clearCoatRoughness: appearance.clearCoatRoughness,
-      source: 'json',
-    };
-
-    if (emissive) {
-      info.emissive = true;
-      info.lightColor = [emissive.r, emissive.g, emissive.b];
-      info.lightIntensity = (emissive.intensity ?? 1) * 10000;
-    }
-
-    if (appearance.materialType) {
-      info.materialType = appearance.materialType;
-    }
-
-    return info;
+    return { ...marbleDefToGameInfo(marbleDef), source: 'json' };
   }
 }
 

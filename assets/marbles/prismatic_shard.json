@@ -1,0 +1,28 @@
+{
+  "id": "prismatic_shard",
+  "name": "Prismatic Shard",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 1,
+      "g": 1,
+      "b": 1
+    },
+    "geometry": "cube",
+    "rainbow": true,
+    "emissive": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "intensity": 3.5
+    }
+  },
+  "physics": {
+    "radius": 0.5,
+    "density": 1.5,
+    "restitution": 0.8,
+    "gravityScale": 0.5
+  }
+}
