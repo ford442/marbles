@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { visualizer } from 'rollup-plugin-visualizer';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -88,7 +89,16 @@ export default defineConfig({
     exclude: ['@dimforge/rapier3d-compat', 'filament']
   },
   assetsInclude: ['**/*.wasm', '**/*.filmat', '**/*.glb', '**/*.gltf', '**/*.wgsl'],
-  plugins: [copyAssetsPlugin()],
+  plugins: [
+    copyAssetsPlugin(),
+    // BUNDLE_STATS=1 npx vite build → dist/bundle-stats.json (module → chunk map)
+    // consumed by scripts/check-bundle-budget.mjs; BUNDLE_STATS=html for a treemap.
+    ...(process.env.BUNDLE_STATS ? [visualizer({
+      filename: process.env.BUNDLE_STATS === 'html' ? 'dist/bundle-stats.html' : 'dist/bundle-stats.json',
+      template: process.env.BUNDLE_STATS === 'html' ? 'treemap' : 'raw-data',
+      gzipSize: true,
+    })] : []),
+  ],
   build: {
     rollupOptions: {
       // marble_physics.js is loaded dynamically by src/wasm-bridge.js when the

@@ -280,6 +280,9 @@ export interface InputState {
     stompOldGravity: number;
     stompOldColor: number[] | null;
     stompReleaseTime: number;
+    /** Set on stomp release; gates the next charge (`stompCooldown` ms). */
+    lastStompTime: number;
+    stompCooldown: number;
 }
 
 /** Score, combo, and HUD DOM references. */

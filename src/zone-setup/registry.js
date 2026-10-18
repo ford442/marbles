@@ -1,17 +1,25 @@
 /**
- * Single zone-type registry. Maps levels.js `zone.type` strings to setup handlers.
+ * Single zone-type registry. Maps level `zone.type` strings to setup handlers.
  *
- * Built-in handlers call methods installed from the closed zones/methods maps.
- * Factory handlers delegate to src/zones/<name>.js builders.
+ * - Built-in stamps call methods installed from the closed zones/methods maps.
+ * - Factory stamps live in src/zones/<file>.js and are loaded **lazily**: the
+ *   main chunk only carries this table, and a level awaits just the modules
+ *   its zones reference (see preloadZoneModules).
+ * - Level Format v2 primitives (box/ramp/mover/spinner/trigger) go through the
+ *   single typed builder in primitives.ts.
  */
-import * as zones from '../zones/index.js';
 import { createModelZone } from '../assets/gltf-track-loader.js';
+import { buildPrimitive, isPrimitiveType, PRIMITIVE_TYPES, toVec3 } from './primitives.ts';
+import { gamePrimitiveHost } from './primitive-host.js';
+
+/** @param {unknown} v */
+const optionalVec3 = (v) => (v ? toVec3(/** @type {any} */ (v)) : undefined);
 
 /** @typedef {(game: object, zone: object, offset: {x:number,y:number,z:number}) => void | Promise<void>} ZoneHandler */
 
 /** @type {Record<string, ZoneHandler>} */
 const BUILTIN_ZONE_HANDLERS = {
-    floor: (game, zone, offset) => game.createFloorZone(offset, zone.size, zone.rotY, zone.color),
+    floor: (game, zone, offset) => game.createFloorZone(offset, optionalVec3(zone.size), zone.rotY, zone.color),
     track: (game, _zone, offset) => game.createTrackZone(offset),
     landing: (game, _zone, offset) => game.createLandingZone(offset),
     jump: (game, _zone, offset) => game.createJumpZone(offset),
@@ -29,7 +37,7 @@ const BUILTIN_ZONE_HANDLERS = {
     block: (game, _zone, offset) => game.createBlockZone(offset),
     bowling: (game, _zone, offset) => game.createBowlingZone(offset),
     castle: (game, _zone, offset) => game.createCastleZone(offset),
-    checkpoint: (game, zone, offset) => game.createCheckpointZone(offset, zone.size),
+    checkpoint: (game, zone, offset) => game.createCheckpointZone(offset, optionalVec3(zone.size)),
     collectible: (game, zone, offset) => game.createCollectiblePickup(offset, zone.collectible),
     grapple_anchor: (game, zone, offset) => game.createGrappleAnchorZone(offset, zone.grappleAnchor),
     domino: (game, _zone, offset) => game.createDominoZone(offset),
@@ -106,21 +114,127 @@ const FACTORY_ZONE_HANDLERS = {
     neon_pulse_matrix: (game, _zone, offset) => zones.createNeonPulseMatrixZone(game, offset),
     quantum_core: (game, _zone, offset) => zones.createQuantumCoreZone(game, offset),
     neon_hologram: (game, _zone, offset) => zones.createNeonHologramZone(game, offset),
+/**
+ * Factory stamp type → [module basename in src/zones/, exported builder].
+ * The builder is called as `builder(game, offset)`.
+ * @type {Record<string, readonly [string, string]>}
+ */
+export const FACTORY_ZONES = {
+    pinwheel_alley: ['pinwheel-alley', 'createPinwheelAlleyZone'],
+    plinko: ['plinko-zone', 'createPlinkoZone'],
+    plinko_obstacle: ['plinko-obstacle-zone', 'createPlinkoObstacleZone'],
+    space_station: ['space-station', 'createSpaceStationZone'],
+    skate_park: ['skate-park', 'createSkateParkZone'],
+    helix: ['helix-zone', 'createHelixZone'],
+    pinball: ['pinball-zone', 'createPinballZone'],
+    clockwork: ['clockwork-zone', 'createClockworkZone'],
+    bumper_arena: ['bumper-arena', 'createBumperArenaZone'],
+    canyon_run: ['canyon-run', 'createCanyonRunZone'],
+    volcano: ['volcano-zone', 'createVolcanoZone'],
+    mushroom_bounce: ['mushroom-bounce-zone', 'createMushroomBounceZone'],
+    wind_tunnel: ['wind-tunnel-zone', 'createWindTunnelZone'],
+    cyber_track: ['cyber-track-zone', 'createCyberTrackZone'],
+    water_slide: ['water-slide-zone', 'createWaterSlideZone'],
+    grapple_course: ['grapple-course-zone', 'createGrappleCourseZone'],
+    ice_cave: ['ice-cave-zone', 'createIceCaveZone'],
+    antigravity: ['antigravity-zone', 'createAntigravityZone'],
+    trampoline_park: ['trampoline-park', 'createTrampolineParkZone'],
+    space_elevator: ['space-elevator', 'createSpaceElevatorZone'],
+    mystic_forest: ['mystic-forest', 'createMysticForestZone'],
+    cloud_city: ['cloud-city', 'createCloudCityZone'],
+    desert_ruins: ['desert-ruins', 'createDesertRuinsZone'],
+    neon_grid: ['neon-grid', 'createNeonGridZone'],
+    ice_bridges: ['ice-bridges', 'createIceBridgesZone'],
+    jungle_run: ['jungle-run', 'createJungleRunZone'],
+    lava_tubes: ['lava-tubes', 'createLavaTubesZone'],
+    quantum_leap: ['quantum-leap', 'createQuantumLeapZone'],
+    frostbite_cavern: ['frostbite-cavern', 'createFrostbiteCavernZone'],
+    magnetic_canyon: ['magnetic-canyon', 'createMagneticCanyonZone'],
+    magnetic_cavern: ['magnetic-cavern', 'createMagneticCavernZone'],
+    gravity_well: ['gravity-well', 'createGravityWellZone'],
+    cyber_ice_track: ['cyber-ice-track', 'createCyberIceTrackZone'],
+    neon_plunge: ['neon-plunge', 'createNeonPlungeZone'],
+    prismatic_speedway: ['prismatic-speedway', 'createPrismaticSpeedwayZone'],
+    neon_alley: ['neon-alley', 'createNeonAlleyZone'],
+    chrono_canyon: ['chrono-canyon', 'createChronoCanyonZone'],
+    synthwave_surge: ['synthwave-surge', 'createSynthwaveSurgeZone'],
+    meteorite_hollow: ['meteorite-hollow', 'createMeteoriteHollowZone'],
+    radiant_reactor: ['radiant-reactor', 'createRadiantReactorZone'],
+    plasma_pipeline: ['plasma-pipeline', 'createPlasmaPipelineZone'],
+    starlight_ascent: ['starlight-ascent', 'createStarlightAscentZone'],
+    zen_garden: ['zen-garden', 'createZenGardenZone'],
+    toxic_swamp: ['toxic-swamp', 'createToxicSwampZone'],
+    galaxy_spiral: ['galaxy-spiral', 'createGalaxySpiralZone'],
+    glacial_chasm: ['glacial-chasm', 'createGlacialChasmZone'],
+    neon_pulse_grid: ['neon-pulse-grid', 'createNeonPulseGridZone'],
+    nebula_nexus: ['nebula-nexus', 'createNebulaNexusZone'],
+    quantum_tunnel: ['quantum-tunnel', 'createQuantumTunnelZone'],
+    void_station: ['void-station', 'createVoidStationZone'],
+    neon_pipeline: ['neon-pipeline', 'createNeonPipelineZone'],
 };
+
+/**
+ * Lazy module loaders, one chunk per zone file. A template-literal import
+ * (rather than import.meta.glob) so the same table works under Vite and in
+ * Node (headless level harness, scripts).
+ * @type {Record<string, () => Promise<Record<string, unknown>>>}
+ */
+export const ZONE_LOADERS = Object.fromEntries(
+    Object.entries(FACTORY_ZONES).map(([type, [file]]) => [type, () => import(`../zones/${file}.js`)]),
+);
+
+/** @param {string} type */
+async function loadFactoryBuilder(type) {
+    const [, exportName] = FACTORY_ZONES[type];
+    const mod = await ZONE_LOADERS[type]();
+    const builder = mod[exportName];
+    if (typeof builder !== 'function') {
+        throw new Error(`[ZONE] ${type}: src/zones/${FACTORY_ZONES[type][0]}.js does not export ${exportName}`);
+    }
+    return /** @type {(game: object, offset: {x:number,y:number,z:number}) => void | Promise<void>} */ (builder);
+}
+
+/** @type {Record<string, ZoneHandler>} */
+const FACTORY_ZONE_HANDLERS = Object.fromEntries(
+    Object.keys(FACTORY_ZONES).map((type) => [
+        type,
+        /** @type {ZoneHandler} */ (async (game, _zone, offset) => (await loadFactoryBuilder(type))(game, offset)),
+    ]),
+);
+
+/** @type {Record<string, ZoneHandler>} */
+const PRIMITIVE_ZONE_HANDLERS = Object.fromEntries(
+    PRIMITIVE_TYPES.map((type) => [
+        type,
+        /** @type {ZoneHandler} */ ((game, zone) => { buildPrimitive(gamePrimitiveHost(game), /** @type {any} */ (zone)); }),
+    ]),
+);
 
 /** @type {Record<string, ZoneHandler>} */
 export const ZONE_HANDLERS = {
     ...BUILTIN_ZONE_HANDLERS,
     ...FACTORY_ZONE_HANDLERS,
+    ...PRIMITIVE_ZONE_HANDLERS,
 };
+
+/** Every registered zone.type, sorted (zone-handlers.json is generated from this). */
+export const ZONE_TYPES = Object.keys(ZONE_HANDLERS).sort();
+
+/**
+ * Await the lazy modules for every factory stamp a level references, in
+ * parallel, before zones are built in order.
+ * @param {Array<{ type?: string }>} zones
+ */
+export async function preloadZoneModules(zones) {
+    const types = new Set(zones.map((z) => z?.type).filter((t) => t && t in ZONE_LOADERS));
+    await Promise.all([...types].map((t) => ZONE_LOADERS[/** @type {string} */ (t)]()));
+}
 
 /**
  * @param {object} game
- * @param {{ type?: string, pos?: { x?: number, y?: number, z?: number }, [key: string]: unknown }} zone
+ * @param {{ type?: string, pos?: unknown, [key: string]: unknown }} zone
  */
 export async function dispatchZone(game, zone) {
-    const pos = zone.pos || { x: 0, y: 0, z: 0 };
-    const offset = { x: pos.x, y: pos.y, z: pos.z };
     const handler = ZONE_HANDLERS[zone.type ?? ''];
 
     if (!handler) {
@@ -128,5 +242,7 @@ export async function dispatchZone(game, zone) {
         return;
     }
 
+    // v2 maps may write positions as [x, y, z]; stamps always get {x, y, z}.
+    const offset = isPrimitiveType(zone.type) ? { x: 0, y: 0, z: 0 } : toVec3(/** @type {any} */ (zone.pos));
     await handler(game, zone, offset);
 }

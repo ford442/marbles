@@ -36,5 +36,7 @@ export function createInputState() {
         stompOldGravity: 1.0,
         stompOldColor: null,
         stompReleaseTime: 0,
+        lastStompTime: 0,
+        stompCooldown: 2000,
     };
 }

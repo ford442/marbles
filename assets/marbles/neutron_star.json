@@ -1,0 +1,28 @@
+{
+  "id": "neutron_star",
+  "name": "Neutron Star",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0.9,
+      "g": 0.9,
+      "b": 1
+    },
+    "roughness": 0.1,
+    "materialType": "shinyMetal",
+    "emissive": {
+      "r": 0.8,
+      "g": 0.9,
+      "b": 1,
+      "intensity": 2
+    }
+  },
+  "physics": {
+    "radius": 0.3,
+    "density": 50,
+    "friction": 0.5,
+    "restitution": 0.1
+  }
+}

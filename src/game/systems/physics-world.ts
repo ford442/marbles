@@ -5,6 +5,7 @@ import type { FilamentHandle, FilamentModule } from '../../types/filament.ts';
 import { audio } from '../../audio.js';
 import { applyFullPreset } from '../../material-system.ts';
 import { CUBE_VERTICES, CUBE_INDICES } from '../../cube-geometry.js';
+import { DEFAULT_FIXED_STEP } from './fixed-step-clock.ts';
 import {
     batchBoxGeometry,
     batchGeometry,
@@ -90,6 +91,7 @@ export interface NetworkMarbleEntry {
 export interface PhysicsWorldHost {
     world: RAPIER.World;
     physicsGravity?: Vec3;
+    physicsClock?: { readonly step: number } | null;
     physicsBackend?: {
         isWorkerMode?(): boolean;
         step(): void;
@@ -141,13 +143,17 @@ export class PhysicsWorld {
         return g.world;
     }
 
+    /** Advance one fixed step (`physicsClock.step` seconds), or drain worker commands. */
     step(): void {
         const backend = this.game.physicsBackend;
         if (backend?.isWorkerMode?.()) {
             backend.step();
             return;
         }
-        this.game.world?.step();
+        const world = this.game.world;
+        if (!world) return;
+        world.timestep = this.game.physicsClock?.step ?? DEFAULT_FIXED_STEP;
+        world.step();
     }
 
     _isWorkerMode(): boolean {
@@ -608,6 +614,7 @@ export class PhysicsWorld {
         g.dynamicObjects.push({
             rigidBody: body,
             entity,
+            matInstance,
             halfExtents,
         });
         g.dynamicBodies.add(body);
@@ -658,6 +665,7 @@ export class PhysicsWorld {
         g.rotatingPlatforms.push({
             rigidBody: body,
             entity,
+            matInstance,
             halfExtents,
             axis,
             speed,
@@ -674,7 +682,8 @@ export class PhysicsWorld {
         const radius = 0.5;
         const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
             .setTranslation(spawn.x, spawn.y, spawn.z)
-            .setCanSleep(false);
+            .setCanSleep(false)
+            .setCcdEnabled(true);
         const rigidBody = g.world.createRigidBody(bodyDesc);
         const colliderDesc = RAPIER.ColliderDesc.ball(radius)
             .setRestitution(0.5)

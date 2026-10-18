@@ -4,16 +4,12 @@
  */
 
 export { createAntigravityZone } from './antigravity-zone.js';
-export { createAbyssalTrenchZone } from './abyssal-trench.js';
-export { createAetherCoreZone } from './aether-core.js';
 export { createBumperArenaZone } from './bumper-arena.js';
 export { createCanyonRunZone } from './canyon-run.js';
 export { createChronoCanyonZone } from './chrono-canyon.js';
 export { createClockworkZone } from './clockwork-zone.js';
 export { createCloudCityZone } from './cloud-city.js';
-export { createCrystalCavernZone } from './crystal-cavern.js';
 export { createCyberIceTrackZone } from './cyber-ice-track.js';
-export { createCyberReactorZone } from './cyber-reactor.js';
 export { createCyberTrackZone } from './cyber-track-zone.js';
 export { createDesertRuinsZone } from './desert-ruins.js';
 export { createFrostbiteCavernZone } from './frostbite-cavern.js';
@@ -50,8 +46,6 @@ export { createSkateParkZone } from './skate-park.js';
 export { createSpaceElevatorZone } from './space-elevator.js';
 export { createSpaceStationZone } from './space-station.js';
 export { createStarlightAscentZone } from './starlight-ascent.js';
-export { createStellarForgeZone } from './stellar-forge.js';
-export { createStormPeakZone } from './storm-peak.js';
 export { createSynthwaveSurgeZone } from './synthwave-surge.js';
 export { createToxicSwampZone } from './toxic-swamp.js';
 export { createTrampolineParkZone } from './trampoline-park.js';

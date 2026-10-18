@@ -1,4 +1,4 @@
-import { quatFromEuler } from '../math.ts';
+import { quatFromYawPitchRoll, quatMultiply } from '../math.ts';
 
 export function createWaterSlideZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
@@ -38,7 +38,7 @@ export function createWaterSlideZone(game, offset) {
         // Bank the turn
         const roll = -Math.sin(i * 0.2) * 0.3;
 
-        const q = quatFromEuler(currentYaw, pitch, roll);
+        const q = quatMultiply(quatFromYawPitchRoll({ roll: currentYaw }), quatFromYawPitchRoll({ yaw: pitch, pitch: roll }));
 
         // Floor
         game.createStaticBox(
@@ -113,7 +113,7 @@ export function createWaterSlideZone(game, offset) {
         const angle = (i / numWalls) * Math.PI * 2;
         const x = poolX + Math.sin(angle) * poolRadius;
         const z = poolZ + Math.cos(angle) * poolRadius;
-        const q = quatFromEuler(angle, 0, 0);
+        const q = quatFromYawPitchRoll({ roll: angle });
 
         game.createStaticBox(
             { x: x, y: poolY + wallHeight/2, z: z },

@@ -1,0 +1,28 @@
+{
+  "id": "crystal",
+  "name": "Crystal",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0.9,
+      "g": 0.9,
+      "b": 1
+    },
+    "roughness": 0.05,
+    "materialType": "glass",
+    "emissive": {
+      "r": 0.8,
+      "g": 0.9,
+      "b": 1,
+      "intensity": 2
+    }
+  },
+  "physics": {
+    "radius": 0.5,
+    "density": 2.5,
+    "friction": 0.1,
+    "restitution": 0.6
+  }
+}

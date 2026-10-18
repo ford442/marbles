@@ -1,6 +1,5 @@
 // @ts-check
-import { DEV_LEVELS } from '../levels.ts';
-import { mapDefToLevel } from '../editor/map-document.js';
+import { mapToRuntimeLevel } from './map-normalize.js';
 
 /** @typedef {import('../types/map.ts').MapDefinition} MapDefinition */
 /** @typedef {import('../types/map.ts').RuntimeLevel} RuntimeLevel */
@@ -20,7 +19,9 @@ export function isDevLevelsEnabled() {
 }
 
 /**
- * Build the runtime level catalog from AssetRegistry maps plus optional dev-only levels.
+ * Build the runtime level catalog from AssetRegistry maps. Dev-only code
+ * levels are added separately by `loadDevLevels()` so their zone code stays
+ * out of the main chunk.
  * @param {MapCatalogRegistry} registry
  * @returns {Record<string, RuntimeLevel>}
  */
@@ -33,15 +34,28 @@ export function initLevelCatalog(registry) {
     JSON_LEVEL_IDS.add(mapDef.id);
   }
 
-  if (isDevLevelsEnabled()) {
-    for (const [id, level] of Object.entries(DEV_LEVELS)) {
-      if (!LEVELS[id]) {
-        LEVELS[id] = /** @type {RuntimeLevel} */ ({ ...level, source: 'code' });
-      }
+  return LEVELS;
+}
+
+/**
+ * Merge `DEV_LEVELS` (src/levels.ts) into the catalog when `?devLevels=1`.
+ * A dynamic import, so normal play never downloads the dev level table or
+ * the zone modules it references.
+ * @param {{ force?: boolean }} [options] force: load regardless of the URL (tests, harness)
+ * @returns {Promise<string[]>} ids that were added
+ */
+export async function loadDevLevels({ force = false } = {}) {
+  if (!force && !isDevLevelsEnabled()) return [];
+  const { DEV_LEVELS } = await import('../levels.ts');
+  /** @type {string[]} */
+  const added = [];
+  for (const [id, level] of Object.entries(DEV_LEVELS)) {
+    if (!LEVELS[id]) {
+      LEVELS[id] = /** @type {RuntimeLevel} */ ({ ...level, source: 'code' });
+      added.push(id);
     }
   }
-
-  return LEVELS;
+  return added;
 }
 
 /**
@@ -63,6 +77,6 @@ export function getOrderedLevelIds() {
  * @returns {string}
  */
 export function registerCustomLevel(mapDef) {
-  LEVELS[mapDef.id] = /** @type {RuntimeLevel} */ (mapDefToLevel(mapDef));
+  LEVELS[mapDef.id] = mapToRuntimeLevel(mapDef, 'editor');
   return mapDef.id;
 }
