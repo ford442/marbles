@@ -1,0 +1,29 @@
+{
+  "id": "cosmic_prism",
+  "name": "Cosmic Prism",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0.9,
+      "g": 0.1,
+      "b": 0.9
+    },
+    "clearCoat": 1,
+    "clearCoatRoughness": 0,
+    "materialType": "glass",
+    "emissive": {
+      "r": 0.9,
+      "g": 0.1,
+      "b": 0.9,
+      "intensity": 6
+    }
+  },
+  "physics": {
+    "radius": 0.85,
+    "density": 50,
+    "friction": 0,
+    "restitution": 1
+  }
+}

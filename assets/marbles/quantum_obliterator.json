@@ -1,0 +1,29 @@
+{
+  "id": "quantum_obliterator",
+  "name": "Quantum Obliterator",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0.1,
+      "g": 0.9,
+      "b": 1
+    },
+    "clearCoat": 1,
+    "clearCoatRoughness": 0,
+    "materialType": "glass",
+    "emissive": {
+      "r": 0.1,
+      "g": 0.9,
+      "b": 1,
+      "intensity": 20
+    }
+  },
+  "physics": {
+    "radius": 2,
+    "density": 500,
+    "friction": 0,
+    "restitution": 1
+  }
+}

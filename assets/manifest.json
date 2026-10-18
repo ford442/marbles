@@ -121,6 +121,106 @@
       "file": "maps/galaxy_spiral_run.json",
       "name": "Galaxy Spiral Run",
       "difficulty": "expert"
+    },
+    "quantum_core": {
+      "file": "maps/quantum_core.json",
+      "name": "Quantum Core",
+      "difficulty": "medium"
+    },
+    "cyber_matrix": {
+      "file": "maps/cyber_matrix.json",
+      "name": "Cyber Matrix",
+      "difficulty": "easy"
+    },
+    "neon_drift": {
+      "file": "maps/neon_drift.json",
+      "name": "Neon Drift",
+      "difficulty": "easy"
+    },
+    "neon_pulse_matrix": {
+      "file": "maps/neon_pulse_matrix.json",
+      "name": "Neon Pulse Matrix",
+      "difficulty": "hard"
+    },
+    "aether_core": {
+      "file": "maps/aether_core.json",
+      "name": "Aether Core",
+      "difficulty": "hard"
+    },
+    "inferno_chamber": {
+      "file": "maps/inferno_chamber.json",
+      "name": "Inferno Chamber",
+      "difficulty": "hard"
+    },
+    "block_challenge": {
+      "file": "maps/block_challenge.json",
+      "name": "Block Challenge",
+      "difficulty": "easy"
+    },
+    "bowling_alley": {
+      "file": "maps/bowling_alley.json",
+      "name": "Bowling Alley",
+      "difficulty": "easy"
+    },
+    "domino_effect": {
+      "file": "maps/domino_effect.json",
+      "name": "Domino Effect",
+      "difficulty": "easy"
+    },
+    "trampoline_park": {
+      "file": "maps/trampoline_park.json",
+      "name": "Trampoline Park",
+      "difficulty": "medium"
+    },
+    "pinball_wizard": {
+      "file": "maps/pinball_wizard.json",
+      "name": "Pinball Wizard",
+      "difficulty": "medium"
+    },
+    "canyon_run": {
+      "file": "maps/canyon_run.json",
+      "name": "Canyon Run",
+      "difficulty": "medium"
+    },
+    "castle_siege": {
+      "file": "maps/castle_siege.json",
+      "name": "Castle Siege",
+      "difficulty": "medium"
+    },
+    "bumper_arena": {
+      "file": "maps/bumper_arena.json",
+      "name": "Bumper Arena",
+      "difficulty": "hard"
+    },
+    "neon_pipeline_run": {
+      "file": "maps/neon_pipeline_run.json",
+      "name": "Neon Pipeline",
+      "difficulty": "medium"
+    },
+    "toxic_swamp_run": {
+      "file": "maps/toxic_swamp_run.json",
+      "name": "Toxic Swamp Run",
+      "difficulty": "hard"
+    },
+    "meteorite_hollow_run": {
+      "file": "maps/meteorite_hollow_run.json",
+      "name": "Meteorite Hollow",
+      "difficulty": "hard"
+    },
+    "neon_vortex": {
+      "file": "maps/neon_vortex.json",
+      "name": "Neon Vortex",
+      "difficulty": "medium"
+    },
+    "crystal_cavern": {
+      "file": "maps/crystal_cavern.json",
+      "name": "Crystal Cavern",
+      "difficulty": "medium"
+    },
+    "astral_cascade": {
+      "file": "maps/astral_cascade.json",
+      "name": "Astral Cascade",
+      "difficulty": "hard"
     }
   },
   "marbles": {
@@ -171,6 +271,334 @@
     "aegis_core": {
       "file": "marbles/aegis_core.json",
       "rarity": "legendary"
+    },
+    "juggernaut_prism": {
+      "file": "marbles/juggernaut_prism.json",
+      "rarity": "legendary"
+    },
+    "celestial_pearl": {
+      "file": "marbles/celestial_pearl.json",
+      "rarity": "legendary"
+    },
+    "celestial_orb": {
+      "file": "marbles/celestial_orb.json",
+      "rarity": "legendary"
+    },
+    "abyssal_eye": {
+      "file": "marbles/abyssal_eye.json",
+      "rarity": "legendary"
+    },
+    "void_walker": {
+      "file": "marbles/void_walker.json",
+      "rarity": "legendary"
+    },
+    "astral_jumper": {
+      "file": "marbles/astral_jumper.json",
+      "rarity": "legendary"
+    },
+    "hypernova_glass": {
+      "file": "marbles/hypernova_glass.json",
+      "rarity": "legendary"
+    },
+    "neon_juggernaut": {
+      "file": "marbles/neon_juggernaut.json",
+      "rarity": "legendary"
+    },
+    "quantum_core": {
+      "file": "marbles/quantum_core.json",
+      "rarity": "legendary"
+    },
+    "astral_juggernaut": {
+      "file": "marbles/astral_juggernaut.json",
+      "rarity": "legendary"
+    },
+    "cosmic_singularity": {
+      "file": "marbles/cosmic_singularity.json",
+      "rarity": "legendary"
+    },
+    "ghost": {
+      "file": "marbles/ghost.json",
+      "rarity": "common"
+    },
+    "red_standard": {
+      "file": "marbles/red_standard.json",
+      "rarity": "common"
+    },
+    "blue_standard": {
+      "file": "marbles/blue_standard.json",
+      "rarity": "common"
+    },
+    "green_bouncy": {
+      "file": "marbles/green_bouncy.json",
+      "rarity": "common"
+    },
+    "purple_heavy": {
+      "file": "marbles/purple_heavy.json",
+      "rarity": "common"
+    },
+    "gold_heavy": {
+      "file": "marbles/gold_heavy.json",
+      "rarity": "common"
+    },
+    "cyan_slick": {
+      "file": "marbles/cyan_slick.json",
+      "rarity": "common"
+    },
+    "void_heavy": {
+      "file": "marbles/void_heavy.json",
+      "rarity": "common"
+    },
+    "ice_slick": {
+      "file": "marbles/ice_slick.json",
+      "rarity": "common"
+    },
+    "super_bouncy": {
+      "file": "marbles/super_bouncy.json",
+      "rarity": "common"
+    },
+    "mud_sticky": {
+      "file": "marbles/mud_sticky.json",
+      "rarity": "common"
+    },
+    "tiny_dense": {
+      "file": "marbles/tiny_dense.json",
+      "rarity": "common"
+    },
+    "nano": {
+      "file": "marbles/nano.json",
+      "rarity": "common"
+    },
+    "giant": {
+      "file": "marbles/giant.json",
+      "rarity": "common"
+    },
+    "mercury": {
+      "file": "marbles/mercury.json",
+      "rarity": "common"
+    },
+    "neutron_star": {
+      "file": "marbles/neutron_star.json",
+      "rarity": "common"
+    },
+    "balloon": {
+      "file": "marbles/balloon.json",
+      "rarity": "common"
+    },
+    "plasma": {
+      "file": "marbles/plasma.json",
+      "rarity": "common"
+    },
+    "zero_g": {
+      "file": "marbles/zero_g.json",
+      "rarity": "common"
+    },
+    "meteor": {
+      "file": "marbles/meteor.json",
+      "rarity": "common"
+    },
+    "pinball": {
+      "file": "marbles/pinball.json",
+      "rarity": "common"
+    },
+    "obsidian": {
+      "file": "marbles/obsidian.json",
+      "rarity": "common"
+    },
+    "digital_cube": {
+      "file": "marbles/digital_cube.json",
+      "rarity": "common"
+    },
+    "slime": {
+      "file": "marbles/slime.json",
+      "rarity": "common"
+    },
+    "feather": {
+      "file": "marbles/feather.json",
+      "rarity": "common"
+    },
+    "sun": {
+      "file": "marbles/sun.json",
+      "rarity": "common"
+    },
+    "neon_core": {
+      "file": "marbles/neon_core.json",
+      "rarity": "common"
+    },
+    "glacier": {
+      "file": "marbles/glacier.json",
+      "rarity": "common"
+    },
+    "chameleon": {
+      "file": "marbles/chameleon.json",
+      "rarity": "common"
+    },
+    "quantum_anomaly": {
+      "file": "marbles/quantum_anomaly.json",
+      "rarity": "common"
+    },
+    "anti_matter": {
+      "file": "marbles/anti_matter.json",
+      "rarity": "common"
+    },
+    "black_hole": {
+      "file": "marbles/black_hole.json",
+      "rarity": "common"
+    },
+    "crystal": {
+      "file": "marbles/crystal.json",
+      "rarity": "common"
+    },
+    "ethereal_juggernaut": {
+      "file": "marbles/ethereal_juggernaut.json",
+      "rarity": "common"
+    },
+    "hyper_bouncing_prism": {
+      "file": "marbles/hyper_bouncing_prism.json",
+      "rarity": "common"
+    },
+    "alien_tech": {
+      "file": "marbles/alien_tech.json",
+      "rarity": "common"
+    },
+    "nova": {
+      "file": "marbles/nova.json",
+      "rarity": "common"
+    },
+    "quasar": {
+      "file": "marbles/quasar.json",
+      "rarity": "common"
+    },
+    "prismatic_shard": {
+      "file": "marbles/prismatic_shard.json",
+      "rarity": "common"
+    },
+    "plasma_core": {
+      "file": "marbles/plasma_core.json",
+      "rarity": "common"
+    },
+    "aether": {
+      "file": "marbles/aether.json",
+      "rarity": "common"
+    },
+    "hyperion": {
+      "file": "marbles/hyperion.json",
+      "rarity": "common"
+    },
+    "radiant_spark": {
+      "file": "marbles/radiant_spark.json",
+      "rarity": "common"
+    },
+    "supernova": {
+      "file": "marbles/supernova.json",
+      "rarity": "common"
+    },
+    "galactic_core": {
+      "file": "marbles/galactic_core.json",
+      "rarity": "common"
+    },
+    "pulsar_crystal": {
+      "file": "marbles/pulsar_crystal.json",
+      "rarity": "common"
+    },
+    "thunderbolt": {
+      "file": "marbles/thunderbolt.json",
+      "rarity": "common"
+    },
+    "echo_prism": {
+      "file": "marbles/echo_prism.json",
+      "rarity": "common"
+    },
+    "sapphire_bullet": {
+      "file": "marbles/sapphire_bullet.json",
+      "rarity": "common"
+    },
+    "phantom_glass": {
+      "file": "marbles/phantom_glass.json",
+      "rarity": "common"
+    },
+    "aegis_diamond": {
+      "file": "marbles/aegis_diamond.json",
+      "rarity": "common"
+    },
+    "omega_titan": {
+      "file": "marbles/omega_titan.json",
+      "rarity": "common"
+    },
+    "infinity_glass": {
+      "file": "marbles/infinity_glass.json",
+      "rarity": "common"
+    },
+    "quantum_phoenix": {
+      "file": "marbles/quantum_phoenix.json",
+      "rarity": "common"
+    },
+    "nebula_smasher": {
+      "file": "marbles/nebula_smasher.json",
+      "rarity": "common"
+    },
+    "cosmic_prism": {
+      "file": "marbles/cosmic_prism.json",
+      "rarity": "common"
+    },
+    "chronos_jewel": {
+      "file": "marbles/chronos_jewel.json",
+      "rarity": "common"
+    },
+    "starlight_ruby": {
+      "file": "marbles/starlight_ruby.json",
+      "rarity": "common"
+    },
+    "celestial_juggernaut": {
+      "file": "marbles/celestial_juggernaut.json",
+      "rarity": "common"
+    },
+    "galactic_titan": {
+      "file": "marbles/galactic_titan.json",
+      "rarity": "common"
+    },
+    "quantum_leviathan": {
+      "file": "marbles/quantum_leviathan.json",
+      "rarity": "common"
+    },
+    "quantum_obliterator": {
+      "file": "marbles/quantum_obliterator.json",
+      "rarity": "common"
+    },
+    "celestial_singularity": {
+      "file": "marbles/celestial_singularity.json",
+      "rarity": "common"
+    },
+    "astral_behemoth": {
+      "file": "marbles/astral_behemoth.json",
+      "rarity": "common"
+    },
+    "aetherium_catalyst": {
+      "file": "marbles/aetherium_catalyst.json",
+      "rarity": "common"
+    },
+    "astro_smasher": {
+      "file": "marbles/astro_smasher.json",
+      "rarity": "common"
+    },
+    "radiant_nova": {
+      "file": "marbles/radiant_nova.json",
+      "rarity": "common"
+    },
+    "classic_glass": {
+      "file": "marbles/classic_glass.json",
+      "rarity": "rare"
+    },
+    "neon_glow": {
+      "file": "marbles/neon_glow.json",
+      "rarity": "legendary"
+    },
+    "obsidian_metal": {
+      "file": "marbles/obsidian_metal.json",
+      "rarity": "epic"
+    },
+    "stone_vein": {
+      "file": "marbles/stone_vein.json",
+      "rarity": "uncommon"
     }
   },
   "sounds": {

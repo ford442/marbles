@@ -1,0 +1,27 @@
+{
+  "id": "supernova",
+  "name": "Supernova",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 1,
+      "g": 0.8,
+      "b": 0.2
+    },
+    "materialType": "volcanicMagma",
+    "emissive": {
+      "r": 1,
+      "g": 0.7,
+      "b": 0.1,
+      "intensity": 6
+    }
+  },
+  "physics": {
+    "radius": 0.7,
+    "density": 8,
+    "friction": 0,
+    "restitution": 1
+  }
+}

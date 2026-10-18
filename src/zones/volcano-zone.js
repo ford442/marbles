@@ -1,4 +1,4 @@
-import { quatFromEuler } from '../math.ts';
+import { quatFromYawPitchRoll } from '../math.ts';
 
 export function createVolcanoZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
@@ -31,7 +31,7 @@ export function createVolcanoZone(game, offset) {
         const angle = (i / numWalls) * Math.PI * 2;
         const x = offset.x + Math.sin(angle) * calderaRadius;
         const z = offset.z + 40 + Math.cos(angle) * calderaRadius;
-        const q = quatFromEuler(angle, 0, 0);
+        const q = quatFromYawPitchRoll({ roll: angle });
 
         game.createStaticBox(
             { x: x, y: offset.y + wallHeight/2 - 5, z: z },

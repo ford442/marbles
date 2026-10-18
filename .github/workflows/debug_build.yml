@@ -47,7 +47,7 @@ jobs:
       - name: Validate assets
         run: npm run validate:assets
 
-      - name: Unit tests
+      - name: Unit tests + level completability harness (tests/levels/)
         run: node scripts/run-unit-tests.mjs
 
       - name: Lint
@@ -56,8 +56,11 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Build Vite app
-        run: npx vite build
+      - name: Build Vite app (with bundle stats)
+        run: BUNDLE_STATS=1 npx vite build
+
+      - name: Bundle size budget (main chunk, no zone/dev-level/editor code)
+        run: npm run check:bundle
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

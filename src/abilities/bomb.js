@@ -19,6 +19,7 @@ export class AbilityBomb {
         const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
             .setTranslation(spawnPos.x, spawnPos.y, spawnPos.z)
             .setLinvel(linvel.x * 0.5, linvel.y + 5.0, linvel.z * 0.5)
+            .setCcdEnabled(true)
 
         const body = this.world.createRigidBody(bodyDesc)
         const colliderDesc = RAPIER.ColliderDesc.ball(0.4)
