@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-10-17T11:31:39.287Z",
+  "generated_at": "2026-10-17T09:10:05.467Z",
   "counts": {
-    "manifest": 44,
-    "dev_levels": 38,
-    "map_files": 48,
-    "unique_ids": 100,
-    "json_only": 44,
-    "code_only": 38,
-    "dual": 0,
+    "manifest": 24,
+    "dev_levels": 64,
+    "map_files": 28,
+    "unique_ids": 88,
+    "json_only": 20,
+    "code_only": 60,
+    "dual": 4,
     "orphan_json": 0,
     "archived_json": 4,
     "deleted": 3,
@@ -872,6 +872,20 @@
       "triage": "ship",
       "triage_reason": "",
       "difficulty": "medium"
+    },
+    {
+      "id": "neon_hologram_run",
+      "source": "code",
+      "in_manifest": false,
+      "in_dev_levels": true,
+      "on_disk": false,
+      "chapter": "neon",
+      "chapter_source": "heuristic:neon",
+      "zone_types": "(dev inline)",
+      "unknown_zones": "",
+      "migration_status": "dev-only",
+      "archive_reason": "",
+      "difficulty": ""
     },
     {
       "id": "neon_pipeline_run",

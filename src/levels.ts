@@ -30,6 +30,132 @@ export const DEV_LEVELS: Record<string, any> = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
+    aether_core_run: {
+        name: 'Aether Core Run',
+        description: 'Navigate the glowing purple tracks and master the jump pads!',
+        zones: [
+            { type: 'aether_core', pos: { x: 0, y: 0, z: 0 } }
+        ],
+        spawn: { x: 0, y: 5, z: -30 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [105, 115], y: [5, 15] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.05, 0.02, 0.1, 1.0],
+        environment: 'space_nebula'
+    },
+    neon_hologram_run: {
+        name: 'Neon Hologram',
+        description: 'Navigate the icy cyan hologram track, dodge magenta blockers, and launch to the exit!',
+        zones: [
+            { type: 'neon_hologram', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: 10, z: 75 } }
+        ],
+        spawn: { x: 0, y: 5, z: -10 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [70, 80], y: [5, 15] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.02, 0.02, 0.05, 1.0],
+        environment: 'neon_city'
+    },
+    neon_city_heights_run: {
+        name: 'Neon City Heights',
+        description: 'Navigate the neon platforms, low-friction purple track, and moving hover cars!',
+        zones: [
+            { type: 'neon_city_heights', pos: { x: 0, y: 0, z: 0 } }
+        ],
+        spawn: { x: 0, y: 5, z: -30 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [110, 120], y: [5, 15] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.01, 0.01, 0.05, 1.0],
+        environment: 'neon_city'
+    },
+    cyber_reactor_run: {
+        name: 'Cyber Reactor Run',
+        description: 'Brave the icy track and jump across the glowing red reactor cores!',
+        zones: [
+            { type: 'cyber_reactor', pos: { x: 0, y: 0, z: 0 } }
+        ],
+        spawn: { x: 0, y: 5, z: -30 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [105, 115], y: [5, 15] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.05, 0.05, 0.1, 1.0],
+        environment: 'space_nebula'
+    },
+    crystal_cavern_run: {
+        name: 'Crystal Cavern Run',
+        description: 'Navigate the icy depths and dodge the glowing purple crystals!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 150 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'crystal_cavern', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 0, y: -3, z: 125 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [120, 130], y: [-5, 5] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
+    },
+    staircase: {
+        name: 'Stairway to Heaven',
+        description: 'Climb the steps to victory',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 80, y: 0.5, z: 180 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'landing', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'slalom', pos: { x: 0, y: -2, z: 85 } },
+            { type: 'checkpoint', pos: { x: 0, y: -1.5, z: 110 }, size: { x: 10, y: 4, z: 2 } },
+            { type: 'staircase', pos: { x: 0, y: -2, z: 110 } },
+            { type: 'goal', pos: { x: 0, y: 9, z: 154 } }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-3, 3], z: [152, 156], y: [7, 15] } }
+        ],
+        camera: { mode: 'follow', height: 18, offset: -30 }
+    },
+    full_course: {
+        name: 'Full Course',
+        description: 'The complete challenge - all zones!',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 50 }, size: { x: 100, y: 0.5, z: 200 } },
+            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
+            { type: 'landing', pos: { x: 0, y: 0, z: 25 } },
+            { type: 'goal', pos: { x: 0, y: 0.25, z: 32.5 }, color: [1, 0.84, 0] },
+            { type: 'jump', pos: { x: 0, y: 0, z: 37.5 } },
+            { type: 'slalom', pos: { x: 0, y: -2, z: 85 } },
+            { type: 'goal', pos: { x: 0, y: -1.4, z: 100 }, color: [1, 0.84, 0] },
+            { type: 'staircase', pos: { x: 0, y: -2, z: 110 } },
+            { type: 'goal', pos: { x: 0, y: 9, z: 154 }, color: [1, 0.5, 0] }
+        ],
+        spawn: { x: 0, y: 8, z: -12 },
+        goals: [
+            { id: 1, range: { x: [-2, 2], z: [30.5, 34.5], y: [0, 2] } },
+            { id: 2, range: { x: [-2, 2], z: [98, 102], y: [-2, 0] } },
+            { id: 3, range: { x: [-3, 3], z: [152, 156], y: [7, 15] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 }
+    },
+    sandbox: {
+        name: 'Sandbox',
+        description: 'Open area to test all marbles',
+        zones: [
+            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 100, y: 0.5, z: 100 } }
+        ],
+        spawn: { x: 0, y: 5, z: 0 },
+        goals: [],
+        camera: { mode: 'orbit', angle: 0, height: 15, radius: 40 }
+    },
     crystal_orchard: {
         devOnly: UNPROVEN,
         name: 'Crystal Orchard',
