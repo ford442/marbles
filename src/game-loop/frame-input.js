@@ -86,6 +86,54 @@ export class GameLoopFrameInput {
                 }
         
 
+                // Hover edge detection via Ability System and Keys
+                const hoverCode = 'KeyH';
+                const isHoverKeyPressed = this.keys[hoverCode];
+                const wasHoverKeyPressed = this._lastHoverKeyPressed;
+
+                if (isHoverKeyPressed && !wasHoverKeyPressed) {
+                    if (this.abilitySystem?.isEnabled('hover') !== false && this.playerMarble && !this.isHovering) {
+                        if (now - (this.lastHoverTime || 0) > (this.hoverCooldown || 3000)) {
+                            if (typeof this.beginHoverCharge === 'function') {
+                                this.beginHoverCharge(now);
+                            }
+                        }
+                    }
+                } else if (!isHoverKeyPressed && wasHoverKeyPressed) {
+                    if (this.isHovering && this.playerMarble) {
+                        if (typeof this.releaseHover === 'function') {
+                            this.releaseHover(now);
+                        }
+                    }
+                } else if (isHoverKeyPressed && this.isHovering) {
+                    if (typeof this.updateHover === 'function') {
+                        this.updateHover(now, frameDeltaSec);
+                    }
+                }
+                this._lastHoverKeyPressed = isHoverKeyPressed;
+
+                if (shouldUpdateHUD && this.hoverBarEl) {
+                    if (this.isHovering) {
+                        this.hoverBarEl.style.width = `${(this.hoverCharge || 0) * 100}%`
+                        this.hoverBarEl.style.backgroundColor = '#00ff00'
+                        this.hoverBarEl.style.filter = 'brightness(1.5) drop-shadow(0 0 10px #00ff00)'
+                    } else {
+                        const timeSince = now - (this.lastHoverTime || 0)
+                        const progress = Math.min(1.0, timeSince / (this.hoverCooldown || 3000))
+                        this.hoverBarEl.style.width = `${progress * 100}%`
+                        this.hoverBarEl.style.backgroundColor = '#00ff00'
+                        if (progress >= 1.0) {
+                            this.hoverBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #00ff00)'
+                        } else {
+                            this.hoverBarEl.style.filter = 'brightness(0.7)'
+                        }
+                    }
+                }
+
+                // Air dash edge detection via Ability System and Keys
+                const airDashCode = 'KeyQ';
+                const isAirDashKeyPressed = this.keys[airDashCode];
+                const wasAirDashKeyPressed = this._lastAirDashKeyPressed;
                 // Charge abilities (air dash, dash, stomp): edge-detected from the
                 // held keys by their registry entries (src/abilities/registry.js).
                 this.abilitySystem?.tickChargeInputs(now)

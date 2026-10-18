@@ -123,6 +123,16 @@ export const ABILITY_REGISTRY = {
         press: (game) => pressJump(game),
         release: (game) => releaseJump(game),
     },
+    hover: {
+        id: 'hover',
+        name: 'Hover',
+        category: 'movement',
+        cooldownMs: 3000,
+        lastUseKey: 'lastHoverTime',
+        cooldownKey: 'hoverCooldown',
+        input: { defaultCode: 'KeyH', trigger: 'hold', settingsKey: 'hover' },
+        hudSlot: { barKey: 'hoverBarEl', mode: 'charge' },
+    },
     stomp: {
         id: 'stomp',
         name: 'Stomp',
