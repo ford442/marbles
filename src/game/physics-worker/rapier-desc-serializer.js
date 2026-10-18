@@ -7,6 +7,15 @@ const BODY_TYPE = {
     kinematicVelocity: RAPIER.RigidBodyType?.KinematicVelocityBased ?? 3,
 };
 
+const SHAPE_TYPE = {
+    ball: RAPIER.ShapeType?.Ball ?? 0,
+    cuboid: RAPIER.ShapeType?.Cuboid ?? 1,
+    capsule: RAPIER.ShapeType?.Capsule ?? 2,
+    trimesh: RAPIER.ShapeType?.TriMesh ?? 6,
+    cylinder: RAPIER.ShapeType?.Cylinder ?? 10,
+    cone: RAPIER.ShapeType?.Cone ?? 11,
+};
+
 /**
  * @param {import('@dimforge/rapier3d-compat').RigidBodyDesc} bodyDesc
  */
@@ -30,37 +39,64 @@ export function serializeRigidBodyDesc(bodyDesc) {
         angularDamping: bodyDesc.angularDamping,
         canSleep: bodyDesc.canSleep,
         linvel: lv ? [lv.x, lv.y, lv.z] : undefined,
+        ccd: bodyDesc.ccdEnabled === true,
     };
+}
+
+/**
+ * Shape fields for a descriptor. Throws on shapes the worker cannot rebuild
+ * rather than silently substituting a box.
+ * @param {any} shape
+ */
+function serializeShape(shape) {
+    switch (shape?.type) {
+        case SHAPE_TYPE.ball:
+            return { type: 'ball', radius: shape.radius };
+        case SHAPE_TYPE.cuboid: {
+            const h = shape.halfExtents;
+            return { type: 'cuboid', halfExtents: [h.x, h.y, h.z] };
+        }
+        case SHAPE_TYPE.capsule:
+            return { type: 'capsule', halfHeight: shape.halfHeight, radius: shape.radius };
+        case SHAPE_TYPE.cylinder:
+            return { type: 'cylinder', halfHeight: shape.halfHeight, radius: shape.radius };
+        case SHAPE_TYPE.cone:
+            return { type: 'cone', halfHeight: shape.halfHeight, radius: shape.radius };
+        case SHAPE_TYPE.trimesh:
+            return {
+                type: 'trimesh',
+                vertices: Array.from(shape.vertices),
+                indices: Array.from(shape.indices),
+            };
+        default:
+            throw new Error(
+                `[PhysicsWorker] cannot serialize collider shape type ${shape?.type}; `
+                + 'add it to rapier-desc-serializer.js and world-builder.js',
+            );
+    }
 }
 
 /**
  * @param {import('@dimforge/rapier3d-compat').ColliderDesc} colliderDesc
  */
 export function serializeColliderDesc(colliderDesc) {
-    const shape = colliderDesc.shape;
-    const shapeType = shape?.type;
-
-    /** @type {object} */
+    /** @type {Record<string, unknown>} */
     const collider = {
+        ...serializeShape(colliderDesc.shape),
         friction: colliderDesc.friction,
         restitution: colliderDesc.restitution,
         density: colliderDesc.density,
     };
 
-    if (colliderDesc.isSensor) {
-        collider.type = 'sensor_ball';
-    }
+    if (colliderDesc.isSensor) collider.sensor = true;
 
-    if (shapeType === 0 || shape?.radius != null) {
-        collider.type = colliderDesc.isSensor ? 'sensor_ball' : 'ball';
-        collider.radius = shape.radius;
-    } else if (shapeType === 1 || shape?.halfExtents != null) {
-        collider.type = 'cuboid';
-        const h = shape.halfExtents;
-        collider.halfExtents = [h.x, h.y, h.z];
-    } else {
-        collider.type = 'cuboid';
-        collider.halfExtents = [0.5, 0.5, 0.5];
+    const t = colliderDesc.translation;
+    if (t && (t.x !== 0 || t.y !== 0 || t.z !== 0)) {
+        collider.offset = [t.x, t.y, t.z];
+    }
+    const r = colliderDesc.rotation;
+    if (r && (r.x !== 0 || r.y !== 0 || r.z !== 0 || r.w !== 1)) {
+        collider.offsetRotation = [r.x, r.y, r.z, r.w];
     }
 
     if (colliderDesc.collisionGroups != null) {

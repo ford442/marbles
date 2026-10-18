@@ -1,0 +1,28 @@
+{
+  "id": "mercury",
+  "name": "Mercury",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0.7,
+      "g": 0.7,
+      "b": 0.7
+    },
+    "roughness": 0.05,
+    "materialType": "shinyMetal",
+    "emissive": {
+      "r": 0.8,
+      "g": 0.85,
+      "b": 0.95,
+      "intensity": 0.8
+    }
+  },
+  "physics": {
+    "radius": 0.55,
+    "density": 5,
+    "friction": 0.05,
+    "restitution": 0.2
+  }
+}

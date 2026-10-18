@@ -1,7 +1,9 @@
 import { serializeColliderDesc, serializeRigidBodyDesc } from './rapier-desc-serializer.js';
 
 /**
- * Rapier-shaped facade backed by SharedArrayBuffer + command ring.
+ * Rapier-shaped facade backed by SharedArrayBuffer + command ring. Reads
+ * (pose, velocities, mass, type) come from the worker's last published
+ * snapshot; writes are queued and applied before the worker's next step.
  * @param {import('../systems/physics-backend.ts').WorkerPhysicsBackend} backend
  * @param {number} bodyIndex
  */
@@ -22,8 +24,20 @@ export function createProxyRigidBody(backend, bodyIndex) {
         angvel() {
             return backend.getAngvel(bodyIndex);
         },
+        mass() {
+            return backend.getMass(bodyIndex);
+        },
+        bodyType() {
+            return backend.getBodyType(bodyIndex);
+        },
+        isValid() {
+            return backend.isBodyAlive(proxy);
+        },
         gravityScale() {
             return backend.getGravityScale(bodyIndex);
+        },
+        enableCcd(enabled) {
+            backend.queueSetCcd(bodyIndex, enabled);
         },
         applyImpulse(force, wake = true) {
             backend.queueImpulse(bodyIndex, force, wake);
@@ -48,7 +62,6 @@ export function createProxyRigidBody(backend, bodyIndex) {
         },
         setTranslation(t, wake = true) {
             backend.queueSetTranslation(bodyIndex, t, wake);
-            backend._linvelCache.set(bodyIndex, { x: 0, y: 0, z: 0 });
         },
         setRotation(r, wake = true) {
             backend.queueSetRotation(bodyIndex, r, wake);
@@ -62,24 +75,9 @@ export function createProxyRigidBody(backend, bodyIndex) {
  * @param {import('../systems/physics-backend.ts').WorkerPhysicsBackend} backend
  */
 export function createProxyWorld(backend) {
+    // Ray queries go through `game.physicsQueries`, which routes to
+    // `backend.castRay`; the proxy world deliberately has no `castRay`.
     return {
-        get timestep() {
-            return backend.timestep;
-        },
-        set timestep(value) {
-            backend.setTimestep(value);
-        },
-        castRay(ray, maxDist, solid = true, filterFlags, filterGroups, filterExcludeCollider, filterExcludeRigidBody) {
-            return backend.castRay({
-                ray,
-                maxDist,
-                solid,
-                filterFlags,
-                filterGroups,
-                filterExcludeCollider,
-                filterExcludeRigidBody,
-            });
-        },
         removeRigidBody(body) {
             backend.removeRigidBody(body);
         },

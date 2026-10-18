@@ -1,0 +1,29 @@
+{
+  "id": "hyper_bouncing_prism",
+  "name": "Hyper-Bouncing Prism",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 1,
+      "g": 0,
+      "b": 0.5
+    },
+    "clearCoat": 1,
+    "clearCoatRoughness": 0,
+    "materialType": "glass",
+    "emissive": {
+      "r": 1,
+      "g": 0,
+      "b": 0.5,
+      "intensity": 8
+    }
+  },
+  "physics": {
+    "radius": 1.2,
+    "density": 100,
+    "friction": 0,
+    "restitution": 1.5
+  }
+}

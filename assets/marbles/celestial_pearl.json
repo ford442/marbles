@@ -1,0 +1,30 @@
+{
+  "id": "celestial_pearl",
+  "name": "Celestial Pearl",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "legendary",
+  "premium": true,
+  "unlock": "premium",
+  "appearance": {
+    "color": {
+      "r": 0.95,
+      "g": 0.9,
+      "b": 1
+    },
+    "roughness": 0.1,
+    "emissive": {
+      "r": 0.8,
+      "g": 0.9,
+      "b": 1,
+      "intensity": 4.5
+    }
+  },
+  "physics": {
+    "radius": 0.65,
+    "density": 1.2,
+    "friction": 0.05,
+    "restitution": 0.95,
+    "gravityScale": 0.8
+  }
+}

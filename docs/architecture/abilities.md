@@ -10,12 +10,11 @@ Central registry for player abilities. Replaces scattered constructor fields, du
 | Runtime | `src/game/systems/ability-system.ts` | Masks, keybinds, unified HUD tick, `tryActivate` |
 | Implementations | `src/abilities/*.js` | Spawn/update logic (mixins until Phase B) |
 
-Migrated abilities (registry-driven):
+**Every** ability is a registry entry (#451 Part E) — `id`, `binding` (`code` + `trigger`: `press` / `hold` / `charge` / `poll`), `cooldownSec`, `activate(ctx, dt)` (plus hold/release hooks) and an explicit `netBit`. `src/init/core.js` and `src/game-loop/frame-input.js` dispatch keys through `AbilitySystem`; there are no per-key ability branches left (`tests/test_ability_bindings.js` enforces this, and that no two abilities — or an ability and a reserved UI/movement key — share a binding).
 
-- `jump` — charge input; tutorial mask target
-- `bomb`, `missile`, `blackhole` — combat projectiles
-- `holo` — holo platform (`Backquote` default)
-- `blink` — short-range teleport
+Network bits are pinned: 0–9 are the original abilities (airdashing, dash, jump, stomp, bomb, missile, blackhole, holo, blink, doublejump) and 10–15 the held movement modifiers (magnet attract/repel, hover, jetpack, glider, phase). The bitfield is full at 16 (`MAX_NETWORKED_ABILITY_IDS`); newer abilities are `netBit: null` (local-only) — growing it is a wire-protocol change. `src/game/network/input-bitfield.js` derives its list from the registry.
+
+Binding changes made to resolve conflicts: magnet repel `Q` → `-` (air dash keeps Q), chameleon `N` → `=` (mute keeps N), missile `L` → `V` (lock-on keeps L).
 
 ## Level ability mask
 
@@ -27,7 +26,7 @@ Maps may include:
 }
 ```
 
-Or blacklist with `"disabled": ["bomb", "missile"]`. Omit the field to allow all registered abilities.
+Or blacklist with `"disabled": ["bomb", "missile"]`. Omit the field to allow all registered abilities. The mask covers every registry entry (including the formerly hard-coded ones such as magnet, hover, portals): a masked ability never activates and its HUD icon hides. Ids must be registered abilities (schema-checked by test).
 
 `tutorial.json` enables **jump only**.
 

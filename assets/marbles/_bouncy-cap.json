@@ -1,0 +1,6 @@
+{
+  "$comment": "Marbles allowed restitution above 1.0 (energy-gaining bounces). Every other marble must keep physics.restitution <= 1.0; nothing here may exceed 1.5 (src/marbles/catalog-format.js BOUNCY_CAP_HARD_MAX). Add an entry only when bouncing IS the marble's identity, with the reason.",
+  "super_bouncy": { "max": 1.5, "reason": "Named for it: the novelty marble whose whole point is gaining height on every bounce." },
+  "hyper_bouncing_prism": { "max": 1.5, "reason": "Named for it: hyper-bounce prism; capped from the old 2.0 so it can't run away." },
+  "astral_jumper": { "max": 1.5, "reason": "Low-gravity (0.4) jumper built around big floaty bounces; 1.5 was its original value." }
+}

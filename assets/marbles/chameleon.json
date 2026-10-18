@@ -1,0 +1,21 @@
+{
+  "id": "chameleon",
+  "name": "Chameleon",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 1,
+      "g": 1,
+      "b": 1
+    },
+    "roughness": 0.2,
+    "rainbow": true
+  },
+  "physics": {
+    "radius": 0.5,
+    "friction": 0.5,
+    "restitution": 0.5
+  }
+}

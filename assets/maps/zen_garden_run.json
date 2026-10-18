@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "author": "Marble Game Team",
   "difficulty": "easy",
-  "chapter": "classic",
+  "chapter": "tutorial",
   "zones": [
     { "type": "zen_garden", "pos": { "x": 0, "y": 0, "z": 0 } },
     { "type": "goal", "pos": { "x": 0, "y": 0, "z": 80 } }

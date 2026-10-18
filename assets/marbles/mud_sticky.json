@@ -1,0 +1,21 @@
+{
+  "id": "mud_sticky",
+  "name": "Mud Sticky",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0.35,
+      "g": 0.25,
+      "b": 0.2
+    },
+    "roughness": 0.9
+  },
+  "physics": {
+    "radius": 0.5,
+    "density": 3,
+    "friction": 2,
+    "restitution": 0
+  }
+}

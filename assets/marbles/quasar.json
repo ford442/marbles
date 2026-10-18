@@ -1,0 +1,26 @@
+{
+  "id": "quasar",
+  "name": "Quasar",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 1,
+      "g": 1,
+      "b": 0.8
+    },
+    "emissive": {
+      "r": 1,
+      "g": 1,
+      "b": 0.8,
+      "intensity": 4
+    }
+  },
+  "physics": {
+    "radius": 0.6,
+    "density": 5,
+    "friction": 0.1,
+    "restitution": 1
+  }
+}

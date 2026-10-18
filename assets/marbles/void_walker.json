@@ -1,0 +1,30 @@
+{
+  "id": "void_walker",
+  "name": "Void Walker",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "legendary",
+  "premium": true,
+  "unlock": "premium",
+  "appearance": {
+    "color": {
+      "r": 0.1,
+      "g": 0.1,
+      "b": 0.1
+    },
+    "roughness": 0.9,
+    "emissive": {
+      "r": 0.5,
+      "g": 0,
+      "b": 1,
+      "intensity": 2
+    }
+  },
+  "physics": {
+    "radius": 0.5,
+    "density": 0.5,
+    "friction": 0.1,
+    "restitution": 0.8,
+    "gravityScale": 0.3
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "id": "chronos_jewel",
+  "name": "Chronos Jewel",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0.2,
+      "g": 0.8,
+      "b": 1
+    },
+    "clearCoat": 1,
+    "clearCoatRoughness": 0,
+    "materialType": "glass",
+    "emissive": {
+      "r": 0.2,
+      "g": 0.8,
+      "b": 1,
+      "intensity": 9
+    }
+  },
+  "physics": {
+    "radius": 0.9,
+    "density": 80,
+    "friction": 0,
+    "restitution": 1
+  }
+}

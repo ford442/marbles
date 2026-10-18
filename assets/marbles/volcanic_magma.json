@@ -5,26 +5,47 @@
   "version": "5.0.0",
   "author": "Marble Game Team - Visual Overhaul",
   "rarity": "legendary",
+  "unlock": "campaign",
   "appearance": {
-    "color": {"r": 0.4, "g": 0.05, "b": 0.02},
+    "color": {
+      "r": 0.4,
+      "g": 0.05,
+      "b": 0.02
+    },
     "roughness": 0.7,
     "metallic": 0.1,
-    "emissive": {"r": 1.0, "g": 0.25, "b": 0.05, "intensity": 4.0},
-    "clearCoat": 0.0,
-    "clearCoatRoughness": 1.0,
-    "rimLightColor": {"r": 1.0, "g": 0.4, "b": 0.1},
+    "emissive": {
+      "r": 1,
+      "g": 0.25,
+      "b": 0.05,
+      "intensity": 4
+    },
+    "clearCoat": 0,
+    "clearCoatRoughness": 1,
+    "rimLightColor": {
+      "r": 1,
+      "g": 0.4,
+      "b": 0.1
+    },
     "rimLightIntensity": 2.5,
     "subsurfaceScattering": 0.4,
     "reflectance": 0.3,
     "ambientOcclusion": 0.5,
     "texture": "procedural_cracked_crust",
-    "particleEffect": "lava_eruption"
+    "particleEffect": "lava_eruption",
+    "materialType": "volcanicMagma",
+    "shader": {
+      "bumpScale": 0.18,
+      "bumpFrequency": 18,
+      "heatIntensity": 1.4,
+      "crackGlow": 1
+    }
   },
   "physics": {
     "radius": 0.55,
     "density": 1.8,
     "friction": 0.12,
-    "restitution": 1.2,
+    "restitution": 1,
     "linearDamping": 0.1,
     "angularDamping": 0.1
   },
@@ -43,33 +64,78 @@
       "Agent 3: Heat distortion shader, lava flow animation, eruption glow, bubble simulation",
       "Agent 4: 6 particle systems including volcanic boost, collision deformation, scorch effect"
     ],
-    "effects": ["heat_distortion", "lava_flow", "cracked_crust", "eruption_glow", "surface_bubbles", "volcanic_boost"],
+    "effects": [
+      "heat_distortion",
+      "lava_flow",
+      "cracked_crust",
+      "eruption_glow",
+      "surface_bubbles",
+      "volcanic_boost"
+    ],
     "shader_uniforms": {
-      "uHeatIntensity": 4.0,
-      "uCrackScale": [1.0, 3.0, 8.0],
+      "uHeatIntensity": 4,
+      "uCrackScale": [
+        1,
+        3,
+        8
+      ],
       "uLavaFlowSpeed": 0.5,
       "uBubbleCount": 8,
       "uEruptionFrequency": 0.02
     },
-    "particle_systems": ["HeatShimmer", "LavaSparks", "EruptionBurst", "MagmaTrail", "VolcanicBoost", "SmokePlume"],
+    "particle_systems": [
+      "HeatShimmer",
+      "LavaSparks",
+      "EruptionBurst",
+      "MagmaTrail",
+      "VolcanicBoost",
+      "SmokePlume"
+    ],
     "post_process": {
-      "bloom": {"intensity": 2.5, "threshold": 0.3, "tint": [0.5, 0.15, 0.05]},
-      "heatDistortion": {"intensity": 0.4, "waveSpeed": 3.0},
+      "bloom": {
+        "intensity": 2.5,
+        "threshold": 0.3,
+        "tint": [
+          0.5,
+          0.15,
+          0.05
+        ]
+      },
+      "heatDistortion": {
+        "intensity": 0.4,
+        "waveSpeed": 3
+      },
       "chromaticAberration": 0.025,
       "motionBlur": 0.5,
-      "colorGrading": {"contrast": 1.25, "saturation": 1.3, "temperature": 1.2}
+      "colorGrading": {
+        "contrast": 1.25,
+        "saturation": 1.3,
+        "temperature": 1.2
+      }
     },
     "dynamic_properties": {
       "crust_cooling": true,
       "lava_viscosity": 0.7,
-      "eruption_events": {"enabled": true, "random": true, "intensity_range": [0.5, 1.0]},
+      "eruption_events": {
+        "enabled": true,
+        "random": true,
+        "intensity_range": [
+          0.5,
+          1
+        ]
+      },
       "surface_scorch": true
     },
     "gameplay_modifiers": {
-      "heat_damage_radius": 2.0,
+      "heat_damage_radius": 2,
       "lava_tracks_bonus": 0.15,
       "unstable_bounce": true
     },
-    "lod_variants": ["high_magma", "medium_magma", "low_magma", "impostor"]
+    "lod_variants": [
+      "high_magma",
+      "medium_magma",
+      "low_magma",
+      "impostor"
+    ]
   }
 }

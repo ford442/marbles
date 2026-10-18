@@ -1,0 +1,29 @@
+{
+  "id": "omega_titan",
+  "name": "Omega Titan",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 1,
+      "g": 0.2,
+      "b": 0.3
+    },
+    "clearCoat": 1,
+    "clearCoatRoughness": 0,
+    "materialType": "glass",
+    "emissive": {
+      "r": 1,
+      "g": 0.2,
+      "b": 0.3,
+      "intensity": 5.5
+    }
+  },
+  "physics": {
+    "radius": 0.75,
+    "density": 30,
+    "friction": 0,
+    "restitution": 1
+  }
+}

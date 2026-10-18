@@ -1,20 +1,25 @@
-import RAPIER from '@dimforge/rapier3d-compat';
+// @ts-check
 import { audio } from '../audio.js';
-import { quaternionToMat4, quatFromEuler } from '../math.ts';
-import { getLevel } from '../levels/catalog.js';
 import { getMarblePhysics, FORCE_BATCH_THRESHOLD, PhysicsBatchBuffers } from '../wasm-bridge.js';
-import { getDofConfig } from '../rendering/post-fx-presets.js';
-import {
-    getCachedTransformInstance,
-    transformChanged,
-    scaledTransform,
-    setColor3IfChanged,
-    DOF_CAMERA_MODES,
-    DOF_UPDATE_THRESHOLD,
-} from './helpers.ts';
+
+/** @typedef {import('../types/mixin-host.ts').GameMixinHost} GameMixinHost */
 
 export class GameLoopFrameInput {
+    /**
+     * @this {GameMixinHost}
+     * @param {number} now
+     * @param {boolean} shouldUpdateHUD
+     * @param {number} frameDeltaSec
+     * @param {number} rotSpeed
+     * @param {number} zoomSpeed
+     */
     tickFrameInput(now, shouldUpdateHUD, frameDeltaSec, rotSpeed, zoomSpeed) {
+                // Per-frame rates below are tuned per 1/60 s: `meter` scales
+                // charge/energy meters by wall time, `step` scales continuous
+                // impulses by the simulated time this frame's physics covers.
+                const meter = frameDeltaSec * 60
+                const step = (this.simDt ?? 1 / 60) * 60
+
                 if (this.keys['KeyR']) {
                     this.respawnToLastCheckpoint()
                     this.keys['KeyR'] = false // Debounce key press
@@ -54,7 +59,7 @@ export class GameLoopFrameInput {
                     this.camRadius += (this.targetCamRadius - this.camRadius) * 0.1
                     this.camHeight += (this.targetCamHeight - this.camHeight) * 0.1
                 } else if (this.cameraMode === 'follow' || this.cameraMode === 'action' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown' || this.cameraMode === 'cinematic' || this.cameraMode === 'side-scroller' || this.cameraMode === 'drone') {
-                    let impulseStrength = 0.5
+                    let impulseStrength = 0.5 * step
                     if (this.activeEffects.speed && Date.now() < this.activeEffects.speed) {
                         impulseStrength *= 2.0
                     }
@@ -129,67 +134,14 @@ export class GameLoopFrameInput {
                 const airDashCode = 'KeyQ';
                 const isAirDashKeyPressed = this.keys[airDashCode];
                 const wasAirDashKeyPressed = this._lastAirDashKeyPressed;
+                // Charge abilities (air dash, dash, stomp): edge-detected from the
+                // held keys by their registry entries (src/abilities/registry.js).
+                this.abilitySystem?.tickChargeInputs(now)
 
-                if (isAirDashKeyPressed && !wasAirDashKeyPressed) {
-                    if (this.abilitySystem?.isEnabled('airdashing')) {
-                        if (this.playerMarble && !this.isGrounded(this.playerMarble) && !this.isChargingAirDash) {
-                            if (now - (this.lastAirDashTime || 0) > (this.airDashCooldown || 2000)) {
-                                if (typeof this.beginAirDashCharge === 'function') {
-                                    this.beginAirDashCharge(now);
-                                }
-                            }
-                        }
-                    }
-                } else if (!isAirDashKeyPressed && wasAirDashKeyPressed) {
-                    if (this.isChargingAirDash && this.playerMarble) {
-                        if (typeof this.releaseAirDash === 'function') {
-                            this.releaseAirDash(now);
-                        }
-                    }
-                }
-                this._lastAirDashKeyPressed = isAirDashKeyPressed;
-
-                // Ground dash — methods mixed in from src/abilities/dash.js via installAbilityMethods
-                const isDashKeyPressed = this.keys['ShiftLeft'] || this.keys['ShiftRight'];
-                const wasDashKeyPressed = this._lastDashKeyPressed;
-
-                if (isDashKeyPressed && !wasDashKeyPressed) {
-                    if (this.abilitySystem?.isEnabled('dash') !== false && this.playerMarble && !this.isChargingDash) {
-                        if (now - (this.lastDashTime || 0) > (this.dashCooldown || 1500)) {
-                            if (typeof this.beginDashCharge === 'function') {
-                                this.beginDashCharge(now);
-                            }
-                        }
-                    }
-                } else if (!isDashKeyPressed && wasDashKeyPressed) {
-                    if (this.isChargingDash && typeof this.releaseDash === 'function') {
-                        this.releaseDash(now);
-                    }
-                }
-                this._lastDashKeyPressed = isDashKeyPressed;
-
-                // Stomp — methods mixed in from src/abilities/stomp.js via installAbilityMethods
-                const isStompKeyPressed = this.keys['KeyZ'];
-                const wasStompKeyPressed = this._lastStompKeyPressed;
-
-                if (isStompKeyPressed && !wasStompKeyPressed) {
-                    if (this.abilitySystem?.isEnabled('stomp') !== false && this.playerMarble && !this.isChargingStomp) {
-                        if (now - (this.lastStompTime || 0) > (this.stompCooldown || 2000)) {
-                            if (typeof this.beginStompCharge === 'function') {
-                                this.beginStompCharge(now);
-                            }
-                        }
-                    }
-                } else if (!isStompKeyPressed && wasStompKeyPressed) {
-                    if (this.isChargingStomp && typeof this.releaseStomp === 'function') {
-                        this.releaseStomp(now);
-                    }
-                }
-                this._lastStompKeyPressed = isStompKeyPressed;
-        
+                // Shift is the dash now; the legacy boost bar shows its cooldown.
                 if (shouldUpdateHUD && this.boostBarEl) {
-                    const timeSince = now - this.lastBoostTime
-                    const progress = Math.min(1.0, timeSince / this.boostCooldown)
+                    const timeSince = now - (this.lastDashTime || 0)
+                    const progress = Math.min(1.0, timeSince / (this.dashCooldown || 1500))
                     this.boostBarEl.style.width = `${progress * 100}%`
         
                     if (progress >= 1.0) {
@@ -256,12 +208,12 @@ export class GameLoopFrameInput {
                 }
 
                 if (this.isChargingJump) {
-                    this.jumpCharge = Math.min(1.0, this.jumpCharge + 0.03)
+                    this.jumpCharge = Math.min(1.0, this.jumpCharge + 0.03 * meter)
                     if (this.jumpBarEl) this.jumpBarEl.style.width = `${this.jumpCharge * 100}%`
                 }
         
                 if (this.charging) {
-                    this.chargePower = Math.min(1.0, this.chargePower + 0.015)
+                    this.chargePower = Math.min(1.0, this.chargePower + 0.015 * meter)
                 }
         
                 if (!this.levelComplete && this.levelStartTime && shouldUpdateHUD) {
@@ -270,7 +222,7 @@ export class GameLoopFrameInput {
                 }
         
                 if (this.magnetActive && this.magnetPower > 0 && this.playerMarble) {
-                    this.magnetPower = Math.max(0, this.magnetPower - 0.005)
+                    this.magnetPower = Math.max(0, this.magnetPower - 0.005 * meter)
         
                     const pt = this.playerMarble.rigidBody.translation()
                     const range = 20.0
@@ -279,7 +231,9 @@ export class GameLoopFrameInput {
                     const physics = getMarblePhysics()
                     const repelSign = this.magnetMode === 'repel' ? -1 : 1
         
+                    /** @type {{ body: import('@dimforge/rapier3d-compat').RigidBody, pos: { x: number, y: number, z: number } }[]} */
                     const targets = []
+                    /** @param {import('@dimforge/rapier3d-compat').RigidBody} body */
                     const considerBody = (body) => {
                         const bt = body.translation()
                         const dx = pt.x - bt.x
@@ -303,9 +257,8 @@ export class GameLoopFrameInput {
                         const buf = this._forceBatchBuffers
                         buf.ensure(targets.length)
         
-                        for (let i = 0; i < targets.length; i++) {
+                        for (const [i, { pos: p }] of targets.entries()) {
                             const base = i * 3
-                            const p = targets[i].pos
                             buf.positions[base] = p.x
                             buf.positions[base + 1] = p.y
                             buf.positions[base + 2] = p.z
@@ -318,12 +271,12 @@ export class GameLoopFrameInput {
                             2.0, 0.5, range, 1.0
                         )
         
-                        for (let i = 0; i < targets.length; i++) {
+                        for (const [i, { body }] of targets.entries()) {
                             const base = i * 3
-                            targets[i].body.applyImpulse({
-                                x: buf.forces[base] * repelSign,
-                                y: buf.forces[base + 1] * repelSign,
-                                z: buf.forces[base + 2] * repelSign
+                            body.applyImpulse({
+                                x: (buf.forces[base] ?? 0) * repelSign * step,
+                                y: (buf.forces[base + 1] ?? 0) * repelSign * step,
+                                z: (buf.forces[base + 2] ?? 0) * repelSign * step
                             }, true)
                         }
                     } else {
@@ -337,15 +290,15 @@ export class GameLoopFrameInput {
                                 forceStrength, 2.0, 0.5, range, 1.0
                             )
                             body.applyImpulse({
-                                x: scalarBuf[0] * repelSign,
-                                y: scalarBuf[1] * repelSign,
-                                z: scalarBuf[2] * repelSign
+                                x: scalarBuf[0] * repelSign * step,
+                                y: scalarBuf[1] * repelSign * step,
+                                z: scalarBuf[2] * repelSign * step
                             }, true)
                         }
                     }
         
                 } else if (!this.magnetActive && this.magnetPower < 1.0) {
-                    this.magnetPower = Math.min(1.0, this.magnetPower + 0.002)
+                    this.magnetPower = Math.min(1.0, this.magnetPower + 0.002 * meter)
                 }
         
                 if (shouldUpdateHUD && this.magnetBarEl) {

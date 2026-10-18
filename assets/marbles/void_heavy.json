@@ -1,0 +1,21 @@
+{
+  "id": "void_heavy",
+  "name": "Void Heavy",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0.1,
+      "g": 0.05,
+      "b": 0.2
+    },
+    "materialType": "shadowNinja"
+  },
+  "physics": {
+    "radius": 0.7,
+    "density": 4,
+    "friction": 1,
+    "restitution": 0.1
+  }
+}
