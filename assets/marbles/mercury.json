@@ -10,14 +10,14 @@
       "g": 0.7,
       "b": 0.7
     },
-    "roughness": 0.05,
-    "materialType": "shinyMetal",
     "emissive": {
       "r": 0.8,
       "g": 0.85,
       "b": 0.95,
       "intensity": 0.8
-    }
+    },
+    "roughness": 0.05,
+    "materialType": "shinyMetal"
   },
   "physics": {
     "radius": 0.55,

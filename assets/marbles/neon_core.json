@@ -10,13 +10,13 @@
       "g": 0.1,
       "b": 0.1
     },
-    "materialType": "neonGlow",
     "emissive": {
       "r": 0,
       "g": 1,
       "b": 1,
       "intensity": 3
-    }
+    },
+    "materialType": "neonGlow"
   },
   "physics": {
     "radius": 0.5,
