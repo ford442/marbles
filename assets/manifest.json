@@ -238,19 +238,19 @@
     },
     "volcanic_magma": {
       "file": "marbles/volcanic_magma.json",
-      "rarity": "rare"
+      "rarity": "common"
     },
     "shadow_ninja": {
       "file": "marbles/shadow_ninja.json",
-      "rarity": "epic"
+      "rarity": "common"
     },
     "cosmic_nebula": {
       "file": "marbles/cosmic_nebula.json",
-      "rarity": "legendary"
+      "rarity": "common"
     },
     "vortex_annihilator": {
       "file": "marbles/vortex_annihilator.json",
-      "rarity": "legendary"
+      "rarity": "common"
     },
     "starfire_diamond": {
       "file": "marbles/starfire_diamond.json",
@@ -599,6 +599,10 @@
     "stone_vein": {
       "file": "marbles/stone_vein.json",
       "rarity": "uncommon"
+    },
+    "nebula_smasher_core": {
+      "file": "marbles/nebula_smasher_core.json",
+      "rarity": "common"
     }
   },
   "sounds": {

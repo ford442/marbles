@@ -10,14 +10,14 @@
       "g": 1,
       "b": 0.5
     },
-    "materialType": "neonGlow",
-    "geometry": "cube",
     "emissive": {
       "r": 0,
       "g": 1,
       "b": 0.5,
       "intensity": 1
-    }
+    },
+    "materialType": "neonGlow",
+    "geometry": "cube"
   },
   "physics": {
     "radius": 0.5,

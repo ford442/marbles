@@ -1,6 +1,163 @@
 {
   "$comment": "Marbles allowed restitution above 1.0 (energy-gaining bounces). Every other marble must keep physics.restitution <= 1.0; nothing here may exceed 1.5 (src/marbles/catalog-format.js BOUNCY_CAP_HARD_MAX). Add an entry only when bouncing IS the marble's identity, with the reason.",
-  "super_bouncy": { "max": 1.5, "reason": "Named for it: the novelty marble whose whole point is gaining height on every bounce." },
-  "hyper_bouncing_prism": { "max": 1.5, "reason": "Named for it: hyper-bounce prism; capped from the old 2.0 so it can't run away." },
-  "astral_jumper": { "max": 1.5, "reason": "Low-gravity (0.4) jumper built around big floaty bounces; 1.5 was its original value." }
+  "super_bouncy": {
+    "max": 1.5,
+    "reason": "Named for it: the novelty marble whose whole point is gaining height on every bounce."
+  },
+  "hyper_bouncing_prism": {
+    "max": 1.5,
+    "reason": "Named for it: hyper-bounce prism; capped from the old 2.0 so it can't run away."
+  },
+  "astral_jumper": {
+    "max": 1.5,
+    "reason": "Low-gravity (0.4) jumper built around big floaty bounces; 1.5 was its original value."
+  },
+  "purple_heavy": {
+    "max": 1.2,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "volcanic_magma": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "plasma": {
+    "max": 1.1,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "quantum_anomaly": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "ethereal_juggernaut": {
+    "max": 1.2,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "alien_tech": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "nova": {
+    "max": 1.2,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "quasar": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "plasma_core": {
+    "max": 1.1,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "aether": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "radiant_spark": {
+    "max": 1.3,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "supernova": {
+    "max": 1.4,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "galactic_core": {
+    "max": 1.2,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "pulsar_crystal": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "thunderbolt": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "echo_prism": {
+    "max": 1.2,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "sapphire_bullet": {
+    "max": 1.2,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "phantom_glass": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "aegis_diamond": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "omega_titan": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "infinity_glass": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "quantum_phoenix": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "nebula_smasher": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "cosmic_prism": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "chronos_jewel": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "starlight_ruby": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "celestial_juggernaut": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "galactic_titan": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "quantum_leviathan": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "quantum_obliterator": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "celestial_singularity": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "astral_behemoth": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "aetherium_catalyst": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "vortex_annihilator": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "astro_smasher": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "radiant_nova": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  },
+  "nebula_smasher_core": {
+    "max": 1.5,
+    "reason": "Legacy hardcoded value ported exactly."
+  }
 }
