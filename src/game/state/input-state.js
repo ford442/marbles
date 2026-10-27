@@ -38,5 +38,11 @@ export function createInputState() {
         stompReleaseTime: 0,
         lastStompTime: 0,
         stompCooldown: 2000,
+        isChargingShockwave: false,
+        shockwaveChargeTime: 0,
+        shockwaveOldGravity: 1.0,
+        awaitingShockwaveImpact: false,
+        lastShockwaveTime: 0,
+        shockwaveCooldown: 3000,
     };
 }

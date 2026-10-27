@@ -149,6 +149,24 @@ export const ABILITY_REGISTRY = {
             if (game.isChargingStomp) game.releaseStomp?.(now)
         },
     },
+    shockwave: {
+        id: 'shockwave',
+        name: 'Shockwave Dive',
+        category: 'combat',
+        netBit: null, // local-only for now
+        binding: { code: 'Comma', trigger: 'charge', settingsKey: 'shockwave' },
+        cooldownSec: 3,
+        lastUseKey: 'lastShockwaveTime',
+        cooldownKey: 'shockwaveCooldown',
+        hudIconId: 'groundslam',
+        hudSlot: { barKey: 'groundslambarEl', mode: 'charge' },
+        press(game, now) {
+            if (!game.isChargingShockwave) game.beginShockwaveCharge?.(now)
+        },
+        release(game, now) {
+            if (game.isChargingShockwave) game.releaseShockwave?.(now)
+        }
+    },
     bomb: {
         id: 'bomb',
         name: 'Bomb',
