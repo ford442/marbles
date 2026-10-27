@@ -10,18 +10,18 @@
       "g": 0.5,
       "b": 0
     },
-    "roughness": 0.1,
     "emissive": {
       "r": 1,
       "g": 0.6,
       "b": 0.1,
       "intensity": 4.5
-    }
+    },
+    "roughness": 0.1
   },
   "physics": {
     "radius": 0.6,
     "density": 10,
     "friction": 0.05,
-    "restitution": 1
+    "restitution": 1.2
   }
 }

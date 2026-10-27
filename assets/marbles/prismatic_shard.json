@@ -10,14 +10,14 @@
       "g": 1,
       "b": 1
     },
-    "geometry": "cube",
-    "rainbow": true,
     "emissive": {
       "r": 1,
       "g": 1,
       "b": 1,
       "intensity": 3.5
-    }
+    },
+    "geometry": "cube",
+    "rainbow": true
   },
   "physics": {
     "radius": 0.5,

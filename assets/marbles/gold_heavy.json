@@ -10,16 +10,16 @@
       "g": 0.84,
       "b": 0
     },
-    "roughness": 0.15,
-    "clearCoat": 1,
-    "clearCoatRoughness": 0,
-    "materialType": "polishedMarble",
     "emissive": {
       "r": 1,
       "g": 0.8,
       "b": 0.3,
       "intensity": 0.8
-    }
+    },
+    "roughness": 0.15,
+    "clearCoat": 1,
+    "clearCoatRoughness": 0,
+    "materialType": "polishedMarble"
   },
   "physics": {
     "radius": 0.6,
