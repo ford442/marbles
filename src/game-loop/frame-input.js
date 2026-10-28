@@ -211,6 +211,33 @@ export class GameLoopFrameInput {
                     this.jumpCharge = Math.min(1.0, this.jumpCharge + 0.03 * meter)
                     if (this.jumpBarEl) this.jumpBarEl.style.width = `${this.jumpCharge * 100}%`
                 }
+
+                if (shouldUpdateHUD && this.groundslambarEl) {
+                    if (this.isChargingShockwave) {
+                        const chargeDuration = now - (this.shockwaveChargeTime || now)
+                        // Max charge at 1000ms
+                        const chargeRatio = Math.min(1.0, chargeDuration / 1000.0)
+                        this.groundslambarEl.style.width = `${chargeRatio * 100}%`
+
+                        if (chargeRatio >= 1.0) {
+                            this.groundslambarEl.style.filter = 'brightness(1.5) drop-shadow(0 0 10px #ff00ff)'
+                            this.groundslambarEl.style.backgroundColor = '#ffffff'
+                        } else {
+                            this.groundslambarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ff00ff)'
+                            this.groundslambarEl.style.backgroundColor = '#ff00ff'
+                        }
+                    } else {
+                        const timeSince = now - (this.lastShockwaveTime || 0)
+                        const progress = Math.min(1.0, timeSince / (this.shockwaveCooldown || 3000))
+                        this.groundslambarEl.style.width = `${progress * 100}%`
+                        this.groundslambarEl.style.backgroundColor = '#ff00ff'
+                        if (progress >= 1.0) {
+                            this.groundslambarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ff00ff)'
+                        } else {
+                            this.groundslambarEl.style.filter = 'brightness(0.7)'
+                        }
+                    }
+                }
         
                 if (this.charging) {
                     this.chargePower = Math.min(1.0, this.chargePower + 0.015 * meter)

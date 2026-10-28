@@ -283,6 +283,12 @@ export interface InputState {
     /** Set on stomp release; gates the next charge (`stompCooldown` ms). */
     lastStompTime: number;
     stompCooldown: number;
+    isChargingShockwave: boolean;
+    shockwaveChargeTime: number;
+    shockwaveOldGravity: number;
+    awaitingShockwaveImpact: boolean;
+    lastShockwaveTime: number;
+    shockwaveCooldown: number;
 }
 
 /** Score, combo, and HUD DOM references. */
