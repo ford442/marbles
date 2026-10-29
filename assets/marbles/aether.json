@@ -1,0 +1,27 @@
+{
+  "id": "aether",
+  "name": "Aether",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0.5,
+      "g": 0,
+      "b": 1
+    },
+    "emissive": {
+      "r": 0.5,
+      "g": 0,
+      "b": 1,
+      "intensity": 6
+    }
+  },
+  "physics": {
+    "radius": 0.5,
+    "density": 0.1,
+    "friction": 0,
+    "restitution": 1.5,
+    "gravityScale": 0.1
+  }
+}

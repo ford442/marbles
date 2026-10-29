@@ -163,7 +163,7 @@ Expected signal: modest p50 improvement on levels with many simultaneous force-f
 
 ## Physics worker A/B (Rapier offload)
 
-Opt in with `?physicsWorker=1` on any **manifest** campaign level (24 maps in `assets/manifest.json`). Requires COOP/COEP (`vite.config.js` / production CDN). Compare against `?physicsWorker=0` on the same level.
+The worker is **default-on** for capable desktops on any **manifest** campaign level (24 maps in `assets/manifest.json`). Requires COOP/COEP (`vite.config.js` / production CDN). Compare against `?physicsWorker=0` on the same level.
 
 Suggested route (isolates physics from Filament):
 
@@ -192,7 +192,9 @@ Sample levels:
 
 **Expected on real hardware:** main-thread `physicsStepMs` drops when Rapier runs in the worker; marble transform sync in `sync.js` remains on the main thread. SwiftShader headless timings are not representative — capture notes from a discrete-GPU machine when updating this table.
 
-E2E: `npm run test:e2e:smoke:worker` (with dev server on :5173).
+E2E: `npm run test:e2e:smoke:worker` (forced worker) and `npm run test:e2e:smoke:main` (kill switch), with dev server on :5173.
+
+**Default-on soak (2026-10-17): pending.** Real-GPU numbers for `physicsBackend`, `physicsStepMs`, `mainThreadPhysicsWaitMs` across the 24 manifest ids have not been recorded yet.
 
 See [architecture/physics-worker.md](./architecture/physics-worker.md).
 

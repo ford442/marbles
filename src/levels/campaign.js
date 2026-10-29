@@ -1,10 +1,12 @@
 // @ts-check
 /**
  * Campaign chapter layout and unlock rules.
- * Levels not listed explicitly are auto-assigned by heuristics.
+ * Every shipped manifest map is listed, in play order, in exactly one
+ * chapter's `levels` (tests/test_campaign_chapters.js). Levels not listed
+ * (dev levels, workshop maps) are auto-assigned by heuristics.
  */
 
-/** @typedef {{ id: string, name: string, icon: string, description: string, order: number }} ChapterDef */
+/** @typedef {{ id: string, name: string, icon: string, description: string, order: number, levels: string[] }} ChapterDef */
 /** @typedef {'easy' | 'medium' | 'hard' | 'expert' | 'extreme'} Difficulty */
 /** @typedef {{ difficulty?: string, name?: string, chapter?: string }} CampaignLevel */
 /** @typedef {{ goldTime: number, silverTime: number, bronzeTime: number, parTime?: number }} MedalThresholds */
@@ -17,6 +19,7 @@ export const CAMPAIGN_CHAPTERS = [
         icon: '📘',
         description: 'Learn movement and goals',
         order: 0,
+        levels: ['tutorial', 'landing', 'block_challenge', 'bowling_alley', 'domino_effect', 'zen_garden_run', 'mushroom_hop', 'jump'],
     },
     {
         id: 'classic',
@@ -24,6 +27,7 @@ export const CAMPAIGN_CHAPTERS = [
         icon: '🏛',
         description: 'Core runs and fundamentals',
         order: 1,
+        levels: ['canyon_run', 'castle_siege', 'trampoline_park', 'pinball_wizard', 'jungle_run', 'wind_tunnel', 'pinwheel_alley', 'slalom', 'staircase', 'sandbox'],
     },
     {
         id: 'neon',
@@ -31,6 +35,7 @@ export const CAMPAIGN_CHAPTERS = [
         icon: '🌃',
         description: 'Synth tracks and cyber zones',
         order: 2,
+        levels: ['neon_showcase', 'cyber_matrix', 'neon_drift', 'cyber_run', 'neon_grid', 'neon_pipeline_run', 'crystal_cavern', 'neon_vortex', 'quantum_core'],
     },
     {
         id: 'extreme',
@@ -38,6 +43,7 @@ export const CAMPAIGN_CHAPTERS = [
         icon: '🔥',
         description: 'Hard routes and hazards',
         order: 3,
+        levels: ['volcano_run', 'toxic_swamp_run', 'meteorite_hollow_run', 'ice_cave_run', 'helix_havoc', 'clockwork_chaos', 'inferno_chamber', 'storm_peak', 'stellar_forge'],
     },
     {
         id: 'expert',
@@ -45,30 +51,14 @@ export const CAMPAIGN_CHAPTERS = [
         icon: '👑',
         description: 'Master challenges',
         order: 4,
+        levels: ['aether_core', 'neon_pulse_matrix', 'astral_cascade', 'prismatic_speedway', 'bumper_arena', 'galaxy_spiral_run', 'space_station', 'full_course'],
     },
 ];
 
-/** Explicit level → chapter overrides (manifest JSON + key dev levels). @type {Record<string, string>} */
-export const LEVEL_CHAPTER_OVERRIDES = {
-    tutorial: 'tutorial',
-    tutorial_extreme: 'extreme',
-    landing: 'tutorial',
-    jump: 'classic',
-    slalom: 'classic',
-    slalom_extreme: 'extreme',
-    staircase: 'classic',
-    staircase_extreme: 'extreme',
-    sandbox: 'classic',
-    volcano_run: 'extreme',
-    volcano_run_extreme: 'extreme',
-    full_course: 'expert',
-    prismatic_speedway: 'neon',
-    storm_peak: 'extreme',
-    stellar_forge: 'extreme',
-    space_station: 'expert',
-    neon_grid: 'neon',
-    neon_showcase: 'neon',
-};
+/** Level → chapter for every listed level (derived from CAMPAIGN_CHAPTERS). @type {Record<string, string>} */
+export const LEVEL_CHAPTER_OVERRIDES = Object.fromEntries(
+    CAMPAIGN_CHAPTERS.flatMap((chapter) => chapter.levels.map((id) => [id, chapter.id])),
+);
 
 const NEON_KEYWORDS = /neon|cyber|synth|prismatic|plasma|pulse|chrono|grid_run|alley/i;
 const EXTREME_KEYWORDS = /extreme|volcano|lava|storm|abyssal|void|toxic|magnetic|gravity_well|frostbite|glacial/i;
@@ -119,6 +109,28 @@ export const CHAPTER_UNLOCK_RULES = {
 };
 
 /**
+ * Within an unlocked chapter, the listed level at index i opens once
+ * i - LEVEL_UNLOCK_SLACK of the chapter's listed levels are completed: the
+ * first SLACK + 1 are open, and a player stuck on a level can play up to
+ * SLACK levels past it.
+ */
+export const LEVEL_UNLOCK_SLACK = 2;
+
+/**
+ * @param {string} chapterId
+ * @param {string} levelId
+ * @param {(levelId: string) => boolean} isCompleted
+ * @returns {boolean} false only for a listed level still gated behind earlier ones
+ */
+export function isLevelUnlockedInChapter(chapterId, levelId, isCompleted) {
+    const listed = CAMPAIGN_CHAPTERS.find((c) => c.id === chapterId)?.levels ?? [];
+    const index = listed.indexOf(levelId);
+    if (index < 0) return true;
+    const completed = listed.filter((id) => isCompleted(id)).length;
+    return completed >= index - LEVEL_UNLOCK_SLACK;
+}
+
+/**
  * Build chapter → level id lists from the runtime catalog.
  * @param {Record<string, CampaignLevel>} levels
  * @returns {Record<string, string[]>}
@@ -136,7 +148,12 @@ export function buildChapterLayout(levels) {
     for (const chapterId of Object.keys(layout)) {
         const chapterLevels = layout[chapterId];
         if (!chapterLevels) continue;
+        const listed = CAMPAIGN_CHAPTERS.find((c) => c.id === chapterId)?.levels ?? [];
         chapterLevels.sort((a, b) => {
+            // Listed levels keep their authored order, ahead of unlisted ones.
+            const ia = listed.indexOf(a);
+            const ib = listed.indexOf(b);
+            if (ia >= 0 || ib >= 0) return (ia < 0 ? Infinity : ia) - (ib < 0 ? Infinity : ib);
             const da = levels[a]?.difficulty || 'medium';
             const db = levels[b]?.difficulty || 'medium';
             /** @type {Record<string, number>} */

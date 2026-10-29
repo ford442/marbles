@@ -1,0 +1,31 @@
+{
+  "id": "plasma",
+  "name": "Plasma",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0.9,
+      "g": 0.2,
+      "b": 0.9
+    },
+    "emissive": {
+      "r": 0.9,
+      "g": 0.2,
+      "b": 0.9,
+      "intensity": 3.5
+    },
+    "materialType": "neonGlow",
+    "shader": {
+      "iridescenceScale": 0.85,
+      "sparkleDensity": 0.6
+    }
+  },
+  "physics": {
+    "radius": 0.6,
+    "density": 0.2,
+    "friction": 0,
+    "restitution": 1.1
+  }
+}

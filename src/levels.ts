@@ -1,72 +1,21 @@
-import { spaceStationLevel } from './zones/space-station.js';
 import { skateParkLevel } from './zones/skate-park.js';
-import { pinballLevel } from './zones/pinball-zone.js';
-import { canyonRunLevel } from './zones/canyon-run.js';
 import { antigravityLevel } from './zones/antigravity-zone.js';
 
 import type { RuntimeLevel } from './types/map.ts';
 
 /** Code-only levels (experimental / not yet migrated to JSON). Shown when `?devLevels=1`. */
+/**
+ * Every DEV_LEVELS entry must say why it is not a shipped JSON map
+ * (tests/levels/test_dev_levels_policy.js). New levels ship as JSON — see
+ * docs/architecture/level-pipeline.md.
+ */
+const UNPROVEN = 'Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.';
+const GRAPPLE_ROUTE = 'Route needs the grapple, which the completability autopilot cannot drive yet.';
+const RANDOM_LAYOUT = 'Layout is randomised per build (Math.random) and the greedy route fails on the seeded headless layout; needs a deterministic v2 port.';
+const GRAVITY_MECHANIC = 'Route depends on gravity power-ups, which the headless harness does not collect or simulate; completability unproven.';
 export const DEV_LEVELS: Record<string, any> = {
-    quantum_core_run: {
-        name: 'Quantum Core',
-        description: 'Navigate the low-friction glass tracks and the orbiting quantum fields!',
-        zones: [
-            { type: 'quantum_core', pos: { x: 0, y: 0, z: 0 } },
-            { type: 'goal', pos: { x: 0, y: -2, z: 75 } }
-        ],
-        spawn: { x: 0, y: 5, z: -5 },
-        goals: [
-            { id: 1, range: { x: [-10, 10], z: [70, 80], y: [-15, 5] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 },
-        nightMode: true,
-        backgroundColor: [0.0, 0.05, 0.0, 1.0]
-    },
-    cyber_matrix_run: {
-        name: 'Cyber Matrix',
-        description: 'Navigate the digital ice track and avoid the data packets!',
-        zones: [
-            { type: 'cyber_matrix', pos: { x: 0, y: 0, z: 0 } },
-            { type: 'goal', pos: { x: 0, y: -2, z: 90 } }
-        ],
-        spawn: { x: 0, y: 5, z: -5 },
-        goals: [
-            { id: 1, range: { x: [-10, 10], z: [85, 95], y: [-15, 5] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 },
-        nightMode: true,
-        backgroundColor: [0.0, 0.05, 0.0, 1.0]
-    },
-    neon_drift_run: {
-        name: 'Neon Drift',
-        description: 'Drift along the icy cyan track and conquer the moving platforms!',
-        zones: [
-            { type: 'neon_drift', pos: { x: 0, y: 0, z: 0 } },
-        ],
-        spawn: { x: 0, y: 3, z: -3 },
-        goals: [
-            { id: 1, range: { x: [25, 40], z: [10, 30], y: [-15, 10] } }
-        ],
-        camera: { mode: 'action', height: 10, offset: -25 },
-        environment: 'space_nebula'
-    },
-
-    neon_vortex_run: {
-        name: 'Neon Vortex',
-        description: 'Navigate the swirling kinematic platforms and high-speed jump!',
-        zones: [
-            { type: 'neon_vortex', pos: { x: 0, y: 0, z: 0 } },
-        ],
-        spawn: { x: 0, y: 2, z: 4 },
-        goals: [
-            { id: 1, range: { x: [-5, 5], z: [60, 75], y: [-15, 0] } }
-        ],
-        camera: { mode: 'action', height: 12, offset: -25 },
-        environment: 'space_nebula'
-    },
-
     plinko_obstacle: {
+        devOnly: UNPROVEN,
         name: 'Plinko Obstacle Course',
         description: 'Navigate the slanted board full of pegs!',
         zones: [
@@ -95,6 +44,22 @@ export const DEV_LEVELS: Record<string, any> = {
         nightMode: true,
         backgroundColor: [0.05, 0.02, 0.1, 1.0],
         environment: 'space_nebula'
+    },
+    neon_hologram_run: {
+        name: 'Neon Hologram',
+        description: 'Navigate the icy cyan hologram track, dodge magenta blockers, and launch to the exit!',
+        zones: [
+            { type: 'neon_hologram', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: 10, z: 75 } }
+        ],
+        spawn: { x: 0, y: 5, z: -10 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [70, 80], y: [5, 15] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.02, 0.02, 0.05, 1.0],
+        environment: 'neon_city'
     },
     neon_city_heights_run: {
         name: 'Neon City Heights',
@@ -192,6 +157,7 @@ export const DEV_LEVELS: Record<string, any> = {
         camera: { mode: 'orbit', angle: 0, height: 15, radius: 40 }
     },
     crystal_orchard: {
+        devOnly: UNPROVEN,
         name: 'Crystal Orchard',
         description: 'Night falls on the glowing fruit trees',
         zones: [
@@ -206,6 +172,7 @@ export const DEV_LEVELS: Record<string, any> = {
         backgroundColor: [0.02, 0.02, 0.08, 1.0]
     },
     spiral_madness: {
+        devOnly: UNPROVEN,
         name: 'Spiral Madness',
         description: 'Dizzying heights!',
         zones: [
@@ -221,6 +188,7 @@ export const DEV_LEVELS: Record<string, any> = {
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
     zigzag: {
+        devOnly: UNPROVEN,
         name: 'ZigZag Challenge',
         description: 'Sharp turns ahead!',
         zones: [
@@ -240,6 +208,7 @@ export const DEV_LEVELS: Record<string, any> = {
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
     neon_dash: {
+        devOnly: UNPROVEN,
         name: 'Neon Dash',
         description: 'Race through the glowing city!',
         zones: [
@@ -258,6 +227,7 @@ export const DEV_LEVELS: Record<string, any> = {
         environment: 'neon_city'
     },
     loop_challenge: {
+        devOnly: UNPROVEN,
         name: 'Loop-the-Loop',
         description: 'Defy gravity!',
         zones: [
@@ -272,67 +242,8 @@ export const DEV_LEVELS: Record<string, any> = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
-    block_challenge: {
-        name: 'Block Challenge',
-        description: 'Navigate through the obstacle course',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'block', pos: { x: 0, y: 0, z: 25 } },
-            { type: 'goal', pos: { x: 0, y: 0.25, z: 50 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-2, 2], z: [48, 52], y: [0, 2] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 }
-    },
-    bowling_alley: {
-        name: 'Bowling Alley',
-        description: 'Knock down the pins!',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'bowling', pos: { x: 0, y: 0, z: 25 } },
-            { type: 'goal', pos: { x: 0, y: 0.25, z: 55 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-10, 10], z: [53, 57], y: [0, 5] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 }
-    },
-    castle_siege: {
-        name: 'Castle Siege',
-        description: 'Storm the castle!',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'castle', pos: { x: 0, y: 0, z: 35 } },
-            { type: 'goal', pos: { x: 0, y: 0.25, z: 65 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-2, 2], z: [63, 67], y: [0, 5] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 }
-    },
-    domino_effect: {
-        name: 'Domino Effect',
-        description: 'Set off the chain reaction!',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'domino', pos: { x: 0, y: 0, z: 25 } },
-            { type: 'goal', pos: { x: 0, y: 0.25, z: 60 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-2, 2], z: [58, 62], y: [0, 2] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 }
-    },
     pyramid_climb: {
+        devOnly: UNPROVEN,
         name: 'Pyramid Climb',
         description: 'Ascend the ancient structure',
         zones: [
@@ -348,6 +259,7 @@ export const DEV_LEVELS: Record<string, any> = {
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
     powerup_park: {
+        devOnly: UNPROVEN,
         name: 'Power-Up Park',
         description: 'Test your abilities with power-ups!',
         zones: [
@@ -363,6 +275,7 @@ export const DEV_LEVELS: Record<string, any> = {
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
     moving_madness: {
+        devOnly: UNPROVEN,
         name: 'Moving Madness',
         description: 'Watch your step on these moving platforms!',
         zones: [
@@ -378,6 +291,7 @@ export const DEV_LEVELS: Record<string, any> = {
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
     plinko_challenge: {
+        devOnly: UNPROVEN,
         name: 'Plinko Challenge',
         description: 'Drop the marble and hope for the best!',
         zones: [
@@ -392,40 +306,8 @@ export const DEV_LEVELS: Record<string, any> = {
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
-    bumper_arena: {
-        name: 'Bumper Arena',
-        description: 'Navigate through the bouncy obstacles!',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'bumper_arena', pos: { x: 0, y: 0, z: 30 } },
-            { type: 'goal', pos: { x: 0, y: 0.25, z: 60 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-5, 5], z: [58, 62], y: [0, 5] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 }
-    },
-    volcano_run: {
-        name: 'Volcano Run',
-        description: 'Cross the glowing lava pit!',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'volcano', pos: { x: 0, y: 0, z: 25 } },
-            { type: 'goal', pos: { x: 0, y: 0.25, z: 70 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-5, 5], z: [65, 75], y: [-1, 3] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 },
-        nightMode: true,
-        backgroundColor: [0.05, 0.0, 0.0, 1.0],
-        environment: 'volcanic'
-    },
     water_slide: {
+        devOnly: UNPROVEN,
         name: 'Water Slide',
         description: 'Slide down the curvy water slide!',
         zones: [
@@ -441,6 +323,7 @@ export const DEV_LEVELS: Record<string, any> = {
         nightMode: false
     },
     grapple_course_run: {
+        devOnly: GRAPPLE_ROUTE,
         name: 'Grapple Course Run',
         description: 'Use the grapple hook (Right Click) and wall-ride to cross the void!',
         zones: [
@@ -457,21 +340,8 @@ export const DEV_LEVELS: Record<string, any> = {
         nightMode: true,
         backgroundColor: [0.02, 0.05, 0.1, 1.0]
     },
-    trampoline_park: {
-        name: 'Trampoline Park',
-        description: 'Bounce your way to the exit!',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'trampoline_park', pos: { x: 0, y: 0, z: 25 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-5, 5], z: [80, 90], y: [-2, 5] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 }
-    },
     space_elevator: {
+        devOnly: UNPROVEN,
         name: 'Space Elevator',
         description: 'Take the elevator to the top!',
         zones: [
@@ -486,6 +356,7 @@ export const DEV_LEVELS: Record<string, any> = {
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
     mystic_forest_run: {
+        devOnly: UNPROVEN,
         name: 'Mystic Forest Run',
         description: 'Navigate the glowing forest!',
         zones: [
@@ -502,6 +373,7 @@ export const DEV_LEVELS: Record<string, any> = {
         backgroundColor: [0.05, 0.05, 0.1, 1.0]
     },
     cloud_city_run: {
+        devOnly: UNPROVEN,
         name: 'Cloud City Run',
         description: 'Bounce across the clouds!',
         zones: [
@@ -517,6 +389,7 @@ export const DEV_LEVELS: Record<string, any> = {
         nightMode: false
     },
     desert_ruins_run: {
+        devOnly: UNPROVEN,
         name: 'Desert Ruins Run',
         description: 'Navigate through ancient ruins and dodging falling blocks!',
         zones: [
@@ -532,6 +405,7 @@ export const DEV_LEVELS: Record<string, any> = {
         nightMode: false
     },
     ice_bridges_run: {
+        devOnly: UNPROVEN,
         name: 'Ice Bridges Run',
         description: 'Cross the slippery, spinning ice bridges!',
         zones: [
@@ -541,11 +415,13 @@ export const DEV_LEVELS: Record<string, any> = {
         ],
         spawn: { x: 0, y: 8, z: -12 },
         goals: [
-            { id: 1, range: { x: [-5, 5], z: [80, 90], y: [-2, 5] } }
+            // The exit platform and goal stamp sit at z 95 (ice-bridges.js).
+            { id: 1, range: { x: [-5, 5], z: [90, 100], y: [0, 4] } }
         ],
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
     lava_tubes_run: {
+        devOnly: UNPROVEN,
         name: 'Lava Tubes Run',
         description: 'Navigate the treacherous lava tubes!',
         zones: [
@@ -560,6 +436,7 @@ export const DEV_LEVELS: Record<string, any> = {
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
     starlight_ascent_run: {
+        devOnly: UNPROVEN,
         name: 'Starlight Ascent Run',
         description: 'Ascend the glowing platforms to the starry exit!',
         zones: [
@@ -576,23 +453,8 @@ export const DEV_LEVELS: Record<string, any> = {
         backgroundColor: [0.02, 0.02, 0.08, 1.0],
         environment: 'space_nebula'
     },
-    toxic_swamp_run: {
-        name: 'Toxic Swamp Run',
-        description: 'Navigate the toxic swamp!',
-        zones: [
-            { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-            { type: 'track', pos: { x: 0, y: 3, z: 0 } },
-            { type: 'toxic_swamp', pos: { x: 0, y: 0, z: 25 } }
-        ],
-        spawn: { x: 0, y: 8, z: -12 },
-        goals: [
-            { id: 1, range: { x: [-5, 5], z: [110, 120], y: [-2, 5] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 },
-        nightMode: true,
-        backgroundColor: [0.01, 0.05, 0.01, 1.0]
-    },
     quantum_leap_run: {
+        devOnly: UNPROVEN,
         name: 'Quantum Leap Run',
         description: 'Leap across the volatile quantum platforms!',
         zones: [
@@ -609,6 +471,7 @@ export const DEV_LEVELS: Record<string, any> = {
         backgroundColor: [0.05, 0.01, 0.05, 1.0]
     },
     glacial_chasm_run: {
+        devOnly: UNPROVEN,
         name: 'Glacial Chasm Run',
         description: 'Navigate the treacherous ice bridges!',
         zones: [
@@ -627,6 +490,7 @@ export const DEV_LEVELS: Record<string, any> = {
         environment: 'ice'
     },
     frostbite_cavern_run: {
+        devOnly: UNPROVEN,
         name: 'Frostbite Cavern Run',
         description: 'Slide down the icy slopes and navigate moving floes!',
         zones: [
@@ -645,6 +509,7 @@ export const DEV_LEVELS: Record<string, any> = {
         environment: 'ice'
     },
     magnetic_canyon_run: {
+        devOnly: UNPROVEN,
         name: 'Magnetic Canyon Run',
         description: 'Navigate the icy paths and magnetic floating platforms!',
         zones: [
@@ -658,6 +523,7 @@ export const DEV_LEVELS: Record<string, any> = {
         camera: { mode: 'follow', height: 15, offset: -25 }
     },
     magnetic_cavern_run: {
+        devOnly: UNPROVEN,
         name: 'Magnetic Cavern Run',
         description: 'Navigate the icy paths and magnetic floating platforms in the cavern!',
         zones: [
@@ -673,6 +539,7 @@ export const DEV_LEVELS: Record<string, any> = {
         backgroundColor: [0.05, 0.05, 0.15, 1.0]
     },
     gravity_well_run: {
+        devOnly: RANDOM_LAYOUT,
         name: 'Gravity Well',
         description: 'Navigate the icy funnel without falling into the core!',
         zones: [
@@ -688,6 +555,7 @@ export const DEV_LEVELS: Record<string, any> = {
         backgroundColor: [0.02, 0.05, 0.08, 1.0]
     },
     neon_plunge_run: {
+        devOnly: UNPROVEN,
         name: 'Neon Plunge Run',
         description: 'A steep neon dive with moving platforms.',
         zones: [
@@ -703,7 +571,25 @@ export const DEV_LEVELS: Record<string, any> = {
         backgroundColor: [0.01, 0.0, 0.05, 1.0],
         environment: 'neon_city'
     },
+    cyber_matrix_run: {
+        devOnly: UNPROVEN,
+        name: 'Cyber Matrix',
+        description: 'Navigate the low-friction digital ice track and dodge moving data packets!',
+        zones: [
+            { type: 'cyber_matrix', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: 0, z: 120 } }
+        ],
+        spawn: { x: 0, y: 5, z: -5 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [115, 125], y: [-5, 10] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.0, 0.05, 0.1, 1.0],
+        environment: 'neon_city'
+    },
     cyber_ice_track_run: {
+        devOnly: UNPROVEN,
         name: 'Cyber Ice Track',
         description: 'Navigate low friction ice and dodging platforms!',
         zones: [
@@ -720,6 +606,7 @@ export const DEV_LEVELS: Record<string, any> = {
         environment: 'ice'
     },
     neon_alley_run: {
+        devOnly: UNPROVEN,
         name: 'Neon Alley Run',
         description: 'Navigate the high speed neon icy slide and dodging laser sweepers!',
         zones: [
@@ -736,6 +623,7 @@ export const DEV_LEVELS: Record<string, any> = {
         environment: 'neon_city'
     },
     chrono_canyon_run: {
+        devOnly: UNPROVEN,
         name: 'Chrono Canyon Run',
         description: 'Navigate the high friction sands and erratic time-distorted platforms!',
         zones: [
@@ -753,6 +641,7 @@ export const DEV_LEVELS: Record<string, any> = {
         backgroundColor: [0.08, 0.03, 0.05, 1.0]
     },
     synthwave_surge_run: {
+        devOnly: UNPROVEN,
         name: 'Synthwave Surge',
         description: 'Ride the neon ice and dodge the moving platforms!',
         zones: [
@@ -768,22 +657,8 @@ export const DEV_LEVELS: Record<string, any> = {
         backgroundColor: [0.05, 0.01, 0.08, 1.0],
         environment: 'neon_city'
     },
-    meteorite_hollow_run: {
-        name: 'Meteorite Hollow',
-        description: 'Navigate the frozen underground lake and dodge the glowing hot meteorites!',
-        zones: [
-            { type: 'meteorite_hollow', pos: { x: 0, y: 0, z: 0 } },
-            { type: 'goal', pos: { x: 0, y: -2, z: 80 } }
-        ],
-        spawn: { x: 0, y: 5, z: -5 },
-        goals: [
-            { id: 1, range: { x: [-5, 5], z: [75, 85], y: [-5, 5] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 },
-        nightMode: true,
-        backgroundColor: [0.02, 0.01, 0.03, 1.0]
-    },
     radiant_reactor_run: {
+        devOnly: UNPROVEN,
         name: 'Radiant Reactor',
         description: 'Navigate the hazardous coolant pool and dodge the active reactor rods!',
         zones: [
@@ -800,6 +675,7 @@ export const DEV_LEVELS: Record<string, any> = {
         environment: 'volcanic'
     },
     plasma_pipeline_run: {
+        devOnly: UNPROVEN,
         name: 'Plasma Pipeline',
         description: 'Navigate the cyan ice track and alternating moving platforms!',
         zones: [
@@ -815,23 +691,8 @@ export const DEV_LEVELS: Record<string, any> = {
         backgroundColor: [0.0, 0.05, 0.1, 1.0],
         environment: 'neon_city'
     },
-    inferno_chamber_run: {
-        name: 'Inferno Chamber',
-        description: 'Navigate the glowing hot magma pool and dodge the active magma pillars!',
-        zones: [
-            { type: 'inferno_chamber', pos: { x: 0, y: 0, z: 0 } },
-            { type: 'goal', pos: { x: 0, y: 3, z: 95 } }
-        ],
-        spawn: { x: 0, y: 5, z: -5 },
-        goals: [
-            { id: 1, range: { x: [-5, 5], z: [90, 100], y: [0, 6] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 },
-        nightMode: true,
-        backgroundColor: [0.05, 0.01, 0.0, 1.0],
-        environment: 'volcanic'
-    },
     neon_pulse_grid_run: {
+        devOnly: UNPROVEN,
         name: 'Neon Pulse Grid',
         description: 'Slide through the dark grid and avoid the glowing pulse walls!',
         zones: [
@@ -848,6 +709,7 @@ export const DEV_LEVELS: Record<string, any> = {
         environment: 'neon_city'
     },
     nebula_nexus_run: {
+        devOnly: UNPROVEN,
         name: 'Nebula Nexus',
         description: 'Navigate the low friction ice track and vertical moving platforms!',
         zones: [
@@ -864,6 +726,7 @@ export const DEV_LEVELS: Record<string, any> = {
         environment: 'space_nebula'
     },
     quantum_tunnel_run: {
+        devOnly: UNPROVEN,
         name: 'Quantum Tunnel',
         description: 'Navigate the twisting translucent paths and quantum shifting obstacles!',
         zones: [
@@ -879,23 +742,8 @@ export const DEV_LEVELS: Record<string, any> = {
         backgroundColor: [0.05, 0.0, 0.1, 1.0],
         environment: 'space_nebula'
     },
-    abyssal_trench_run: {
-        name: 'Abyssal Trench',
-        description: 'Dive deep into the bioluminescent trench!',
-        zones: [
-            { type: 'abyssal_trench', pos: { x: 0, y: 0, z: 0 } },
-            { type: 'goal', pos: { x: 0, y: -20, z: 60 } }
-        ],
-        spawn: { x: 0, y: 5, z: -5 },
-        goals: [
-            { id: 1, range: { x: [-5, 5], z: [55, 65], y: [-25, -15] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 },
-        nightMode: true,
-        backgroundColor: [0.0, 0.05, 0.1, 1.0],
-        environment: 'underwater'
-    },
     void_station_run: {
+        devOnly: UNPROVEN,
         name: 'Void Station Run',
         description: 'Navigate the zero-G glass track and void rings!',
         zones: [
@@ -911,89 +759,6 @@ export const DEV_LEVELS: Record<string, any> = {
         backgroundColor: [0.01, 0.0, 0.05, 1.0],
         environment: 'space_nebula'
     },
-    storm_peak_run: {
-        name: 'Storm Peak',
-        description: 'Brave the icy slide, pulsing clouds, and high winds of Storm Peak!',
-        zones: [
-            { type: 'storm_peak', pos: { x: 0, y: 0, z: 0 } },
-            { type: 'goal', pos: { x: 0, y: 15, z: 105 } }
-        ],
-        spawn: { x: 0, y: 5, z: -40 },
-        goals: [
-            { id: 1, range: { x: [-10, 10], z: [100, 110], y: [10, 20] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 },
-        nightMode: true,
-        backgroundColor: [0.1, 0.1, 0.15, 1.0],
-        environment: 'space_nebula'
-    },
-    neon_pipeline_run: {
-        name: 'Neon Pipeline',
-        description: 'Navigate the high-speed enclosed pipe with sweeping laser bars!',
-        zones: [
-            { type: 'neon_pipeline', pos: { x: 0, y: 0, z: 0 } },
-            { type: 'goal', pos: { x: 0, y: -2, z: 80 } }
-        ],
-        spawn: { x: 0, y: 5, z: -5 },
-        goals: [
-            { id: 1, range: { x: [-5, 5], z: [75, 85], y: [-5, 5] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 },
-        nightMode: true,
-        backgroundColor: [0.01, 0.0, 0.05, 1.0],
-        environment: 'neon_city'
-    },
-    stellar_forge_run: {
-        name: "Stellar Forge",
-        description: "Brave the icy slide and the glowing hot forge hammers!",
-        zones: [
-            { type: "stellar_forge", pos: { x: 0, y: 0, z: 0 } },
-            { type: "goal", pos: { x: 0, y: -5, z: 85 } }
-        ],
-        spawn: { x: 0, y: 5, z: -40 },
-        goals: [
-            { id: 1, range: { x: [-10, 10], z: [80, 90], y: [-10, 5] } }
-        ],
-        camera: { mode: "follow", height: 15, offset: -25 },
-        nightMode: true,
-        backgroundColor: [0.15, 0.05, 0.0, 1.0],
-        environment: "volcanic"
-    },
-    astral_cascade_run: {
-        name: 'Astral Cascade',
-        description: 'Slide through a glowing low-friction path, dodge sweeping platforms, and launch via a heavy jump pad to victory!',
-        zones: [
-            { type: 'astral_cascade', pos: { x: 0, y: 0, z: 0 } },
-            { type: 'goal', pos: { x: 0, y: 20, z: 110 } }
-        ],
-        spawn: { x: 0, y: 5, z: 0 },
-        goals: [
-            { id: 1, range: { x: [-10, 10], z: [105, 115], y: [15, 25] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 },
-        nightMode: true,
-        backgroundColor: [0.05, 0.02, 0.1, 1.0],
-        environment: 'space_nebula'
-    },
-    neon_pulse_matrix_run: {
-        name: 'Neon Pulse Matrix',
-        description: 'Slide down the pulsing low-friction track and dodge the data streams!',
-        zones: [
-            { type: 'neon_pulse_matrix', pos: { x: 0, y: 0, z: 0 } },
-            { type: 'goal', pos: { x: 0, y: -2, z: 120 } }
-        ],
-        spawn: { x: 0, y: 5, z: -5 },
-        goals: [
-            { id: 1, range: { x: [-10, 10], z: [115, 125], y: [-5, 10] } }
-        ],
-        camera: { mode: 'follow', height: 15, offset: -25 },
-        nightMode: true,
-        backgroundColor: [0.02, 0.01, 0.05, 1.0],
-        environment: 'space_nebula'
-    },
-    space_station: spaceStationLevel,
-    skate_park: skateParkLevel,
-    pinball_wizard: pinballLevel,
-    canyon_run: canyonRunLevel,
-    antigravity_chamber: antigravityLevel
+    skate_park: { ...skateParkLevel, devOnly: UNPROVEN },
+    antigravity_chamber: { ...antigravityLevel, devOnly: GRAVITY_MECHANIC },
 };

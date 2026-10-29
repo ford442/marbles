@@ -1,6 +1,12 @@
+// @ts-check
 import { audio } from '../audio.js';
+import { applyVelocityChange } from '../game/systems/body-impulse.ts';
+import { DOUBLE_JUMP_DV } from './movement-tuning.js';
+
+/** @typedef {import('../types/mixin-host.ts').GameMixinHost} GameMixinHost */
 
 export class AbilityDoubleJump {
+    /** @this {GameMixinHost} */
     executeDoubleJump() {
         if (!this.playerMarble || this.hasDoubleJumped) return;
 
@@ -14,7 +20,7 @@ export class AbilityDoubleJump {
             : Math.min(0, linvel.y);
 
         rb.setLinvel({ x: linvel.x, y: newVelY, z: linvel.z }, true);
-        rb.applyImpulse({ x: 0, y: 15.0 * gravityDir, z: 0 }, true);
+        applyVelocityChange(rb, { x: 0, y: DOUBLE_JUMP_DV * gravityDir, z: 0 });
 
         this.hasDoubleJumped = true;
         this.jumpCount = 2;

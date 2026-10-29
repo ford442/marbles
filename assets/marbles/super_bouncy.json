@@ -1,0 +1,27 @@
+{
+  "id": "super_bouncy",
+  "name": "Super Bouncy",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 1,
+      "g": 0,
+      "b": 0.8
+    },
+    "emissive": {
+      "r": 1,
+      "g": 0,
+      "b": 0.8,
+      "intensity": 1
+    },
+    "roughness": 0.2
+  },
+  "physics": {
+    "radius": 0.52,
+    "density": 0.5,
+    "friction": 0.5,
+    "restitution": 1.5
+  }
+}

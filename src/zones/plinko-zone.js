@@ -1,11 +1,11 @@
-import { quatFromEuler } from '../math.ts';
+import { quatFromYawPitchRoll, quatMultiply } from '../math.ts';
 
 export function createPlinkoZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
     // --- Board Base (Slanted almost vertically) ---
     const slopeAngle = Math.PI / 2.5; // Almost vertical, tilted slightly back
-    const boardQ = quatFromEuler(0, slopeAngle, 0);
+    const boardQ = quatFromYawPitchRoll({ yaw: slopeAngle });
 
     const width = 30;
     const length = 40;
@@ -33,7 +33,7 @@ export function createPlinkoZone(game, offset) {
         const posY = offset.y + length / 2 + yRel;
         const posZ = offset.z + zRel;
 
-        const q = quatFromEuler(rotY, slopeAngle, 0);
+        const q = quatMultiply(quatFromYawPitchRoll({ roll: rotY }), quatFromYawPitchRoll({ yaw: slopeAngle }));
 
         game.createStaticBox(
             { x: posX, y: posY, z: posZ },

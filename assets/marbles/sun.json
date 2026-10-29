@@ -1,0 +1,27 @@
+{
+  "id": "sun",
+  "name": "Sun",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 1,
+      "g": 0.9,
+      "b": 0.5
+    },
+    "emissive": {
+      "r": 1,
+      "g": 0.8,
+      "b": 0.4,
+      "intensity": 6
+    },
+    "roughness": 0
+  },
+  "physics": {
+    "radius": 0.8,
+    "density": 5,
+    "friction": 0.5,
+    "restitution": 0.5
+  }
+}

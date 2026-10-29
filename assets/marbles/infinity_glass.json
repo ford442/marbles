@@ -1,0 +1,29 @@
+{
+  "id": "infinity_glass",
+  "name": "Infinity Glass",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0,
+      "g": 1,
+      "b": 0.8
+    },
+    "emissive": {
+      "r": 0,
+      "g": 1,
+      "b": 0.8,
+      "intensity": 6.5
+    },
+    "clearCoat": 1,
+    "clearCoatRoughness": 0,
+    "materialType": "glass"
+  },
+  "physics": {
+    "radius": 0.8,
+    "density": 40,
+    "friction": 0,
+    "restitution": 1.5
+  }
+}

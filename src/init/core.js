@@ -1,6 +1,6 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
-import { initLevelCatalog, LEVELS } from '../levels/catalog.js';
+import { initLevelCatalog, loadDevLevels, LEVELS } from '../levels/catalog.js';
 import { mergeRegistryMarbles } from '../marbles_data.js';
 import {
     resolveWebGLContextOptions,
@@ -25,7 +25,7 @@ import {
     setRuntimeRendererGlobals,
 } from '../rendering/simple-debug-renderer.js';
 import { getRenderDimensions, applyDynamicResolution } from '../render-resolution.js';
-import { isEditorMode, bootMapEditor } from '../editor/index.js';
+import { isEditorMode } from '../editor/mode.js';
 
 export class InitCore {
     async init() {
@@ -75,54 +75,6 @@ export class InitCore {
             // Don't process game inputs when paused
             if (this.isPaused) return
 
-            if (e.code === 'Space' && !this.keys['Space']) {
-                if (!this.abilitySystem?.isEnabled('jump')) return
-                if (this.playerMarble) {
-                    if (this.isGrounded(this.playerMarble)) {
-                        this.isChargingJump = true
-                        this.jumpCharge = 0
-                        this.hasDoubleJumped = false
-                    } else {
-                        const wallContact = this.getWallContact(this.playerMarble)
-                        if (wallContact) {
-                            const rb = this.playerMarble.rigidBody
-                            const linvel = rb.linvel()
-                            rb.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true)
-
-                            const gravityDir = rb.gravityScale() < 0 ? -1 : 1
-                            const upForce = 20.0 * gravityDir
-                            const pushForce = 25.0
-                            const forwardX = Math.sin(this.aimYaw)
-                            const forwardZ = Math.cos(this.aimYaw)
-                            const forwardForce = 15.0
-
-                            rb.applyImpulse({
-                                x: wallContact.normal.x * pushForce + forwardX * forwardForce,
-                                y: upForce,
-                                z: wallContact.normal.z * pushForce + forwardZ * forwardForce
-                            }, true)
-
-                            this.jumpCount = 1
-                            this.hasDoubleJumped = false
-                            audio.playJump()
-                            if (typeof this.awardTrickPoints === 'function') this.awardTrickPoints('Wall Launch!', 75, '#ff00ff')
-                        } else if (!this.hasDoubleJumped && this.abilitySystem?.isEnabled('doublejump')) {
-                            if (typeof this.executeDoubleJump === 'function') {
-                                this.executeDoubleJump()
-                            }
-
-                            // Visual effect for double jump (burst particle)
-                            if (this.particleSystem && this.particleSystem.createEmitter) {
-                                this.particleSystem.createEmitter(
-                                    this.playerMarble.rigidBody.translation(),
-                                    { r: 0, g: 1, b: 1, a: 1 }, // Cyan burst
-                                    0.5
-                                )
-                            }
-                        }
-                    }
-                }
-            }
             if (e.code === 'Tab') {
                 e.preventDefault()
                 if (this.marbles.length > 0) {
@@ -130,7 +82,13 @@ export class InitCore {
                         this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
                         this.flipActive = false
                     }
-                    this.currentMarbleIndex = (this.currentMarbleIndex + 1) % this.marbles.length
+                    // Cycle among player-controllable marbles; level rivals aren't selectable.
+                    let next = this.currentMarbleIndex
+                    for (let i = 0; i < this.marbles.length; i++) {
+                        next = (next + 1) % this.marbles.length
+                        if (!this.marbles[next].isRival) break
+                    }
+                    this.currentMarbleIndex = next
                     this.playerMarble = this.marbles[this.currentMarbleIndex]
                     this.selectedEl.textContent = `Selected: ${this.playerMarble.name}`
                     console.log(`[GAME] Switched to marble ${this.currentMarbleIndex}: ${this.playerMarble.name}`)
@@ -139,6 +97,8 @@ export class InitCore {
             }
             this.keys[e.code] = true
 
+            // Every ability key (press / hold / charge) is a registry entry
+            // (src/abilities/registry.js); map masks apply there.
             if (this.abilitySystem?.handleKeyDown(e.code)) {
                 return
             }
@@ -149,276 +109,20 @@ export class InitCore {
                 this.cameraMode = modes[(idx + 1) % modes.length]
                 console.log('Camera Mode:', this.cameraMode)
             }
-            if (e.code === 'KeyE') {
-                this.magnetMode = 'attract'
-                this.magnetActive = true
-                if (this.hudManager) this.hudManager.markAbilityUsed('magnet')
-            }
-            if (e.code === 'KeyQ') {
-                this.magnetMode = 'repel'
-                this.magnetActive = true
-                if (this.hudManager) this.hudManager.markAbilityUsed('magnet')
-            }
-            if (e.code === 'KeyH' && this.playerMarble) {
-                this.hoverActive = true
-                if (this.hudManager) this.hudManager.markAbilityUsed('hover')
-            }
-            if (e.code === 'KeyG' && this.playerMarble) {
-                if (typeof this.fireGravityPulse === 'function') {
-                    this.fireGravityPulse()
-                }
-            }
-            if (e.code === 'KeyU' && this.playerMarble) {
-                this.flipActive = !this.flipActive
-                if (this.flipActive) {
-                    this.playerMarble.rigidBody.setGravityScale(-this.playerMarble.baseGravityScale, true)
-                } else {
-                    this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
-                }
-                if (this.hudManager) this.hudManager.markAbilityUsed('flip')
-            }
-
-            if (e.code === 'Digit0' && this.playerMarble) {
-                if (typeof this.fireTremor === 'function') {
-                    this.fireTremor()
-                }
-            }
-            if (e.code === 'Digit1') {
-                this.spawnBuildPiece('ramp')
-            }
-            if (e.code === 'Digit2') {
-                this.spawnBuildPiece('floor')
-            }
-            if (e.code === 'Digit3') {
-                this.spawnBuildPiece('bouncer')
-            }
-            if (e.code === 'Digit4' && this.playerMarble) {
-                this.firePortal('A')
-            }
-            if (e.code === 'Digit5' && this.playerMarble) {
-                this.firePortal('B')
-            }
-            if (e.code === 'Digit6' && this.playerMarble) {
-                this.phaseActive = true
-                if (this.hudManager) this.hudManager.markAbilityUsed('phase')
-            }
-            if (e.code === 'Digit7' && this.playerMarble) {
-                this.gliderActive = true
-                if (this.hudManager) this.hudManager.markAbilityUsed('glider')
-            }
-            if (e.code === 'Digit8' && this.playerMarble) {
-                this.timeStopActive = !this.timeStopActive
-                if (this.timeStopActive) {
-                    if (audio && audio.playTrick) audio.playTrick()
-                    this.showTrickMessage('TIME STOP!', '#ffffff')
-                    if (this.hudManager) this.hudManager.markAbilityUsed('timestop')
-                } else {
-                    // Restore velocities immediately
-                    const playerRb = this.playerMarble.rigidBody
-                    for (const body of this.dynamicBodies) {
-                        if (body !== playerRb) {
-                            if (this.timeStopSavedStates.has(body.handle)) {
-                                const state = this.timeStopSavedStates.get(body.handle)
-                                body.setLinvel(state.linvel, true)
-                                body.setAngvel(state.angvel, true)
-                                this.timeStopSavedStates.delete(body.handle)
-                            }
-                            body.setGravityScale(1.0, true)
-                        }
-                    }
-                    this.timeStopSavedStates.clear()
-                }
-            }
-
-            if (e.code === 'KeyO' && this.playerMarble) {
-                this.violetActive = true
-                if (this.hudManager) this.hudManager.markAbilityUsed('violet')
-            }
-
-            if (e.code === 'KeyT') {
-                this.isRewinding = true
-                if (this.hudManager) this.hudManager.markAbilityUsed('rewind')
-            }
-            if (e.code === 'KeyP' && this.playerMarble) {
-                const now = Date.now()
-                if (now - this.lastTeleportTime > this.teleportCooldown) {
-                    this.triggerTeleport()
-                }
-            }
-            if (e.code === 'KeyJ' && this.playerMarble) {
-                this.jetpackActive = true
-                if (this.hudManager) this.hudManager.markAbilityUsed('jetpack')
-            }
-            if (e.code === 'KeyY' && this.playerMarble) {
-                this.vortexActive = true
-                if (this.hudManager) this.hudManager.markAbilityUsed('vortex')
-            }
-            if (e.code === 'KeyN' && this.playerMarble && this.blinkCooldown <= 0) {
-                const maxDist = 20.0
-                const cosP = Math.cos(this.pitchAngle)
-                const sinP = Math.sin(this.pitchAngle)
-                const dirX = Math.sin(this.aimYaw) * cosP
-                const dirY = sinP
-                const dirZ = Math.cos(this.aimYaw) * cosP
-
-                const rb = this.playerMarble.rigidBody
-                const pos = rb.translation()
-                const pRadius = this.playerMarble.scale * 0.5 || 0.5
-
-                const ray = new RAPIER.Ray(pos, { x: dirX, y: dirY, z: dirZ })
-                const hit = this.world.castRay(ray, maxDist, true, 0xffffffff, undefined, undefined, undefined, rb)
-
-                let newPos
-                if (hit) {
-                    newPos = {
-                        x: pos.x + dirX * Math.max(0, hit.toi - pRadius - 0.1),
-                        y: pos.y + dirY * Math.max(0, hit.toi - pRadius - 0.1),
-                        z: pos.z + dirZ * Math.max(0, hit.toi - pRadius - 0.1)
-                    }
-                } else {
-                    newPos = {
-                        x: pos.x + dirX * maxDist,
-                        y: pos.y + dirY * maxDist,
-                        z: pos.z + dirZ * maxDist
-                    }
-                }
-
-                rb.setTranslation(newPos, true)
-                this.blinkCooldown = this.maxBlinkCooldown
-                this.awardTrickPoints('Blink!', 100, '#ff00ff')
-                if (typeof audio !== 'undefined' && audio.playTrick) audio.playTrick()
-            }
-            if (e.code === 'KeyI' && this.playerMarble) {
-                const now = Date.now()
-                if (now - this.lastSizeShiftTime > this.sizeShiftCooldown) {
-                    this.lastSizeShiftTime = now
-
-                    const sizes = [
-                        { name: 'Normal', scale: 1.0 },
-                        { name: 'Mini', scale: 0.5 },
-                        { name: 'Giant', scale: 2.0 }
-                    ]
-
-                    this.playerMarble.sizeState = ((this.playerMarble.sizeState || 0) + 1) % 3
-                    const sizeProfile = sizes[this.playerMarble.sizeState]
-
-                    const rb = this.playerMarble.rigidBody
-
-                    if (this.playerMarble.collider) {
-                        this.world.removeCollider(this.playerMarble.collider, true)
-                    }
-
-                    const newRadius = (this.playerMarble.baseRadius || 0.5) * sizeProfile.scale
-                    const desc = RAPIER.ColliderDesc.ball(newRadius)
-                        .setRestitution(this.playerMarble.baseRestitution !== undefined ? this.playerMarble.baseRestitution : 0.5)
-                        .setFriction(this.playerMarble.baseFriction !== undefined ? this.playerMarble.baseFriction : 0.5)
-
-                    if (this.playerMarble.baseDensity) {
-                        desc.setDensity(this.playerMarble.baseDensity)
-                    }
-
-                    this.playerMarble.collider = this.world.createCollider(desc, rb)
-                    this.playerMarble.scale = sizeProfile.scale * (this.playerMarble.baseScale || 1.0)
-
-                    if (sizeProfile.scale > 1.0) {
-                        const pos = rb.translation()
-                        rb.setTranslation({ x: pos.x, y: pos.y + newRadius, z: pos.z }, true)
-                    }
-
-                    this.showTrickMessage(`Size: ${sizeProfile.name}`, '#ffff00')
-                    if (audio && audio.playCollect) audio.playCollect()
-                }
-            }
-            if (e.code === 'KeyK' && this.playerMarble) {
-                if (typeof this.fireEMP === 'function') {
-                    this.fireEMP()
-                }
-                if (this.hudManager) this.hudManager.markAbilityUsed('emp')
-            }
-            if (e.code === 'KeyN' && this.playerMarble) {
-                const now = Date.now()
-                if (now - this.lastChameleonTime > this.chameleonCooldown) {
-                    this.chameleonState = (this.chameleonState + 1) % this.chameleonProfiles.length
-                    const profile = this.chameleonProfiles[this.chameleonState]
-
-                    this.playerMarble.baseGravityScale = profile.gravityScale
-                    if (!this.flipActive) {
-                        this.playerMarble.rigidBody.setGravityScale(profile.gravityScale, true)
-                    } else {
-                        this.playerMarble.rigidBody.setGravityScale(-profile.gravityScale, true)
-                    }
-
-                    this.playerMarble.color = profile.color
-                    const rcm = this.engine.getRenderableManager()
-                    const inst = rcm.getInstance(this.playerMarble.entity)
-                    rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, profile.color)
-
-                    this.lastChameleonTime = now
-                    this.showTrickMessage(`Chameleon: ${profile.name}`, `rgb(${profile.color[0]*255}, ${profile.color[1]*255}, ${profile.color[2]*255})`)
-                    if (audio && audio.playCollect) audio.playCollect()
-                    if (this.hudManager) this.hudManager.markAbilityUsed('chameleon')
-                }
-            }
         })
 
         window.addEventListener('keyup', (e) => {
-            if (e.code === 'Digit6') {
-                this.phaseActive = false
-            }
-            if (e.code === 'Digit7') {
-                this.gliderActive = false
-            }
-            if (e.code === 'KeyO') {
-                this.violetActive = false
-            }
-            if (e.code === 'KeyH') {
-                this.hoverActive = false
-            }
-            if (e.code === 'KeyG') {
-                this.iceActive = false
-            }
-            if (e.code === 'KeyY') {
-                this.vortexActive = false
-            }
-            if (e.code === 'KeyJ') {
-                this.jetpackActive = false
-            }
-            if (e.code === 'KeyT') {
-                this.isRewinding = false
-                if (this.playerMarble) {
-                    this.playerMarble.rigidBody.wakeUp()
-                    if (this.playerMarble.color) {
-                         const rcm = this.engine.getRenderableManager()
-                         const inst = rcm.getInstance(this.playerMarble.entity)
-                         rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, this.playerMarble.color)
-                    }
-                }
-            }
-
-            if (e.code === 'KeyE' || e.code === 'KeyQ') {
-                this.magnetActive = false
-                this.magnetMode = null
-            }
-            if (e.code === 'Space') {
-                if (this.isChargingJump && this.playerMarble) {
-                    let force = 5.0 + this.jumpCharge * 10.0
-                    if (this.activeEffects.jump && Date.now() < this.activeEffects.jump) {
-                        force *= 2.0
-                    }
-                    const gravityDir = this.playerMarble.rigidBody.gravityScale() < 0 ? -1 : 1
-                    this.playerMarble.rigidBody.applyImpulse({ x: 0, y: force * gravityDir, z: 0 }, true)
-                    audio.playJump()
-                    this.jumpCount = 1
-                    if (this.multiplayerMode && this.network?.room) {
-                        this.network.sendAbility('jump', this.jumpCharge);
-                    }
-                }
-                this.isChargingJump = false
-                this.jumpCharge = 0
-                if (this.jumpBarEl) this.jumpBarEl.style.width = '0%'
-            }
+            this.abilitySystem?.handleKeyUp(e.code)
             this.keys[e.code] = false
         })
+
+        // The grapple's mouse binding is dispatched by InputSystem, which calls
+        // startGrapple / stopGrapple; route those through the registry entry so
+        // level ability masks can disable it.
+        this.startGrappleRaw = this.startGrapple
+        this.stopGrappleRaw = this.stopGrapple
+        this.startGrapple = () => { this.abilitySystem?.pressAbility('grapple') }
+        this.stopGrapple = () => { this.abilitySystem?.releaseAbility('grapple') }
 
         const initAudio = () => {
             audio.init()
@@ -666,6 +370,7 @@ export class InitCore {
             const assetRegistry = this.levelLoader.assetRegistry
             await assetRegistry.loadAll()
             initLevelCatalog(assetRegistry)
+            await loadDevLevels()
             mergeRegistryMarbles(assetRegistry)
             if (audio?.loadFromRegistry) {
                 await audio.loadFromRegistry(assetRegistry)
@@ -694,6 +399,8 @@ export class InitCore {
         
         if (isEditorMode()) {
             console.log('[INIT] Editor mode — launching map editor')
+            // Lazy chunk: the editor (and its ajv validator) never ships in normal play.
+            const { bootMapEditor } = await import('../editor/index.js')
             await bootMapEditor(this)
         } else {
             this.showLevelSelection()

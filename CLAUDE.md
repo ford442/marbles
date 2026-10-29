@@ -151,16 +151,12 @@ Output: `public/wasm/marble_physics.{js,wasm}`
 
 ## Development Patterns
 
-### Adding a New Zone
+### Adding a New Level
 
-1. Create `src/zones/[zone-name].js` with zone setup function
-2. Export from `src/zones/index.js`
-3. Import and call setup in the appropriate game level selection
-4. Define zone geometry using physics factory methods:
-   ```javascript
-   this.createStaticBody(position, collider, material);
-   this.createDynamicEntity(position, collider, material);
-   ```
+1. Write `assets/maps/<id>.json` with `"schemaVersion": 2`, using the primitives `box`/`ramp`/`mover`/`spinner`/`trigger` (built by `src/zone-setup/primitives.ts`). Example: `assets/maps/quantum_core.json`.
+2. Register it in `assets/manifest.json`, and list it in a chapter's `levels` in `src/levels/campaign.js`.
+3. Record a `solution` with `npm run level:lab -- assets/maps/<id>.json --waypoints '[[x,z],...]'`; `tests/levels/` replays it in `npm test`.
+4. Use a factory zone (`src/zones/<name>.js` + `FACTORY_ZONES` in `src/zone-setup/registry.js`, then `node scripts/sync-zone-handlers.cjs`) only when primitives can't express the geometry. It still ships via a JSON map.
 
 ### Creating Game Logic
 
@@ -224,8 +220,8 @@ Special abilities use internal cooldown tracking:
 
 ## Testing
 
-- Test files in `src/__tests__/`
-- Use jsdom + Playwright for rendering/physics verification
+- Unit tests in `tests/` and the headless level completability harness in `tests/levels/` (both run by `npm test`); Playwright e2e in `tests/e2e/`
+- `npm run level:lab -- <map.json>` debugs one map headlessly (static checks, smoke, solution replay, autopilot)
 - Check browser console for physics logs and rendering errors
 
 ## TypeScript Support
@@ -254,7 +250,9 @@ npm run build                  # Production build to dist/
 
 ## Known issues / blockers
 
-- Three recently merged zones — Astral Cascade (`src/zones/astral-cascade.js`), Inferno Chamber (`src/zones/inferno-chamber.js`), and Aether Core (`src/zones/aether-core.js`) — are only registered as `DEV_LEVELS` entries in `src/levels.ts` (reachable via `?devLevels=1`), not added to the shipped 24-map `assets/manifest.json` that normal play uses. A fourth zone from the same run of feature PRs, Cyber Reactor (`cyber_run`), *did* make it into the live manifest. Unclear whether the other three are intentionally staged in dev-only limbo or just missed the manifest update — worth confirming before assuming they're live content.
+- Level Format v2 (#451) resolved the dev-only zone backlog. The 11 post-August JS zones were ported to v2 JSON maps or deleted, and the manifest now ships 44 maps across 5 campaign chapters. `DEV_LEVELS` (38 entries) is sandbox-only: each entry carries a `devOnly` reason, and `tests/levels/test_dev_levels_policy.js` enforces that. Do **not** add new JS zones/levels without a JSON map. See `docs/architecture/level-pipeline.md`.
+- `pinball-zone.js`, `plinko-zone.js`, `helix-zone.js` (and `createSpiralZone` in `zones/methods/track-creation.js`) pass `rotY` as a **roll**. This was preserved exactly during the `quatFromEuler` → `quatFromYawPitchRoll` migration, but it looks unintended; revisit when those levels are ported to v2.
+- Held-key movement is a raw impulse that isn't scaled by mass, so light marbles accelerate much harder. Recorded level `solution`s are tied to the reference marble (`classic_red`).
 - `docs/backups/` (including the `_backup_*` files and `orphan-react-stack/`) is intentionally archived and excluded from `tsconfig.json` — not dead weight to clean up, already correctly documented in AGENTS.md's "Non-obvious gotchas".
 - `npm run lint` and `npm run typecheck` were re-verified clean as of this check (2026-09-26) — the doc's claim still holds. `typecheck` covers the composed systems (`src/game/systems/*.ts`), `wasm-bridge.js`, `src/webgpu/**`, and `src/gpu-chores/**`; JS is only checked where a file has `// @ts-check` (see `docs/architecture/language-strategy.md`).
 - `backend/core/app_storage_manager.py` is the single copy of the legacy monolithic storage module (the byte-identical `backend/shared/hf/` duplicate was removed 2026-09-26; nothing imported either). The live API is `backend/storage/` (`uvicorn storage.main:app`).
