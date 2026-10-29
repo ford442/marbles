@@ -2,6 +2,7 @@ import { audio } from '../audio.js';
 import { quaternionToMat4 } from '../math.ts';
 import { tickLevelBehaviors } from '../game/level-behaviors/index.js';
 import { applyAcceleration } from '../game/systems/body-impulse.ts';
+import { getMarblePhysics, FORCE_BATCH_THRESHOLD, PhysicsBatchBuffers } from '../wasm-bridge.js';
 
 /** Gravity (m/s²) the hover / glider / gravity-powerup lift is tuned against. */
 const GRAVITY = 9.81;
@@ -630,6 +631,89 @@ export class GameLoopLogic {
 
         // One grounding probe per frame, shared by the meters below.
         const grounded = this.playerMarble ? this.isGrounded(this.playerMarble) : false
+
+        if (this.awaitingShockwaveImpact && grounded && this.playerMarble) {
+            this.awaitingShockwaveImpact = false;
+
+            const pt = this.playerMarble.rigidBody.translation();
+            const range = 25.0;
+            const rangeSq = range * range;
+            const forceStrength = 500.0;
+            const physics = getMarblePhysics();
+
+            /** @type {{ body: import('@dimforge/rapier3d-compat').RigidBody, pos: { x: number, y: number, z: number } }[]} */
+            const targets = [];
+
+            /** @param {import('@dimforge/rapier3d-compat').RigidBody} body */
+            const considerBody = (body) => {
+                const bt = body.translation();
+                const dx = pt.x - bt.x;
+                const dy = pt.y - bt.y;
+                const dz = pt.z - bt.z;
+                const distSq = dx * dx + dy * dy + dz * dz;
+                if (distSq > 0.1 && distSq < rangeSq) {
+                    targets.push({ body, pos: bt });
+                }
+            };
+
+            for (const m of this.marbles) {
+                if (m !== this.playerMarble) considerBody(m.rigidBody);
+            }
+            for (const obj of this.dynamicObjects) {
+                considerBody(obj.rigidBody);
+            }
+
+            if (targets.length > FORCE_BATCH_THRESHOLD) {
+                if (!this._forceBatchBuffers) this._forceBatchBuffers = new PhysicsBatchBuffers(128);
+                const buf = this._forceBatchBuffers;
+                buf.ensure(targets.length);
+
+                for (const [i, { pos: p }] of targets.entries()) {
+                    const base = i * 3;
+                    buf.positions[base] = p.x;
+                    buf.positions[base + 1] = p.y;
+                    buf.positions[base + 2] = p.z;
+                    buf.strengths[i] = forceStrength;
+                }
+
+                physics.computeForceFieldsBatch(
+                    buf.positions, buf.strengths, buf.forces, targets.length,
+                    pt.x, pt.y, pt.z,
+                    1.0, 0.2, range, 1.0 // exponent, offset, radius, scale
+                );
+
+                for (const [i, { body }] of targets.entries()) {
+                    const base = i * 3;
+                    body.applyImpulse({
+                        x: buf.forces[base] ?? 0,
+                        y: (buf.forces[base + 1] ?? 0) + 20.0, // Extra upward kick
+                        z: buf.forces[base + 2] ?? 0
+                    }, true);
+                }
+            } else if (targets.length > 0) {
+                if (!this._forceBatchBuffers) this._forceBatchBuffers = new PhysicsBatchBuffers(16);
+                const scalarBuf = this._forceBatchBuffers.forces;
+                for (const { body, pos: bt } of targets) {
+                    physics.computeForceFieldInto(
+                        scalarBuf,
+                        pt.x, pt.y, pt.z,
+                        bt.x, bt.y, bt.z,
+                        forceStrength, 1.0, 0.2, range, 1.0
+                    );
+                    body.applyImpulse({
+                        x: scalarBuf[0],
+                        y: scalarBuf[1] + 20.0,
+                        z: scalarBuf[2]
+                    }, true);
+                }
+            }
+
+            // Camera shake
+            if (!this.cameraShake) this.cameraShake = { x: 0, y: 0, z: 0 };
+            this.cameraShake.y += 2.0; // intense vertical shake
+
+            if (audio && audio.playImpact) audio.playImpact();
+        }
 
         if (this.hoverActive && this.hoverEnergy > 0) {
             if (this.playerMarble) {

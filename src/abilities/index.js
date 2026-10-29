@@ -11,6 +11,7 @@ import { AbilityBlackHole } from './black-hole.js';
 import { AbilityBomb } from './bomb.js';
 import { AbilityConstructs } from './constructs.js';
 import { AbilityDoubleJump } from './double-jump.js';
+import { AbilityShockwaveDive } from './shockwave-dive.js';
 
 export {
     ABILITY_REGISTRY,
@@ -28,6 +29,7 @@ export function installAbilityMethods(targetClass) {
     installKnownMethods(targetClass, AbilityHover, ['beginHoverCharge', 'updateHover', 'releaseHover']);
     installKnownMethods(targetClass, AbilityDash, ['beginDashCharge', 'releaseDash']);
     installKnownMethods(targetClass, AbilityStomp, ['beginStompCharge', 'releaseStomp']);
+    installKnownMethods(targetClass, AbilityShockwaveDive, ['beginShockwaveCharge', 'releaseShockwave']);
     installKnownMethods(targetClass, AbilityBlink, ['triggerBlink', 'spawnBlinkParticle']);
     installKnownMethods(targetClass, AbilityEmpTremor, [
         'fireEMP', 'fireTremor', 'spawnEMPEffect', 'spawnEMPSpark', 'triggerEMPFlash',
