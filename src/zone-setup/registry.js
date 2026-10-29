@@ -47,7 +47,7 @@ const BUILTIN_ZONE_HANDLERS = {
 };
 
 /** @type {Record<string, ZoneHandler>} */
-const FACTORY_ZONE_HANDLERS = {
+const OLD_FACTORY_ZONE_HANDLERS = {
     pinwheel_alley: (game, _zone, offset) => zones.createPinwheelAlleyZone(game, offset),
     plinko: (game, _zone, offset) => zones.createPlinkoZone(game, offset),
     plinko_obstacle: (game, _zone, offset) => zones.createPlinkoObstacleZone(game, offset),
@@ -114,6 +114,8 @@ const FACTORY_ZONE_HANDLERS = {
     neon_pulse_matrix: (game, _zone, offset) => zones.createNeonPulseMatrixZone(game, offset),
     quantum_core: (game, _zone, offset) => zones.createQuantumCoreZone(game, offset),
     neon_hologram: (game, _zone, offset) => zones.createNeonHologramZone(game, offset),
+};
+
 /**
  * Factory stamp type → [module basename in src/zones/, exported builder].
  * The builder is called as `builder(game, offset)`.
@@ -171,6 +173,7 @@ export const FACTORY_ZONES = {
     quantum_tunnel: ['quantum-tunnel', 'createQuantumTunnelZone'],
     void_station: ['void-station', 'createVoidStationZone'],
     neon_pipeline: ['neon-pipeline', 'createNeonPipelineZone'],
+    cyber_matrix: ['cyber-matrix', 'createCyberMatrixZone'],
 };
 
 /**
@@ -195,7 +198,7 @@ async function loadFactoryBuilder(type) {
 }
 
 /** @type {Record<string, ZoneHandler>} */
-const FACTORY_ZONE_HANDLERS = Object.fromEntries(
+const DYNAMIC_FACTORY_ZONE_HANDLERS = Object.fromEntries(
     Object.keys(FACTORY_ZONES).map((type) => [
         type,
         /** @type {ZoneHandler} */ (async (game, _zone, offset) => (await loadFactoryBuilder(type))(game, offset)),
@@ -213,7 +216,8 @@ const PRIMITIVE_ZONE_HANDLERS = Object.fromEntries(
 /** @type {Record<string, ZoneHandler>} */
 export const ZONE_HANDLERS = {
     ...BUILTIN_ZONE_HANDLERS,
-    ...FACTORY_ZONE_HANDLERS,
+    ...OLD_FACTORY_ZONE_HANDLERS,
+    ...DYNAMIC_FACTORY_ZONE_HANDLERS,
     ...PRIMITIVE_ZONE_HANDLERS,
 };
 

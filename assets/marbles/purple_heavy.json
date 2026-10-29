@@ -19,6 +19,6 @@
   },
   "physics": {
     "radius": 0.75,
-    "restitution": 1
+    "restitution": 1.2
   }
 }

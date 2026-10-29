@@ -10,13 +10,13 @@
       "g": 0,
       "b": 0
     },
-    "roughness": 0,
     "emissive": {
       "r": 0.1,
       "g": 0,
       "b": 0.2,
       "intensity": 5
-    }
+    },
+    "roughness": 0
   },
   "physics": {
     "radius": 0.6,

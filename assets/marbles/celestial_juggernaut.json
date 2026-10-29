@@ -10,20 +10,20 @@
       "g": 1,
       "b": 0.8
     },
-    "clearCoat": 1,
-    "clearCoatRoughness": 0,
-    "materialType": "glass",
     "emissive": {
       "r": 0.9,
       "g": 1,
       "b": 0.8,
       "intensity": 9.5
-    }
+    },
+    "clearCoat": 1,
+    "clearCoatRoughness": 0,
+    "materialType": "glass"
   },
   "physics": {
     "radius": 0.95,
     "density": 150,
     "friction": 0,
-    "restitution": 1
+    "restitution": 1.5
   }
 }

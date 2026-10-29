@@ -571,6 +571,23 @@ export const DEV_LEVELS: Record<string, any> = {
         backgroundColor: [0.01, 0.0, 0.05, 1.0],
         environment: 'neon_city'
     },
+    cyber_matrix_run: {
+        devOnly: UNPROVEN,
+        name: 'Cyber Matrix',
+        description: 'Navigate the low-friction digital ice track and dodge moving data packets!',
+        zones: [
+            { type: 'cyber_matrix', pos: { x: 0, y: 0, z: 0 } },
+            { type: 'goal', pos: { x: 0, y: 0, z: 120 } }
+        ],
+        spawn: { x: 0, y: 5, z: -5 },
+        goals: [
+            { id: 1, range: { x: [-10, 10], z: [115, 125], y: [-5, 10] } }
+        ],
+        camera: { mode: 'follow', height: 15, offset: -25 },
+        nightMode: true,
+        backgroundColor: [0.0, 0.05, 0.1, 1.0],
+        environment: 'neon_city'
+    },
     cyber_ice_track_run: {
         devOnly: UNPROVEN,
         name: 'Cyber Ice Track',
