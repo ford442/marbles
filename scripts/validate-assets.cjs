@@ -18,7 +18,7 @@ const ROOT = path.join(__dirname, '..');
 function loadZoneHandlers() {
   const handlersPath = path.join(ASSETS_DIR, 'schemas', 'zone-handlers.json');
   if (!fs.existsSync(handlersPath)) {
-    require('./sync-zone-handlers.cjs');
+    throw new Error('assets/schemas/zone-handlers.json is missing. Run: node scripts/sync-zone-handlers.cjs');
   }
   const data = JSON.parse(fs.readFileSync(handlersPath, 'utf8'));
   return new Set(data.handlers || []);
@@ -229,7 +229,29 @@ function validateManifest(results) {
   console.log('');
 }
 
-function validateAssets() {
+async function loadMapRules(mapSchema) {
+  // The same rule set the editor uses (src/levels/map-rules.js), compiled with ajv.
+  const Ajv = require('ajv');
+  const { pathToFileURL } = require('url');
+  const rules = await import(pathToFileURL(path.join(ROOT, 'src', 'levels', 'map-rules.js')).href);
+  return {
+    validateSchema: rules.compileMapSchema(Ajv, mapSchema),
+    semanticChecks: rules.semanticChecks,
+  };
+}
+
+async function validateMarbleCatalog() {
+  const { pathToFileURL } = require('url');
+  const gen = await import(pathToFileURL(path.join(ROOT, 'scripts', 'generate-marbles-data.mjs')).href);
+  const { infos, problems } = gen.loadCatalog();
+  if (problems.length) return problems;
+  const current = fs.existsSync(gen.OUTPUT_PATH) ? fs.readFileSync(gen.OUTPUT_PATH, 'utf8') : '';
+  return current === gen.renderMarblesData(infos)
+    ? []
+    : ['src/marbles_data.js is stale — run `npm run gen:marbles`'];
+}
+
+async function validateAssets() {
   console.log('🔍 Validating Assets...\n');
 
   const schemas = {
@@ -239,6 +261,7 @@ function validateAssets() {
   };
 
   const zoneHandlers = loadZoneHandlers();
+  const mapRules = await loadMapRules(schemas.map);
   const manifestMapIds = getManifestMapIds();
   console.log(`📦 Zone handlers: ${zoneHandlers.size} registered\n`);
 
@@ -264,7 +287,9 @@ function validateAssets() {
       continue;
     }
 
-    const errors = validateAgainstSchema(data, schemas.map, file, schemas.map);
+    const errors = mapRules.validateSchema(data);
+    const semantic = mapRules.semanticChecks(data, zoneHandlers);
+    errors.push(...semantic.errors);
     errors.push(...validateMapZoneHandlers(data, file, zoneHandlers, manifestMapIds, results));
     if (errors.length === 0) {
       console.log(`  ✅ ${file} - ${data.name || 'Unnamed'}`);
@@ -279,7 +304,8 @@ function validateAssets() {
 
   // Validate marbles
   const marblesDir = path.join(ASSETS_DIR, 'marbles');
-  const marbleFiles = fs.readdirSync(marblesDir).filter(f => f.endsWith('.json') && f !== 'TEMPLATE.json');
+  // `_*.json` are catalog metadata (e.g. _bouncy-cap.json), not marbles.
+  const marbleFiles = fs.readdirSync(marblesDir).filter(f => f.endsWith('.json') && f !== 'TEMPLATE.json' && !f.startsWith('_'));
   
   console.log('\n🔮 Marbles:');
   for (const file of marbleFiles) {
@@ -303,6 +329,19 @@ function validateAssets() {
       results.invalid++;
       results.errors.push({ file, errors });
     }
+  }
+
+  // Catalog invariants (unique ids/names, restitution <= 1 outside _bouncy-cap.json,
+  // every file in the manifest) and the generated src/marbles_data.js being current.
+  const catalogErrors = await validateMarbleCatalog();
+  if (catalogErrors.length === 0) {
+    console.log(`  ✅ catalog: ids/names unique, restitution capped, src/marbles_data.js up to date`);
+    results.valid++;
+  } else {
+    console.log('  ❌ marble catalog:');
+    catalogErrors.forEach(e => console.log(`      - ${e}`));
+    results.invalid++;
+    results.errors.push({ file: 'marble catalog', errors: catalogErrors });
   }
 
   // Validate sounds
@@ -348,4 +387,7 @@ function validateAssets() {
   }
 }
 
-validateAssets();
+validateAssets().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

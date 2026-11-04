@@ -1,34 +1,61 @@
 {
-  "generated_at": "2026-10-10T09:11:22.066Z",
+  "generated_at": "2026-10-27T15:09:41.860Z",
   "counts": {
-    "manifest": 24,
-    "dev_levels": 63,
-    "map_files": 28,
-    "unique_ids": 87,
-    "json_only": 20,
-    "code_only": 59,
-    "dual": 4,
+    "manifest": 44,
+    "dev_levels": 47,
+    "map_files": 48,
+    "unique_ids": 101,
+    "json_only": 41,
+    "code_only": 44,
+    "dual": 3,
     "orphan_json": 0,
-    "archived_json": 4
+    "archived_json": 4,
+    "deleted": 1,
+    "migrated": 8
   },
   "checks": {
     "duplicate_dev_level_ids": [],
+    "untriaged": [
+      "aether_core_run",
+      "crystal_cavern_run",
+      "cyber_reactor_run",
+      "neon_city_heights_run",
+      "neon_hologram_run"
+    ],
     "shipped_without_handlers": []
   },
   "rows": [
     {
       "id": "abyssal_trench_run",
-      "source": "code",
+      "source": "deleted",
       "in_manifest": false,
-      "in_dev_levels": true,
+      "in_dev_levels": false,
       "on_disk": false,
-      "chapter": "extreme",
-      "chapter_source": "heuristic:extreme",
+      "chapter": "",
+      "chapter_source": "",
       "zone_types": "(dev inline)",
       "unknown_zones": "",
-      "migration_status": "dev-only",
+      "migration_status": "deleted",
       "archive_reason": "",
+      "triage": "delete",
+      "triage_reason": "Crashed on load: abyssal-trench.js read .rigidBody from createMovingZone(), which returns nothing. Underwater theme is covered by other levels; deleted rather than ported (zone file removed).",
       "difficulty": ""
+    },
+    {
+      "id": "aether_core",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "expert",
+      "chapter_source": "override:expert",
+      "zone_types": "box, ramp, mover, trigger, goal",
+      "unknown_zones": "",
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "hard"
     },
     {
       "id": "aether_core_run",
@@ -42,10 +69,13 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "",
+      "replaced_by": "aether_core",
       "difficulty": ""
     },
     {
-      "id": "astral_cascade_run",
+      "id": "antigravity_chamber",
       "source": "code",
       "in_manifest": false,
       "in_dev_levels": true,
@@ -56,63 +86,122 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Route depends on gravity power-ups, which the headless harness does not collect or simulate; completability unproven.",
+      "difficulty": ""
+    },
+    {
+      "id": "astral_cascade",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "expert",
+      "chapter_source": "override:expert",
+      "zone_types": "box, ramp, mover, trigger, goal",
+      "unknown_zones": "",
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "hard"
+    },
+    {
+      "id": "astral_cascade_run",
+      "source": "migrated",
+      "in_manifest": false,
+      "in_dev_levels": false,
+      "on_disk": false,
+      "chapter": "",
+      "chapter_source": "",
+      "zone_types": "(dev inline)",
+      "unknown_zones": "",
+      "migration_status": "migrated (renamed JSON map)",
+      "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "Ported to Level Format v2 as assets/maps/astral_cascade.json (geometry and goal bugs fixed, recorded solution); JS zone and DEV_LEVELS entry removed.",
+      "replaced_by": "astral_cascade",
       "difficulty": ""
     },
     {
       "id": "block_challenge",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
-      "chapter": "classic",
-      "chapter_source": "heuristic:classic",
-      "zone_types": "(dev inline)",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "tutorial",
+      "chapter_source": "override:tutorial",
+      "zone_types": "floor, track, block, goal",
       "unknown_zones": "",
-      "migration_status": "dev-only",
+      "migration_status": "shipped",
       "archive_reason": "",
-      "difficulty": ""
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "easy"
     },
     {
       "id": "bowling_alley",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
-      "chapter": "neon",
-      "chapter_source": "heuristic:neon",
-      "zone_types": "(dev inline)",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "tutorial",
+      "chapter_source": "override:tutorial",
+      "zone_types": "floor, track, bowling, goal",
       "unknown_zones": "",
-      "migration_status": "dev-only",
+      "migration_status": "shipped",
       "archive_reason": "",
-      "difficulty": ""
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "easy"
     },
     {
       "id": "bumper_arena",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
-      "chapter": "classic",
-      "chapter_source": "heuristic:classic",
-      "zone_types": "(dev inline)",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "expert",
+      "chapter_source": "override:expert",
+      "zone_types": "floor, track, bumper_arena, goal",
       "unknown_zones": "",
-      "migration_status": "dev-only",
+      "migration_status": "shipped",
       "archive_reason": "",
-      "difficulty": ""
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "hard"
+    },
+    {
+      "id": "canyon_run",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "classic",
+      "chapter_source": "override:classic",
+      "zone_types": "canyon_run, goal",
+      "unknown_zones": "",
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "medium"
     },
     {
       "id": "castle_siege",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
       "chapter": "classic",
-      "chapter_source": "heuristic:classic",
-      "zone_types": "(dev inline)",
+      "chapter_source": "override:classic",
+      "zone_types": "floor, track, castle, goal",
       "unknown_zones": "",
-      "migration_status": "dev-only",
+      "migration_status": "shipped",
       "archive_reason": "",
-      "difficulty": ""
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "medium"
     },
     {
       "id": "chrono_canyon_run",
@@ -126,6 +215,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -135,11 +226,13 @@
       "in_dev_levels": false,
       "on_disk": true,
       "chapter": "extreme",
-      "chapter_source": "json:extreme",
+      "chapter_source": "override:extreme",
       "zone_types": "floor, track, clockwork, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "hard"
     },
     {
@@ -154,7 +247,25 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
+    },
+    {
+      "id": "crystal_cavern",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "neon",
+      "chapter_source": "override:neon",
+      "zone_types": "box, ramp, mover, goal",
+      "unknown_zones": "",
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "medium"
     },
     {
       "id": "crystal_cavern_run",
@@ -168,6 +279,9 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "",
+      "replaced_by": "crystal_cavern",
       "difficulty": ""
     },
     {
@@ -182,6 +296,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -196,7 +312,25 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
+    },
+    {
+      "id": "cyber_matrix",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "neon",
+      "chapter_source": "override:neon",
+      "zone_types": "box, ramp, mover, goal",
+      "unknown_zones": "",
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "easy"
     },
     {
       "id": "cyber_matrix_run",
@@ -210,6 +344,9 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
+      "replaced_by": "cyber_matrix",
       "difficulty": ""
     },
     {
@@ -224,6 +361,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "",
       "difficulty": ""
     },
     {
@@ -233,11 +372,13 @@
       "in_dev_levels": false,
       "on_disk": true,
       "chapter": "neon",
-      "chapter_source": "json:neon",
+      "chapter_source": "override:neon",
       "zone_types": "floor, track, cyber_track, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "medium"
     },
     {
@@ -252,21 +393,25 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
       "id": "domino_effect",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
-      "chapter": "classic",
-      "chapter_source": "heuristic:classic",
-      "zone_types": "(dev inline)",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "tutorial",
+      "chapter_source": "override:tutorial",
+      "zone_types": "floor, track, domino, goal",
       "unknown_zones": "",
-      "migration_status": "dev-only",
+      "migration_status": "shipped",
       "archive_reason": "",
-      "difficulty": ""
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "easy"
     },
     {
       "id": "frostbite_cavern_run",
@@ -280,6 +425,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -294,6 +441,8 @@
       "unknown_zones": "",
       "migration_status": "json-wins",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "expert"
     },
     {
@@ -303,11 +452,13 @@
       "in_dev_levels": false,
       "on_disk": true,
       "chapter": "expert",
-      "chapter_source": "json:expert",
+      "chapter_source": "override:expert",
       "zone_types": "floor, track, galaxy_spiral, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "expert"
     },
     {
@@ -322,6 +473,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -336,6 +489,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Route needs the grapple, which the completability autopilot cannot drive yet.",
       "difficulty": ""
     },
     {
@@ -350,6 +505,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Layout is randomised per build (Math.random) and the greedy route fails on the seeded headless layout; needs a deterministic v2 port.",
       "difficulty": ""
     },
     {
@@ -359,11 +516,13 @@
       "in_dev_levels": false,
       "on_disk": true,
       "chapter": "extreme",
-      "chapter_source": "json:extreme",
+      "chapter_source": "override:extreme",
       "zone_types": "floor, track, helix, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "hard"
     },
     {
@@ -378,6 +537,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -387,25 +548,46 @@
       "in_dev_levels": false,
       "on_disk": true,
       "chapter": "extreme",
-      "chapter_source": "json:extreme",
+      "chapter_source": "override:extreme",
       "zone_types": "floor, track, ice_cave, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "hard"
+    },
+    {
+      "id": "inferno_chamber",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "extreme",
+      "chapter_source": "override:extreme",
+      "zone_types": "box, mover, trigger, goal",
+      "unknown_zones": "",
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "hard"
     },
     {
       "id": "inferno_chamber_run",
-      "source": "code",
+      "source": "migrated",
       "in_manifest": false,
-      "in_dev_levels": true,
+      "in_dev_levels": false,
       "on_disk": false,
-      "chapter": "classic",
-      "chapter_source": "heuristic:classic",
+      "chapter": "",
+      "chapter_source": "",
       "zone_types": "(dev inline)",
       "unknown_zones": "",
-      "migration_status": "dev-only",
+      "migration_status": "migrated (renamed JSON map)",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "Ported to Level Format v2 as assets/maps/inferno_chamber.json (geometry and goal bugs fixed, recorded solution); JS zone and DEV_LEVELS entry removed.",
+      "replaced_by": "inferno_chamber",
       "difficulty": ""
     },
     {
@@ -414,12 +596,14 @@
       "in_manifest": true,
       "in_dev_levels": false,
       "on_disk": true,
-      "chapter": "classic",
-      "chapter_source": "override:classic",
+      "chapter": "tutorial",
+      "chapter_source": "override:tutorial",
       "zone_types": "floor, track, landing, jump, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "medium"
     },
     {
@@ -429,11 +613,13 @@
       "in_dev_levels": false,
       "on_disk": true,
       "chapter": "classic",
-      "chapter_source": "json:classic",
+      "chapter_source": "override:classic",
       "zone_types": "floor, track, jungle_run, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "medium"
     },
     {
@@ -448,6 +634,8 @@
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "easy"
     },
     {
@@ -462,6 +650,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -476,6 +666,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -490,6 +682,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -504,21 +698,25 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
       "id": "meteorite_hollow_run",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
-      "chapter": "classic",
-      "chapter_source": "heuristic:classic",
-      "zone_types": "(dev inline)",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "extreme",
+      "chapter_source": "override:extreme",
+      "zone_types": "meteorite_hollow, goal",
       "unknown_zones": "",
-      "migration_status": "dev-only",
+      "migration_status": "shipped",
       "archive_reason": "",
-      "difficulty": ""
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "hard"
     },
     {
       "id": "moving_madness",
@@ -532,6 +730,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -540,12 +740,14 @@
       "in_manifest": true,
       "in_dev_levels": false,
       "on_disk": true,
-      "chapter": "classic",
-      "chapter_source": "json:classic",
+      "chapter": "tutorial",
+      "chapter_source": "override:tutorial",
       "zone_types": "mushroom_bounce, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "easy"
     },
     {
@@ -560,6 +762,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -574,6 +778,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -588,6 +794,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -602,6 +810,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "",
       "difficulty": ""
     },
     {
@@ -616,20 +826,41 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
-      "id": "neon_drift_run",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
+      "id": "neon_drift",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
       "chapter": "neon",
-      "chapter_source": "heuristic:neon",
+      "chapter_source": "override:neon",
+      "zone_types": "box, ramp, mover, goal",
+      "unknown_zones": "",
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "easy"
+    },
+    {
+      "id": "neon_drift_run",
+      "source": "migrated",
+      "in_manifest": false,
+      "in_dev_levels": false,
+      "on_disk": false,
+      "chapter": "",
+      "chapter_source": "",
       "zone_types": "(dev inline)",
       "unknown_zones": "",
-      "migration_status": "dev-only",
+      "migration_status": "migrated (renamed JSON map)",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "Ported to Level Format v2 as assets/maps/neon_drift.json (geometry and goal bugs fixed, recorded solution); JS zone and DEV_LEVELS entry removed.",
+      "replaced_by": "neon_drift",
       "difficulty": ""
     },
     {
@@ -644,10 +875,12 @@
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "medium"
     },
     {
-      "id": "neon_pipeline_run",
+      "id": "neon_hologram_run",
       "source": "code",
       "in_manifest": false,
       "in_dev_levels": true,
@@ -658,7 +891,25 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "",
       "difficulty": ""
+    },
+    {
+      "id": "neon_pipeline_run",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "neon",
+      "chapter_source": "override:neon",
+      "zone_types": "neon_pipeline, goal",
+      "unknown_zones": "",
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "medium"
     },
     {
       "id": "neon_plunge_run",
@@ -672,6 +923,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -686,20 +939,41 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
+      "id": "neon_pulse_matrix",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "expert",
+      "chapter_source": "override:expert",
+      "zone_types": "box, ramp, mover, goal",
+      "unknown_zones": "",
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "hard"
+    },
+    {
       "id": "neon_pulse_matrix_run",
-      "source": "code",
+      "source": "migrated",
       "in_manifest": false,
-      "in_dev_levels": true,
+      "in_dev_levels": false,
       "on_disk": false,
-      "chapter": "neon",
-      "chapter_source": "heuristic:neon",
+      "chapter": "",
+      "chapter_source": "",
       "zone_types": "(dev inline)",
       "unknown_zones": "",
-      "migration_status": "dev-only",
+      "migration_status": "migrated (renamed JSON map)",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "Ported to Level Format v2 as assets/maps/neon_pulse_matrix.json (geometry and goal bugs fixed, recorded solution); JS zone and DEV_LEVELS entry removed.",
+      "replaced_by": "neon_pulse_matrix",
       "difficulty": ""
     },
     {
@@ -714,21 +988,58 @@
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "easy"
     },
     {
-      "id": "neon_vortex_run",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
+      "id": "neon_vortex",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
       "chapter": "neon",
-      "chapter_source": "heuristic:neon",
+      "chapter_source": "override:neon",
+      "zone_types": "box, ramp, mover, goal",
+      "unknown_zones": "",
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "medium"
+    },
+    {
+      "id": "neon_vortex_run",
+      "source": "migrated",
+      "in_manifest": false,
+      "in_dev_levels": false,
+      "on_disk": false,
+      "chapter": "",
+      "chapter_source": "",
       "zone_types": "(dev inline)",
       "unknown_zones": "",
-      "migration_status": "dev-only",
+      "migration_status": "migrated (renamed JSON map)",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "Ported to Level Format v2 as assets/maps/neon_vortex.json (geometry and goal bugs fixed, recorded solution); JS zone and DEV_LEVELS entry removed.",
+      "replaced_by": "neon_vortex",
       "difficulty": ""
+    },
+    {
+      "id": "pinball_wizard",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "classic",
+      "chapter_source": "override:classic",
+      "zone_types": "floor, pinball, goal",
+      "unknown_zones": "",
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "medium"
     },
     {
       "id": "pinwheel_alley",
@@ -737,11 +1048,13 @@
       "in_dev_levels": false,
       "on_disk": true,
       "chapter": "classic",
-      "chapter_source": "json:classic",
+      "chapter_source": "override:classic",
       "zone_types": "floor, track, pinwheel_alley, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "hard"
     },
     {
@@ -756,6 +1069,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -770,6 +1085,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -784,6 +1101,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -798,6 +1117,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -806,12 +1127,14 @@
       "in_manifest": true,
       "in_dev_levels": false,
       "on_disk": true,
-      "chapter": "neon",
-      "chapter_source": "override:neon",
+      "chapter": "expert",
+      "chapter_source": "override:expert",
       "zone_types": "prismatic_speedway, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "hard"
     },
     {
@@ -826,20 +1149,41 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
+      "id": "quantum_core",
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
+      "chapter": "neon",
+      "chapter_source": "override:neon",
+      "zone_types": "box, ramp, mover, goal",
+      "unknown_zones": "",
+      "migration_status": "shipped",
+      "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "medium"
+    },
+    {
       "id": "quantum_core_run",
-      "source": "code",
+      "source": "migrated",
       "in_manifest": false,
-      "in_dev_levels": true,
+      "in_dev_levels": false,
       "on_disk": false,
-      "chapter": "classic",
-      "chapter_source": "heuristic:classic",
+      "chapter": "",
+      "chapter_source": "",
       "zone_types": "(dev inline)",
       "unknown_zones": "",
-      "migration_status": "dev-only",
+      "migration_status": "migrated (renamed JSON map)",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "Ported to Level Format v2 as assets/maps/quantum_core.json (geometry and goal bugs fixed, recorded solution); JS zone and DEV_LEVELS entry removed.",
+      "replaced_by": "quantum_core",
       "difficulty": ""
     },
     {
@@ -854,6 +1198,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -868,6 +1214,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -882,6 +1230,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -896,7 +1246,25 @@
       "unknown_zones": "",
       "migration_status": "json-wins",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "easy"
+    },
+    {
+      "id": "skate_park",
+      "source": "code",
+      "in_manifest": false,
+      "in_dev_levels": true,
+      "on_disk": false,
+      "chapter": "classic",
+      "chapter_source": "heuristic:classic",
+      "zone_types": "(dev inline)",
+      "unknown_zones": "",
+      "migration_status": "dev-only",
+      "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
+      "difficulty": ""
     },
     {
       "id": "slalom",
@@ -910,6 +1278,8 @@
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "hard"
     },
     {
@@ -919,11 +1289,13 @@
       "in_dev_levels": false,
       "on_disk": true,
       "chapter": "extreme",
-      "chapter_source": "override:extreme",
+      "chapter_source": "heuristic:extreme",
       "zone_types": "floor, track, landing, boost_pad, slalom, collectible, jump, spiral_drop, switchback, banked_turn, trap, boost_chain, merge, plunge, checkpoint, goal",
       "unknown_zones": "boost_pad, spiral_drop, switchback, banked_turn, trap, boost_chain, merge, plunge",
       "migration_status": "archived (unsupported mechanics)",
       "archive_reason": "Prototype branching, trap, boost-chain, and plunge mechanics are not implemented.",
+      "triage": "archive",
+      "triage_reason": "Prototype branching, trap, boost-chain, and plunge mechanics are not implemented.",
       "difficulty": "extreme"
     },
     {
@@ -938,6 +1310,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -952,6 +1326,8 @@
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "expert"
     },
     {
@@ -966,6 +1342,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -980,6 +1358,8 @@
       "unknown_zones": "",
       "migration_status": "json-wins",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "hard"
     },
     {
@@ -989,11 +1369,13 @@
       "in_dev_levels": false,
       "on_disk": true,
       "chapter": "extreme",
-      "chapter_source": "override:extreme",
+      "chapter_source": "heuristic:extreme",
       "zone_types": "floor, track, landing, checkpoint, fork, spiral_staircase, trap_stair, platform, collectible, freefall, double_helix, boost_pad, staircase, goal",
       "unknown_zones": "fork, spiral_staircase, trap_stair, platform, freefall, double_helix, boost_pad",
       "migration_status": "archived (unsupported mechanics)",
       "archive_reason": "Prototype fork, freefall, trap-stair, platform, and spiral-staircase mechanics are not implemented.",
+      "triage": "archive",
+      "triage_reason": "Prototype fork, freefall, trap-stair, platform, and spiral-staircase mechanics are not implemented.",
       "difficulty": "extreme"
     },
     {
@@ -1008,6 +1390,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -1018,24 +1402,29 @@
       "on_disk": true,
       "chapter": "extreme",
       "chapter_source": "override:extreme",
-      "zone_types": "stellar_forge, goal",
+      "zone_types": "box, ramp, mover, trigger, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "hard"
     },
     {
       "id": "stellar_forge_run",
-      "source": "code",
+      "source": "migrated",
       "in_manifest": false,
-      "in_dev_levels": true,
+      "in_dev_levels": false,
       "on_disk": false,
-      "chapter": "classic",
-      "chapter_source": "heuristic:classic",
+      "chapter": "",
+      "chapter_source": "",
       "zone_types": "(dev inline)",
       "unknown_zones": "",
-      "migration_status": "dev-only",
+      "migration_status": "migrated (renamed JSON map)",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "Ported to Level Format v2 as assets/maps/stellar_forge.json (geometry and goal bugs fixed, recorded solution); JS zone and DEV_LEVELS entry removed.",
+      "replaced_by": "stellar_forge",
       "difficulty": ""
     },
     {
@@ -1046,24 +1435,29 @@
       "on_disk": true,
       "chapter": "extreme",
       "chapter_source": "override:extreme",
-      "zone_types": "storm_peak, goal",
+      "zone_types": "box, ramp, mover, trigger, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "hard"
     },
     {
       "id": "storm_peak_run",
-      "source": "code",
+      "source": "migrated",
       "in_manifest": false,
-      "in_dev_levels": true,
+      "in_dev_levels": false,
       "on_disk": false,
-      "chapter": "extreme",
-      "chapter_source": "heuristic:extreme",
+      "chapter": "",
+      "chapter_source": "",
       "zone_types": "(dev inline)",
       "unknown_zones": "",
-      "migration_status": "dev-only",
+      "migration_status": "migrated (renamed JSON map)",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "Ported to Level Format v2 as assets/maps/storm_peak.json (geometry and goal bugs fixed, recorded solution); JS zone and DEV_LEVELS entry removed.",
+      "replaced_by": "storm_peak",
       "difficulty": ""
     },
     {
@@ -1078,35 +1472,41 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
       "id": "toxic_swamp_run",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
       "chapter": "extreme",
-      "chapter_source": "heuristic:extreme",
-      "zone_types": "(dev inline)",
+      "chapter_source": "override:extreme",
+      "zone_types": "floor, track, toxic_swamp",
       "unknown_zones": "",
-      "migration_status": "dev-only",
+      "migration_status": "shipped",
       "archive_reason": "",
-      "difficulty": ""
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "hard"
     },
     {
       "id": "trampoline_park",
-      "source": "code",
-      "in_manifest": false,
-      "in_dev_levels": true,
-      "on_disk": false,
+      "source": "json",
+      "in_manifest": true,
+      "in_dev_levels": false,
+      "on_disk": true,
       "chapter": "classic",
-      "chapter_source": "heuristic:classic",
-      "zone_types": "(dev inline)",
+      "chapter_source": "override:classic",
+      "zone_types": "floor, track, trampoline_park",
       "unknown_zones": "",
-      "migration_status": "dev-only",
+      "migration_status": "shipped",
       "archive_reason": "",
-      "difficulty": ""
+      "triage": "ship",
+      "triage_reason": "",
+      "difficulty": "medium"
     },
     {
       "id": "tutorial",
@@ -1120,6 +1520,8 @@
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "easy"
     },
     {
@@ -1128,12 +1530,14 @@
       "in_manifest": false,
       "in_dev_levels": false,
       "on_disk": true,
-      "chapter": "extreme",
-      "chapter_source": "override:extreme",
-      "zone_types": "floor, track, boost_pad, collectible, checkpoint, spiral_drop, switchback, hazard, ramp, trap, jump, platform, stomp_pad, goal",
-      "unknown_zones": "boost_pad, spiral_drop, switchback, hazard, ramp, trap, platform, stomp_pad",
+      "chapter": "tutorial",
+      "chapter_source": "heuristic:tutorial",
+      "zone_types": "floor, track, boost_pad, collectible, checkpoint, spiral_drop, switchback, hazard, legacy_ramp, trap, jump, platform, stomp_pad, goal",
+      "unknown_zones": "boost_pad, spiral_drop, switchback, hazard, legacy_ramp, trap, platform, stomp_pad",
       "migration_status": "archived (unsupported mechanics)",
-      "archive_reason": "Prototype mechanics are not implemented by the runtime zone registry.",
+      "archive_reason": "Prototype mechanics are not implemented by the runtime zone registry. Its v1 \"ramp\" stamp (angle/length) was renamed legacy_ramp when v2 claimed \"ramp\" as a primitive.",
+      "triage": "archive",
+      "triage_reason": "Prototype mechanics are not implemented by the runtime zone registry. Its v1 \"ramp\" stamp (angle/length) was renamed legacy_ramp when v2 claimed \"ramp\" as a primitive.",
       "difficulty": "extreme"
     },
     {
@@ -1148,20 +1552,24 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
       "id": "volcano_run",
-      "source": "dual",
+      "source": "json",
       "in_manifest": true,
-      "in_dev_levels": true,
+      "in_dev_levels": false,
       "on_disk": true,
       "chapter": "extreme",
       "chapter_source": "override:extreme",
       "zone_types": "floor, track, landing, jump, slalom, goal",
       "unknown_zones": "",
-      "migration_status": "json-wins",
+      "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "hard"
     },
     {
@@ -1171,11 +1579,13 @@
       "in_dev_levels": false,
       "on_disk": true,
       "chapter": "extreme",
-      "chapter_source": "override:extreme",
+      "chapter_source": "heuristic:extreme",
       "zone_types": "floor, track, landing, checkpoint, stairs, heat_zone, collectible, bridge, magma_spiral, eruption_zone, boost_pad, jump, slalom, lava_tsunami_zone, boss_caldera, collapsing_platform, victory_ramp, goal",
       "unknown_zones": "stairs, heat_zone, bridge, magma_spiral, eruption_zone, boost_pad, lava_tsunami_zone, boss_caldera, collapsing_platform, victory_ramp",
       "migration_status": "archived (unsupported mechanics)",
       "archive_reason": "Prototype heat, eruption, tsunami, collapsing-platform, and boss-caldera systems are not implemented.",
+      "triage": "archive",
+      "triage_reason": "Prototype heat, eruption, tsunami, collapsing-platform, and boss-caldera systems are not implemented.",
       "difficulty": "extreme"
     },
     {
@@ -1190,6 +1600,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     },
     {
@@ -1199,11 +1611,13 @@
       "in_dev_levels": false,
       "on_disk": true,
       "chapter": "classic",
-      "chapter_source": "json:classic",
+      "chapter_source": "override:classic",
       "zone_types": "floor, track, wind_tunnel, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "medium"
     },
     {
@@ -1212,12 +1626,14 @@
       "in_manifest": true,
       "in_dev_levels": false,
       "on_disk": true,
-      "chapter": "classic",
-      "chapter_source": "json:classic",
+      "chapter": "tutorial",
+      "chapter_source": "override:tutorial",
       "zone_types": "zen_garden, goal",
       "unknown_zones": "",
       "migration_status": "shipped",
       "archive_reason": "",
+      "triage": "ship",
+      "triage_reason": "",
       "difficulty": "easy"
     },
     {
@@ -1232,6 +1648,8 @@
       "unknown_zones": "",
       "migration_status": "dev-only",
       "archive_reason": "",
+      "triage": "dev-only",
+      "triage_reason": "Builds cleanly and passes the static + smoke checks, but completability is unproven: the greedy autopilot does not finish it. Needs a v2 port with an authored solution.",
       "difficulty": ""
     }
   ]

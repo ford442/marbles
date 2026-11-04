@@ -1,0 +1,24 @@
+{
+  "id": "feather",
+  "name": "Feather",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 1,
+      "g": 1,
+      "b": 0.9
+    },
+    "roughness": 0.7
+  },
+  "physics": {
+    "radius": 0.4,
+    "density": 0.1,
+    "friction": 0.5,
+    "restitution": 0.2,
+    "gravityScale": 0.2,
+    "linearDamping": 3,
+    "angularDamping": 3
+  }
+}

@@ -1,4 +1,4 @@
-import { quatFromEuler } from '../math.ts';
+import { quatFromYawPitchRoll, quatMultiply } from '../math.ts';
 
 export function createHelixZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
@@ -47,8 +47,8 @@ export function createHelixZone(game, offset) {
 
         // We need to combine these rotations.
         // Simple approximation: Rotate Y first, then bank (Roll/Pitch relative to path)
-        const q1 = quatFromEuler(rotY, pitch, bankAngle);
-        const q2 = quatFromEuler(rotY + Math.PI, pitch, bankAngle);
+        const q1 = quatMultiply(quatFromYawPitchRoll({ roll: rotY }), quatFromYawPitchRoll({ yaw: pitch, pitch: bankAngle }));
+        const q2 = quatMultiply(quatFromYawPitchRoll({ roll: rotY + Math.PI }), quatFromYawPitchRoll({ yaw: pitch, pitch: bankAngle }));
 
         // Track Segments
         game.createStaticBox(

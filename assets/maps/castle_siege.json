@@ -1,0 +1,117 @@
+{
+  "id": "castle_siege",
+  "schemaVersion": 2,
+  "name": "Castle Siege",
+  "description": "Storm the castle!",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "difficulty": "medium",
+  "chapter": "classic",
+  "spawn": [0, 8, -12],
+  "goals": [
+    {
+      "id": 1,
+      "range": {
+        "x": [-2, 2],
+        "z": [63, 67],
+        "y": [0, 5]
+      }
+    }
+  ],
+  "camera": {
+    "mode": "follow",
+    "height": 15,
+    "offset": -25
+  },
+  "zones": [
+    {
+      "type": "floor",
+      "pos": [0, -2, 0],
+      "size": [50, 0.5, 50]
+    },
+    {
+      "type": "track",
+      "pos": [0, 3, 0]
+    },
+    {
+      "type": "castle",
+      "pos": [0, 0, 35]
+    },
+    {
+      "type": "goal",
+      "pos": [0, 0.25, 65]
+    }
+  ],
+  "medals": {
+    "goldTime": 11,
+    "silverTime": 16,
+    "bronzeTime": 24,
+    "parTime": 12
+  },
+  "solution": {
+    "inputs": [
+      { "frames": 14, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 35, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 19, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 29, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 179, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 29, "keys": [], "yawDeg": 0 },
+      { "frames": 3, "keys": ["forward"], "yawDeg": 5 },
+      { "frames": 2, "keys": ["forward"], "yawDeg": 10 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 15 },
+      { "frames": 2, "keys": ["forward"], "yawDeg": 20 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 25 },
+      { "frames": 2, "keys": ["forward"], "yawDeg": 30 },
+      { "frames": 4, "keys": [], "yawDeg": 35 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 20 },
+      { "frames": 7, "keys": [], "yawDeg": 20 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 325 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 335 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 330 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 335 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 330 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 335 },
+      { "frames": 7, "keys": [], "yawDeg": 330 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 345 },
+      { "frames": 11, "keys": [], "yawDeg": 30 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 355 },
+      { "frames": 8, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 350 },
+      { "frames": 6, "keys": [], "yawDeg": 350 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 350 },
+      { "frames": 6, "keys": [], "yawDeg": 355 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 355 },
+      { "frames": 12, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 11, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 13, "keys": [], "yawDeg": 355 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 42, "keys": [], "yawDeg": 195 },
+      { "frames": 1, "keys": ["jump"], "yawDeg": 0 },
+      { "frames": 11, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 38, "keys": [], "yawDeg": 210 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 180 },
+      { "frames": 1, "keys": [], "yawDeg": 185 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 180 },
+      { "frames": 2, "keys": [], "yawDeg": 185 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 180 },
+      { "frames": 1, "keys": [], "yawDeg": 185 },
+      { "frames": 3, "keys": ["forward"], "yawDeg": 355 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 2, "keys": ["forward"], "yawDeg": 355 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 2, "keys": ["forward"], "yawDeg": 355 },
+      { "frames": 4, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 2, "keys": ["forward"], "yawDeg": 355 },
+      { "frames": 5, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 355 }
+    ],
+    "tolerance": 0.35
+  }
+}

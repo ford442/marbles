@@ -14,6 +14,6 @@ export function installZoneSetupMethods(targetClass) {
     ]);
     installKnownMethods(targetClass, ZoneSetupGrapple, [
         'createGrappleLine', 'createCueStick', 'startGrapple', 'stopGrapple',
-        'updateGrapple', 'shootMarble',
+        'cancelGrapple', 'updateGrapple', 'shootMarble',
     ]);
 }

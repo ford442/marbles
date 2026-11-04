@@ -27,10 +27,13 @@ export class AbilityMissiles {
 
         const missileSpeed = 40.0
 
+        // CCD: at 40 m/s a 0.2 m missile moves ~0.67 m per 1/60 s step and
+        // would otherwise pass straight through thin walls.
         const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
             .setTranslation(spawnPos.x, spawnPos.y, spawnPos.z)
             .setLinvel(dirX * missileSpeed, dirY * missileSpeed, dirZ * missileSpeed)
             .setGravityScale(0)
+            .setCcdEnabled(true)
 
         const body = this.world.createRigidBody(bodyDesc)
         const colliderDesc = RAPIER.ColliderDesc.ball(0.2)

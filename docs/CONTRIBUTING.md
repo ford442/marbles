@@ -30,136 +30,71 @@ See [CURRENT_STATE.md](CURRENT_STATE.md) for project health and migration status
 
 ## Adding a Zone (Level Geometry)
 
-Playable levels are loaded from **`assets/maps/*.json`** via **`assets/manifest.json`** at boot (`src/assets/AssetRegistry.js`). Zone geometry builders live in **`src/zones/<kebab-name>.js`**, registered in **`src/zone-setup/registry.js`**.
+Playable levels are **`assets/maps/*.json`** files registered in **`assets/manifest.json`**. New levels use **Level Format v2** (`"schemaVersion": 2`): geometry is built from five JSON primitives, so most levels need no JavaScript at all. The full pipeline is in [`docs/architecture/level-pipeline.md`](architecture/level-pipeline.md).
 
-Code-only levels remain in **`src/levels.js`** as `DEV_LEVELS` and appear in the level menu only when **`?devLevels=1`** or **`?dev=1`** is set (for experimental maps not yet migrated to JSON).
-
-### Policy: new campaign levels
-
-**All new campaign levels must ship as JSON + manifest.** Do not add permanent content to `DEV_LEVELS`.
+### Policy: no new JS zone without a JSON map
 
 | Requirement | Detail |
 |-------------|--------|
-| Map file | `assets/maps/<id>.json` validated against `assets/schemas/map-schema.json` |
+| Map file | `assets/maps/<id>.json`, valid against `assets/schemas/map-schema.json` |
 | Manifest | Entry under `maps` in `assets/manifest.json` |
-| Zone geometry | Reference registered `zones[].type` stamps (builtin or factory in `src/zones/`) |
-| Chapter | Set `"chapter"` in map JSON (`tutorial`, `classic`, `neon`, `extreme`, `expert`) |
-| Custom logic | Optional `"behaviors": ["behavior-id"]` — see [level pipeline](../architecture/level-pipeline.md) |
-| Dev path | `DEV_LEVELS` is **WIP/sandbox only**; PRs adding campaign content via `levels.js` should be rejected |
+| Campaign | Listed in one chapter's `levels` in `src/levels/campaign.js` (and `"chapter"` in the map, if set, must match) |
+| Completable | Passes `tests/levels/` (static + smoke) and records a `solution` that replays within `medals.parTime` ± tolerance |
+| Geometry | Primitives first. A new `src/zones/*.js` factory only when primitives can't express it, and still shipped via a JSON map |
+| `DEV_LEVELS` | Sandbox only. Every entry needs a `devOnly: '<why>'` reason; CI fails otherwise |
 
-Full inventory: [`docs/architecture/level-pipeline.md`](../architecture/level-pipeline.md).
-
-### Checklist (JSON map — required for campaign)
-
-1. **Create or extend a zone builder** if needed — `src/zones/my-cool-zone.js` (see factory checklist below).
-
-2. **Add a map JSON file** — copy `assets/maps/TEMPLATE.json` → `assets/maps/my_cool_run.json`, set `zones[].type` to a registered handler id (e.g. `my_cool_zone`, `floor`, `goal`).
-
-3. **Register in manifest** — add an entry under `maps` in `assets/manifest.json`:
-   ```json
-   "my_cool_run": {
-     "file": "maps/my_cool_run.json",
-     "name": "My Cool Run",
-     "difficulty": "medium"
-   }
-   ```
-
-4. **Validate** — `npm run validate:assets` and `node tests/test_level_inventory.js` (also run in CI). The inventory gate rejects duplicate `DEV_LEVELS` ids and shipped maps with unknown handlers.
-
-5. **Play** — `npm run dev`; the map appears in the level select without editing `levels.js`.
-
-### Checklist (code-only dev level)
-
-Use only for work-in-progress zones. Add to `DEV_LEVELS` in `src/levels.js` and test with **`?devLevels=1`**.
-
-1. **Create the builder** — `src/zones/my-cool-zone.js`:
-   ```javascript
-   export function createMyCoolZone(game, offset) {
-       // Use game.createStaticBox, game.createFloorZone, zones/methods helpers, etc.
-   }
-   ```
-
-2. **Export from the barrel** — add to `src/zones/index.js`:
-   ```javascript
-   export { createMyCoolZone } from './my-cool-zone.js';
-   ```
-
-3. **Register the zone type** — add one entry to `FACTORY_ZONE_HANDLERS` in `src/zone-setup/registry.js`:
-   ```javascript
-   my_cool_zone: (game, _zone, offset) => zones.createMyCoolZone(game, offset),
-   ```
-   Use the same snake_case string you will put in `levels.js` `zone.type`.
-
-4. **Add a level** (or extend an existing one) in `src/levels.js`:
-   ```javascript
-   my_cool_run: {
-       name: 'My Cool Run',
-       description: '…',
-       zones: [
-           { type: 'floor', pos: { x: 0, y: -2, z: 0 }, size: { x: 50, y: 0.5, z: 50 } },
-           { type: 'my_cool_zone', pos: { x: 0, y: 0, z: 25 } },
-           { type: 'goal', pos: { x: 0, y: 0.25, z: 70 } },
-       ],
-       spawn: { x: 0, y: 8, z: -12 },
-       goals: [{ id: 1, range: { x: [-5, 5], z: [65, 75], y: [-1, 3] } }],
-       camera: { mode: 'follow', height: 15, offset: -25 },
-   },
-   ```
-
-5. **Verify** — `npm run build` and play with `?devLevels=1`.
-
-### Migrating hard-coded levels to JSON
-
-Many legacy levels still live in `DEV_LEVELS` (`src/levels.js`). To migrate one:
-
-1. Copy its object fields into `assets/maps/<id>.json` (match an existing map like `tutorial.json` or a hybrid factory map below).
-2. Add `"version"`, `"id"`, `"difficulty"`, and `"chapter"` per `assets/schemas/map-schema.json`.
-3. Register the file in `assets/manifest.json`.
-4. Remove the entry from `DEV_LEVELS` once verified in normal play (no dev flag).
-5. Run `npm run validate:assets`.
-
-**Hybrid factory-stamp example** (migrated from `storm_peak_run`):
+### Primitives
 
 ```json
-{
-  "id": "storm_peak",
-  "name": "Storm Peak",
-  "version": "1.0.0",
-  "difficulty": "hard",
-  "chapter": "extreme",
-  "environment": "space_nebula",
-  "nightMode": true,
-  "backgroundColor": [0.1, 0.1, 0.15, 1.0],
-  "zones": [
-    { "type": "storm_peak", "pos": { "x": 0, "y": 0, "z": 0 } },
-    { "type": "goal", "pos": { "x": 0, "y": 15, "z": 105 } }
-  ],
-  "spawn": { "x": 0, "y": 5, "z": -40 },
-  "goals": [{ "id": 1, "range": { "x": [-10, 10], "z": [100, 110], "y": [10, 20] } }],
-  "camera": { "mode": "follow", "height": 15, "offset": -25 }
-}
+{ "type": "box",     "pos": [0, 0, 0], "size": [16, 1, 16], "material": "metal", "rot": { "yawDeg": 15 } }
+{ "type": "ramp",    "from": [0, 0.5, 8], "to": [0, -7.5, 38], "width": 8, "material": "glass" }
+{ "type": "mover",   "size": [6, 1.6, 1.6], "path": [[-12, -6.7, 41], [12, -6.7, 41]], "period": 3.0, "phase": 0.25 }
+{ "type": "spinner", "pos": [0, 1, 20], "size": [10, 0.8, 0.8], "axis": "y", "rpm": 12 }
+{ "type": "trigger", "pos": [0, -8, 78], "size": [6, 2, 6], "do": { "setVelocity": [0, 25, 9] }, "color": [1, 0.9, 0.1] }
 ```
 
-The factory builder (`src/zones/storm-peak.js`) stays; JSON only references it by `type`.
+- **Sizes are full extents**, and vectors are `[x, y, z]` or `{ "x", "y", "z" }`.
+- **`ramp`**: you give the top surface's centre line (`from` → `to`); its orientation is derived from that.
+- **`mover`**: ping-pongs along `path` once per `period` seconds (`"loop": true` cycles instead). It's eased with `sine` unless `"ease": "linear"`. `phase` (0–1) offsets it.
+- **`spinner`**: rotates about its own `axis` at `rpm`.
+- **`trigger`**: has no collider. `do` is `boost` (a velocity change), `setVelocity`, or `respawn`. It fires on `enter` (default) or every step on `stay`.
+- **Rotation**: named axes only, `rot: { yawDeg, pitchDeg, rollDeg }`. Positive pitch lowers the +Z end.
+- **Surface**: `material` presets (`ice`, `neon_ice`, `glass`, `metal`, `rubber`, `sand`, …), or explicit `friction` (0–2) and `restitution` (0–1). The explicit value wins.
+- **Mixing**: primitives combine with v1 stamps such as `goal` (the visual pad) and `checkpoint`.
+- **Map-level v2 fields**: `goal: { pos, size }` (one goal volume, instead of `goals[]`), `bounds: { min, max }`, `rivals: [marble ids]` (≤ 6) and `solution`.
 
-**Already on JSON (manifest-driven):** 24 production maps, including the first factory migration wave (`mushroom_hop`, `wind_tunnel`, `pinwheel_alley`, `helix_havoc`, `clockwork_chaos`, `cyber_run`, `ice_cave_run`, `jungle_run`, `zen_garden_run`, `galaxy_spiral_run`). See the generated inventory for the full catalog.
+[`assets/maps/quantum_core.json`](../assets/maps/quantum_core.json) is a complete example. In the map editor, the **Primitives (v2)** palette group places each type.
 
-**Still code-only (dev flag):** remaining entries in `DEV_LEVELS` — see [`level-inventory.json`](architecture/level-inventory.json).
+### Checklist (new map)
 
-**Archived prototypes:** the four `*_extreme` JSON maps are preserved but intentionally excluded from the manifest because their gameplay systems are not implemented. See [`archived-levels.json`](architecture/archived-levels.json); do not register placeholder handlers to make validation pass.
+1. **Write the map**: copy `assets/maps/quantum_core.json` (v2) or `TEMPLATE.json`, and set `id`, `name`, `difficulty`, `chapter`, `spawn`, `goal`, `bounds` and `camera`.
+2. **Register it**: add an entry under `maps` in `assets/manifest.json`, and add the id to a chapter's `levels` in `src/levels/campaign.js`.
+3. **Check it headlessly**:
+   ```bash
+   npm run level:lab -- assets/maps/my_map.json            # static + smoke
+   npm run level:lab -- assets/maps/my_map.json --greedy   # straight run at the goal?
+   npm run level:lab -- assets/maps/my_map.json --waypoints '[[0,40],[9,46],[0,70]]' --speed 9 --yaw-step 10
+   ```
+   Paste the printed `"solution"` into the map. Set `medals.parTime` near its time and `"tolerance": 0.35`. Solutions are recorded on the reference marble (`classic_red`); see the level pipeline doc for why.
+4. **Validate**: run `npm run validate:assets`, then `npm test` (which includes `tests/levels/`).
+5. **Play it**: `npm run dev`.
 
-Zone `type` strings in JSON must match keys in `src/zone-setup/registry.js` (`ZONE_HANDLERS`).
+### Factory zones (when primitives aren't enough)
 
-### Built-in zone types (no new file)
+1. Write `src/zones/my-cool-zone.js` exporting `createMyCoolZone(game, offset)`. Use `quatFromYawPitchRoll` from `src/math.ts`; lint bans `quatFromEuler` in `src/zones/**`.
+2. Register it in `FACTORY_ZONES` in `src/zone-setup/registry.js`: `my_cool_zone: ['my-cool-zone', 'createMyCoolZone']`. It's loaded lazily as its own chunk.
+3. Run `node scripts/sync-zone-handlers.cjs` (CI's `--check` fails if you forget).
+4. Ship it through a JSON map (`{ "type": "my_cool_zone", "pos": [0, 0, 0] }`) that passes the checklist above, solution included. Avoid `Math.random` in layout code: the harness seeds it, but players would get layouts the solution never saw.
 
-Primitive zones (`floor`, `track`, `goal`, `slalom`, etc.) are handled by methods in `src/zones/methods/creation.js` and registered under `BUILTIN_ZONE_HANDLERS` in `registry.js`. Only add a new `src/zones/*.js` file when the geometry is non-trivial.
+### Built-in stamps
+
+`floor`, `track`, `goal`, `checkpoint`, `collectible`, `slalom`, etc. are `BUILTIN_ZONE_HANDLERS` in `registry.js`, backed by `src/zones/methods/`. **`registry.js` is the only map** of zone types.
 
 ### Do not
 
-- Add zone modules at `src/*_zone.js` (legacy layout removed)
-- Duplicate `switch` cases in multiple files — **`registry.js` is the only map**
-- Import zone factories from `zone-setup/index.js` — use `zones/index.js` or `registry.js`
-
+- Add campaign content to `DEV_LEVELS`.
+- Add zone modules at `src/*_zone.js` (legacy layout), or import factories eagerly (it breaks the bundle budget).
+- Register placeholder handlers to make an archived map validate (see [`archived-levels.json`](architecture/archived-levels.json)).
 
 ## Asset Structure
 
@@ -200,6 +135,7 @@ Maps define the 3D environment where marbles roll.
 
 ### Zone Types
 
+- `box`, `ramp`, `mover`, `spinner`, `trigger` - v2 primitives (`"schemaVersion": 2`; see [Primitives](#primitives))
 - `floor` - Flat ground plane
 - `track` - Sloped ramp for rolling
 - `landing` - Flat platform for landing
@@ -331,7 +267,10 @@ Marbles are the playable spheres with unique physics and appearance.
 
 1. Copy `assets/marbles/TEMPLATE.json` to a new file
 2. Modify the values to create your marble
-3. Save as `assets/marbles/your_marble_id.json`
+3. Save as `assets/marbles/your_marble_id.json` and add it under `marbles` in `assets/manifest.json`
+4. Run `npm run gen:marbles` — `src/marbles_data.js` is **generated** from the JSON files (never edit it by hand); `npm run validate:assets` fails when it is stale or when two marbles share an id or name
+
+`assets/marbles/*.json` is the single source of truth for the marble catalog. Set `"premium": true` or an `unlock` rule to gate a marble; locked marbles are visible but can't be selected in the level-menu picker.
 
 ### Marble Properties
 
@@ -351,7 +290,7 @@ Marbles are the playable spheres with unique physics and appearance.
 - `radius` (0.1-2.0) - Size of the marble
 - `density` - Affects mass (higher = heavier)
 - `friction` (0-1) - Surface grip (lower = more slippery)
-- `restitution` (0-2) - Bounciness (>1 = super bouncy)
+- `restitution` (0-1) - Bounciness. Above 1 adds energy on every bounce, so it is only allowed (≤ 1.5) for marbles listed with a reason in `assets/marbles/_bouncy-cap.json`
 - `linearDamping` - Slows down linear movement
 - `angularDamping` - Slows down spinning
 

@@ -1,11 +1,21 @@
-import RAPIER from '@dimforge/rapier3d-compat';
+// @ts-check
 import { audio } from '../audio.js';
-
 import { getMarblePhysics } from '../wasm-bridge.js';
+import { applyAcceleration, applyVelocityChange } from '../game/systems/body-impulse.ts';
+
+/** @typedef {import('../types/mixin-host.ts').GameMixinHost} GameMixinHost */
 
 const _springForceScratch = new Float32Array(3);
 
+/** Upward acceleration (m/s²) while swinging below the anchor: partial gravity relief. */
+const SWING_LIFT_ACCEL = 0.3 * 9.81;
+/** Velocity change (m/s) of the slingshot release boost. */
+const SLINGSHOT_DV = 15.0;
+/** Rest-length reel-in rate while zipping (m/s of simulated time). */
+const ZIP_REEL_SPEED = 30.0;
+
 export class ZoneSetupGrapple {
+    /** @this {GameMixinHost} */
     createGrappleLine() {
         this.grappleEntity = this.Filament.EntityManager.get().create()
         const grappleColor = [0.0, 1.0, 1.0]
@@ -39,6 +49,7 @@ export class ZoneSetupGrapple {
         tcm.setTransform(this.grappleInst, zeroMat)
     }
 
+    /** @this {GameMixinHost} */
     createCueStick() {
         this.cueEntity = this.Filament.EntityManager.get().create()
         const cueColor = [1.0, 1.0, 0.0]
@@ -70,8 +81,9 @@ export class ZoneSetupGrapple {
         tcm.setTransform(this.cueInst, zeroMat)
     }
 
+    /** @this {GameMixinHost} */
     startGrapple() {
-        if (!this.playerMarble || !this.world) return
+        if (!this.playerMarble || !this.physicsQueries) return
 
         const rb = this.playerMarble.rigidBody
         const pos = rb.translation()
@@ -82,24 +94,13 @@ export class ZoneSetupGrapple {
         const dirY = sinP
         const dirZ = Math.cos(this.aimYaw) * cosP
 
-        const rayOrigin = { x: pos.x, y: pos.y, z: pos.z }
         const rayDir = { x: dirX, y: dirY, z: dirZ }
-        const ray = new RAPIER.Ray(rayOrigin, rayDir)
-
-        const hit = this.world.castRay(ray, this.grappleMaxDist, true)
+        const hit = this.physicsQueries.castRay(pos, rayDir, this.grappleMaxDist, { excludeBody: rb })
         if (hit) {
-            this.grappleTarget = {
-                x: rayOrigin.x + rayDir.x * hit.toi,
-                y: rayOrigin.y + rayDir.y * hit.toi,
-                z: rayOrigin.z + rayDir.z * hit.toi
-            }
+            this.grappleTarget = { ...hit.point }
 
-            const parent = hit.collider.parent();
-            if (parent && parent.bodyType() === RAPIER.RigidBodyType.Dynamic) {
-                this.grappleTargetBody = parent;
-            } else {
-                this.grappleTargetBody = null;
-            }
+            // Dynamic bodies get yanked toward the player; anything else is an anchor.
+            this.grappleTargetBody = hit.bodyType === 'dynamic' ? hit.body : null
 
             this.grappleRestLength = hit.toi * 0.8 // slightly pull them in initially
             this.isGrappling = true
@@ -108,6 +109,7 @@ export class ZoneSetupGrapple {
         }
     }
 
+    /** @this {GameMixinHost} */
     stopGrapple() {
         // Slingshot Boost logic before releasing the grapple
         if (this.isGrappling && this.playerMarble && this.grappleTarget) {
@@ -116,17 +118,16 @@ export class ZoneSetupGrapple {
             const speed = Math.hypot(vel.x, vel.y, vel.z)
 
             if (speed > 15.0) {
-                // Apply forward and upward physics impulse
-                const boostForce = 15.0
+                // Forward and upward velocity kick
                 const dirX = vel.x / speed
                 const dirY = Math.max(0.2, vel.y / speed) + 0.5 // Add some vertical kick
                 const dirZ = vel.z / speed
 
-                rb.applyImpulse({
-                    x: dirX * boostForce,
-                    y: dirY * boostForce,
-                    z: dirZ * boostForce
-                }, true)
+                applyVelocityChange(rb, {
+                    x: dirX * SLINGSHOT_DV,
+                    y: dirY * SLINGSHOT_DV,
+                    z: dirZ * SLINGSHOT_DV
+                })
 
                 // Call awardTrickPoints if available
                 if (typeof this.awardTrickPoints === 'function') {
@@ -135,6 +136,15 @@ export class ZoneSetupGrapple {
             }
         }
 
+        this.cancelGrapple()
+    }
+
+    /**
+     * Drop the grapple with no release boost (respawn, level change, target
+     * removed) and hide the line.
+     * @this {GameMixinHost}
+     */
+    cancelGrapple() {
         this.isGrappling = false
         this.grappleTarget = null
         this.grappleTargetBody = null
@@ -148,14 +158,22 @@ export class ZoneSetupGrapple {
         }
     }
 
+    /** @this {GameMixinHost} */
     updateGrapple() {
         if (!this.isGrappling || !this.playerMarble || !this.grappleTarget) {
-            if (this.isGrappling) this.stopGrapple()
+            if (this.isGrappling) this.cancelGrapple()
+            return
+        }
+
+        // The yanked body can be removed mid-grapple (missile hit, cleanup).
+        if (this.grappleTargetBody && !this.physicsQueries.isBodyAlive(this.grappleTargetBody)) {
+            this.cancelGrapple()
             return
         }
 
         const rb = this.playerMarble.rigidBody
         const pos = rb.translation()
+        const simDt = this.simDt ?? 1 / 60
 
         if (this.grappleTargetBody) {
             const bodyPos = this.grappleTargetBody.translation()
@@ -167,6 +185,7 @@ export class ZoneSetupGrapple {
         const dy = target.y - pos.y
         const dz = target.z - pos.z
         const dist = Math.hypot(dx, dy, dz)
+        if (!(dist > 1e-6)) return
 
         const dirX = dx / dist
         const dirY = dy / dist
@@ -177,10 +196,12 @@ export class ZoneSetupGrapple {
 
         if (this.isGrappleZipping) {
             // Quickly reel in by shrinking the rest length
-            this.grappleRestLength = Math.max(1.0, this.grappleRestLength - 0.5)
+            this.grappleRestLength = Math.max(1.0, this.grappleRestLength - ZIP_REEL_SPEED * simDt)
         }
 
         if (dist > restLength) {
+            // Stiffness/damping are per unit mass, so the spring output is an
+            // acceleration and every marble swings the same way.
             const stiffness = this.isGrappleZipping ? 50.0 : 15.0
             const damping = this.isGrappleZipping ? 5.0 : 2.0
             const vel = rb.linvel()
@@ -192,31 +213,23 @@ export class ZoneSetupGrapple {
                 restLength, stiffness, damping,
                 vel.x, vel.y, vel.z
             )
-            const totalForce = _springForceScratch[0] * dirX
-                + _springForceScratch[1] * dirY
-                + _springForceScratch[2] * dirZ
+            const ax = _springForceScratch[0] ?? 0
+            const ay = _springForceScratch[1] ?? 0
+            const az = _springForceScratch[2] ?? 0
 
-            if (totalForce > 0) {
-                const dt = 0.016
-                rb.applyImpulse({
-                    x: _springForceScratch[0] * dt,
-                    y: _springForceScratch[1] * dt,
-                    z: _springForceScratch[2] * dt
-                }, true)
+            if (ax * dirX + ay * dirY + az * dirZ > 0) {
+                applyAcceleration(rb, { x: ax, y: ay, z: az }, simDt)
 
+                // Yank: the target accelerates toward the player just as hard.
                 if (this.grappleTargetBody) {
-                    this.grappleTargetBody.applyImpulse({
-                        x: -_springForceScratch[0] * dt,
-                        y: -_springForceScratch[1] * dt,
-                        z: -_springForceScratch[2] * dt
-                    }, true)
+                    applyAcceleration(this.grappleTargetBody, { x: -ax, y: -ay, z: -az }, simDt)
                 }
             }
         }
 
         // Counter-gravity when swinging
         if (dirY > 0 && dist > restLength) {
-            rb.applyImpulse({ x: 0, y: 0.5, z: 0 }, true)
+            applyAcceleration(rb, { x: 0, y: SWING_LIFT_ACCEL, z: 0 }, simDt)
         }
 
         // Visuals
@@ -262,6 +275,7 @@ export class ZoneSetupGrapple {
         }
     }
 
+    /** @this {GameMixinHost} */
     shootMarble() {
         if (!this.playerMarble) return
 

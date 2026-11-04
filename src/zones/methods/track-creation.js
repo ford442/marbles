@@ -1,4 +1,4 @@
-import { quatFromEuler } from '../../math.ts';
+import { quatFromYawPitchRoll, quatMultiply } from '../../math.ts';
 import { decorateSpiralTrack } from './decorations.js';
 
 /**
@@ -54,7 +54,8 @@ export const trackCreationMethods = {
 
     createFloorZone(offset, size, rotY, color) {
         const sz = size || { x: 50, y: 0.5, z: 50 };
-        const q = rotY ? quatFromEuler(rotY, 0, 0) : { x: 0, y: 0, z: 0, w: 1 };
+        // rotY is a heading about +Y (map-schema "Y-axis rotation"); it used to bank about Z.
+        const q = rotY ? quatFromYawPitchRoll({ yaw: rotY }) : { x: 0, y: 0, z: 0, w: 1 };
         this.createStaticBox(
             { x: offset.x, y: offset.y, z: offset.z },
             q,
@@ -119,7 +120,7 @@ export const trackCreationMethods = {
             const rotY = -angle;
             const pitch = -0.2;
 
-            const q = quatFromEuler(rotY, pitch, 0);
+            const q = quatMultiply(quatFromYawPitchRoll({ roll: rotY }), quatFromYawPitchRoll({ yaw: pitch }));
 
             this.createStaticBox(
                 { x: x, y: y, z: z },

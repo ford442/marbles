@@ -68,6 +68,21 @@ function setColor3IfChanged(game, owner, matInstance, color, minIntervalMs = PAR
     return true
 }
 
+/** Record pre-step poses of the bodies `renderTransform` interpolates (main-thread backend). */
+function capturePrevPoses(backend, marbles, dynamicObjects) {
+    if (!backend?.capturePrevPoses) return
+    const bodies = []
+    for (const m of marbles) bodies.push(m.rigidBody)
+    for (const obj of dynamicObjects) bodies.push(obj.rigidBody)
+    backend.capturePrevPoses(bodies)
+}
+
+/** Pose to draw: blended between the last two fixed steps by the active backend. */
+function renderTransform(backend, rigidBody) {
+    if (backend?.getRenderTransform) return backend.getRenderTransform(rigidBody)
+    return { translation: rigidBody.translation(), rotation: rigidBody.rotation() }
+}
+
 function setScaledTransformIfChanged(tcm, owner, entity, pos, quat, scale, perfCounts) {
     if (!transformChanged(owner, pos, quat, scale)) {
         perfCounts.transformsSkipped += 1
@@ -465,13 +480,24 @@ export class GameLoopSyncMethods {
         }
 
         const backend = this.physicsBackend
-        const useWorkerInterp = backend?.isWorkerMode?.() === true
+        const workerMode = backend?.isWorkerMode?.() === true
 
         // Skip physics and game logic when paused
         if (!this.isPaused) {
             const physicsStart = performance.now()
-            this.physicsWorld.step()
-            if (backend?.isWorkerMode?.()) {
+            if (workerMode) {
+                // The worker runs its own fixed-step clock; this drains commands.
+                this.physicsWorld.step()
+            } else {
+                // Fixed-step contract: run the steps the loop's clock decided on,
+                // snapshotting poses before the last one for render interpolation.
+                const steps = this.physicsSubsteps ?? 1
+                for (let i = 0; i < steps; i++) {
+                    if (i === steps - 1) capturePrevPoses(backend, this.marbles, this.dynamicObjects)
+                    this.physicsWorld.step()
+                }
+            }
+            if (workerMode) {
                 perfCounts.physicsStepMs = backend.lastStepMs || 0
                 perfCounts.mainThreadPhysicsWaitMs = backend.lastWaitMs || 0
                 perfCounts.physicsBackend = 'worker'
@@ -485,15 +511,7 @@ export class GameLoopSyncMethods {
         }
 
         for (const m of this.marbles) {
-            let t, r
-            if (useWorkerInterp && m.rigidBody._bodyIndex != null) {
-                const xf = backend.getInterpolatedTransform(m.rigidBody._bodyIndex)
-                t = xf.translation
-                r = xf.rotation
-            } else {
-                t = m.rigidBody.translation()
-                r = m.rigidBody.rotation()
-            }
+            const { translation: t, rotation: r } = renderTransform(backend, m.rigidBody)
             const mat = quaternionToMat4(t, r)
 
             if (m.scale && m.scale !== 1.0) {
@@ -536,15 +554,7 @@ export class GameLoopSyncMethods {
         updateMarbleDynamicMaterialEffects(this, now, perfCounts)
 
         for (const obj of this.dynamicObjects) {
-            let t, r
-            if (useWorkerInterp && obj.rigidBody._bodyIndex != null) {
-                const xf = backend.getInterpolatedTransform(obj.rigidBody._bodyIndex)
-                t = xf.translation
-                r = xf.rotation
-            } else {
-                t = obj.rigidBody.translation()
-                r = obj.rigidBody.rotation()
-            }
+            const { translation: t, rotation: r } = renderTransform(backend, obj.rigidBody)
             const mat = quaternionToMat4(t, r)
 
             if (obj.halfExtents) {

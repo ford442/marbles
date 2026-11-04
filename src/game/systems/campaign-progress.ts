@@ -2,6 +2,7 @@ import {
     CAMPAIGN_CHAPTERS,
     CHAPTER_UNLOCK_RULES,
     buildChapterLayout,
+    isLevelUnlockedInChapter,
     computeMedal,
     getChapterForLevel,
     getMedalThresholds,
@@ -202,7 +203,8 @@ export class CampaignProgress {
     isLevelPlayable(levelId: string): boolean {
         if (this.data.freePlay) return true;
         const chapterId = getChapterForLevel(levelId, this._levelsCatalog?.[levelId]);
-        return this.isChapterUnlocked(chapterId);
+        return this.isChapterUnlocked(chapterId)
+            && isLevelUnlockedInChapter(chapterId, levelId, (id) => Boolean(this.data.levels[id]?.completed));
     }
 
     getLevelProgress(levelId: string): LevelProgress | undefined {
@@ -280,6 +282,18 @@ export class CampaignProgress {
 
         this.save();
         return this.data.levels[levelId]!;
+    }
+
+    /** Marble ids granted to this player (campaign milestones + premium grants). */
+    getUnlockedMarbles(): string[] {
+        return [...this.data.unlockedMarbles];
+    }
+
+    /** Grant a marble (campaign reward or premium purchase); persists. */
+    unlockMarble(marbleId: string): void {
+        if (this.data.unlockedMarbles.includes(marbleId)) return;
+        this.data.unlockedMarbles.push(marbleId);
+        this.save();
     }
 
     private _maybeUnlockMarbles(_levelId: string): void {

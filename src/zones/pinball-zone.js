@@ -1,4 +1,4 @@
-import { quatFromEuler } from '../math.ts';
+import { quatFromYawPitchRoll, quatMultiply } from '../math.ts';
 
 export const pinballLevel = {
     name: 'Pinball Wizard',
@@ -41,7 +41,7 @@ export function createPinballZone(game, offset) {
     // Yes! Positive pitch makes Z- high and Z+ low.
 
     const slopeAngle = 0.15; // Positive pitch for back-high/front-low
-    const tableQ = quatFromEuler(0, slopeAngle, 0);
+    const tableQ = quatFromYawPitchRoll({ yaw: slopeAngle });
 
     const width = 30;
     const length = 60;
@@ -89,7 +89,7 @@ export function createPinballZone(game, offset) {
         // Then we apply the object's local Y rotation (rotY).
         // Since we are using Euler angles (Yaw, Pitch, Roll),
         // and assuming specific order, we can try combining them.
-        // In `quatFromEuler(yaw, pitch, roll)`:
+        // In `quatMultiply(quatFromYawPitchRoll({ roll: yaw }), quatFromYawPitchRoll({ yaw: pitch, pitch: roll }))`:
         // Yaw is Y rotation, Pitch is X rotation.
         // If the order is Y then X (intrinsic) or X then Y?
         // The implementation in `math.js`:
@@ -99,7 +99,7 @@ export function createPinballZone(game, offset) {
         // If the object needs to rotate around its own local Y (which is the table normal),
         // and the table is pitched by X, then (rotY, slopeAngle, 0) should be close enough.
 
-        const q = quatFromEuler(rotY, slopeAngle, 0);
+        const q = quatMultiply(quatFromYawPitchRoll({ roll: rotY }), quatFromYawPitchRoll({ yaw: slopeAngle }));
 
         game.createStaticBox(
             { x: posX, y: posY, z: posZ },
@@ -157,7 +157,7 @@ export function createPinballZone(game, offset) {
         const posY = offset.y + yRel;
         const posZ = offset.z + zRel;
 
-        const q = quatFromEuler(0, slopeAngle, 0);
+        const q = quatFromYawPitchRoll({ yaw: slopeAngle });
 
         // Note: game.createDynamicBox signature: (pos, rotation, halfExtents, color, density, material, gravityScale)
         game.createDynamicBox(

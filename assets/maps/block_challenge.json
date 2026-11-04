@@ -1,0 +1,103 @@
+{
+  "id": "block_challenge",
+  "schemaVersion": 2,
+  "name": "Block Challenge",
+  "description": "Navigate through the obstacle course",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "difficulty": "easy",
+  "chapter": "tutorial",
+  "spawn": [0, 8, -12],
+  "goals": [
+    {
+      "id": 1,
+      "range": {
+        "x": [-2, 2],
+        "z": [48, 52],
+        "y": [0, 2]
+      }
+    }
+  ],
+  "camera": {
+    "mode": "follow",
+    "height": 15,
+    "offset": -25
+  },
+  "zones": [
+    {
+      "type": "floor",
+      "pos": [0, -2, 0],
+      "size": [50, 0.5, 50]
+    },
+    {
+      "type": "track",
+      "pos": [0, 3, 0]
+    },
+    {
+      "type": "block",
+      "pos": [0, 0, 25]
+    },
+    {
+      "type": "goal",
+      "pos": [0, 0.25, 50]
+    }
+  ],
+  "medals": {
+    "goldTime": 9,
+    "silverTime": 14,
+    "bronzeTime": 20,
+    "parTime": 10
+  },
+  "solution": {
+    "inputs": [
+      { "frames": 14, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 35, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 19, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 29, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 162, "keys": [], "yawDeg": 180 },
+      { "frames": 14, "keys": ["forward"], "yawDeg": 5 },
+      { "frames": 9, "keys": ["forward"], "yawDeg": 15 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 10 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 15 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 10 },
+      { "frames": 31, "keys": [], "yawDeg": 15 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 5 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 10 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 5 },
+      { "frames": 17, "keys": [], "yawDeg": 5 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 5 },
+      { "frames": 12, "keys": [], "yawDeg": 10 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 5 },
+      { "frames": 38, "keys": [], "yawDeg": 45 },
+      { "frames": 5, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 5 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 5 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 2, "keys": ["forward"], "yawDeg": 5 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 5 },
+      { "frames": 6, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 5 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 5 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 5 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 5 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 24, "keys": [], "yawDeg": 135 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 180 },
+      { "frames": 1, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 180 },
+      { "frames": 2, "keys": [], "yawDeg": 185 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 185 },
+      { "frames": 2, "keys": [], "yawDeg": 180 },
+      { "frames": 11, "keys": ["forward"], "yawDeg": 0 }
+    ],
+    "tolerance": 0.35
+  }
+}

@@ -1,4 +1,4 @@
-import { quatFromEuler } from '../math.ts';
+import { quatFromYawPitchRoll } from '../math.ts';
 
 export function createFrostbiteCavernZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
@@ -16,7 +16,7 @@ export function createFrostbiteCavernZone(game, offset) {
 
     // Angled Ice Slide
     const slideAngle = 0.2;
-    const slideQ = quatFromEuler(slideAngle, 0, 0);
+    const slideQ = quatFromYawPitchRoll({ roll: slideAngle });
     game.createStaticBox(
         { x: offset.x, y: offset.y - 2, z: cavernZ + 10 },
         slideQ,

@@ -1,4 +1,4 @@
-import RAPIER from '@dimforge/rapier3d-compat';
+// @ts-check
 import { audio } from '../audio.js';
 import { quaternionToMat4, quatFromEuler } from '../math.ts';
 import { getLevel } from '../levels/catalog.js';
@@ -13,7 +13,17 @@ import {
     DOF_UPDATE_THRESHOLD,
 } from './helpers.ts';
 
+/** @typedef {import('../types/mixin-host.ts').GameMixinHost} GameMixinHost */
+
 export class GameLoopCamera {
+    /**
+     * @this {GameMixinHost}
+     * @param {number} now
+     * @param {boolean} shouldUpdateHUD
+     * @param {number} frameDeltaSec
+     * @param {number} FOV_CHANGE_THRESHOLD
+     * @param {number} ASPECT_CHANGE_THRESHOLD
+     */
     updateCamera(now, shouldUpdateHUD, frameDeltaSec, FOV_CHANGE_THRESHOLD, ASPECT_CHANGE_THRESHOLD) {
                 if (this.view && (!DOF_CAMERA_MODES.has(this.cameraMode) || !this.currentLevel) && this._dofEnabled === true) {
                     try { this.view.setDepthOfFieldOptions({ enabled: false }) } catch (e) { /* not supported */ }
@@ -61,7 +71,7 @@ export class GameLoopCamera {
                             let idealEyeZ = t.z - Math.cos(this.aimYaw) * dist
         
                             // Camera Collision Avoidance
-                            if (this.world && typeof RAPIER !== 'undefined') {
+                            if (this.physicsQueries) {
                                 const dx = idealEyeX - t.x
                                 const dy = idealEyeY - t.y
                                 const dz = idealEyeZ - t.z
@@ -76,23 +86,22 @@ export class GameLoopCamera {
                                     z: t.z + rayDir.z * startDist
                                 }
         
-                                const ray = new RAPIER.Ray(rayOrigin, rayDir)
-        
                                 const maxRayDist = Math.max(0.01, distToEye - startDist)
-                                const hit = this.world.castRay(ray, maxRayDist, false)
+                                const hit = this.physicsQueries.castRay(rayOrigin, rayDir, maxRayDist, {
+                                    solid: false,
+                                    excludeBody: target.rigidBody,
+                                    excludeSensors: true,
+                                })
                                 if (hit) {
-                                    const otherBody = hit.collider.parent()
-                                    if (!otherBody || (otherBody.handle !== target.rigidBody.handle && !hit.collider.isSensor())) {
-                                        const safeDist = hit.toi - 0.2
-                                        if (safeDist > 0) {
-                                            idealEyeX = rayOrigin.x + rayDir.x * safeDist
-                                            idealEyeY = rayOrigin.y + rayDir.y * safeDist
-                                            idealEyeZ = rayOrigin.z + rayDir.z * safeDist
-                                        } else {
-                                            idealEyeX = rayOrigin.x
-                                            idealEyeY = rayOrigin.y
-                                            idealEyeZ = rayOrigin.z
-                                        }
+                                    const safeDist = hit.toi - 0.2
+                                    if (safeDist > 0) {
+                                        idealEyeX = rayOrigin.x + rayDir.x * safeDist
+                                        idealEyeY = rayOrigin.y + rayDir.y * safeDist
+                                        idealEyeZ = rayOrigin.z + rayDir.z * safeDist
+                                    } else {
+                                        idealEyeX = rayOrigin.x
+                                        idealEyeY = rayOrigin.y
+                                        idealEyeZ = rayOrigin.z
                                     }
                                 }
                             }
@@ -234,7 +243,7 @@ export class GameLoopCamera {
                             let idealEyeZ = t.z - dirZ * dist
         
                             // Collision Avoidance using Rapier Raycast
-                            if (this.world && typeof RAPIER !== 'undefined') {
+                            if (this.physicsQueries) {
                                 const dx = idealEyeX - t.x
                                 const dy = idealEyeY - t.y
                                 const dz = idealEyeZ - t.z
@@ -249,23 +258,22 @@ export class GameLoopCamera {
                                     z: t.z + rayDir.z * startDist
                                 }
         
-                                const ray = new RAPIER.Ray(rayOrigin, rayDir)
-        
                                 const maxRayDist = Math.max(0.01, distToEye - startDist)
-                                const hit = this.world.castRay(ray, maxRayDist, false)
+                                const hit = this.physicsQueries.castRay(rayOrigin, rayDir, maxRayDist, {
+                                    solid: false,
+                                    excludeBody: target.rigidBody,
+                                    excludeSensors: true,
+                                })
                                 if (hit) {
-                                    const otherBody = hit.collider.parent()
-                                    if (!otherBody || (otherBody.handle !== target.rigidBody.handle && !hit.collider.isSensor())) {
-                                        const safeDist = hit.toi - 0.2
-                                        if (safeDist > 0) {
-                                            idealEyeX = rayOrigin.x + rayDir.x * safeDist
-                                            idealEyeY = rayOrigin.y + rayDir.y * safeDist
-                                            idealEyeZ = rayOrigin.z + rayDir.z * safeDist
-                                        } else {
-                                            idealEyeX = rayOrigin.x
-                                            idealEyeY = rayOrigin.y
-                                            idealEyeZ = rayOrigin.z
-                                        }
+                                    const safeDist = hit.toi - 0.2
+                                    if (safeDist > 0) {
+                                        idealEyeX = rayOrigin.x + rayDir.x * safeDist
+                                        idealEyeY = rayOrigin.y + rayDir.y * safeDist
+                                        idealEyeZ = rayOrigin.z + rayDir.z * safeDist
+                                    } else {
+                                        idealEyeX = rayOrigin.x
+                                        idealEyeY = rayOrigin.y
+                                        idealEyeZ = rayOrigin.z
                                     }
                                 }
                             }
@@ -301,21 +309,19 @@ export class GameLoopCamera {
                 } else {
                     const target = this.playerMarble || this.getLeader();
                     let targetX = 0, targetY = 0, targetZ = 0;
-                    let targetBodyHandle = -1;
         
                     if (target && target.rigidBody) {
                         const t = target.rigidBody.translation();
                         targetX = t.x;
                         targetY = t.y;
                         targetZ = t.z;
-                        targetBodyHandle = target.rigidBody.handle;
                     }
         
                     let idealEyeX = targetX + this.camRadius * Math.sin(this.camAngle);
                     let idealEyeY = targetY + this.camHeight;
                     let idealEyeZ = targetZ + this.camRadius * Math.cos(this.camAngle);
         
-                    if (this.world && typeof RAPIER !== 'undefined') {
+                    if (this.physicsQueries) {
                         const dx = idealEyeX - targetX;
                         const dy = idealEyeY - targetY;
                         const dz = idealEyeZ - targetZ;
@@ -332,22 +338,22 @@ export class GameLoopCamera {
                             };
         
                             const maxRayDist = Math.max(0.01, distToEye - startDist);
-                            const ray = new RAPIER.Ray(rayOrigin, rayDir);
-                            const hit = this.world.castRay(ray, maxRayDist, false);
+                            const hit = this.physicsQueries.castRay(rayOrigin, rayDir, maxRayDist, {
+                                solid: false,
+                                excludeBody: target?.rigidBody,
+                                excludeSensors: true,
+                            });
         
                             if (hit) {
-                                const otherBody = hit.collider.parent();
-                                if (!otherBody || (otherBody.handle !== targetBodyHandle && !hit.collider.isSensor())) {
-                                    const safeDist = hit.toi - 0.2;
-                                    if (safeDist > 0) {
-                                        idealEyeX = rayOrigin.x + rayDir.x * safeDist;
-                                        idealEyeY = rayOrigin.y + rayDir.y * safeDist;
-                                        idealEyeZ = rayOrigin.z + rayDir.z * safeDist;
-                                    } else {
-                                        idealEyeX = rayOrigin.x;
-                                        idealEyeY = rayOrigin.y;
-                                        idealEyeZ = rayOrigin.z;
-                                    }
+                                const safeDist = hit.toi - 0.2;
+                                if (safeDist > 0) {
+                                    idealEyeX = rayOrigin.x + rayDir.x * safeDist;
+                                    idealEyeY = rayOrigin.y + rayDir.y * safeDist;
+                                    idealEyeZ = rayOrigin.z + rayDir.z * safeDist;
+                                } else {
+                                    idealEyeX = rayOrigin.x;
+                                    idealEyeY = rayOrigin.y;
+                                    idealEyeZ = rayOrigin.z;
                                 }
                             }
                         }

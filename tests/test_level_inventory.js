@@ -21,8 +21,12 @@ console.log('test_level_inventory.js');
 
 const inventory = loadInventory();
 assert.ok(inventory.rows?.length >= 70, 'inventory should list ~70+ level ids');
-assert.ok(inventory.counts.manifest >= 24, 'first migration wave should ship at least 24 maps');
-assert.ok(inventory.counts.dev_levels >= 48, 'remaining DEV_LEVELS prototypes are inventoried');
+assert.ok(inventory.counts.manifest >= 40, 'Level Format v2 wave ships at least 40 maps');
+assert.ok(inventory.counts.dev_levels <= 38, 'DEV_LEVELS only shrinks (new levels ship as JSON)');
+assert.deepEqual(inventory.checks?.untriaged, [], 'every non-shipped level has a triage reason');
+for (const row of inventory.rows) {
+  assert.ok(['ship', 'dev-only', 'archive', 'delete'].includes(row.triage), `${row.id} triage`);
+}
 assert.equal(inventory.counts.orphan_json, 0, 'all on-disk maps must be shipped or archived');
 assert.equal(inventory.counts.archived_json, 4, 'four extreme prototypes are explicitly archived');
 assert.deepEqual(inventory.checks?.duplicate_dev_level_ids, [], 'DEV_LEVELS keys must be unique');
@@ -43,7 +47,7 @@ for (const id of [
   const row = inventory.rows.find((r) => r.id === id);
   assert.ok(row?.in_manifest, `${id} should be in manifest`);
   assert.ok(row?.source === 'json' || row?.source === 'dual', `${id} source`);
-  if (['mushroom_hop', 'pinwheel_alley', 'galaxy_spiral_run'].includes(id)) {
+  if (['mushroom_hop', 'pinwheel_alley', 'galaxy_spiral_run', 'storm_peak'].includes(id)) {
     assert.equal(row.in_dev_levels, false, `${id} removed from DEV_LEVELS after migration`);
   }
 }
@@ -58,6 +62,17 @@ for (const id of [
   assert.equal(row?.source, 'archived-json', `${id} archived`);
   assert.ok(!row?.in_manifest, `${id} not in manifest`);
   assert.ok(row?.archive_reason, `${id} has an archive reason`);
+}
+
+// The post-August zone backlog (#451 Part D): ported or deleted, none left dev-only.
+for (const id of [
+  'aether_core_run', 'astral_cascade_run', 'crystal_cavern_run', 'cyber_matrix_run', 'cyber_reactor_run',
+  'inferno_chamber_run', 'neon_city_heights_run', 'neon_drift_run', 'neon_pulse_matrix_run', 'neon_vortex_run',
+  'quantum_core_run',
+]) {
+  const row = inventory.rows.find((r) => r.id === id);
+  assert.ok(row && !row.in_dev_levels, `${id} removed from DEV_LEVELS`);
+  assert.ok(row.triage === 'delete' || inventory.rows.find((r) => r.id === row.replaced_by)?.in_manifest, `${id} shipped or deleted`);
 }
 
 // Compare semantic content without rewriting the committed file or comparing timestamps.

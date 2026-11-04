@@ -1,4 +1,4 @@
-import { quatFromEuler } from '../math.ts';
+import { quatFromYawPitchRoll } from '../math.ts';
 
 export const canyonRunLevel = {
     name: 'Canyon Run',
@@ -48,7 +48,7 @@ export function createCanyonRunZone(game, offset) {
 
     // --- Narrow Path / Bridge ---
     // Section 1: Slanted down
-    const qSlant1 = quatFromEuler(0, -0.1, 0); // Pitch down slightly
+    const qSlant1 = quatFromYawPitchRoll({ yaw: -0.1 }); // Pitch down slightly
     game.createStaticBox(
         { x: offset.x, y: offset.y - 1, z: offset.z + 20 },
         qSlant1,
@@ -61,7 +61,7 @@ export function createCanyonRunZone(game, offset) {
     // There's a 5 unit gap here from z: 30 to z: 35
 
     // Section 3: Slanted up, very narrow
-    const qSlant2 = quatFromEuler(0, 0.1, 0); // Pitch up
+    const qSlant2 = quatFromYawPitchRoll({ yaw: 0.1 }); // Pitch up
     game.createStaticBox(
         { x: offset.x, y: offset.y - 1.5, z: offset.z + 45 },
         qSlant2,

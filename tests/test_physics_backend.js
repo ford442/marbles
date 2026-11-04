@@ -22,7 +22,7 @@ import {
 } from '../src/game/physics-worker/protocol.js';
 import { drainCommandRing } from '../src/game/physics-worker/command-drain.js';
 import { WorkerPhysicsBackend } from '../src/game/systems/physics-backend.ts';
-import { MAX_BODIES, SAB_LAYOUT_VERSION } from '../src/game/physics-worker/protocol.js';
+import { MAX_BODIES, SNAPSHOT_LAYOUT_VERSION, CMD_RING_CAPACITY } from '../src/game/physics-worker/protocol.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { serializeRigidBodyDesc, serializeColliderDesc } from '../src/game/physics-worker/rapier-desc-serializer.js';
 import { createBodyFromDescriptor } from '../src/game/physics-worker/world-builder.js';
@@ -156,7 +156,7 @@ function testShouldUsePhysicsWorkerDefaultOn() {
 }
 
 function testMaxBodiesGuard() {
-    assert.ok(SAB_LAYOUT_VERSION >= 2);
+    assert.ok(SNAPSHOT_LAYOUT_VERSION >= 3);
     assert.equal(MAX_BODIES, 1024);
     const backend = Object.create(WorkerPhysicsBackend.prototype);
     backend._nextBodyIndex = MAX_BODIES - 1;
@@ -216,13 +216,13 @@ function testCommandRingEnqueue() {
 function testCommandRingDrain() {
     const sab = new SharedArrayBuffer(CMD_RING_BYTES);
     const { u32, f32 } = createCommandViews(sab);
-    enqueueCommand(u32, f32, CMD_OP.SET_TIMESTEP, 0, 1 / 90);
+    enqueueCommand(u32, f32, CMD_OP.SET_TIME_SCALE, 0, 0.25);
     enqueueCommand(u32, f32, CMD_OP.KINEMATIC_ROTATION, 2, 0, 0, 0, 1);
 
     const bodies = [null, null, { removed: false }];
     const removed = new Set();
-    const state = { timestep: 1 / 120 };
-    const world = { timestep: 1 / 120 };
+    const clock = { timeScale: 1 };
+    const world = {};
 
     bodies[2] = {
         setNextKinematicRotation(q) {
@@ -230,15 +230,19 @@ function testCommandRingDrain() {
         },
     };
 
-    drainCommandRing(u32, f32, bodies, removed, world, state);
+    drainCommandRing(u32, f32, bodies, removed, world, clock);
     assert.equal(u32[CMD_HEADER_HEAD], u32[CMD_HEADER_TAIL]);
-    assert.ok(Math.abs(state.timestep - 1 / 90) < 1e-6);
+    // Time scale reaches the worker clock (it used to be dropped on the floor).
+    assert.ok(Math.abs(clock.timeScale - 0.25) < 1e-6);
     assert.deepEqual(bodies[2].lastQ, { x: 0, y: 0, z: 0, w: 1 });
 }
 
 function testBufferSizes() {
-    assert.ok(TRANSFORM_BUFFER_BYTES > 0);
-    assert.ok(CMD_RING_BYTES > TRANSFORM_BUFFER_BYTES);
+    // Two slots of MAX_BODIES full records after the header.
+    assert.equal(TRANSFORM_BUFFER_BYTES, TRANSFORM_HEADER_BYTES + 2 * MAX_BODIES * BODY_FLOATS * 4);
+    // The ring holds at least one command per body between drains.
+    assert.ok(CMD_RING_CAPACITY >= MAX_BODIES);
+    assert.ok(CMD_RING_BYTES > CMD_RING_CAPACITY);
 }
 
 function writeBodyTransform(f32, slot, bodyIndex, t) {

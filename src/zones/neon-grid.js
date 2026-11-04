@@ -1,4 +1,3 @@
-import { quatFromEuler } from '../math.ts';
 import { createZoneLight } from './methods/visuals.js';
 
 export function createNeonGridZone(game, offset) {

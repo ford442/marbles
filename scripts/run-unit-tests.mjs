@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Runs Node-based unit tests under tests/ (no browser / Playwright required).
+ * Runs Node-based unit tests under tests/ and tests/levels/ (no browser / Playwright required).
  *
  * Playwright integration tests live in tests/e2e/ and run via npm run test:e2e
  * with the dev server already running.
@@ -23,6 +23,14 @@ const files = readdirSync(testsDir)
   .filter((name) => name.endsWith('.js'))
   .sort()
   .map((name) => path.join('tests', name));
+
+// Headless level completability harness (docs/architecture/level-pipeline.md).
+files.push(
+  ...readdirSync(path.join(testsDir, 'levels'))
+    .filter((name) => name.startsWith('test_') && name.endsWith('.js'))
+    .sort()
+    .map((name) => path.join('tests', 'levels', name)),
+);
 
 if (files.length === 0) {
   console.error('No unit test files found.');

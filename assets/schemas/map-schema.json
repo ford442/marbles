@@ -1,10 +1,24 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Marble Game Map Schema",
-  "description": "Schema for defining marble game levels/maps. Zone type strings must match keys in src/zone-setup/registry.js (ZONE_HANDLERS).",
+  "description": "Schema for marble game levels/maps. One rule set, compiled with ajv by scripts/validate-assets.cjs (CI), src/editor/map-validator.js (editor + workshop import) and backend/storage/services/map_validation.py (workshop publish). zone.type strings must be registered in src/zone-setup/registry.js (see assets/schemas/zone-handlers.json). schemaVersion 2 adds data-driven primitives (box, ramp, mover, spinner, trigger), [x,y,z] vectors, a goal volume, rivals and bounds.",
   "type": "object",
-  "required": ["id", "name", "version", "zones", "spawn", "goals"],
+  "required": [
+    "id",
+    "name",
+    "version",
+    "zones",
+    "spawn"
+  ],
   "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "enum": [
+        1,
+        2
+      ],
+      "description": "Level format version. Omit for 1; 2 enables primitives and [x,y,z] vectors."
+    },
     "id": {
       "type": "string",
       "description": "Unique identifier for the map",
@@ -29,12 +43,24 @@
     },
     "difficulty": {
       "type": "string",
-      "enum": ["easy", "medium", "hard", "expert", "extreme"],
+      "enum": [
+        "easy",
+        "medium",
+        "hard",
+        "expert",
+        "extreme"
+      ],
       "description": "Difficulty level"
     },
     "chapter": {
       "type": "string",
-      "enum": ["tutorial", "classic", "neon", "extreme", "expert"],
+      "enum": [
+        "tutorial",
+        "classic",
+        "neon",
+        "extreme",
+        "expert"
+      ],
       "description": "Campaign chapter override"
     },
     "nightMode": {
@@ -44,13 +70,24 @@
     "backgroundColor": {
       "type": "array",
       "description": "RGBA clear color [r, g, b, a]",
-      "items": { "type": "number", "minimum": 0, "maximum": 1 },
+      "items": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      },
       "minItems": 4,
       "maxItems": 4
     },
     "environment": {
       "type": "string",
-      "enum": ["default", "space_nebula", "ice", "volcanic", "neon_city", "underwater"],
+      "enum": [
+        "default",
+        "space_nebula",
+        "ice",
+        "volcanic",
+        "neon_city",
+        "underwater"
+      ],
       "description": "Environment preset key (see src/rendering/environment.js)"
     },
     "colorGrade": {
@@ -60,7 +97,10 @@
     "behaviors": {
       "type": "array",
       "description": "Named per-level behavior module ids (src/game/level-behaviors/)",
-      "items": { "type": "string", "pattern": "^[a-z0-9_-]+$" }
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9_-]+$"
+      }
     },
     "checkpoints": {
       "type": "array",
@@ -68,22 +108,55 @@
       "items": {
         "type": "object",
         "properties": {
-          "id": { "type": "integer" },
+          "id": {
+            "type": "integer"
+          },
           "pos": {
             "type": "object",
-            "required": ["x", "y", "z"],
+            "required": [
+              "x",
+              "y",
+              "z"
+            ],
             "properties": {
-              "x": { "type": "number" },
-              "y": { "type": "number" },
-              "z": { "type": "number" }
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
             }
           },
           "range": {
             "type": "object",
             "properties": {
-              "x": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
-              "y": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
-              "z": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+              "x": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "y": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "z": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
             }
           }
         }
@@ -92,31 +165,57 @@
     "zones": {
       "type": "array",
       "description": "List of zones/areas in the map",
-      "items": { "$ref": "#/definitions/zone" }
+      "items": {
+        "$ref": "#/definitions/zone"
+      }
     },
     "spawn": {
-      "type": "object",
-      "required": ["x", "y", "z"],
-      "properties": {
-        "x": { "type": "number" },
-        "y": { "type": "number" },
-        "z": { "type": "number" }
-      }
+      "$ref": "#/definitions/vec3"
     },
     "goals": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "range"],
+        "required": [
+          "id",
+          "range"
+        ],
         "properties": {
-          "id": { "type": "integer" },
+          "id": {
+            "type": "integer"
+          },
           "range": {
             "type": "object",
-            "required": ["x", "y", "z"],
+            "required": [
+              "x",
+              "y",
+              "z"
+            ],
             "properties": {
-              "x": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
-              "y": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
-              "z": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+              "x": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "y": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "z": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
             }
           }
         }
@@ -125,37 +224,76 @@
     "camera": {
       "type": "object",
       "properties": {
-        "mode": { "type": "string", "enum": ["orbit", "follow", "action", "fpv", "topdown", "cinematic", "side-scroller", "drone"] },
-        "angle": { "type": "number" },
-        "height": { "type": "number" },
-        "radius": { "type": "number" },
-        "offset": { "type": "number" }
+        "mode": {
+          "type": "string",
+          "enum": [
+            "orbit",
+            "follow",
+            "action",
+            "fpv",
+            "topdown",
+            "cinematic",
+            "side-scroller",
+            "drone"
+          ]
+        },
+        "angle": {
+          "type": "number"
+        },
+        "height": {
+          "type": "number"
+        },
+        "radius": {
+          "type": "number"
+        },
+        "offset": {
+          "type": "number"
+        }
       }
     },
     "abilities": {
       "type": "object",
-      "description": "Per-level ability subset. Omit to allow all registered abilities.",
+      "description": "Per-level ability subset, by registry id (src/abilities/registry.js, e.g. \"jump\", \"bomb\", \"magnet_attract\", \"grapple\"). Omit to allow every registered ability. When both lists are present `enabled` wins; abilities implied by an enabled one (double jump by jump) follow it unless `disabled` names them.",
       "properties": {
         "enabled": {
           "type": "array",
-          "items": { "type": "string" },
-          "description": "Whitelist of ability ids (e.g. tutorial uses [\"jump\"])"
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true,
+          "description": "Whitelist of ability ids (e.g. tutorial uses [\"jump\"]); every other ability is disabled"
         },
         "disabled": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true,
           "description": "Blacklist of ability ids"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "medals": {
       "type": "object",
       "description": "Time thresholds (seconds) for gold/silver/bronze medals and par display",
       "properties": {
-        "goldTime": { "type": "number", "description": "Finish at or below for gold" },
-        "silverTime": { "type": "number", "description": "Finish at or below for silver" },
-        "bronzeTime": { "type": "number", "description": "Finish at or below for bronze" },
-        "parTime": { "type": "number", "description": "Designer par time for HUD/reference" }
+        "goldTime": {
+          "type": "number",
+          "description": "Finish at or below for gold"
+        },
+        "silverTime": {
+          "type": "number",
+          "description": "Finish at or below for silver"
+        },
+        "bronzeTime": {
+          "type": "number",
+          "description": "Finish at or below for bronze"
+        },
+        "parTime": {
+          "type": "number",
+          "description": "Designer par time for HUD/reference"
+        }
       }
     },
     "collectiblesTotal": {
@@ -169,14 +307,659 @@
     },
     "ambientSounds": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "description": "Optional ambient sound ids"
+    },
+    "goal": {
+      "type": "object",
+      "description": "v2 goal volume (centre + full size); converted to goals[] at load.",
+      "required": [
+        "pos",
+        "size"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pos": {
+          "$ref": "#/definitions/vec3"
+        },
+        "size": {
+          "$ref": "#/definitions/positiveVec3"
+        }
+      }
+    },
+    "rivals": {
+      "type": "array",
+      "description": "Marble ids raced against (default roster when omitted). The level spawns 1 + rivals.length marbles.",
+      "maxItems": 6,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9_]+$"
+      }
+    },
+    "bounds": {
+      "type": "object",
+      "description": "Declared play volume. The level harness fails when a zone body extends past it.",
+      "required": [
+        "min",
+        "max"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "$ref": "#/definitions/vec3"
+        },
+        "max": {
+          "$ref": "#/definitions/vec3"
+        }
+      }
+    },
+    "goalless": {
+      "type": "boolean",
+      "description": "Free-roam map with no finish (e.g. sandbox). Exempts it from the goal checks in tests/levels/."
+    },
+    "solution": {
+      "type": "object",
+      "description": "Scripted completion for the headless level harness (tests/levels/).",
+      "required": [
+        "inputs"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "description": "Held-input segments replayed at the fixed step.",
+          "items": {
+            "type": "object",
+            "required": [
+              "frames"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "frames": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "keys": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "forward",
+                    "back",
+                    "left",
+                    "right",
+                    "jump"
+                  ]
+                }
+              },
+              "yawDeg": {
+                "type": "number"
+              },
+              "jumpCharge": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Jump charge for a segment with \"jump\" (0 = JUMP_DV_MIN, 1 = JUMP_DV_MAX; default 1)"
+              }
+            }
+          }
+        },
+        "tolerance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Allowed relative deviation from medals.parTime (default 0.5)."
+        }
+      }
     }
   },
   "definitions": {
     "zone": {
       "type": "object",
-      "required": ["type", "pos"],
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "box"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/definitions/boxZone"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "ramp"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/definitions/rampZone"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "mover"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/definitions/moverZone"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "spinner"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/definitions/spinnerZone"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "trigger"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/definitions/triggerZone"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": [
+                  "box",
+                  "ramp",
+                  "mover",
+                  "spinner",
+                  "trigger"
+                ]
+              }
+            }
+          },
+          "else": {
+            "$ref": "#/definitions/stampZone"
+          }
+        }
+      ]
+    },
+    "vec3": {
+      "description": "[x, y, z] (v2) or {x, y, z}",
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        {
+          "type": "object",
+          "required": [
+            "x",
+            "y",
+            "z"
+          ],
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          }
+        }
+      ]
+    },
+    "positiveVec3": {
+      "description": "Full extents, each > 0",
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        {
+          "type": "object",
+          "required": [
+            "x",
+            "y",
+            "z"
+          ],
+          "properties": {
+            "x": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "y": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "z": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        }
+      ]
+    },
+    "color": {
+      "type": "array",
+      "items": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "rotation": {
+      "type": "object",
+      "description": "Named-axis rotation in degrees (applied yaw → pitch → roll). Positive pitch lowers the +Z end.",
+      "additionalProperties": false,
+      "properties": {
+        "yawDeg": {
+          "type": "number"
+        },
+        "pitchDeg": {
+          "type": "number"
+        },
+        "rollDeg": {
+          "type": "number"
+        }
+      }
+    },
+    "boxZone": {
+      "type": "object",
+      "description": "Static box (size = full extents)",
+      "required": [
+        "type",
+        "pos",
+        "size"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "box"
+        },
+        "color": {
+          "$ref": "#/definitions/color"
+        },
+        "material": {
+          "type": "string",
+          "enum": [
+            "obsidian",
+            "ice",
+            "neon_ice",
+            "rubber",
+            "sand",
+            "volcanicRock",
+            "crystal",
+            "wood",
+            "metal",
+            "concrete",
+            "glass",
+            "stone",
+            "lava",
+            "volcanic",
+            "dirt",
+            "rock",
+            "steel",
+            "tile",
+            "carpet",
+            "grass"
+          ],
+          "description": "Surface preset (render + default friction)"
+        },
+        "friction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "restitution": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "pos": {
+          "$ref": "#/definitions/vec3"
+        },
+        "size": {
+          "$ref": "#/definitions/positiveVec3"
+        },
+        "rot": {
+          "$ref": "#/definitions/rotation"
+        }
+      }
+    },
+    "rampZone": {
+      "type": "object",
+      "description": "Static ramp whose top surface runs from `from` to `to`",
+      "required": [
+        "type",
+        "from",
+        "to",
+        "width"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "ramp"
+        },
+        "color": {
+          "$ref": "#/definitions/color"
+        },
+        "material": {
+          "type": "string",
+          "enum": [
+            "obsidian",
+            "ice",
+            "neon_ice",
+            "rubber",
+            "sand",
+            "volcanicRock",
+            "crystal",
+            "wood",
+            "metal",
+            "concrete",
+            "glass",
+            "stone",
+            "lava",
+            "volcanic",
+            "dirt",
+            "rock",
+            "steel",
+            "tile",
+            "carpet",
+            "grass"
+          ],
+          "description": "Surface preset (render + default friction)"
+        },
+        "friction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "restitution": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "from": {
+          "$ref": "#/definitions/vec3"
+        },
+        "to": {
+          "$ref": "#/definitions/vec3"
+        },
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "thickness": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "moverZone": {
+      "type": "object",
+      "description": "Kinematic box moving along a path",
+      "required": [
+        "type",
+        "size",
+        "path",
+        "period"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "mover"
+        },
+        "color": {
+          "$ref": "#/definitions/color"
+        },
+        "material": {
+          "type": "string",
+          "enum": [
+            "obsidian",
+            "ice",
+            "neon_ice",
+            "rubber",
+            "sand",
+            "volcanicRock",
+            "crystal",
+            "wood",
+            "metal",
+            "concrete",
+            "glass",
+            "stone",
+            "lava",
+            "volcanic",
+            "dirt",
+            "rock",
+            "steel",
+            "tile",
+            "carpet",
+            "grass"
+          ],
+          "description": "Surface preset (render + default friction)"
+        },
+        "friction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "restitution": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "shape": {
+          "const": "box"
+        },
+        "size": {
+          "$ref": "#/definitions/positiveVec3"
+        },
+        "path": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/definitions/vec3"
+          }
+        },
+        "period": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Seconds per full cycle"
+        },
+        "ease": {
+          "enum": [
+            "linear",
+            "sine"
+          ]
+        },
+        "loop": {
+          "type": "boolean",
+          "description": "Loop back to the first point instead of ping-ponging"
+        },
+        "phase": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "rot": {
+          "$ref": "#/definitions/rotation"
+        }
+      }
+    },
+    "spinnerZone": {
+      "type": "object",
+      "description": "Kinematic box spinning about one of its axes",
+      "required": [
+        "type",
+        "pos",
+        "size",
+        "axis",
+        "rpm"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "spinner"
+        },
+        "color": {
+          "$ref": "#/definitions/color"
+        },
+        "material": {
+          "type": "string",
+          "enum": [
+            "obsidian",
+            "ice",
+            "neon_ice",
+            "rubber",
+            "sand",
+            "volcanicRock",
+            "crystal",
+            "wood",
+            "metal",
+            "concrete",
+            "glass",
+            "stone",
+            "lava",
+            "volcanic",
+            "dirt",
+            "rock",
+            "steel",
+            "tile",
+            "carpet",
+            "grass"
+          ],
+          "description": "Surface preset (render + default friction)"
+        },
+        "friction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "restitution": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "pos": {
+          "$ref": "#/definitions/vec3"
+        },
+        "size": {
+          "$ref": "#/definitions/positiveVec3"
+        },
+        "axis": {
+          "enum": [
+            "x",
+            "y",
+            "z"
+          ]
+        },
+        "rpm": {
+          "type": "number"
+        },
+        "phaseDeg": {
+          "type": "number"
+        },
+        "rot": {
+          "$ref": "#/definitions/rotation"
+        }
+      }
+    },
+    "triggerZone": {
+      "type": "object",
+      "description": "Volume that acts on marbles (boost = Δv in m/s)",
+      "required": [
+        "type",
+        "pos",
+        "size",
+        "do"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "trigger"
+        },
+        "pos": {
+          "$ref": "#/definitions/vec3"
+        },
+        "size": {
+          "$ref": "#/definitions/positiveVec3"
+        },
+        "rot": {
+          "$ref": "#/definitions/rotation"
+        },
+        "on": {
+          "enum": [
+            "enter",
+            "stay"
+          ]
+        },
+        "color": {
+          "$ref": "#/definitions/color"
+        },
+        "do": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "boost": {
+              "$ref": "#/definitions/vec3"
+            },
+            "setVelocity": {
+              "$ref": "#/definitions/vec3"
+            },
+            "respawn": {
+              "const": true
+            }
+          }
+        }
+      }
+    },
+    "stampZone": {
+      "type": "object",
+      "required": [
+        "type",
+        "pos"
+      ],
       "properties": {
         "type": {
           "type": "string",
@@ -184,25 +967,18 @@
           "description": "Registered zone handler id (see zone-setup/registry.js ZONE_HANDLERS)"
         },
         "pos": {
-          "type": "object",
-          "required": ["x", "y", "z"],
-          "properties": {
-            "x": { "type": "number" },
-            "y": { "type": "number" },
-            "z": { "type": "number" }
-          }
+          "$ref": "#/definitions/vec3"
         },
         "size": {
-          "type": "object",
-          "properties": {
-            "x": { "type": "number" },
-            "y": { "type": "number" },
-            "z": { "type": "number" }
-          }
+          "$ref": "#/definitions/vec3"
         },
         "color": {
           "type": "array",
-          "items": { "type": "number", "minimum": 0, "maximum": 1 },
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
           "minItems": 3,
           "maxItems": 3
         },
@@ -210,17 +986,34 @@
           "type": "number",
           "description": "Y-axis rotation in radians (optional)"
         },
-        "friction": { "type": "number", "minimum": 0, "maximum": 1 },
-        "restitution": { "type": "number", "minimum": 0, "maximum": 1 },
-        "slope": { "type": "number" },
-        "boostForce": { "type": "number", "minimum": 0 },
+        "friction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "restitution": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "slope": {
+          "type": "number"
+        },
+        "boostForce": {
+          "type": "number",
+          "minimum": 0
+        },
         "model": {
           "type": "string",
           "description": "GLB/GLTF path relative to assets/ (e.g. tracks/neon_01.glb)"
         },
         "collider": {
           "type": "string",
-          "enum": ["trimesh", "convexHull", "none"],
+          "enum": [
+            "trimesh",
+            "convexHull",
+            "none"
+          ],
           "description": "Rapier collider type for imported mesh (default: trimesh)"
         },
         "scale": {
@@ -236,10 +1029,18 @@
           "description": "Distance-switched LOD models (furthest listed LOD swaps in at distance)",
           "items": {
             "type": "object",
-            "required": ["model", "distance"],
+            "required": [
+              "model",
+              "distance"
+            ],
             "properties": {
-              "model": { "type": "string" },
-              "distance": { "type": "number", "minimum": 0 }
+              "model": {
+                "type": "string"
+              },
+              "distance": {
+                "type": "number",
+                "minimum": 0
+              }
             }
           }
         },
@@ -247,24 +1048,49 @@
           "type": "object",
           "description": "Moving platform parameters (declarative stamp)",
           "properties": {
-            "axis": { "type": "string", "enum": ["horizontal", "vertical", "circular"] },
-            "amplitude": { "type": "number", "minimum": 0 },
-            "speed": { "type": "number", "minimum": 0 },
-            "phase": { "type": "number" }
+            "axis": {
+              "type": "string",
+              "enum": [
+                "horizontal",
+                "vertical",
+                "circular"
+              ]
+            },
+            "amplitude": {
+              "type": "number",
+              "minimum": 0
+            },
+            "speed": {
+              "type": "number",
+              "minimum": 0
+            },
+            "phase": {
+              "type": "number"
+            }
           }
         },
         "collectible": {
           "type": "object",
           "properties": {
-            "kind": { "type": "string" },
-            "value": { "type": "integer", "minimum": 0 }
+            "kind": {
+              "type": "string"
+            },
+            "value": {
+              "type": "integer",
+              "minimum": 0
+            }
           }
         },
         "grappleAnchor": {
           "type": "object",
           "properties": {
-            "id": { "type": "string" },
-            "radius": { "type": "number", "minimum": 0 }
+            "id": {
+              "type": "string"
+            },
+            "radius": {
+              "type": "number",
+              "minimum": 0
+            }
           }
         },
         "checkpoint": {
@@ -274,15 +1100,50 @@
         "reverb": {
           "type": "object",
           "description": "Convolution reverb applied while the listener is within `radius` of this zone's pos",
-          "required": ["decay", "wetMix"],
+          "required": [
+            "decay",
+            "wetMix"
+          ],
           "properties": {
-            "decay": { "type": "number", "minimum": 0.1, "maximum": 8, "description": "Reverb tail length in seconds" },
-            "wetMix": { "type": "number", "minimum": 0, "maximum": 1, "description": "Wet-signal gain, 0 = dry, 1 = fully wet" },
-            "preDelay": { "type": "number", "minimum": 0, "maximum": 0.5, "description": "Silence before the tail starts, in seconds" },
-            "radius": { "type": "number", "minimum": 0, "description": "Trigger radius around pos (default 20)" }
+            "decay": {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 8,
+              "description": "Reverb tail length in seconds"
+            },
+            "wetMix": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Wet-signal gain, 0 = dry, 1 = fully wet"
+            },
+            "preDelay": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 0.5,
+              "description": "Silence before the tail starts, in seconds"
+            },
+            "radius": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Trigger radius around pos (default 20)"
+            }
           }
         }
-      }
+      },
+      "description": "Prebuilt zone stamp (any registered non-primitive type)"
     }
-  }
+  },
+  "anyOf": [
+    {
+      "required": [
+        "goals"
+      ]
+    },
+    {
+      "required": [
+        "goal"
+      ]
+    }
+  ]
 }

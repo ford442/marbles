@@ -1,0 +1,27 @@
+{
+  "id": "sapphire_bullet",
+  "name": "Sapphire Bullet",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0,
+      "g": 0.4,
+      "b": 1
+    },
+    "emissive": {
+      "r": 0,
+      "g": 0.4,
+      "b": 1,
+      "intensity": 5
+    },
+    "materialType": "glass"
+  },
+  "physics": {
+    "radius": 0.6,
+    "density": 15,
+    "friction": 0,
+    "restitution": 1.2
+  }
+}

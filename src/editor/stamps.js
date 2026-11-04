@@ -92,22 +92,58 @@ export const EDITOR_GAMEPLAY_STAMPS = [
     },
 ];
 
+/** @param {{ x: number, y: number, z: number }} p @param {number} dx @param {number} dy @param {number} dz */
+const at = (p, dx = 0, dy = 0, dz = 0) => ({ x: p.x + dx, y: p.y + dy, z: p.z + dz });
+
+/**
+ * Level Format v2 primitives (src/zone-setup/primitives.ts). Placing one
+ * upgrades the map to schemaVersion 2. `primitive(pos)` builds the zone.
+ */
+export const EDITOR_PRIMITIVE_STAMPS = [
+    {
+        id: 'prim_box',
+        label: 'Box',
+        type: 'box',
+        icon: '■',
+        defaults: {},
+        primitive: (p) => ({ type: 'box', pos: at(p, 0, 0.25), size: [6, 1, 6], color: [0.35, 0.35, 0.4] }),
+    },
+    {
+        id: 'prim_ramp',
+        label: 'Ramp',
+        type: 'ramp',
+        icon: '◢',
+        defaults: {},
+        primitive: (p) => ({ type: 'ramp', from: at(p, 0, 2), to: at(p, 0, 0, 12), width: 6, color: [0.3, 0.45, 0.6] }),
+    },
+    {
+        id: 'prim_mover',
+        label: 'Mover',
+        type: 'mover',
+        icon: '⇄',
+        defaults: {},
+        primitive: (p) => ({ type: 'mover', size: [4, 0.6, 4], path: [at(p, -6, 0.5), at(p, 6, 0.5)], period: 4, color: [0.2, 0.8, 1.0] }),
+    },
+    {
+        id: 'prim_spinner',
+        label: 'Spinner',
+        type: 'spinner',
+        icon: '✣',
+        defaults: {},
+        primitive: (p) => ({ type: 'spinner', pos: at(p, 0, 0.8), size: [10, 0.8, 0.8], axis: 'y', rpm: 12, color: [1.0, 0.4, 0.2] }),
+    },
+    {
+        id: 'prim_boost',
+        label: 'Boost Trigger',
+        type: 'trigger',
+        icon: '⇪',
+        defaults: {},
+        primitive: (p) => ({ type: 'trigger', pos: at(p, 0, 1), size: [4, 2, 4], do: { boost: [0, 12, 4] }, color: [1.0, 0.9, 0.1] }),
+    },
+];
+
 /** Factory zone stamps (procedural geometry; reference by type + pos only). */
 export const EDITOR_FACTORY_STAMPS = [
-    {
-        id: 'storm_peak',
-        label: 'Storm Peak',
-        type: 'storm_peak',
-        icon: '⛈',
-        defaults: {},
-    },
-    {
-        id: 'stellar_forge',
-        label: 'Stellar Forge',
-        type: 'stellar_forge',
-        icon: '🔨',
-        defaults: {},
-    },
     {
         id: 'prismatic_speedway',
         label: 'Prismatic Speedway',
@@ -148,6 +184,7 @@ export const EDITOR_MODEL_STAMPS = TRACK_CATALOG.map((track) => ({
 
 export const EDITOR_STAMPS = [
     ...EDITOR_BUILTIN_STAMPS,
+    ...EDITOR_PRIMITIVE_STAMPS,
     ...EDITOR_GAMEPLAY_STAMPS,
     ...EDITOR_MODEL_STAMPS,
     ...EDITOR_FACTORY_STAMPS,
@@ -161,6 +198,7 @@ export const STAMP_BY_ID = Object.fromEntries(EDITOR_STAMPS.map((s) => [s.id, s]
  * @param {{ x: number, y: number, z: number }} pos
  */
 export function createZoneFromStamp(stamp, pos) {
+    if ('primitive' in stamp && stamp.primitive) return stamp.primitive(pos);
     const zone = {
         type: stamp.type,
         pos: { ...pos },

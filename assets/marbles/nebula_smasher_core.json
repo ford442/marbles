@@ -1,0 +1,30 @@
+{
+  "id": "nebula_smasher_core",
+  "name": "Nebula Smasher Core",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 1,
+      "g": 0,
+      "b": 0.5
+    },
+    "emissive": {
+      "r": 1,
+      "g": 0,
+      "b": 0.5,
+      "intensity": 50
+    },
+    "clearCoat": 1,
+    "clearCoatRoughness": 0,
+    "thickness": 2,
+    "materialType": "glass"
+  },
+  "physics": {
+    "radius": 1.8,
+    "density": 10000,
+    "friction": 0,
+    "restitution": 1.5
+  }
+}

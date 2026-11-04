@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "author": "Marble Game Team",
   "difficulty": "hard",
-  "chapter": "neon",
+  "chapter": "expert",
   "environment": "neon_city",
   "nightMode": true,
   "backgroundColor": [0.01, 0.0, 0.05, 1.0],

@@ -211,6 +211,32 @@ async function main() {
         test('computeForceFieldsBatch WASM vs JS (13 entities, edge cases)', ffOk, true);
     }
 
+    // Shield / Violet repel parameters: falloffExp = 0 (constant magnitude),
+    // minDist = 0, negative per-body strength. See src/game-loop/repel-pulse.js.
+    {
+        const rpCount = 13;
+        const rpPositions = new Float32Array(rpCount * 3);
+        const rpStrengths = new Float32Array(rpCount);
+        for (let i = 0; i < rpCount; i++) {
+            const base = i * 3;
+            rpPositions[base] = 2 + Math.cos(i) * (0.3 + i);
+            rpPositions[base + 1] = 1 + (i % 3) - 1;
+            rpPositions[base + 2] = -3 + Math.sin(i) * (0.3 + i);
+            rpStrengths[i] = -3.0 * (0.5 + (i % 4));
+        }
+        const rpWasmOut = new Float32Array(rpCount * 3);
+        const rpJsOut = new Float32Array(rpCount * 3);
+        runner.computeForceFieldsBatch(rpPositions, rpStrengths, rpWasmOut, rpCount, 2, 1, -3, 0, 0, 15, 0);
+        jsFallback.computeForceFieldsBatch(rpPositions, rpStrengths, rpJsOut, rpCount, 2, 1, -3, 0, 0, 15, 0);
+
+        let rpOk = true;
+        for (let i = 0; i < rpWasmOut.length; i++) {
+            const a = rpWasmOut[i], b = rpJsOut[i];
+            if (Number.isNaN(a) || Math.abs(a - b) > 1e-3) { rpOk = false; break; }
+        }
+        test('computeForceFieldsBatch WASM vs JS (13 entities, repel falloffExp=0)', rpOk, true);
+    }
+
     // 13 entities again for velocity damping, mixing speeds above/below the
     // cap so both the vectorized branch and its bitselect blend are hit.
     {
@@ -246,6 +272,123 @@ async function main() {
             if (Math.abs(vdUncappedWasmOut[i] - vdUncappedJsOut[i]) > 1e-3) { vdUncappedOk = false; break; }
         }
         test('applyVelocityDampingBatch WASM vs JS (13 entities, uncapped)', vdUncappedOk, true);
+    }
+
+    // 13 springs: 3 SIMD groups + 1 scalar remainder. Covers coincident
+    // marble/anchor (dist == 0 -> zero, not NaN), compressed (dist < rest),
+    // extended, and velocity both along and across the spring axis.
+    {
+        const spCount = 13;
+        const positions = new Float32Array(spCount * 3);
+        const anchors = new Float32Array(spCount * 3);
+        const velocities = new Float32Array(spCount * 3);
+        const restLengths = new Float32Array(spCount);
+        const stiffnesses = new Float32Array(spCount);
+        const dampings = new Float32Array(spCount);
+        for (let i = 0; i < spCount; i++) {
+            const base = i * 3;
+            positions[base] = Math.cos(i) * 4;
+            positions[base + 1] = (i % 3) * 0.5;
+            positions[base + 2] = Math.sin(i) * 4;
+            if (i === 0 || i === 12) {
+                // anchor coincides with marble (i === 12 is the scalar remainder)
+                anchors[base] = positions[base];
+                anchors[base + 1] = positions[base + 1];
+                anchors[base + 2] = positions[base + 2];
+            } else {
+                anchors[base] = positions[base] + 1 + i * 0.7;
+                anchors[base + 1] = positions[base + 1] + (i % 2 ? 2 : -1);
+                anchors[base + 2] = positions[base + 2] - i * 0.3;
+            }
+            velocities[base] = (i % 4 - 1.5) * 3;
+            velocities[base + 1] = i % 2 ? 4 : -2;
+            velocities[base + 2] = Math.cos(i * 1.3) * 5;
+            restLengths[i] = i % 3 === 0 ? 20 : 2 + i * 0.25; // every 3rd compressed
+            stiffnesses[i] = 15 + i;
+            dampings[i] = i % 2 ? 2 : 5;
+        }
+
+        const spWasmOut = new Float32Array(spCount * 3);
+        const spJsOut = new Float32Array(spCount * 3);
+        runner.computeSpringForcesBatch(positions, anchors, velocities,
+            restLengths, stiffnesses, dampings, spWasmOut, spCount);
+        jsFallback.computeSpringForcesBatch(positions, anchors, velocities,
+            restLengths, stiffnesses, dampings, spJsOut, spCount);
+
+        let spOk = true;
+        for (let i = 0; i < spWasmOut.length; i++) {
+            const a = spWasmOut[i], b = spJsOut[i];
+            if (Number.isNaN(a) || Math.abs(a - b) > 1e-3) { spOk = false; break; }
+        }
+        test('computeSpringForcesBatch WASM vs JS (13 entities, edge cases)', spOk, true);
+    }
+
+    // 13 segment projections: zero-length segments (0/0 must not leak NaN
+    // through the clamp), t < 0, t > 1 and interior t, with per-entity p0/p1.
+    {
+        const sgCount = 13;
+        const p0 = new Float32Array(sgCount * 3);
+        const p1 = new Float32Array(sgCount * 3);
+        const q = new Float32Array(sgCount * 3);
+        for (let i = 0; i < sgCount; i++) {
+            const base = i * 3;
+            p0[base] = i * 0.5;
+            p0[base + 1] = -i * 0.25;
+            p0[base + 2] = 1 + (i % 3);
+            if (i === 1 || i === 12) {
+                // degenerate segment (i === 12 is the scalar remainder)
+                p1[base] = p0[base]; p1[base + 1] = p0[base + 1]; p1[base + 2] = p0[base + 2];
+            } else {
+                p1[base] = p0[base] + 6 + i;
+                p1[base + 1] = p0[base + 1] + (i % 2 ? 3 : -2);
+                p1[base + 2] = p0[base + 2] + i * 0.4;
+            }
+            const along = [-0.5, 0.3, 0.7, 1.6][i % 4]; // before / inside / inside / past
+            q[base] = p0[base] + (p1[base] - p0[base]) * along + 1.5;
+            q[base + 1] = p0[base + 1] + (p1[base + 1] - p0[base + 1]) * along - 2;
+            q[base + 2] = p0[base + 2] + (p1[base + 2] - p0[base + 2]) * along + 0.5;
+        }
+
+        const sgWasmOut = new Float32Array(sgCount * 3);
+        const sgJsOut = new Float32Array(sgCount * 3);
+        runner.closestPointsOnSegmentBatch(p0, p1, q, sgWasmOut, sgCount);
+        jsFallback.closestPointsOnSegmentBatch(p0, p1, q, sgJsOut, sgCount);
+
+        let sgOk = true;
+        for (let i = 0; i < sgWasmOut.length; i++) {
+            const a = sgWasmOut[i], b = sgJsOut[i];
+            if (Number.isNaN(a) || Math.abs(a - b) > 1e-3) { sgOk = false; break; }
+        }
+        test('closestPointsOnSegmentBatch WASM vs JS (13 entities, edge cases)', sgOk, true);
+    }
+
+    console.log('\nMemory growth');
+
+    // 400k entities ≈ 40 MB of runner buffers: forces the heap past its 32 MB
+    // INITIAL_MEMORY (but under the 64 MB cap), which detaches every view over
+    // the old buffer. The runner must re-derive HEAPF32 and its scalar view.
+    {
+        const bigCount = 400_000;
+        const bufferBefore = instance.HEAPF32.buffer;
+        const positions = new Float32Array(bigCount * 3);
+        const strengths = new Float32Array(bigCount).fill(20);
+        for (let i = 0; i < bigCount; i++) positions[i * 3] = 1 + (i % 20);
+        const wasmOut = new Float32Array(bigCount * 3);
+        const jsOut = new Float32Array(bigCount * 3);
+        runner.computeForceFieldsBatch(positions, strengths, wasmOut, bigCount, 0, 0, 0, 1, 0.5, 25, 0);
+        jsFallback.computeForceFieldsBatch(positions, strengths, jsOut, bigCount, 0, 0, 0, 1, 0.5, 25, 0);
+        test('heap grew past INITIAL_MEMORY', instance.HEAPF32.buffer !== bufferBefore, true);
+
+        let growOk = true;
+        for (let i = 0; i < bigCount * 3; i += 997) {
+            if (Math.abs(wasmOut[i] - jsOut[i]) > 1e-3) { growOk = false; break; }
+        }
+        test('computeForceFieldsBatch WASM vs JS after memory growth', growOk, true);
+
+        const into = new Float32Array(3);
+        runner.computeSpringForceInto(into, 0, 0, 0, 10, 0, 0, 5, 1, 0, 0, 0, 0);
+        test('computeSpringForceInto after memory growth', { x: into[0], y: into[1], z: into[2] },
+            jsFallback.computeSpringForce(0, 0, 0, 10, 0, 0, 5, 1, 0, 0, 0, 0));
     }
 
     console.log(`\n${pass + fail} tests: ${pass} passed, ${fail} failed`);

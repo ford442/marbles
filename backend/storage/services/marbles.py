@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException
 
 from ..config import MARBLES_GHOST_MAX_BYTES, MARBLES_WORKSHOP_MAX_BYTES, STORAGE_MAP
+from .map_validation import map_errors
 from ..io import run_io, _read_json_sync, _write_json_sync, INDEX_LOCK
 from ..models_marbles import CampaignSavePayload, GhostUploadPayload, LeaderboardEntry
 
@@ -233,11 +234,10 @@ async def get_ghost(ghost_id: str) -> dict:
 
 
 def validate_workshop_map_json(map_json: str) -> dict:
-    """Cheap sanity check before persisting a published community level.
+    """Validate a community level before persisting it.
 
-    This intentionally does not run the full JSON-schema validation the
-    editor already ran client-side — just enough to reject garbage/oversized
-    payloads before they hit storage.
+    Rejects oversized/garbage payloads, then runs the same map-schema.json
+    rule set the editor and CI use (services/map_validation.py).
     """
     if len(map_json.encode("utf-8")) > MARBLES_WORKSHOP_MAX_BYTES:
         raise HTTPException(status_code=413, detail="Workshop level exceeds size cap")
@@ -249,6 +249,10 @@ def validate_workshop_map_json(map_json: str) -> dict:
 
     if not isinstance(data, dict) or "zones" not in data or "spawn" not in data:
         raise HTTPException(status_code=400, detail="Map JSON missing zones/spawn")
+
+    problems = map_errors(data)
+    if problems:
+        raise HTTPException(status_code=422, detail={"message": "Map failed validation", "errors": problems[:50]})
 
     return data
 

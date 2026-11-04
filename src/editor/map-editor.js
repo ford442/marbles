@@ -15,6 +15,7 @@ import {
 import {
     cmdDeleteZones,
     cmdMoveZones,
+    zoneAnchor,
     cmdPlaceZone,
     cmdReplaceMap,
     cmdRotateZones,
@@ -28,6 +29,7 @@ import { EditorPhysicsPreview } from './physics-preview.js';
 import {
     createZoneFromStamp,
     EDITOR_BUILTIN_STAMPS,
+    EDITOR_PRIMITIVE_STAMPS,
     EDITOR_FACTORY_STAMPS,
     EDITOR_GAMEPLAY_STAMPS,
     EDITOR_MODEL_STAMPS,
@@ -516,6 +518,7 @@ export class MapEditor {
             };
 
             appendStampGroup('Built-in', EDITOR_BUILTIN_STAMPS);
+            appendStampGroup('Primitives (v2)', EDITOR_PRIMITIVE_STAMPS);
             appendStampGroup('Gameplay', EDITOR_GAMEPLAY_STAMPS);
             appendStampGroup('GLB tracks', EDITOR_MODEL_STAMPS);
             appendStampGroup('Factory zones', EDITOR_FACTORY_STAMPS);
@@ -623,9 +626,12 @@ export class MapEditor {
                 if (!zone) return;
                 const value = parseFloat(el.value);
                 if (Number.isNaN(value)) return;
-                const pos = { ...zone.pos, [axis]: value };
-                const snapped = snapPosition(pos, this.snap.gridSize, this.snap.enabled);
-                this._execute(cmdUpdateZoneProps(this.map, idx, { pos: snapped }));
+                const anchor = zoneAnchor(zone);
+                const snapped = snapPosition({ ...anchor, [axis]: value }, this.snap.gridSize, this.snap.enabled);
+                // Move by the delta so ramps (from/to) and movers (path) shift as a whole.
+                this._execute(cmdMoveZones(this.map, [idx], {
+                    x: snapped.x - anchor.x, y: snapped.y - anchor.y, z: snapped.z - anchor.z,
+                }));
                 this.rebuildPreview();
             });
         }
@@ -787,8 +793,9 @@ export class MapEditor {
         let best = -1;
         let bestDist = Infinity;
         this.map.zones.forEach((zone, index) => {
-            const dx = zone.pos.x - pos.x;
-            const dz = zone.pos.z - pos.z;
+            const anchor = zoneAnchor(zone);
+            const dx = anchor.x - pos.x;
+            const dz = anchor.z - pos.z;
             const dist = dx * dx + dz * dz;
             if (dist < bestDist) {
                 bestDist = dist;
@@ -838,9 +845,10 @@ export class MapEditor {
         const primaryIdx = this.selectedIndices[0];
         const zone = primaryIdx !== undefined ? this.map.zones[primaryIdx] : null;
         const sel = this.ui.selectionFields;
-        if (sel.x) sel.x.value = zone ? String(zone.pos.x) : '';
-        if (sel.y) sel.y.value = zone ? String(zone.pos.y) : '';
-        if (sel.z) sel.z.value = zone ? String(zone.pos.z) : '';
+        const anchor = zone ? zoneAnchor(zone) : null;
+        if (sel.x) sel.x.value = anchor ? String(anchor.x) : '';
+        if (sel.y) sel.y.value = anchor ? String(anchor.y) : '';
+        if (sel.z) sel.z.value = anchor ? String(anchor.z) : '';
         if (sel.rot) {
             sel.rot.value = zone?.rotY !== undefined
                 ? String(Math.round((zone.rotY * 180) / Math.PI))
@@ -889,7 +897,8 @@ export class MapEditor {
                 const item = document.createElement('button');
                 item.type = 'button';
                 item.className = 'editor-zone-item' + (this.selectedIndices.includes(i) ? ' selected' : '');
-                item.textContent = `${i + 1}. ${z.type} (${z.pos.x.toFixed(1)}, ${z.pos.y.toFixed(1)}, ${z.pos.z.toFixed(1)})`;
+                const a = zoneAnchor(z);
+                item.textContent = `${i + 1}. ${z.type} (${a.x.toFixed(1)}, ${a.y.toFixed(1)}, ${a.z.toFixed(1)})`;
                 item.addEventListener('click', (ev) => this.selectZone(i, ev));
                 this.ui.zoneList.appendChild(item);
             });

@@ -1,0 +1,28 @@
+{
+  "id": "digital_cube",
+  "name": "Digital Cube",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0,
+      "g": 1,
+      "b": 0.5
+    },
+    "emissive": {
+      "r": 0,
+      "g": 1,
+      "b": 0.5,
+      "intensity": 1
+    },
+    "materialType": "neonGlow",
+    "geometry": "cube"
+  },
+  "physics": {
+    "radius": 0.5,
+    "density": 2,
+    "friction": 0.5,
+    "restitution": 0.3
+  }
+}

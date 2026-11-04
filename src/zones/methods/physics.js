@@ -40,6 +40,7 @@ export const physicsMethods = {
         this.movingPlatforms.push({
             rigidBody: body,
             entity: entity,
+            matInstance,
             halfExtents: halfExtents,
             type: type,
             center: center,
@@ -81,6 +82,7 @@ export const physicsMethods = {
         this.powerUps.push({
             rigidBody: body,
             entity: entity,
+            matInstance,
             type: type,
             baseY: pos.y,
             rotation: 0,

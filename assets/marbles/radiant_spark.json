@@ -1,0 +1,27 @@
+{
+  "id": "radiant_spark",
+  "name": "Radiant Spark",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 1,
+      "g": 0.2,
+      "b": 0.4
+    },
+    "emissive": {
+      "r": 1,
+      "g": 0.2,
+      "b": 0.4,
+      "intensity": 3.5
+    },
+    "roughness": 0.1
+  },
+  "physics": {
+    "radius": 0.5,
+    "density": 0.3,
+    "friction": 0.5,
+    "restitution": 1.3
+  }
+}

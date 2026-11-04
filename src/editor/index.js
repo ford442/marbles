@@ -15,19 +15,13 @@ export {
     PLAYTEST_LEVEL_ID,
     DRAFT_STORAGE_KEY,
 } from './map-document.js';
-export { validateMap, validateAgainstSchema, collectWarnings } from './map-validator.js';
+export { validateMap, collectWarnings } from './map-validator.js';
 export {
     EDITOR_STAMPS,
     EDITOR_GAMEPLAY_STAMPS,
+    EDITOR_PRIMITIVE_STAMPS,
     STAMP_BY_ID,
     createZoneFromStamp,
 } from './stamps.js';
 
-/**
- * @returns {boolean}
- */
-export function isEditorMode() {
-    if (typeof window === 'undefined') return false;
-    const params = new URLSearchParams(window.location.search);
-    return params.has('editor') || params.get('mode') === 'editor';
-}
+export { isEditorMode } from './mode.js';

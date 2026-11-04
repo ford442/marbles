@@ -1,0 +1,16 @@
+{
+  "id": "blue_standard",
+  "name": "Blue Standard",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0,
+      "g": 0,
+      "b": 1
+    },
+    "roughness": 0.4
+  },
+  "physics": {}
+}

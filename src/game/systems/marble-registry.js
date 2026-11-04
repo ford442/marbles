@@ -9,6 +9,13 @@ import {
 import { shouldUseMarbleProxyLight, LIGHT_OWNER } from '../../lighting-budget.js';
 import { extractMarbleMaterialFields } from './marble-material-fields.js';
 import { getMarblePhysics } from '../../wasm-bridge.js';
+import {
+    getSelectedMarbleId,
+    resolveSpawnRoster,
+    selectMarble,
+    SPAWN_SLOTS,
+} from '../../marbles/selection.js';
+import { mountMarblePicker } from '../../marbles/marble-picker.js';
 
 // Tuned for a musical pitch shift rather than a physically literal speed of sound
 // (marble speeds top out well under this).
@@ -42,24 +49,60 @@ export class MarbleRegistry {
     /** @param {object} game */
     constructor(game) {
         this.game = game;
+        this.picker = mountMarblePicker(this);
     }
 
-    createMarbles(spawnPos) {
+    /** Marble ids this player has been granted (campaign + premium). */
+    getUnlockedMarbleIds() {
+        return this.game.campaignProgress?.getUnlockedMarbles?.() ?? [];
+    }
+
+    /** The persisted player marble, falling back to the default if it is locked. */
+    getSelectedMarbleId() {
+        return getSelectedMarbleId({ catalog: marblesInfo, unlockedIds: this.getUnlockedMarbleIds() });
+    }
+
+    /**
+     * Choose the player marble for the next level. Locked / premium marbles
+     * the player hasn't been granted are refused here, not just in the UI.
+     * @param {string} id
+     */
+    selectMarble(id) {
+        return selectMarble(id, { catalog: marblesInfo, unlockedIds: this.getUnlockedMarbleIds() });
+    }
+
+    /**
+     * Spawn the player's selected marble (index 0) plus the level's `rivals`
+     * (≤ 6 marble ids from the map), in SPAWN_SLOTS around `spawnPos`.
+     * @param {{ x: number, y: number, z: number }} [spawnPos]
+     * @param {{ playerId?: string, rivals?: readonly string[] }} [options]
+     */
+    createMarbles(spawnPos, options = {}) {
         const g = this.game;
         const baseSpawn = spawnPos || { x: 0, y: 8, z: -12 };
+        const level = g.currentLevel ? g.levelLoader?.getLevel?.(g.currentLevel) : undefined;
+        const roster = resolveSpawnRoster({
+            catalog: marblesInfo,
+            playerId: options.playerId ?? this.getSelectedMarbleId(),
+            rivals: options.rivals ?? level?.rivals ?? [],
+        });
 
-        for (const info of marblesInfo) {
+        roster.forEach((info, slotIndex) => {
             const radius = info.radius || 0.5;
             const scale = radius / 0.5;
+            const slot = SPAWN_SLOTS[slotIndex] ?? SPAWN_SLOTS[0];
             const pos = {
-                x: baseSpawn.x + info.offset.x,
-                y: baseSpawn.y + info.offset.y,
-                z: baseSpawn.z + info.offset.z,
+                x: baseSpawn.x + slot.x,
+                // Larger marbles start higher so they don't spawn inside the floor.
+                y: baseSpawn.y + slot.y + Math.max(0, radius - 0.5),
+                z: baseSpawn.z + slot.z,
             };
 
+            // CCD: boosted marbles move far enough per step to tunnel thin walls.
             const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
                 .setTranslation(pos.x, pos.y, pos.z)
-                .setCanSleep(false);
+                .setCanSleep(false)
+                .setCcdEnabled(true);
 
             if (info.gravityScale !== undefined) bodyDesc.setGravityScale(info.gravityScale);
             if (info.linearDamping !== undefined) bodyDesc.setLinearDamping(info.linearDamping);
@@ -84,6 +127,7 @@ export class MarbleRegistry {
                     linearDamping: info.linearDamping,
                     angularDamping: info.angularDamping,
                     canSleep: false,
+                    ccd: true,
                 });
             } else {
                 rigidBody = g.world.createRigidBody(bodyDesc);
@@ -128,7 +172,9 @@ export class MarbleRegistry {
             g.scene.addEntity(entity);
 
             const marbleObj = {
+                id: info.id,
                 name: info.name || `Marble ${g.marbles.length + 1}`,
+                isRival: slotIndex > 0,
                 rigidBody,
                 collider,
                 entity,
@@ -169,11 +215,11 @@ export class MarbleRegistry {
             g.dynamicBodies.add(rigidBody);
             applyMarbleMaterialPreset(marbleObj, g, spawnTier);
             this._applyMarbleMaterialOverrides(marbleObj, info);
-        }
+        });
 
         g.currentMarbleIndex = 0;
         g.playerMarble = g.marbles[0];
-        g.selectedEl.textContent = `Selected: ${g.playerMarble.name}`;
+        if (g.selectedEl && g.playerMarble) g.selectedEl.textContent = `Selected: ${g.playerMarble.name}`;
         this.updateActiveMarbleLight();
     }
 
@@ -266,6 +312,7 @@ export class MarbleRegistry {
         m.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
         m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
         m.scoredGoals.clear();
+        this.resetPlayerAbilityState();
 
         g._rewindHead = 0;
         g._rewindCount = 0;
@@ -293,6 +340,31 @@ export class MarbleRegistry {
         if (typeof audio !== 'undefined' && audio.playJump) {
             audio.playJump();
         }
+    }
+
+    /**
+     * Clear per-life movement/ability state: double-jump, charging jump /
+     * stomp / dash / air-dash (restoring gravity they suspended), and any
+     * active grapple. Called on respawn, reset and level clear.
+     */
+    resetPlayerAbilityState() {
+        const g = this.game;
+        const rb = g.playerMarble?.rigidBody;
+        if (rb && (g.isChargingStomp || g.isChargingAirDash)) {
+            const base = g.playerMarble.baseGravityScale ?? 1.0;
+            rb.setGravityScale(g.flipActive ? -base : base, true);
+        }
+
+        g.hasDoubleJumped = false;
+        g.jumpCount = 0;
+        g.isChargingJump = false;
+        g.jumpCharge = 0;
+        g.isChargingStomp = false;
+        g.isStomping = false;
+        g.isChargingDash = false;
+        g.dashCharge = 0;
+        g.isChargingAirDash = false;
+        if (g.isGrappling || g.grappleTargetBody) g.cancelGrapple?.();
     }
 
     resetMarbles() {
@@ -340,6 +412,7 @@ export class MarbleRegistry {
         if (g.combobarContainerEl) g.combobarContainerEl.style.display = 'none';
         if (g.combobarEl) g.combobarEl.style.width = '0%';
 
+        this.resetPlayerAbilityState();
         g.currentMarbleIndex = 0;
         g.playerMarble = g.marbles[0];
         g.selectedEl.textContent = `Selected: ${g.playerMarble ? g.playerMarble.name : 'None'}`;
@@ -426,24 +499,22 @@ export class MarbleRegistry {
             const radius = marble.scale * 0.5 || 0.5;
             const pos = rb.translation();
 
-            const rayOrigin = { x: pos.x, y: pos.y, z: pos.z };
             const rayDir = { x: 0, y: g.flipActive ? 1 : -1, z: 0 };
-            const ray = new RAPIER.Ray(rayOrigin, rayDir);
-            const maxToi = radius + 0.1;
-
-            const hit = g.world.castRay(ray, maxToi, true);
+            const hit = g.physicsQueries.castRay(pos, rayDir, radius + 0.1, {
+                excludeBody: rb,
+                excludeSensors: true,
+            });
             if (hit) {
-                const otherCollider = hit.collider;
-                const otherBody = otherCollider.parent();
+                const otherHandle = hit.bodyHandle;
 
-                if (otherBody && otherBody !== rb) {
-                    if (otherBody.bodyType() === RAPIER.RigidBodyType.Fixed) {
-                        const material = audio.getMaterial(otherBody.handle);
+                if (otherHandle != null) {
+                    if (hit.bodyType === 'fixed') {
+                        const material = audio.getMaterial(otherHandle);
                         const dopplerRate = computeMarbleDopplerRate(g, rb);
 
                         touchingSurfaces.set(i, { material, speed, angularSpeed, radius, dopplerRate });
 
-                        const collisionId = `${rb.handle}-${otherBody.handle}`;
+                        const collisionId = `${rb.handle}-${otherHandle}`;
                         if (!processedCollisions.has(collisionId) && speed > 2.5) {
                             processedCollisions.add(collisionId);
                             const marbleMat = marble.materialPresetName || 'glass';

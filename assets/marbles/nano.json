@@ -1,0 +1,19 @@
+{
+  "id": "nano",
+  "name": "Nano",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 1,
+      "g": 0.4,
+      "b": 0.7
+    },
+    "roughness": 0.2
+  },
+  "physics": {
+    "radius": 0.25,
+    "density": 2
+  }
+}

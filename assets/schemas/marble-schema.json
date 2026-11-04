@@ -3,7 +3,13 @@
   "title": "Marble Definition Schema",
   "description": "Schema for defining custom marbles",
   "type": "object",
-  "required": ["id", "name", "version", "appearance", "physics"],
+  "required": [
+    "id",
+    "name",
+    "version",
+    "appearance",
+    "physics"
+  ],
   "properties": {
     "id": {
       "type": "string",
@@ -29,21 +35,58 @@
     },
     "rarity": {
       "type": "string",
-      "enum": ["common", "uncommon", "rare", "epic", "legendary"],
+      "enum": [
+        "common",
+        "uncommon",
+        "rare",
+        "epic",
+        "legendary"
+      ],
       "description": "Rarity classification"
+    },
+    "premium": {
+      "type": "boolean",
+      "description": "Premium marble: never free; selectable only once granted (its id is in the player's unlockedMarbles). Implies unlock \"premium\"."
+    },
+    "unlock": {
+      "type": "string",
+      "enum": [
+        "default",
+        "campaign",
+        "premium"
+      ],
+      "description": "How the marble becomes selectable: default (from the start), campaign (granted by a campaign milestone), premium (granted only). Defaults to premium when premium is true, else default."
     },
     "appearance": {
       "type": "object",
       "description": "Visual appearance properties",
-      "required": ["color"],
+      "required": [
+        "color"
+      ],
       "properties": {
         "color": {
           "type": "object",
-          "required": ["r", "g", "b"],
+          "required": [
+            "r",
+            "g",
+            "b"
+          ],
           "properties": {
-            "r": { "type": "number", "minimum": 0, "maximum": 1 },
-            "g": { "type": "number", "minimum": 0, "maximum": 1 },
-            "b": { "type": "number", "minimum": 0, "maximum": 1 }
+            "r": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "g": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "b": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
           }
         },
         "roughness": {
@@ -61,10 +104,27 @@
         "emissive": {
           "type": "object",
           "properties": {
-            "r": { "type": "number", "minimum": 0, "maximum": 1 },
-            "g": { "type": "number", "minimum": 0, "maximum": 1 },
-            "b": { "type": "number", "minimum": 0, "maximum": 1 },
-            "intensity": { "type": "number", "minimum": 0 }
+            "r": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "g": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "b": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "intensity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Multiplier: point-light intensity = intensity \u00d7 10000 (src/marbles/catalog-format.js EMISSIVE_LIGHT_SCALE)"
+            }
           }
         },
         "texture": {
@@ -74,6 +134,80 @@
         "particleEffect": {
           "type": "string",
           "description": "Particle effect identifier (optional)"
+        },
+        "reflectance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "clearCoat": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "clearCoatRoughness": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "thickness": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Glass thickness (refraction)"
+        },
+        "materialType": {
+          "type": "string",
+          "description": "Material preset name (src/marble-material-tier.js)"
+        },
+        "geometry": {
+          "type": "string",
+          "enum": [
+            "sphere",
+            "cube"
+          ]
+        },
+        "rainbow": {
+          "type": "boolean",
+          "description": "Cycle hue over time"
+        },
+        "shader": {
+          "type": "object",
+          "description": "Per-marble procedural shader parameters (catalog-format.js SHADER_FIELDS)",
+          "properties": {
+            "bumpScale": {
+              "type": "number"
+            },
+            "bumpFrequency": {
+              "type": "number"
+            },
+            "grainScale": {
+              "type": "number"
+            },
+            "scratchesIntensity": {
+              "type": "number"
+            },
+            "anisotropy": {
+              "type": "number"
+            },
+            "heatIntensity": {
+              "type": "number"
+            },
+            "crackGlow": {
+              "type": "number"
+            },
+            "iridescenceScale": {
+              "type": "number"
+            },
+            "sparkleDensity": {
+              "type": "number"
+            },
+            "fresnelStrength": {
+              "type": "number"
+            },
+            "chromaticDispersion": {
+              "type": "number"
+            }
+          }
         }
       }
     },
@@ -84,25 +218,25 @@
         "radius": {
           "type": "number",
           "minimum": 0.1,
-          "maximum": 2.0,
+          "maximum": 3.0,
           "description": "Marble radius in meters"
         },
         "density": {
           "type": "number",
-          "minimum": 0.1,
+          "minimum": 0.01,
           "description": "Material density (affects mass)"
         },
         "friction": {
           "type": "number",
           "minimum": 0,
-          "maximum": 1,
-          "description": "Surface friction"
+          "maximum": 2,
+          "description": "Surface friction (above 1 = sticky)"
         },
         "restitution": {
           "type": "number",
           "minimum": 0,
-          "maximum": 2,
-          "description": "Bounciness (0=no bounce, >1=super bouncy)"
+          "maximum": 1.5,
+          "description": "Bounciness. Must be <= 1.0 unless the marble is listed in assets/marbles/_bouncy-cap.json (hard max 1.5)."
         },
         "linearDamping": {
           "type": "number",
@@ -113,6 +247,12 @@
           "type": "number",
           "minimum": 0,
           "description": "Angular velocity damping"
+        },
+        "gravityScale": {
+          "type": "number",
+          "minimum": -2,
+          "maximum": 5,
+          "description": "Gravity multiplier (negative floats upward)"
         }
       }
     },
@@ -140,10 +280,18 @@
       "type": "object",
       "description": "Special abilities (optional)",
       "properties": {
-        "doubleJump": { "type": "boolean" },
-        "magnetic": { "type": "boolean" },
-        "ghostMode": { "type": "boolean" },
-        "speedBoost": { "type": "number" }
+        "doubleJump": {
+          "type": "boolean"
+        },
+        "magnetic": {
+          "type": "boolean"
+        },
+        "ghostMode": {
+          "type": "boolean"
+        },
+        "speedBoost": {
+          "type": "number"
+        }
       }
     }
   }

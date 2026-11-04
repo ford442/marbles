@@ -41,13 +41,23 @@ jobs:
       - name: Verify WASM artefacts
         run: npm run check:wasm
 
+      # The 3.1.50 build is byte-reproducible, so a diff here means the
+      # committed public/wasm/* was not rebuilt after a C++/CMake change.
+      - name: Committed WASM matches source
+        run: git diff --exit-code --stat -- public/wasm/
+
       - name: WASM parity tests
         run: npm run test:wasm:parity
+
+      # Compile-only smoke of the Debug/ASan target (-Weverything) so flag or
+      # sanitizer regressions surface in CI; it is not run under Node here.
+      - name: Build WASM (Debug/ASan smoke)
+        run: npm run build:wasm:debug
 
       - name: Validate assets
         run: npm run validate:assets
 
-      - name: Unit tests
+      - name: Unit tests + level completability harness (tests/levels/)
         run: node scripts/run-unit-tests.mjs
 
       - name: Lint
@@ -56,8 +66,11 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Build Vite app
-        run: npx vite build
+      - name: Build Vite app (with bundle stats)
+        run: BUNDLE_STATS=1 npx vite build
+
+      - name: Bundle size budget (main chunk, no zone/dev-level/editor code)
+        run: npm run check:bundle
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

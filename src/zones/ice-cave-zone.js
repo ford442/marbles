@@ -1,4 +1,4 @@
-import { quatFromEuler } from '../math.ts';
+import { quatFromYawPitchRoll } from '../math.ts';
 
 export function createIceCaveZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
@@ -47,7 +47,7 @@ export function createIceCaveZone(game, offset) {
 
         // Random rotation for the crystals
         const angle = Math.random() * Math.PI;
-        const q = quatFromEuler(angle, 0, 0);
+        const q = quatFromYawPitchRoll({ roll: angle });
 
         game.createStaticBox(
             { x: cx, y: cy + h/2, z: cz },
