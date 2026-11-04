@@ -1,0 +1,90 @@
+{
+  "id": "neon_pipeline_run",
+  "schemaVersion": 2,
+  "name": "Neon Pipeline",
+  "description": "Navigate the high-speed enclosed pipe with sweeping laser bars!",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "difficulty": "medium",
+  "chapter": "neon",
+  "environment": "neon_city",
+  "nightMode": true,
+  "backgroundColor": [0.01, 0, 0.05, 1],
+  "spawn": [0, 5, -5],
+  "goals": [
+    {
+      "id": 1,
+      "range": {
+        "x": [-5, 5],
+        "z": [75, 85],
+        "y": [-5, 5]
+      }
+    }
+  ],
+  "camera": {
+    "mode": "follow",
+    "height": 15,
+    "offset": -25
+  },
+  "zones": [
+    {
+      "type": "neon_pipeline",
+      "pos": [0, 0, 0]
+    },
+    {
+      "type": "goal",
+      "pos": [0, -2, 80]
+    }
+  ],
+  "medals": {
+    "goldTime": 11,
+    "silverTime": 17,
+    "bronzeTime": 25,
+    "parTime": 12
+  },
+  "solution": {
+    "inputs": [
+      { "frames": 14, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 37, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 4, "keys": [], "yawDeg": 180 },
+      { "frames": 4, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 32, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 43, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 13, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 315 },
+      { "frames": 41, "keys": [], "yawDeg": 330 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 46, "keys": [], "yawDeg": 190 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 5 },
+      { "frames": 7, "keys": ["forward"], "yawDeg": 355 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 355 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 355 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 355 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 44, "keys": [], "yawDeg": 345 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 355 },
+      { "frames": 45, "keys": [], "yawDeg": 125 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 5 },
+      { "frames": 6, "keys": [], "yawDeg": 35 },
+      { "frames": 12, "keys": ["forward"], "yawDeg": 10 },
+      { "frames": 1, "keys": [], "yawDeg": 10 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 10 },
+      { "frames": 54, "keys": [], "yawDeg": 200 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 4, "keys": [], "yawDeg": 195 },
+      { "frames": 1, "keys": ["jump"], "yawDeg": 350 },
+      { "frames": 40, "keys": [], "yawDeg": 350 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 54, "keys": [], "yawDeg": 230 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 355 },
+      { "frames": 52, "keys": [], "yawDeg": 130 }
+    ],
+    "tolerance": 0.35
+  }
+}

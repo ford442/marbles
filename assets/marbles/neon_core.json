@@ -1,0 +1,27 @@
+{
+  "id": "neon_core",
+  "name": "Neon Core",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0.1,
+      "g": 0.1,
+      "b": 0.1
+    },
+    "emissive": {
+      "r": 0,
+      "g": 1,
+      "b": 1,
+      "intensity": 3
+    },
+    "materialType": "neonGlow"
+  },
+  "physics": {
+    "radius": 0.5,
+    "density": 8,
+    "friction": 0.3,
+    "restitution": 0.4
+  }
+}

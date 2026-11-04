@@ -1,4 +1,5 @@
 import { getLevel } from '../levels/catalog.js';
+import { preloadZoneModules } from '../zone-setup/registry.js';
 import { runWebGPUStressBurst } from '../webgpu/index.js';
 import { audio } from '../audio.js';
 import { loadLevelBehaviors } from '../game/level-behaviors/index.js';
@@ -80,6 +81,8 @@ export class InitLevelLoader {
         }
 
         console.log(`[LEVEL] Creating ${level.zones.length} zones...`)
+        // Fetch the lazy zone chunks this level references in parallel, then build in order.
+        await preloadZoneModules(level.zones)
         for (const zone of level.zones) {
             await this.createZone(zone)
         }

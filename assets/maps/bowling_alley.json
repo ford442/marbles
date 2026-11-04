@@ -1,0 +1,91 @@
+{
+  "id": "bowling_alley",
+  "schemaVersion": 2,
+  "name": "Bowling Alley",
+  "description": "Knock down the pins!",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "difficulty": "easy",
+  "chapter": "tutorial",
+  "spawn": [0, 8, -12],
+  "goals": [
+    {
+      "id": 1,
+      "range": {
+        "x": [-10, 10],
+        "z": [53, 57],
+        "y": [0, 5]
+      }
+    }
+  ],
+  "camera": {
+    "mode": "follow",
+    "height": 15,
+    "offset": -25
+  },
+  "zones": [
+    {
+      "type": "floor",
+      "pos": [0, -2, 0],
+      "size": [50, 0.5, 50]
+    },
+    {
+      "type": "track",
+      "pos": [0, 3, 0]
+    },
+    {
+      "type": "bowling",
+      "pos": [0, 0, 25]
+    },
+    {
+      "type": "goal",
+      "pos": [0, 0.25, 55]
+    }
+  ],
+  "medals": {
+    "goldTime": 9,
+    "silverTime": 13,
+    "bronzeTime": 20,
+    "parTime": 10
+  },
+  "solution": {
+    "inputs": [
+      { "frames": 14, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 35, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 19, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 29, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 84, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 180 },
+      { "frames": 74, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 38, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 27, "keys": [], "yawDeg": 0 },
+      { "frames": 2, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 1, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 1, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 5 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 1, "keys": ["jump"], "yawDeg": 350 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 340 },
+      { "frames": 17, "keys": [], "yawDeg": 325 },
+      { "frames": 9, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 53, "keys": [], "yawDeg": 105 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 5 },
+      { "frames": 29, "keys": [], "yawDeg": 235 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 185 },
+      { "frames": 2, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 180 },
+      { "frames": 1, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 180 },
+      { "frames": 2, "keys": [], "yawDeg": 175 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 180 },
+      { "frames": 2, "keys": [], "yawDeg": 175 }
+    ],
+    "tolerance": 0.35
+  }
+}

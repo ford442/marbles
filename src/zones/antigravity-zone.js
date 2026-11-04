@@ -1,4 +1,4 @@
-import { quatFromEuler } from '../math.ts';
+import { quatFromYawPitchRoll } from '../math.ts';
 
 export function createAntigravityZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
@@ -29,7 +29,7 @@ export function createAntigravityZone(game, offset) {
             const rx = offset.x + Math.sin(angle) * radius;
             const ry = offset.y + 5 + Math.cos(angle) * radius;
 
-            const q = quatFromEuler(0, 0, angle);
+            const q = quatFromYawPitchRoll({ pitch: angle });
 
             game.createStaticBox(
                 { x: rx, y: ry, z: z },

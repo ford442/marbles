@@ -1,4 +1,4 @@
-import { quatFromEuler } from '../math.ts';
+import { quatFromYawPitchRoll } from '../math.ts';
 
 export function createBumperArenaZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
@@ -79,7 +79,7 @@ export function createBumperArenaZone(game, offset) {
         // Actually, let's use some kinematic or static boxes as bumpers so they don't get knocked away easily,
         // OR we can make them dynamic but very heavy.
 
-        const q = quatFromEuler(angle, 0, 0); // Rotate to face outward
+        const q = quatFromYawPitchRoll({ roll: angle }); // Rotate to face outward
 
         game.createDynamicBox(
             { x: bx, y: by, z: bz },
@@ -99,7 +99,7 @@ export function createBumperArenaZone(game, offset) {
         const bz = offset.z + Math.sin(angle) * 3;
         const by = offset.y + 1;
 
-        const q = quatFromEuler(angle, 0, 0);
+        const q = quatFromYawPitchRoll({ roll: angle });
 
         game.createDynamicBox(
             { x: bx, y: by, z: bz },

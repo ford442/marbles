@@ -1,4 +1,4 @@
-import { quatFromEuler } from '../math.ts';
+import { quatFromYawPitchRoll } from '../math.ts';
 
 export const skateParkLevel = {
     name: 'Skate Park',
@@ -29,7 +29,7 @@ export function createSkateParkZone(game, offset) {
 
     // Entrance Ramp
     const rampAngle = -0.25;
-    const rampQ = quatFromEuler(0, rampAngle, 0);
+    const rampQ = quatFromYawPitchRoll({ yaw: rampAngle });
     game.createStaticBox(
         { x: offset.x, y: offset.y + 2, z: offset.z - 5 },
         rampQ,
@@ -45,7 +45,7 @@ export function createSkateParkZone(game, offset) {
         const x = offset.x - 8 - Math.sin(angle) * 3;
         const y = offset.y + 0.5 + (1 - Math.cos(angle)) * 3;
 
-        const q = quatFromEuler(0, 0, -angle);
+        const q = quatFromYawPitchRoll({ pitch: -angle });
 
         game.createStaticBox(
             { x: x, y: y, z: zBase },
@@ -63,7 +63,7 @@ export function createSkateParkZone(game, offset) {
         const x = offset.x + 8 + Math.sin(angle) * 3;
         const y = offset.y + 0.5 + (1 - Math.cos(angle)) * 3;
 
-        const q = quatFromEuler(0, 0, angle);
+        const q = quatFromYawPitchRoll({ pitch: angle });
 
         game.createStaticBox(
             { x: x, y: y, z: zBase },
@@ -85,10 +85,10 @@ export function createSkateParkZone(game, offset) {
         'wood'
     );
     // Ramps
-    game.createStaticBox({ x: offset.x, y: offset.y + 0.75, z: fbZ - 4.5 }, quatFromEuler(0, -0.3, 0), { x: 3, y: 0.2, z: 2.5 }, [0.3, 0.3, 0.7], 'wood'); // Front
-    game.createStaticBox({ x: offset.x, y: offset.y + 0.75, z: fbZ + 4.5 }, quatFromEuler(0, 0.3, 0), { x: 3, y: 0.2, z: 2.5 }, [0.3, 0.3, 0.7], 'wood'); // Back
-    game.createStaticBox({ x: offset.x - 4.5, y: offset.y + 0.75, z: fbZ }, quatFromEuler(0, 0, 0.3), { x: 2.5, y: 0.2, z: 3 }, [0.3, 0.3, 0.7], 'wood'); // Left
-    game.createStaticBox({ x: offset.x + 4.5, y: offset.y + 0.75, z: fbZ }, quatFromEuler(0, 0, -0.3), { x: 2.5, y: 0.2, z: 3 }, [0.3, 0.3, 0.7], 'wood'); // Right
+    game.createStaticBox({ x: offset.x, y: offset.y + 0.75, z: fbZ - 4.5 }, quatFromYawPitchRoll({ yaw: -0.3 }), { x: 3, y: 0.2, z: 2.5 }, [0.3, 0.3, 0.7], 'wood'); // Front
+    game.createStaticBox({ x: offset.x, y: offset.y + 0.75, z: fbZ + 4.5 }, quatFromYawPitchRoll({ yaw: 0.3 }), { x: 3, y: 0.2, z: 2.5 }, [0.3, 0.3, 0.7], 'wood'); // Back
+    game.createStaticBox({ x: offset.x - 4.5, y: offset.y + 0.75, z: fbZ }, quatFromYawPitchRoll({ pitch: 0.3 }), { x: 2.5, y: 0.2, z: 3 }, [0.3, 0.3, 0.7], 'wood'); // Left
+    game.createStaticBox({ x: offset.x + 4.5, y: offset.y + 0.75, z: fbZ }, quatFromYawPitchRoll({ pitch: -0.3 }), { x: 2.5, y: 0.2, z: 3 }, [0.3, 0.3, 0.7], 'wood'); // Right
 
     // Grind Rail
     const railZ = offset.z + 45;

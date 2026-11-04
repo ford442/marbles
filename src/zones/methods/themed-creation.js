@@ -1,4 +1,4 @@
-import { quatFromEuler } from '../../math.ts';
+import { quatFromYawPitchRoll } from '../../math.ts';
 import { materialPresets } from '../../material-system.ts';
 
 /**
@@ -76,7 +76,7 @@ export const themedCreationMethods = {
             const z = startZ + i * spacing * Math.cos(angle * 0.5);
             const x = offset.x + Math.sin(angle) * 3;
 
-            const q = quatFromEuler(angle * 0.5, 0, 0);
+            const q = quatFromYawPitchRoll({ roll: angle * 0.5 });
 
             this.createDynamicBox(
                 { x: x, y: offset.y + 1.0, z: z },

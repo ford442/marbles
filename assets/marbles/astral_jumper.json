@@ -1,0 +1,30 @@
+{
+  "id": "astral_jumper",
+  "name": "Astral Jumper",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "legendary",
+  "premium": true,
+  "unlock": "premium",
+  "appearance": {
+    "color": {
+      "r": 0,
+      "g": 0.5,
+      "b": 1
+    },
+    "roughness": 0,
+    "emissive": {
+      "r": 0,
+      "g": 0.5,
+      "b": 1,
+      "intensity": 3.5
+    }
+  },
+  "physics": {
+    "radius": 0.5,
+    "density": 1,
+    "friction": 0.1,
+    "restitution": 1.5,
+    "gravityScale": 0.4
+  }
+}

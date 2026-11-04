@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { visualizer } from 'rollup-plugin-visualizer';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -69,6 +70,24 @@ function copyAssetsPlugin() {
   };
 }
 
+// Emit the built entry/CSS URLs in index.html relative to the document so the
+// page survives being served from a different prefix or run through a deploy
+// step that relativizes leading-slash paths (which would double the base).
+// Runtime code still uses the absolute `base` via import.meta.env.BASE_URL.
+function relativeHtmlAssetsPlugin() {
+  return {
+    name: 'relative-html-assets',
+    apply: 'build',
+    enforce: 'post',
+    transformIndexHtml(html) {
+      const base = process.env.VITE_BASE_PATH || '/marbles/';
+      if (!base.startsWith('/')) return html;
+      const normalizedBase = base.endsWith('/') ? base : `${base}/`;
+      return html.split(`"${normalizedBase}`).join('"./');
+    }
+  };
+}
+
 const CROSS_ORIGIN_ISOLATION_HEADERS = {
   'Cross-Origin-Embedder-Policy': 'require-corp',
   'Cross-Origin-Opener-Policy': 'same-origin',
@@ -87,8 +106,18 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['@dimforge/rapier3d-compat', 'filament']
   },
-  assetsInclude: ['**/*.wasm', '**/*.filmat', '**/*.glb', '**/*.gltf', '**/*.wgsl'],
-  plugins: [copyAssetsPlugin()],
+assetsInclude: ['**/*.wasm', '**/*.filmat', '**/*.glb', '**/*.gltf', '**/*.wgsl'],
+  plugins: [
+    copyAssetsPlugin(),
+    relativeHtmlAssetsPlugin(),
+    // BUNDLE_STATS=1 npx vite build → dist/bundle-stats.json (module → chunk map)
+    // consumed by scripts/check-bundle-budget.mjs; BUNDLE_STATS=html for a treemap.
+    ...(process.env.BUNDLE_STATS ? [visualizer({
+      filename: process.env.BUNDLE_STATS === 'html' ? 'dist/bundle-stats.html' : 'dist/bundle-stats.json',
+      template: process.env.BUNDLE_STATS === 'html' ? 'treemap' : 'raw-data',
+      gzipSize: true,
+    })] : []),
+  ],
   build: {
     rollupOptions: {
       // marble_physics.js is loaded dynamically by src/wasm-bridge.js when the

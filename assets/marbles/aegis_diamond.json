@@ -1,0 +1,29 @@
+{
+  "id": "aegis_diamond",
+  "name": "Aegis Diamond",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 0.9,
+      "g": 0.95,
+      "b": 1
+    },
+    "emissive": {
+      "r": 0.2,
+      "g": 0.8,
+      "b": 1,
+      "intensity": 5
+    },
+    "clearCoat": 1,
+    "clearCoatRoughness": 0,
+    "materialType": "glass"
+  },
+  "physics": {
+    "radius": 0.6,
+    "density": 10,
+    "friction": 0,
+    "restitution": 1.5
+  }
+}

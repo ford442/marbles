@@ -1,0 +1,29 @@
+{
+  "id": "starlight_ruby",
+  "name": "Starlight Ruby",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 1,
+      "g": 0.2,
+      "b": 0.4
+    },
+    "emissive": {
+      "r": 1,
+      "g": 0.2,
+      "b": 0.4,
+      "intensity": 6.5
+    },
+    "clearCoat": 1,
+    "clearCoatRoughness": 0,
+    "materialType": "glass"
+  },
+  "physics": {
+    "radius": 0.7,
+    "density": 8,
+    "friction": 0,
+    "restitution": 1.5
+  }
+}

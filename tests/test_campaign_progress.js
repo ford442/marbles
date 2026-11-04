@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { CampaignProgress, CAMPAIGN_STORAGE_KEY } from '../src/game/systems/campaign-progress.ts';
 import {
+    CAMPAIGN_CHAPTERS,
+    LEVEL_UNLOCK_SLACK,
     buildChapterLayout,
     computeMedal,
     getChapterForLevel,
@@ -73,12 +75,27 @@ function testChapterAssignment() {
 function testChapterLayout() {
     const layout = buildChapterLayout({
         tutorial: { difficulty: 'easy' },
-        jump: { difficulty: 'medium' },
+        canyon_run: { difficulty: 'medium' },
+        castle_siege: { difficulty: 'easy' },
         neon_dash: { name: 'Neon Dash', difficulty: 'medium' },
     });
     assert.ok(layout.tutorial.includes('tutorial'));
-    assert.ok(layout.classic.includes('jump'));
+    assert.deepEqual(layout.classic, ['canyon_run', 'castle_siege'], 'listed levels keep their authored order');
     assert.ok(layout.neon.includes('neon_dash'));
+}
+
+function testInChapterGating() {
+    globalThis.localStorage = mockStorage();
+    const ids = CAMPAIGN_CHAPTERS.find((c) => c.id === 'tutorial').levels;
+    const campaign = new CampaignProgress();
+    campaign.setCatalog(Object.fromEntries(ids.map((id) => [id, { difficulty: 'easy', goals: [{}] }])));
+    const gated = ids[LEVEL_UNLOCK_SLACK + 1];
+    assert.equal(campaign.isLevelPlayable(ids[0]), true);
+    assert.equal(campaign.isLevelPlayable(gated), false, 'later tutorial levels start locked');
+    campaign.recordCompletion(ids[0], { time: 10, level: { difficulty: 'easy' } });
+    assert.equal(campaign.isLevelPlayable(gated), true, 'a completion opens the next level');
+    campaign.setFreePlay(true);
+    assert.equal(campaign.isLevelPlayable(ids[ids.length - 1]), true, 'free play ignores gating');
 }
 
 testTutorialUnlocksClassic();
@@ -86,4 +103,5 @@ testBestTimePersists();
 testMedalThresholds();
 testChapterAssignment();
 testChapterLayout();
+testInChapterGating();
 console.log('Campaign progression tests passed');

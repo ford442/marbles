@@ -1,0 +1,33 @@
+{
+  "id": "neon_juggernaut",
+  "name": "Neon Juggernaut",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "legendary",
+  "premium": true,
+  "unlock": "premium",
+  "appearance": {
+    "color": {
+      "r": 0,
+      "g": 1,
+      "b": 0.5
+    },
+    "roughness": 0,
+    "clearCoat": 1,
+    "clearCoatRoughness": 0,
+    "materialType": "glass",
+    "emissive": {
+      "r": 0,
+      "g": 1,
+      "b": 0.5,
+      "intensity": 9
+    }
+  },
+  "physics": {
+    "radius": 0.9,
+    "density": 25,
+    "friction": 0,
+    "restitution": 1,
+    "gravityScale": 1
+  }
+}

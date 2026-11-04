@@ -1,17 +1,22 @@
 import {
     CMD_OP,
+    MAX_BODIES,
     TRANSFORM_BUFFER_BYTES,
     CMD_RING_BYTES,
     RAYCAST_BUFFER_BYTES,
     TRANSFORM_HEADER_FRAME_TICK,
+    TRANSFORM_HEADER_LAYOUT_VERSION,
+    TRANSFORM_HEADER_STEP_INTERVAL_MS,
     TRANSFORM_HEADER_STEP_MS,
     TRANSFORM_HEADER_U32,
+    SNAPSHOT_LAYOUT_VERSION,
     WORKER_MSG,
     createCommandViews,
     createRaycastViews,
     createTransformViews,
     enqueueCommand,
     lerpBodyTransform,
+    readBodyDynamics,
     readBodyTransform,
     RAYCAST_STATUS,
     RAYCAST_HIT_INDEX,
@@ -19,13 +24,22 @@ import {
     RAYCAST_POINT_INDEX,
     RAYCAST_NORMAL_INDEX,
     RAYCAST_BODY_INDEX,
+    RAYCAST_BODY_TYPE_INDEX,
+    RAYCAST_COLLIDER_HANDLE_F64_INDEX,
 } from '../physics-worker/protocol.js';
 import { createProxyRigidBody, createProxyWorld } from '../physics-worker/proxy-rigid-body.js';
 import {
     resolvePhysicsHzFromSearch,
     shouldUsePhysicsWorker,
 } from './physics-backend-pure.ts';
+import {
+    rayBodyTypeFromRapier,
+    type RayHit,
+    type RayQueryOptions,
+    type RigidBodyLike,
+} from './physics-queries.ts';
 
+import { detectPlatformProfile } from '../../rendering-defaults.js';
 import type { Vec3, Quat } from '../../types/geometry.ts';
 
 export { shouldUsePhysicsWorker, resolvePhysicsHzFromSearch, WORKER_SPIKE_LEVEL_ID } from './physics-backend-pure.ts';
@@ -50,16 +64,36 @@ export interface PhysicsBackend {
     commitWorldBuild(): Promise<unknown>;
     resetWorld(): void;
     step(): void;
-    setTimestep(value: number): void;
+    /** Slow-mo / focus: scales the fixed-step clock's accumulated time. */
+    setTimeScale(scale: number): void;
+    /** Render pose: blended between the last two fixed steps. */
+    getRenderTransform(body: RigidBodyLike & { _bodyIndex?: number }): RenderTransform;
     removeRigidBody(body: unknown): void;
     destroy(): void;
 }
 
+export interface RenderTransform {
+    translation: Vec3;
+    rotation: Quat;
+}
+
+/** Rapier body surface the main-thread interpolation reads. */
+interface PoseBody {
+    readonly handle: number;
+    translation(): Vec3;
+    rotation(): Quat;
+}
+
+/** Bodies further apart than this between steps are teleports; don't blend. */
+const TELEPORT_SNAP_DIST_SQ = 5 * 5;
+
 /** The slice of the game runtime the physics backends read and write. */
 export interface PhysicsBackendHost {
     /** Rapier world on the main thread, or the worker proxy while a worker level is active. */
-    world?: { timestep: number; removeRigidBody(body: unknown): void } | null;
+    world?: { removeRigidBody(body: unknown): void } | null;
     physicsWorld: { step(): void; init(gravity: Vec3): unknown };
+    /** Main-thread fixed-step clock (also supplies per-frame sim dt in worker mode). */
+    physicsClock?: { timeScale: number; alpha: number } | null;
     physicsGravity?: Vec3;
     physicsBackend?: PhysicsBackend | null;
     mainPhysicsBackend?: MainThreadPhysicsBackend;
@@ -74,13 +108,14 @@ export interface CreatePhysicsBackendOptions {
     gravity?: Vec3;
 }
 
-/** Ray query forwarded to the physics worker. */
-export interface WorkerRaycastSpec {
-    ray: unknown;
-    maxDist: number;
-    solid: boolean;
-    filterExcludeRigidBody?: { handle?: number; _bodyIndex?: number } | null;
+export interface WorkerBackendInitOptions {
+    /** Test hook: build the worker (defaults to the bundled module worker). */
+    createWorker?: () => Worker;
 }
+
+/** Spin-wait budget for a synchronous worker raycast. */
+const RAYCAST_TIMEOUT_MS = 8;
+const NO_BODY = 0xffffffff;
 
 /**
  * Main-thread Rapier backend (default).
@@ -88,18 +123,19 @@ export interface WorkerRaycastSpec {
 export class MainThreadPhysicsBackend implements PhysicsBackend {
     game: PhysicsBackendHost;
     mode: 'main';
-    timestep: number;
     lastStepMs: number;
     lastWaitMs: number;
     gravity: Vec3 | undefined;
+    /** Pose of each interpolated body before the most recent step, by handle. */
+    _prevPoses: Map<number, { translation: Vec3; rotation: Quat }>;
 
     constructor(game: PhysicsBackendHost) {
         this.game = game;
         this.gravity = undefined;
         this.mode = 'main';
-        this.timestep = 1 / 60;
         this.lastStepMs = 0;
         this.lastWaitMs = 0;
+        this._prevPoses = new Map();
     }
 
     isWorkerMode(): boolean {
@@ -123,7 +159,7 @@ export class MainThreadPhysicsBackend implements PhysicsBackend {
     }
 
     resetWorld(): void {
-        // no-op
+        this._prevPoses.clear();
     }
 
     step(): void {
@@ -133,11 +169,49 @@ export class MainThreadPhysicsBackend implements PhysicsBackend {
         this.lastWaitMs = 0;
     }
 
-    setTimestep(value: number): void {
-        this.timestep = value;
-        if (this.game.world) {
-            this.game.world.timestep = value;
+    setTimeScale(scale: number): void {
+        if (this.game.physicsClock) this.game.physicsClock.timeScale = scale;
+    }
+
+    /**
+     * Record each body's pose before the frame's last fixed step (for
+     * interpolation). Replaces the previous capture, so removed bodies drop out.
+     */
+    capturePrevPoses(bodies: Iterable<PoseBody | null | undefined>): void {
+        this._prevPoses.clear();
+        for (const body of bodies) {
+            if (!body) continue;
+            const t = body.translation();
+            const r = body.rotation();
+            this._prevPoses.set(body.handle, {
+                translation: { x: t.x, y: t.y, z: t.z },
+                rotation: { x: r.x, y: r.y, z: r.z, w: r.w },
+            });
         }
+    }
+
+    getRenderTransform(body: RigidBodyLike): RenderTransform {
+        const b = body as unknown as PoseBody;
+        const t = b.translation();
+        const r = b.rotation();
+        const prev = this._prevPoses.get(b.handle);
+        if (!prev) return { translation: t, rotation: r };
+
+        const p = prev.translation;
+        const dx = t.x - p.x, dy = t.y - p.y, dz = t.z - p.z;
+        if (dx * dx + dy * dy + dz * dz > TELEPORT_SNAP_DIST_SQ) return { translation: t, rotation: r };
+
+        const alpha = this.game.physicsClock?.alpha ?? 1;
+        const q = prev.rotation;
+        const blended = lerpBodyTransform(
+            { x: p.x, y: p.y, z: p.z, qx: q.x, qy: q.y, qz: q.z, qw: q.w },
+            { x: t.x, y: t.y, z: t.z, qx: r.x, qy: r.y, qz: r.z, qw: r.w },
+            alpha,
+        );
+        return {
+            translation: { x: blended.x, y: blended.y, z: blended.z },
+            rotation: { x: blended.qx, y: blended.qy, z: blended.qz, w: blended.qw },
+        };
     }
 
     /** Main-thread bodies are created directly in Rapier; nothing to register. */
@@ -163,7 +237,6 @@ export class MainThreadPhysicsBackend implements PhysicsBackend {
 export class WorkerPhysicsBackend implements PhysicsBackend {
     game: PhysicsBackendHost;
     mode: 'worker';
-    timestep: number;
     physicsHz: number;
     lastStepMs: number;
     lastWaitMs: number;
@@ -172,8 +245,7 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
     _active: boolean;
     _descriptors: BodyDescriptor[];
     _descriptorSlots: (BodyDescriptor | null)[];
-    _proxies: Map<number, unknown>;
-    _linvelCache: Map<number, { x: number; y: number; z: number }>;
+    _proxies: Map<number, RigidBodyLike>;
     _gravityScaleCache: Map<number, number>;
     _pendingFrame: { resolve(frameTick: number): void } | null;
     _initPromise: Promise<unknown> | null;
@@ -197,7 +269,6 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
         this.worker = null;
         this._nextBodyIndex = 0;
         this.mode = 'worker';
-        this.timestep = 1 / 120;
         this.physicsHz = 120;
         this.lastStepMs = 0;
         this.lastWaitMs = 0;
@@ -206,7 +277,6 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
         this._descriptors = [];
         this._descriptorSlots = [];
         this._proxies = new Map();
-        this._linvelCache = new Map();
         this._gravityScaleCache = new Map();
         this._pendingFrame = null;
         this._initPromise = null;
@@ -230,7 +300,7 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
         return this.isWorkerMode() ? 'worker' : 'main';
     }
 
-    async init(gravity: Vec3): Promise<void> {
+    async init(gravity: Vec3, options: WorkerBackendInitOptions = {}): Promise<void> {
         this.gravity = gravity;
         if (typeof SharedArrayBuffer === 'undefined') {
             throw new Error('SharedArrayBuffer unavailable');
@@ -239,7 +309,6 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
         this.physicsHz = resolvePhysicsHzFromSearch(
             typeof window !== 'undefined' ? window.location.search : '',
         );
-        this.timestep = 1 / this.physicsHz;
 
         this.transformSab = new SharedArrayBuffer(TRANSFORM_BUFFER_BYTES);
         this.commandSab = new SharedArrayBuffer(CMD_RING_BYTES);
@@ -249,18 +318,27 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
         this.commandViews = createCommandViews(this.commandSab);
         this.raycastViews = createRaycastViews(this.raycastSab);
 
-        const worker = new Worker(
-            new URL('../physics-worker/physics-worker.js', import.meta.url),
-            { type: 'module' },
-        );
+        const worker = options.createWorker
+            ? options.createWorker()
+            : new Worker(
+                new URL('../physics-worker/physics-worker.js', import.meta.url),
+                { type: 'module' },
+            );
         this.worker = worker;
 
         this._initPromise = new Promise((resolve, reject) => {
             const onMessage = (event: MessageEvent) => {
                 const msg = event.data;
                 if (msg.type === WORKER_MSG.WORKER_READY) {
-                    this._ready = true;
                     worker.removeEventListener('message', onMessage);
+                    const version = this.transformViews.u32[TRANSFORM_HEADER_LAYOUT_VERSION];
+                    if (version !== SNAPSHOT_LAYOUT_VERSION) {
+                        reject(new Error(
+                            `Physics worker snapshot layout v${version}, expected v${SNAPSHOT_LAYOUT_VERSION}`,
+                        ));
+                        return;
+                    }
+                    this._ready = true;
                     resolve(true);
                 } else if (msg.type === WORKER_MSG.INIT_ERROR) {
                     worker.removeEventListener('message', onMessage);
@@ -294,7 +372,6 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
         this._descriptors = [];
         this._descriptorSlots = [];
         this._proxies.clear();
-        this._linvelCache.clear();
         this._gravityScaleCache.clear();
         this._pendingBodies.clear();
         this._nextBodyIndex = 0;
@@ -304,6 +381,10 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
     }
 
     reserveBodyIndex(): number {
+        // Indices are never reused within a level; refuse rather than overrun the SAB slot.
+        if (this._nextBodyIndex >= MAX_BODIES) {
+            throw new RangeError(`[PhysicsWorker] body limit reached (MAX_BODIES=${MAX_BODIES}, layout v${SNAPSHOT_LAYOUT_VERSION})`);
+        }
         return this._nextBodyIndex++;
     }
 
@@ -328,20 +409,7 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
             translation: [...(desc.translation || [0, 0, 0])],
             rotation: [...(desc.rotation || [0, 0, 0, 1])],
         };
-        if (desc.gravityScale != null) {
-            this._gravityScaleCache.set(bodyIndex, desc.gravityScale);
-        } else {
-            this._gravityScaleCache.set(bodyIndex, 1);
-        }
-        if (desc.linvel) {
-            this._linvelCache.set(bodyIndex, {
-                x: desc.linvel[0] ?? 0,
-                y: desc.linvel[1] ?? 0,
-                z: desc.linvel[2] ?? 0,
-            });
-        } else {
-            this._linvelCache.set(bodyIndex, { x: 0, y: 0, z: 0 });
-        }
+        this._gravityScaleCache.set(bodyIndex, desc.gravityScale ?? 1);
 
         if (!this._worldCommitted) {
             this._storeDescriptorSlot(bodyIndex, stored);
@@ -374,24 +442,11 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
                 descriptor: stored,
             });
         }
-        if (desc.gravityScale != null) {
-            this._gravityScaleCache.set(bodyIndex, desc.gravityScale);
-        } else {
-            this._gravityScaleCache.set(bodyIndex, 1);
-        }
-        if (desc.linvel) {
-            this._linvelCache.set(bodyIndex, {
-                x: desc.linvel[0] ?? 0,
-                y: desc.linvel[1] ?? 0,
-                z: desc.linvel[2] ?? 0,
-            });
-        } else {
-            this._linvelCache.set(bodyIndex, { x: 0, y: 0, z: 0 });
-        }
+        this._gravityScaleCache.set(bodyIndex, desc.gravityScale ?? 1);
         return createProxyRigidBody(this, bodyIndex);
     }
 
-    registerProxy(bodyIndex: number, proxy: unknown): void {
+    registerProxy(bodyIndex: number, proxy: RigidBodyLike): void {
         this._proxies.set(bodyIndex, proxy);
     }
 
@@ -455,9 +510,14 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
         }
     }
 
-    /** Progress [0,1] between the last observed physics tick and the next one, for render interpolation. */
+    /**
+     * Progress [0,1] between the last observed physics tick and the next one,
+     * for render interpolation. Uses the worker's published step interval,
+     * which stretches under slow-mo.
+     */
     getInterpolationAlpha(): number {
-        const intervalMs = 1000 / this.physicsHz;
+        const published = this.transformViews?.f32[TRANSFORM_HEADER_STEP_INTERVAL_MS];
+        const intervalMs = published != null && published > 0 ? published : 1000 / this.physicsHz;
         if (!intervalMs) return 1;
         const alpha = (performance.now() - this._lastTickAt) / intervalMs;
         return alpha < 0 ? 0 : alpha > 1 ? 1 : alpha;
@@ -481,15 +541,25 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
         };
     }
 
-    setTimestep(value: number): void {
-        this.timestep = value;
+    getRenderTransform(body: RigidBodyLike & { _bodyIndex?: number }): RenderTransform {
+        return this.getInterpolatedTransform(body._bodyIndex ?? body.handle);
+    }
+
+    setTimeScale(scale: number): void {
+        if (this.game.physicsClock) this.game.physicsClock.timeScale = scale;
         enqueueCommand(
             this.commandViews.u32,
             this.commandViews.f32,
-            CMD_OP.SET_TIMESTEP,
+            CMD_OP.SET_TIME_SCALE,
             0,
-            value,
+            scale,
         );
+    }
+
+    /** Current-slot dynamics record for a body (velocities, mass, type). */
+    private _dynamics(bodyIndex: number) {
+        const slot = Atomics.load(this.transformViews.u32, TRANSFORM_HEADER_U32);
+        return readBodyDynamics(this.transformViews.f32, slot, bodyIndex);
     }
 
     getTranslation(bodyIndex: number): Vec3 {
@@ -504,12 +574,27 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
         return { x: t.qx, y: t.qy, z: t.qz, w: t.qw };
     }
 
-    getLinvel(bodyIndex: number): { x: number; y: number; z: number } {
-        return this._linvelCache.get(bodyIndex) || { x: 0, y: 0, z: 0 };
+    /** Linear velocity as of the worker's last published step (lags queued commands by ≤1 tick). */
+    getLinvel(bodyIndex: number): Vec3 {
+        return this._dynamics(bodyIndex).linvel;
     }
 
-    getAngvel(): Vec3 {
-        return { x: 0, y: 0, z: 0 };
+    getAngvel(bodyIndex: number): Vec3 {
+        return this._dynamics(bodyIndex).angvel;
+    }
+
+    getMass(bodyIndex: number): number {
+        return this._dynamics(bodyIndex).mass;
+    }
+
+    /** `RAPIER.RigidBodyType` code from the snapshot. */
+    getBodyType(bodyIndex: number): number {
+        return this._dynamics(bodyIndex).type;
+    }
+
+    isBodyAlive(body: RigidBodyLike | null | undefined): boolean {
+        if (!body || !this.isWorkerMode()) return false;
+        return this._proxies.get(body.handle) === body;
     }
 
     getGravityScale(bodyIndex: number): number {
@@ -527,11 +612,6 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
             force.z,
             wake ? 1 : 0,
         );
-        const lv = this._linvelCache.get(bodyIndex) || { x: 0, y: 0, z: 0 };
-        lv.x += force.x;
-        lv.y += force.y;
-        lv.z += force.z;
-        this._linvelCache.set(bodyIndex, lv);
     }
 
     queueTorque(bodyIndex: number, torque: Vec3, wake = true): void {
@@ -558,7 +638,6 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
             v.z,
             wake ? 1 : 0,
         );
-        this._linvelCache.set(bodyIndex, { x: v.x, y: v.y, z: v.z });
     }
 
     queueSetAngvel(bodyIndex: number, v: Vec3, wake = true): void {
@@ -571,6 +650,16 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
             v.y,
             v.z,
             wake ? 1 : 0,
+        );
+    }
+
+    queueSetCcd(bodyIndex: number, enabled: boolean): void {
+        enqueueCommand(
+            this.commandViews.u32,
+            this.commandViews.f32,
+            CMD_OP.SET_CCD,
+            bodyIndex,
+            enabled ? 1 : 0,
         );
     }
 
@@ -654,46 +743,56 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
         this._proxies.delete(index);
     }
 
-    castRay(spec: WorkerRaycastSpec) {
+    /**
+     * Synchronous ray query against the worker world: posts the request and
+     * spin-waits (≤8 ms) for the worker to fill the raycast SAB. Returns the
+     * same `RayHit` shape as the main-thread queries, with `body` resolved to
+     * this backend's proxy.
+     */
+    castRay(origin: Vec3, dir: Vec3, maxToi: number, opts: RayQueryOptions = {}): RayHit | null {
         const worker = this.worker;
         if (!worker || !this.isWorkerMode()) return null;
-        const { i32, f32, u32 } = this.raycastViews;
+        const { i32, f32, u32, f64 } = this.raycastViews;
         Atomics.store(i32, 0, RAYCAST_STATUS.PENDING);
+        const exclude = opts.excludeBody as (RigidBodyLike & { _bodyIndex?: number }) | null | undefined;
         worker.postMessage({
             type: WORKER_MSG.RAYCAST,
-            ray: spec.ray,
-            maxDist: spec.maxDist,
-            solid: spec.solid,
-            filterExcludeRigidBody: spec.filterExcludeRigidBody?.handle
-                ?? spec.filterExcludeRigidBody?._bodyIndex
-                ?? null,
+            origin: { x: origin.x, y: origin.y, z: origin.z },
+            dir: { x: dir.x, y: dir.y, z: dir.z },
+            maxToi,
+            solid: opts.solid ?? true,
+            groups: opts.groups ?? null,
+            excludeSensors: opts.excludeSensors === true,
+            excludeBodyIndex: exclude ? (exclude._bodyIndex ?? exclude.handle) : null,
         });
 
-        const deadline = performance.now() + 8;
+        const deadline = performance.now() + RAYCAST_TIMEOUT_MS;
         while (Atomics.load(i32, 0) === RAYCAST_STATUS.PENDING && performance.now() < deadline) {
             // spin wait — worker fills SAB synchronously on message
         }
         if (Atomics.load(i32, 0) !== RAYCAST_STATUS.READY) return null;
         if ((f32[RAYCAST_HIT_INDEX] ?? 0) < 0.5) return null;
 
-        const hitBodyIndex = u32[RAYCAST_BODY_INDEX] ?? 0xffffffff;
-        const hitBody = hitBodyIndex !== 0xffffffff
-            ? { handle: hitBodyIndex, _bodyIndex: hitBodyIndex }
-            : null;
+        const hitBodyIndex = u32[RAYCAST_BODY_INDEX] ?? NO_BODY;
+        const body = hitBodyIndex !== NO_BODY ? this._proxies.get(hitBodyIndex) ?? null : null;
+        const typeCode = i32[RAYCAST_BODY_TYPE_INDEX] ?? -1;
 
         return {
-            timeOfImpact: f32[RAYCAST_TOI_INDEX] ?? 0,
             toi: f32[RAYCAST_TOI_INDEX] ?? 0,
+            point: {
+                x: f32[RAYCAST_POINT_INDEX] ?? 0,
+                y: f32[RAYCAST_POINT_INDEX + 1] ?? 0,
+                z: f32[RAYCAST_POINT_INDEX + 2] ?? 0,
+            },
             normal: {
                 x: f32[RAYCAST_NORMAL_INDEX] ?? 0,
                 y: f32[RAYCAST_NORMAL_INDEX + 1] ?? 0,
                 z: f32[RAYCAST_NORMAL_INDEX + 2] ?? 0,
             },
-            collider: {
-                parent() {
-                    return hitBody;
-                },
-            },
+            colliderHandle: f64[RAYCAST_COLLIDER_HANDLE_F64_INDEX] ?? -1,
+            bodyHandle: body ? body.handle : null,
+            bodyType: typeCode >= 0 ? rayBodyTypeFromRapier(typeCode) : null,
+            body,
         };
     }
 
@@ -721,6 +820,7 @@ export async function createPhysicsBackend(
         hostAuthorityMode: game.hostAuthorityMode ?? false,
         editorMode: options.editorMode ?? false,
         levelId: options.levelId ?? null,
+        lowPowerDevice: detectPlatformProfile().prefersLowPower,
     });
 
     if (!wantWorker) {
@@ -733,7 +833,7 @@ export async function createPhysicsBackend(
         await workerBackend.init(options.gravity || { x: 0, y: -9.81, z: 0 });
         game.workerPhysicsBackend = workerBackend;
         game.physicsBackend = mainBackend;
-        console.info('[Physics] Worker infrastructure ready (?physicsWorker=1 + manifest level)');
+        console.info('[Physics] Worker infrastructure ready (manifest level; ?physicsWorker=0 disables)');
         return mainBackend;
     } catch (err) {
         console.warn('[Physics] Worker init failed, using main thread:', (err instanceof Error && err.message) || err);
@@ -756,6 +856,7 @@ export async function activatePhysicsBackendForLevel(
         hostAuthorityMode: game.hostAuthorityMode ?? false,
         editorMode: false,
         levelId,
+        lowPowerDevice: detectPlatformProfile().prefersLowPower,
     });
 
     if (useWorker && game.workerPhysicsBackend?._ready) {

@@ -8,14 +8,12 @@ import { CMD_HEADER_BYTES, CMD_ENTRY_BYTES, CMD_HEADER_HEAD, CMD_HEADER_TAIL, CM
  * @param {number} f1
  * @param {number} f2
  * @param {number} f3
- * @param {import('@dimforge/rapier3d-compat').World | null} world
- * @param {{ timestep: number }} state
+ * @param {{ timeScale: number }} clock worker clock; `SET_TIME_SCALE` writes its `timeScale`
  * @returns {boolean} true if body was removed
  */
-export function applyCommandOp(body, op, f0, f1, f2, f3, world, state) {
-    if (op === CMD_OP.SET_TIMESTEP) {
-        state.timestep = f0;
-        if (world) world.timestep = f0;
+export function applyCommandOp(body, op, f0, f1, f2, f3, clock) {
+    if (op === CMD_OP.SET_TIME_SCALE) {
+        clock.timeScale = f0;
         return false;
     }
 
@@ -49,6 +47,9 @@ export function applyCommandOp(body, op, f0, f1, f2, f3, world, state) {
         case CMD_OP.SET_GRAVITY_SCALE:
             body.setGravityScale(f0, f3 !== 0);
             break;
+        case CMD_OP.SET_CCD:
+            body.enableCcd(f0 !== 0);
+            break;
         case CMD_OP.REMOVE_BODY:
             return true;
         default:
@@ -64,9 +65,9 @@ export function applyCommandOp(body, op, f0, f1, f2, f3, world, state) {
  * @param {Array<import('@dimforge/rapier3d-compat').RigidBody | null>} bodies
  * @param {Set<number>} removedIndices
  * @param {import('@dimforge/rapier3d-compat').World} world
- * @param {{ timestep: number }} state
+ * @param {{ timeScale: number }} clock
  */
-export function drainCommandRing(u32, f32, bodies, removedIndices, world, state) {
+export function drainCommandRing(u32, f32, bodies, removedIndices, world, clock) {
     const capacity = u32[2];
 
     for (;;) {
@@ -89,10 +90,10 @@ export function drainCommandRing(u32, f32, bodies, removedIndices, world, state)
                 bodies[bodyIndex] = null;
                 removedIndices.add(bodyIndex);
             }
-        } else if (op === CMD_OP.SET_TIMESTEP) {
-            applyCommandOp(null, op, f0, f1, f2, f3, world, state);
+        } else if (op === CMD_OP.SET_TIME_SCALE) {
+            applyCommandOp(null, op, f0, f1, f2, f3, clock);
         } else if (body && !removedIndices.has(bodyIndex)) {
-            applyCommandOp(body, op, f0, f1, f2, f3, world, state);
+            applyCommandOp(body, op, f0, f1, f2, f3, clock);
         }
 
         Atomics.store(u32, CMD_HEADER_TAIL, (tail + 1) % capacity);

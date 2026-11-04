@@ -28,6 +28,8 @@ export class AbilityStomp {
         this.isChargingStomp = false;
         this.isStomping = true;
         this.stompReleaseTime = Date.now();
+        // Cooldown starts on release (read by the Z edge detection in frame-input.js).
+        this.lastStompTime = now ?? this.stompReleaseTime;
 
         // Restore gravity
         const grav = this.stompOldGravity !== undefined ? this.stompOldGravity : (this.playerMarble.baseGravityScale || 1.0);

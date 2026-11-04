@@ -1,8 +1,17 @@
+// @ts-check
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
 import { quatFromEuler, quaternionToMat4 } from '../math.ts';
+import { scaledTransform } from '../game-loop/helpers.ts';
+
+/** @typedef {import('../types/mixin-host.ts').GameMixinHost} GameMixinHost */
+/** @typedef {{ x: number, y: number, z: number }} Vec3Like */
 
 export class AbilityConstructs {
+    /**
+     * @this {GameMixinHost}
+     * @param {Vec3Like} pos
+     */
     spawnIceBlock(pos) {
         const now = Date.now()
         const spawnPos = { x: pos.x, y: pos.y - 0.6, z: pos.z }
@@ -30,15 +39,11 @@ export class AbilityConstructs {
 
         const tcm = this.engine.getTransformManager()
         const inst = tcm.getInstance(entity)
-        const mat = quaternionToMat4(spawnPos, { x: 0, y: 0, z: 0, w: 1 })
-
-        const sx = halfExtents.x * 2;
-        const sy = halfExtents.y * 2;
-        const sz = halfExtents.z * 2;
-
-        mat[0] *= sx; mat[1] *= sx; mat[2] *= sx;
-        mat[4] *= sy; mat[5] *= sy; mat[6] *= sy;
-        mat[8] *= sz; mat[9] *= sz; mat[10] *= sz;
+        const mat = scaledTransform(spawnPos, { x: 0, y: 0, z: 0, w: 1 }, {
+            x: halfExtents.x * 2,
+            y: halfExtents.y * 2,
+            z: halfExtents.z * 2,
+        })
 
         tcm.setTransform(inst, mat)
         this.scene.addEntity(entity)
@@ -52,6 +57,10 @@ export class AbilityConstructs {
         })
     }
 
+    /**
+     * @this {GameMixinHost}
+     * @param {string} type
+     */
     spawnBuildPiece(type) {
         if (!this.playerMarble || this.buildEnergy < 25) return
 
@@ -81,6 +90,8 @@ export class AbilityConstructs {
             rot = quatFromEuler(this.aimYaw, 0, 0)
             color = [0.8, 0.0, 1.0]
             restitution = 2.0
+        } else {
+            return
         }
 
         const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(spawnPos.x, spawnPos.y, spawnPos.z).setRotation(rot)
@@ -105,15 +116,11 @@ export class AbilityConstructs {
 
         const tcm = this.engine.getTransformManager()
         const inst = tcm.getInstance(entity)
-        const mat = quaternionToMat4(spawnPos, rot)
-
-        const sx = halfExtents.x * 2;
-        const sy = halfExtents.y * 2;
-        const sz = halfExtents.z * 2;
-
-        mat[0] *= sx; mat[1] *= sx; mat[2] *= sx;
-        mat[4] *= sy; mat[5] *= sy; mat[6] *= sy;
-        mat[8] *= sz; mat[9] *= sz; mat[10] *= sz;
+        const mat = scaledTransform(spawnPos, rot, {
+            x: halfExtents.x * 2,
+            y: halfExtents.y * 2,
+            z: halfExtents.z * 2,
+        })
 
         tcm.setTransform(inst, mat)
         this.scene.addEntity(entity)
@@ -131,6 +138,10 @@ export class AbilityConstructs {
         if (this.hudManager) this.hudManager.markAbilityUsed('build')
     }
 
+    /**
+     * @this {GameMixinHost}
+     * @param {any} portal
+     */
     destroyPortal(portal) {
         if (!portal) return
         this.scene.remove(portal.entity)
@@ -144,7 +155,12 @@ export class AbilityConstructs {
         }
     }
 
+    /**
+     * @this {GameMixinHost}
+     * @param {'A' | 'B'} type
+     */
     firePortal(type) {
+        if (!this.playerMarble) return
         const rb = this.playerMarble.rigidBody
         const pos = rb.translation()
         const cosP = Math.cos(this.pitchAngle)
@@ -153,31 +169,16 @@ export class AbilityConstructs {
         const dirY = sinP
         const dirZ = Math.cos(this.aimYaw) * cosP
 
-        const rayOrigin = { x: pos.x, y: pos.y, z: pos.z }
         const rayDir = { x: dirX, y: dirY, z: dirZ }
-        const ray = new RAPIER.Ray(rayOrigin, rayDir)
 
-        // Ignore marble itself and dynamic objects
-        const hit = this.world.castRay(ray, 100.0, true, 0xffffffff, undefined, undefined, undefined, rb)
+        // Ignore the marble itself
+        const hit = this.physicsQueries.castRay(pos, rayDir, 100.0, { excludeBody: rb })
 
         if (hit) {
-            const hitPos = {
-                x: rayOrigin.x + rayDir.x * hit.toi,
-                y: rayOrigin.y + rayDir.y * hit.toi,
-                z: rayOrigin.z + rayDir.z * hit.toi
-            }
+            const hitPos = hit.point
 
-            // Simple normal approximation - assume the closest cardinal direction or just upright if Y is steep
-            const normal = { x: 0, y: 1, z: 0 }
-
-            // Check world wall normal logic (or just simple bounce direction based on hit position relative to collider center)
-            const otherBody = hit.collider.parent()
-            if (otherBody) {
-               // To keep it simple without full hit normal extraction from Rapier3D JS:
-               // We offset the portal slightly back towards the player along the ray
-               // so it doesn't z-fight
-            }
-
+            // Offset the portal slightly back towards the player along the ray
+            // so it doesn't z-fight
             const portalPos = {
                 x: hitPos.x - dirX * 0.1,
                 y: hitPos.y - dirY * 0.1,
@@ -230,14 +231,7 @@ export class AbilityConstructs {
             const yaw = Math.atan2(dirX, dirZ)
             const rot = quatFromEuler(yaw, pitch, 0)
 
-            const mat = quaternionToMat4(portalPos, rot)
-            const sx = radius * 2;
-            const sy = thickness * 2;
-            const sz = radius * 2;
-
-            mat[0] *= sx; mat[1] *= sx; mat[2] *= sx;
-            mat[4] *= sy; mat[5] *= sy; mat[6] *= sy;
-            mat[8] *= sz; mat[9] *= sz; mat[10] *= sz;
+            const mat = scaledTransform(portalPos, rot, { x: radius * 2, y: thickness * 2, z: radius * 2 })
 
             tcm.setTransform(inst, mat)
             const lightMat = quaternionToMat4(portalPos, { x: 0, y: 0, z: 0, w: 1 })
@@ -251,16 +245,17 @@ export class AbilityConstructs {
                 normal: { x: -dirX, y: -dirY, z: -dirZ } // The direction the portal faces
             }
 
+            const statusEl = document.getElementById(type === 'A' ? 'portal-a-status' : 'portal-b-status')
             if (type === 'A') {
                 if (this.portalA) this.destroyPortal(this.portalA)
                 this.portalA = newPortal
-                document.getElementById('portal-a-status').style.color = indicatorColor
-                document.getElementById('portal-a-status').textContent = '🔵'
             } else {
                 if (this.portalB) this.destroyPortal(this.portalB)
                 this.portalB = newPortal
-                document.getElementById('portal-b-status').style.color = indicatorColor
-                document.getElementById('portal-b-status').textContent = '🟠'
+            }
+            if (statusEl) {
+                statusEl.style.color = indicatorColor
+                statusEl.textContent = type === 'A' ? '🔵' : '🟠'
             }
 
             if (audio && audio.playTrick) audio.playTrick()
@@ -268,6 +263,11 @@ export class AbilityConstructs {
         }
     }
 
+    /**
+     * @this {GameMixinHost}
+     * @param {Vec3Like} pos
+     * @param {Vec3Like} linvel
+     */
     spawnJetpackExhaust(pos, linvel) {
         this.effectPool?.spawnVisualParticle({
             color: [1.0, 0.6, 0.0],
@@ -280,6 +280,7 @@ export class AbilityConstructs {
         })
     }
 
+    /** @this {GameMixinHost} */
     fireGravityPulse() {
         if (!this.playerMarble) return
         const now = Date.now()
@@ -330,10 +331,12 @@ export class AbilityConstructs {
         console.log(`[GAME] Gravity Pulse fired! Hit ${hits} objects.`)
     }
 
+    /** @this {GameMixinHost} */
     spawnHoloPlatform() {
         const now = Date.now()
         if (now - this.lastHoloTime < this.holoCooldown) return
 
+        if (!this.playerMarble) return
         this.lastHoloTime = now
         const pos = this.playerMarble.rigidBody.translation()
 
@@ -352,15 +355,11 @@ export class AbilityConstructs {
 
         const tcm = this.engine.getTransformManager()
         const inst = tcm.getInstance(slot.entity)
-        const mat = quaternionToMat4(spawnPos, { x: 0, y: 0, z: 0, w: 1 })
-
-        const sx = halfExtents.x * 2;
-        const sy = halfExtents.y * 2;
-        const sz = halfExtents.z * 2;
-
-        mat[0] *= sx; mat[1] *= sx; mat[2] *= sx;
-        mat[4] *= sy; mat[5] *= sy; mat[6] *= sy;
-        mat[8] *= sz; mat[9] *= sz; mat[10] *= sz;
+        const mat = scaledTransform(spawnPos, { x: 0, y: 0, z: 0, w: 1 }, {
+            x: halfExtents.x * 2,
+            y: halfExtents.y * 2,
+            z: halfExtents.z * 2,
+        })
 
         tcm.setTransform(inst, mat)
 

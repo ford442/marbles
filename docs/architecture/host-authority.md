@@ -98,3 +98,7 @@ Expect relay to remain responsive on localhost; watch for `ROOM_FULL` or `BAD_ME
 ## Option C (future)
 
 A Rust/C++ or Node headless Rapier service aligns with the existing [`wasm/`](../../wasm/) numeric kernel direction but is **out of scope** for Phase 3 spike. Re-evaluate when ranked seasons (Phase 4) require persistent authoritative sims.
+
+## Physics worker interaction
+
+The SharedArrayBuffer physics worker is default-on for desktop campaign play ([physics-worker.md](./physics-worker.md)), but Party Race and `?hostAuth=1` are hard-excluded in `shouldUsePhysicsWorker()`: `HostSim` steps the main-thread Rapier world. Moving `HostSim` into the worker (or a headless Option C) needs its own issue; do not route host sim through the worker command ring implicitly.

@@ -1,21 +1,25 @@
-import RAPIER from '@dimforge/rapier3d-compat';
-import { audio } from '../audio.js';
-import { quaternionToMat4, quatFromEuler } from '../math.ts';
-import { getLevel } from '../levels/catalog.js';
+// @ts-check
+import { quaternionToMat4 } from '../math.ts';
 import { getMarblePhysics, FORCE_BATCH_THRESHOLD, PhysicsBatchBuffers } from '../wasm-bridge.js';
-import { getDofConfig } from '../rendering/post-fx-presets.js';
 import {
     getCachedTransformInstance,
     transformChanged,
     scaledTransform,
     setColor3IfChanged,
-    DOF_CAMERA_MODES,
-    DOF_UPDATE_THRESHOLD,
 } from './helpers.ts';
 
+/** @typedef {import('../types/mixin-host.ts').GameMixinHost} GameMixinHost */
+
 export class GameLoopEffectsTick {
+    /**
+     * @this {GameMixinHost}
+     * @param {number} now
+     */
     tickActiveProjectiles(now) {
         const tcm = this.engine.getTransformManager()
+        // Black-hole pull is tuned per 1/60 s step; scale by simulated time.
+        const simDt = this.simDt ?? 1 / 60
+        const step = simDt * 60
                 // Handle Active Black Holes lifecycle
                 if (this.activeBlackHoles && this.activeBlackHoles.length > 0) {
                 for (let i = this.activeBlackHoles.length - 1; i >= 0; i--) {
@@ -63,9 +67,8 @@ export class GameLoopEffectsTick {
                             const buf = this._forceBatchBuffers
                             buf.ensure(targets.length)
         
-                            for (let i = 0; i < targets.length; i++) {
+                            for (const [i, t] of targets.entries()) {
                                 const base = i * 3
-                                const t = targets[i]
                                 buf.positions[base] = t.pos.x
                                 buf.positions[base + 1] = t.pos.y
                                 buf.positions[base + 2] = t.pos.z
@@ -78,13 +81,12 @@ export class GameLoopEffectsTick {
                                 1.0, 0.5, radius, 0
                             )
         
-                            for (let i = 0; i < targets.length; i++) {
+                            for (const [i, { body }] of targets.entries()) {
                                 const base = i * 3
-                                const body = targets[i].body
                                 body.applyImpulse({
-                                    x: buf.forces[base],
-                                    y: buf.forces[base + 1] + body.mass() * 0.2,
-                                    z: buf.forces[base + 2]
+                                    x: (buf.forces[base] ?? 0) * step,
+                                    y: ((buf.forces[base + 1] ?? 0) + body.mass() * 0.2) * step,
+                                    z: (buf.forces[base + 2] ?? 0) * step
                                 }, true)
                             }
                         } else {
@@ -99,9 +101,9 @@ export class GameLoopEffectsTick {
                                     1.0, 0.5, radius, 0
                                 )
                                 body.applyImpulse({
-                                    x: scalarBuf[0],
-                                    y: scalarBuf[1] + body.mass() * 0.2,
-                                    z: scalarBuf[2]
+                                    x: (scalarBuf[0] ?? 0) * step,
+                                    y: ((scalarBuf[1] ?? 0) + body.mass() * 0.2) * step,
+                                    z: (scalarBuf[2] ?? 0) * step
                                 }, true)
                             }
                         }
@@ -147,29 +149,25 @@ export class GameLoopEffectsTick {
                     const vel = m.rigidBody.linvel()
                     const speed = Math.hypot(vel.x, vel.y, vel.z)
         
-                    // CCD via raycast
+                    // Impact detection: raycast ahead for the distance the next
+                    // frame's steps will cover (the body itself has CCD, so it
+                    // stops at thin walls rather than tunnelling).
                     let hitTarget = false
                     let hitPos = pos
                     if (speed > 0.1) {
                         const dir = { x: vel.x / speed, y: vel.y / speed, z: vel.z / speed }
-                        // Raycast ahead for the distance it will travel next frame (approx 1/60th of speed)
                         // Plus a little extra for radius
-                        const rayDist = (speed * (1/60)) + 0.2
-                        const ray = new RAPIER.Ray(pos, dir)
-                        // Filter out the missile's rigidBody. castRay args: ray, maxToi, solid, collisionGroups, filterIntersection, filterHit, filterExcludeCollider, filterExcludeRigidBody
-                        const hit = this.world.castRay(ray, rayDist, true, 0xffffffff, undefined, undefined, undefined, m.rigidBody)
-        
-                        if (hit) {
-                            // Check if it hit the player who fired it
-                            const otherBody = hit.collider.parent()
-                            if (!(otherBody && this.playerMarble && otherBody.handle === this.playerMarble.rigidBody.handle)) {
-                                 hitTarget = true
-                                 hitPos = {
-                                     x: pos.x + dir.x * hit.toi,
-                                     y: pos.y + dir.y * hit.toi,
-                                     z: pos.z + dir.z * hit.toi
-                                 }
-                            }
+                        const rayDist = speed * Math.max(simDt, 1 / 60) + 0.2
+                        const hit = this.physicsQueries.castRay(pos, dir, rayDist, {
+                            excludeBody: m.rigidBody,
+                            excludeSensors: true,
+                        })
+
+                        // Ignore the player who fired it
+                        const firedBy = this.playerMarble?.rigidBody.handle
+                        if (hit && hit.bodyHandle !== firedBy) {
+                            hitTarget = true
+                            hitPos = hit.point
                         }
                     }
         

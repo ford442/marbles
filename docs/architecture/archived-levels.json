@@ -1,22 +1,130 @@
 {
   "tutorial_extreme": {
+    "decision": "archive",
     "file": "assets/maps/tutorial_extreme.json",
-    "reason": "Prototype mechanics are not implemented by the runtime zone registry.",
-    "missing_handlers": ["boost_pad", "hazard", "platform", "ramp", "spiral_drop", "stomp_pad", "switchback", "trap"]
+    "reason": "Prototype mechanics are not implemented by the runtime zone registry. Its v1 \"ramp\" stamp (angle/length) was renamed legacy_ramp when v2 claimed \"ramp\" as a primitive.",
+    "missing_handlers": [
+      "boost_pad",
+      "hazard",
+      "legacy_ramp",
+      "platform",
+      "spiral_drop",
+      "stomp_pad",
+      "switchback",
+      "trap"
+    ]
   },
   "slalom_extreme": {
+    "decision": "archive",
     "file": "assets/maps/slalom_extreme.json",
     "reason": "Prototype branching, trap, boost-chain, and plunge mechanics are not implemented.",
-    "missing_handlers": ["banked_turn", "boost_chain", "boost_pad", "merge", "plunge", "spiral_drop", "switchback", "trap"]
+    "missing_handlers": [
+      "banked_turn",
+      "boost_chain",
+      "boost_pad",
+      "merge",
+      "plunge",
+      "spiral_drop",
+      "switchback",
+      "trap"
+    ]
   },
   "staircase_extreme": {
+    "decision": "archive",
     "file": "assets/maps/staircase_extreme.json",
     "reason": "Prototype fork, freefall, trap-stair, platform, and spiral-staircase mechanics are not implemented.",
-    "missing_handlers": ["boost_pad", "double_helix", "fork", "freefall", "platform", "spiral_staircase", "trap_stair"]
+    "missing_handlers": [
+      "boost_pad",
+      "double_helix",
+      "fork",
+      "freefall",
+      "platform",
+      "spiral_staircase",
+      "trap_stair"
+    ]
   },
   "volcano_run_extreme": {
+    "decision": "archive",
     "file": "assets/maps/volcano_run_extreme.json",
     "reason": "Prototype heat, eruption, tsunami, collapsing-platform, and boss-caldera systems are not implemented.",
-    "missing_handlers": ["boost_pad", "boss_caldera", "bridge", "collapsing_platform", "eruption_zone", "heat_zone", "lava_tsunami_zone", "magma_spiral", "stairs", "victory_ramp"]
+    "missing_handlers": [
+      "boost_pad",
+      "boss_caldera",
+      "bridge",
+      "collapsing_platform",
+      "eruption_zone",
+      "heat_zone",
+      "lava_tsunami_zone",
+      "magma_spiral",
+      "stairs",
+      "victory_ramp"
+    ]
+  },
+  "abyssal_trench_run": {
+    "decision": "delete",
+    "reason": "Crashed on load: abyssal-trench.js read .rigidBody from createMovingZone(), which returns nothing. Underwater theme is covered by other levels; deleted rather than ported (zone file removed)."
+  },
+  "cyber_reactor_run": {
+    "decision": "delete",
+    "reason": "Same broken template as aether_core (NaN createFloorZone floors, goal ~35 m above an unboosted jump). aether_core was ported to v2 instead; deleted as a duplicate (zone file removed)."
+  },
+  "neon_city_heights_run": {
+    "decision": "delete",
+    "reason": "Same broken template as aether_core (NaN createFloorZone floors, goal ~35 m above an unboosted jump). aether_core was ported to v2 instead; deleted as a duplicate (zone file removed)."
+  },
+  "quantum_core_run": {
+    "decision": "ship",
+    "replaced_by": "quantum_core",
+    "reason": "Ported to Level Format v2 as assets/maps/quantum_core.json (geometry and goal bugs fixed, recorded solution); JS zone and DEV_LEVELS entry removed."
+  },
+  "cyber_matrix_run": {
+    "decision": "ship",
+    "replaced_by": "cyber_matrix",
+    "reason": "Ported to Level Format v2 as assets/maps/cyber_matrix.json (geometry and goal bugs fixed, recorded solution); JS zone and DEV_LEVELS entry removed."
+  },
+  "neon_drift_run": {
+    "decision": "ship",
+    "replaced_by": "neon_drift",
+    "reason": "Ported to Level Format v2 as assets/maps/neon_drift.json (geometry and goal bugs fixed, recorded solution); JS zone and DEV_LEVELS entry removed."
+  },
+  "neon_vortex_run": {
+    "decision": "ship",
+    "replaced_by": "neon_vortex",
+    "reason": "Ported to Level Format v2 as assets/maps/neon_vortex.json (geometry and goal bugs fixed, recorded solution); JS zone and DEV_LEVELS entry removed."
+  },
+  "neon_pulse_matrix_run": {
+    "decision": "ship",
+    "replaced_by": "neon_pulse_matrix",
+    "reason": "Ported to Level Format v2 as assets/maps/neon_pulse_matrix.json (geometry and goal bugs fixed, recorded solution); JS zone and DEV_LEVELS entry removed."
+  },
+  "aether_core_run": {
+    "decision": "ship",
+    "replaced_by": "aether_core",
+    "reason": "Ported to Level Format v2 as assets/maps/aether_core.json (geometry and goal bugs fixed, recorded solution); JS zone and DEV_LEVELS entry removed."
+  },
+  "inferno_chamber_run": {
+    "decision": "ship",
+    "replaced_by": "inferno_chamber",
+    "reason": "Ported to Level Format v2 as assets/maps/inferno_chamber.json (geometry and goal bugs fixed, recorded solution); JS zone and DEV_LEVELS entry removed."
+  },
+  "crystal_cavern_run": {
+    "decision": "ship",
+    "replaced_by": "crystal_cavern",
+    "reason": "Ported to Level Format v2 as assets/maps/crystal_cavern.json (geometry and goal bugs fixed, recorded solution); JS zone and DEV_LEVELS entry removed."
+  },
+  "astral_cascade_run": {
+    "decision": "ship",
+    "replaced_by": "astral_cascade",
+    "reason": "Ported to Level Format v2 as assets/maps/astral_cascade.json (geometry and goal bugs fixed, recorded solution); JS zone and DEV_LEVELS entry removed."
+  },
+  "storm_peak_run": {
+    "decision": "ship",
+    "replaced_by": "storm_peak",
+    "reason": "Ported to Level Format v2 as assets/maps/storm_peak.json (geometry and goal bugs fixed, recorded solution); JS zone and DEV_LEVELS entry removed."
+  },
+  "stellar_forge_run": {
+    "decision": "ship",
+    "replaced_by": "stellar_forge",
+    "reason": "Ported to Level Format v2 as assets/maps/stellar_forge.json (geometry and goal bugs fixed, recorded solution); JS zone and DEV_LEVELS entry removed."
   }
 }

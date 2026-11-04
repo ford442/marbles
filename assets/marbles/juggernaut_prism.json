@@ -1,0 +1,31 @@
+{
+  "id": "juggernaut_prism",
+  "name": "Juggernaut Prism",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "legendary",
+  "premium": true,
+  "unlock": "premium",
+  "appearance": {
+    "color": {
+      "r": 0.1,
+      "g": 0.9,
+      "b": 0.4
+    },
+    "clearCoat": 1,
+    "clearCoatRoughness": 0,
+    "materialType": "glass",
+    "emissive": {
+      "r": 0.1,
+      "g": 1,
+      "b": 0.5,
+      "intensity": 12
+    }
+  },
+  "physics": {
+    "radius": 1.2,
+    "density": 100,
+    "friction": 0,
+    "restitution": 1
+  }
+}

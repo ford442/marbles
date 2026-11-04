@@ -1,0 +1,33 @@
+{
+  "id": "hypernova_glass",
+  "name": "Hypernova Glass",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "legendary",
+  "premium": true,
+  "unlock": "premium",
+  "appearance": {
+    "color": {
+      "r": 1,
+      "g": 0.2,
+      "b": 0.6
+    },
+    "roughness": 0,
+    "clearCoat": 1,
+    "clearCoatRoughness": 0,
+    "materialType": "glass",
+    "emissive": {
+      "r": 1,
+      "g": 0.3,
+      "b": 0.8,
+      "intensity": 8
+    }
+  },
+  "physics": {
+    "radius": 0.75,
+    "density": 15,
+    "friction": 0,
+    "restitution": 1,
+    "gravityScale": 1
+  }
+}

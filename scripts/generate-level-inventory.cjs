@@ -6,6 +6,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
 const MAPS_DIR = path.join(ROOT, 'assets', 'maps');
@@ -14,7 +15,8 @@ const LEVELS_JS = fs.existsSync(path.join(ROOT, 'src', 'levels.ts'))
   ? path.join(ROOT, 'src', 'levels.ts')
   : path.join(ROOT, 'src', 'levels.js');
 const CAMPAIGN_JS = path.join(ROOT, 'src', 'levels', 'campaign.js');
-const REGISTRY_JS = path.join(ROOT, 'src', 'zone-setup', 'registry.js');
+// Generated from registry.js ZONE_TYPES; CI keeps it fresh (sync-zone-handlers.cjs --check).
+const ZONE_HANDLERS_JSON = path.join(ROOT, 'assets', 'schemas', 'zone-handlers.json');
 const ARCHIVED_LEVELS_PATH = path.join(ROOT, 'docs', 'architecture', 'archived-levels.json');
 
 function loadJson(filePath) {
@@ -33,26 +35,30 @@ function extractDevLevelIds(levelsJs) {
   return ids;
 }
 
+/** Level → chapter from the CAMPAIGN_CHAPTERS `levels` lists. */
 function extractChapterOverrides(campaignJs) {
-  const block = campaignJs.match(/LEVEL_CHAPTER_OVERRIDES\s*=\s*\{([^}]+)\}/s);
-  if (!block) return {};
   const overrides = {};
-  const re = /^\s*([a-z0-9_]+):\s*'([^']+)'/gm;
+  const re = /id:\s*'([a-z0-9_]+)'[^]*?levels:\s*\[([^\]]*)\]/g;
   let m;
-  while ((m = re.exec(block[1])) !== null) {
-    overrides[m[1]] = m[2];
+  while ((m = re.exec(campaignJs)) !== null) {
+    for (const id of m[2].matchAll(/'([a-z0-9_]+)'/g)) overrides[id[1]] = m[1];
   }
   return overrides;
 }
 
-function extractZoneHandlers(registryJs) {
-  const handlers = new Set();
-  const re = /^\s{4}([a-z0-9_]+):\s*\(/gm;
-  let m;
-  while ((m = re.exec(registryJs)) !== null) {
-    handlers.add(m[1]);
-  }
-  return handlers;
+/** DEV_LEVELS id → devOnly reason (evaluated, since reasons are shared constants). */
+function loadDevOnlyReasons() {
+  const script = `const { DEV_LEVELS } = await import(${JSON.stringify(`file://${LEVELS_JS}`)});
+    console.log(JSON.stringify(Object.fromEntries(Object.entries(DEV_LEVELS).map(([id, l]) => [id, l.devOnly || '']))));`;
+  const res = spawnSync(process.execPath, ['--experimental-strip-types', '--no-warnings', '--input-type=module', '-e', script], {
+    cwd: ROOT, encoding: 'utf8',
+  });
+  if (res.status !== 0) throw new Error(`could not evaluate ${LEVELS_JS}: ${res.stderr}`);
+  return JSON.parse(res.stdout);
+}
+
+function loadZoneHandlers() {
+  return new Set(loadJson(ZONE_HANDLERS_JSON).handlers || []);
 }
 
 function getChapterHeuristic(levelId, level, overrides) {
@@ -89,8 +95,10 @@ function resolveChapter(chapterField) {
   return parts[parts.length - 1];
 }
 
-function classifySource(id, inManifest, inDev, onDisk, isArchived) {
+function classifySource(id, inManifest, inDev, onDisk, isArchived, decision) {
   if (inManifest && inDev) return 'dual';
+  if (!inManifest && !inDev && !onDisk && decision === 'delete') return 'deleted';
+  if (!inManifest && !inDev && !onDisk && decision === 'ship') return 'migrated';
   if (inManifest) return 'json';
   if (isArchived && onDisk) return 'archived-json';
   if (onDisk && !inManifest && id.endsWith('_extreme')) return 'orphan-json';
@@ -105,7 +113,19 @@ function migrationStatus(source) {
   if (source === 'dual') return 'json-wins';
   if (source === 'archived-json') return 'archived (unsupported mechanics)';
   if (source === 'orphan-json') return 'blocked (missing handlers / manifest)';
+  if (source === 'deleted') return 'deleted';
+  if (source === 'migrated') return 'migrated (renamed JSON map)';
   return 'dev-only';
+}
+
+/** Part D triage: every id is shipped, kept dev-only with a reason, archived or deleted. */
+function triageFor(source, archive, devOnly) {
+  if (source === 'json' || source === 'dual' || source === 'migrated') {
+    return { triage: 'ship', triage_reason: archive?.reason || '' };
+  }
+  if (source === 'code') return { triage: 'dev-only', triage_reason: devOnly || '' };
+  if (source === 'deleted') return { triage: 'delete', triage_reason: archive?.reason || '' };
+  return { triage: 'archive', triage_reason: archive?.reason || '' };
 }
 
 function buildInventory() {
@@ -118,7 +138,8 @@ function buildInventory() {
     (id) => rawDevIds.filter((candidate) => candidate === id).length > 1
   );
   const overrides = extractChapterOverrides(fs.readFileSync(CAMPAIGN_JS, 'utf8'));
-  const handlers = extractZoneHandlers(fs.readFileSync(REGISTRY_JS, 'utf8'));
+  const devOnlyReasons = loadDevOnlyReasons();
+  const handlers = loadZoneHandlers();
   const archivedLevels = fs.existsSync(ARCHIVED_LEVELS_PATH)
     ? loadJson(ARCHIVED_LEVELS_PATH)
     : {};
@@ -133,7 +154,7 @@ function buildInventory() {
     if (data.id) mapById[data.id] = { ...data, _file: file };
   }
 
-  const allIds = new Set([...manifestIds, ...devIds, ...Object.keys(mapById)]);
+  const allIds = new Set([...manifestIds, ...devIds, ...Object.keys(mapById), ...Object.keys(archivedLevels)]);
 
   const rows = [];
   for (const id of [...allIds].sort()) {
@@ -141,11 +162,12 @@ function buildInventory() {
     const inDev = devIds.has(id);
     const onDisk = Boolean(mapById[id]);
     const archive = archivedLevels[id];
-    const source = classifySource(id, inManifest, inDev, onDisk, Boolean(archive));
+    const source = classifySource(id, inManifest, inDev, onDisk, Boolean(archive), archive?.decision);
     const level = mapById[id] || {};
     const zoneTypes = [...new Set((level.zones || []).map((z) => z.type).filter(Boolean))];
     const unknownZones = zoneTypes.filter((t) => !handlers.has(t));
-    const chapterField = getChapterHeuristic(id, level, overrides);
+    const gone = source === 'deleted' || source === 'migrated';
+    const chapterField = gone ? '' : getChapterHeuristic(id, level, overrides);
     const chapter = resolveChapter(chapterField);
 
     rows.push({
@@ -159,7 +181,9 @@ function buildInventory() {
       zone_types: zoneTypes.join(', ') || '(dev inline)',
       unknown_zones: unknownZones.join(', ') || '',
       migration_status: migrationStatus(source),
-      archive_reason: archive?.reason || '',
+      archive_reason: source === 'archived-json' ? archive?.reason || '' : '',
+      ...triageFor(source, archive, devOnlyReasons[id]),
+      ...(archive?.replaced_by ? { replaced_by: archive.replaced_by } : {}),
       difficulty: level.difficulty || manifest.maps?.[id]?.difficulty || '',
     });
   }
@@ -176,9 +200,12 @@ function buildInventory() {
       dual: rows.filter((r) => r.source === 'dual').length,
       orphan_json: rows.filter((r) => r.source === 'orphan-json').length,
       archived_json: rows.filter((r) => r.source === 'archived-json').length,
+      deleted: rows.filter((r) => r.source === 'deleted').length,
+      migrated: rows.filter((r) => r.source === 'migrated').length,
     },
     checks: {
       duplicate_dev_level_ids: duplicateDevIds,
+      untriaged: rows.filter((r) => r.triage !== 'ship' && !r.triage_reason).map((r) => r.id),
       shipped_without_handlers: rows
         .filter((r) => r.in_manifest && r.unknown_zones)
         .map((r) => ({ id: r.id, unknown_zones: r.unknown_zones })),
@@ -207,17 +234,19 @@ function toMarkdown(inventory) {
     `| Dual (JSON wins) | ${counts.dual} |`,
     `| Orphan JSON | ${counts.orphan_json} |`,
     `| Archived JSON prototypes | ${counts.archived_json} |`,
+    `| Deleted (code levels) | ${counts.deleted} |`,
+    `| Migrated (renamed JSON map) | ${counts.migrated} |`,
     '',
     '## Master table',
     '',
-    '| id | source | manifest | dev | on_disk | chapter | zone_types | migration |',
-    '|----|--------|:--------:|:---:|:-------:|---------|------------|-----------|',
+    '| id | source | manifest | dev | on_disk | chapter | zone_types | migration | triage |',
+    '|----|--------|:--------:|:---:|:-------:|---------|------------|-----------|--------|',
   ];
 
   for (const r of rows) {
     const flags = (v) => (v ? 'yes' : '—');
     lines.push(
-      `| \`${r.id}\` | ${r.source} | ${flags(r.in_manifest)} | ${flags(r.in_dev_levels)} | ${flags(r.on_disk)} | ${r.chapter} | ${r.zone_types.replace(/\|/g, '\\|')} | ${r.migration_status} |`
+      `| \`${r.id}\` | ${r.source} | ${flags(r.in_manifest)} | ${flags(r.in_dev_levels)} | ${flags(r.on_disk)} | ${r.chapter} | ${r.zone_types.replace(/\|/g, '\\|')} | ${r.migration_status} | ${r.triage}${r.replaced_by ? ` → \`${r.replaced_by}\`` : ''} |`
     );
   }
 

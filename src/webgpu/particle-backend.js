@@ -4,7 +4,6 @@
  * Opt-in via ?webgpuParticles=1; CPU ParticleSystem remains the fallback.
  */
 
-import RAPIER from '@dimforge/rapier3d-compat';
 import integrateShader from './shaders/particle-integrate.wgsl?raw';
 import renderShader from './shaders/particle-render.wgsl?raw';
 import { WEBGPU_PARTICLE_CAP, isWebGPUDepthTestRequested } from './detect.js';
@@ -27,7 +26,7 @@ export { packParticle, PARTICLE_STRIDE } from './particle-data.js';
  * The slice of the game runtime this backend touches.
  * @typedef {object} ParticleBackendHost
  * @property {import('../particle-system.js').ParticleSystem} [particleSystem]
- * @property {import('@dimforge/rapier3d-compat').World} [world] Physics world used for occlusion raycasts.
+ * @property {import('../game/systems/physics-queries.ts').PhysicsQueries} [physicsQueries] Ray queries used for occlusion.
  * @property {WebGPUParticleBackend | null} [webgpuParticles] The live overlay, if any.
  */
 
@@ -503,15 +502,19 @@ export class WebGPUParticleBackend {
     updateOcclusion(cameraState) {
         const device = this.device;
         if (!this.ready || !device || !this._depthTestEnabled || !this.particleSystem) return;
-        const world = this.game.world;
+        const queries = this.game.physicsQueries;
         const eye = cameraState?.eye;
-        if (!world || !eye) return;
+        if (!queries || !eye) return;
 
         updateParticleOcclusion(
             (ox, oy, oz, dx, dy, dz, maxToi) => {
-                const ray = new RAPIER.Ray({ x: ox, y: oy, z: oz }, { x: dx, y: dy, z: dz });
-                const hit = world.castRay(ray, maxToi, true);
-                return !!hit && !hit.collider.isSensor();
+                const hit = queries.castRay(
+                    { x: ox, y: oy, z: oz },
+                    { x: dx, y: dy, z: dz },
+                    maxToi,
+                    { excludeSensors: true },
+                );
+                return hit !== null;
             },
             eye,
             this.particleSystem.activeParticles,

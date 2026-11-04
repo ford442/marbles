@@ -8,10 +8,10 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="manifest" href="/manifest.webmanifest">
-    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="icon" href="./icon.svg" type="image/svg+xml">
     <title>Marbles 3D</title>
-    <script src="/filament.js"></script>
+    <script src="./filament.js"></script>
     <style>
         /* Critical styles only — enough to avoid a white flash before the app shell mounts. */
         * { box-sizing: border-box; }
@@ -38,6 +38,30 @@
     <div id="ui-root"></div>
 
     <script type="module" src="/src/main.js"></script>
+
+    <script>
+        // Visible fallback when a script/stylesheet fails to load (otherwise: black screen).
+        (function () {
+            var shown = false;
+            function show(msg) {
+                if (shown) return;
+                shown = true;
+                var d = document.createElement('div');
+                d.id = 'asset-load-error';
+                d.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;' +
+                    'padding:24px;text-align:center;background:#000;color:#fff;z-index:2147483647;font:16px sans-serif;';
+                d.textContent = msg;
+                document.body.appendChild(d);
+            }
+            window.addEventListener('error', function (e) {
+                var t = e.target;
+                if (!t || t === window) return;
+                if (t.tagName === 'SCRIPT' || (t.tagName === 'LINK' && t.rel === 'stylesheet')) {
+                    show('Failed to load game assets (' + (t.src || t.href) + ')');
+                }
+            }, true);
+        })();
+    </script>
 </body>
 
 </html>

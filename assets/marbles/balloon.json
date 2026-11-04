@@ -1,0 +1,21 @@
+{
+  "id": "balloon",
+  "name": "Balloon",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 1,
+      "g": 0.4,
+      "b": 0.7
+    },
+    "roughness": 0.8
+  },
+  "physics": {
+    "radius": 0.5,
+    "density": 0.05,
+    "friction": 0.3,
+    "restitution": 0.9
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "id": "gold_heavy",
+  "name": "Gold Heavy",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "rarity": "common",
+  "appearance": {
+    "color": {
+      "r": 1,
+      "g": 0.84,
+      "b": 0
+    },
+    "emissive": {
+      "r": 1,
+      "g": 0.8,
+      "b": 0.3,
+      "intensity": 0.8
+    },
+    "roughness": 0.15,
+    "clearCoat": 1,
+    "clearCoatRoughness": 0,
+    "materialType": "polishedMarble"
+  },
+  "physics": {
+    "radius": 0.6,
+    "density": 3,
+    "restitution": 0.2
+  }
+}

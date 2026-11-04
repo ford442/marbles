@@ -1,0 +1,92 @@
+{
+  "id": "trampoline_park",
+  "schemaVersion": 2,
+  "name": "Trampoline Park",
+  "description": "Bounce your way to the exit!",
+  "version": "1.0.0",
+  "author": "Marble Game Team",
+  "difficulty": "medium",
+  "chapter": "classic",
+  "spawn": [0, 8, -12],
+  "goals": [
+    {
+      "id": 1,
+      "range": {
+        "x": [-5, 5],
+        "z": [80, 90],
+        "y": [-2, 5]
+      }
+    }
+  ],
+  "camera": {
+    "mode": "follow",
+    "height": 15,
+    "offset": -25
+  },
+  "zones": [
+    {
+      "type": "floor",
+      "pos": [0, -2, 0],
+      "size": [50, 0.5, 50]
+    },
+    {
+      "type": "track",
+      "pos": [0, 3, 0]
+    },
+    {
+      "type": "trampoline_park",
+      "pos": [0, 0, 25]
+    }
+  ],
+  "medals": {
+    "goldTime": 13,
+    "silverTime": 19,
+    "bronzeTime": 28,
+    "parTime": 14
+  },
+  "solution": {
+    "inputs": [
+      { "frames": 14, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 35, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 19, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 29, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 84, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 180 },
+      { "frames": 41, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 17, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 1, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["jump"], "yawDeg": 180 },
+      { "frames": 2, "keys": [], "yawDeg": 0 },
+      { "frames": 8, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 53, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 2, "keys": [], "yawDeg": 180 },
+      { "frames": 2, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 23, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 23, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 42, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 38, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 39, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 38, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 39, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 13, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["jump"], "yawDeg": 0 },
+      { "frames": 24, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 36, "keys": [], "yawDeg": 180 }
+    ],
+    "tolerance": 0.35
+  }
+}

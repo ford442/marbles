@@ -2,6 +2,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
 import { quaternionToMat4, quatFromEuler } from '../math.ts';
 import { getLevel } from '../levels/catalog.js';
+import { setPrimitiveTransform } from '../zone-setup/primitive-host.js';
 import { getMarblePhysics, FORCE_BATCH_THRESHOLD, PhysicsBatchBuffers } from '../wasm-bridge.js';
 import { getDofConfig } from '../rendering/post-fx-presets.js';
 import {
@@ -100,6 +101,14 @@ export class GameLoopDynamics {
                     }
                 }
         
+                // Level Format v2 movers/spinners/triggers (sim-time driven).
+                this.zoneScope?.tick(
+                    this,
+                    this.simDt ?? 0,
+                    (entry, pose) => setPrimitiveTransform(this, entry.entity, pose, entry.halfExtents),
+                    Boolean(this.timeStopActive),
+                )
+
                 this.updateGrapple()
         
                 // Update PowerUps

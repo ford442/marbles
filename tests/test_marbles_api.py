@@ -88,9 +88,28 @@ class TestReplayValidation(unittest.TestCase):
 
 class TestWorkshopValidation(unittest.TestCase):
     def test_accepts_valid_map_json(self):
-        map_json = json.dumps({"id": "my_map", "name": "My Map", "zones": [], "spawn": {"x": 0, "y": 0, "z": 0}})
+        map_json = json.dumps({
+            "id": "my_map", "name": "My Map", "version": "1.0.0", "schemaVersion": 2,
+            "zones": [{"type": "box", "pos": [0, 0, 0], "size": [10, 0.5, 30]}, {"type": "goal", "pos": [0, 0.5, 12]}],
+            "spawn": [0, 2, -12],
+            "goal": {"pos": [0, 1, 12], "size": [4, 3, 4]},
+        })
         data = validate_workshop_map_json(map_json)
         self.assertEqual(data["id"], "my_map")
+
+    def test_rejects_schema_violations(self):
+        bad = {
+            "id": "bad", "name": "Bad", "version": "1.0.0",
+            "zones": [{"type": "box", "pos": [0, 0, 0], "size": [10, 0.5, 30]}, {"type": "not_a_zone", "pos": [0, 0, 0]}],
+            "spawn": {"x": 0, "y": 2, "z": 0},
+            "goals": [],
+        }
+        with self.assertRaises(HTTPException) as ctx:
+            validate_workshop_map_json(json.dumps(bad))
+        self.assertEqual(ctx.exception.status_code, 422)
+        errors = ctx.exception.detail["errors"]
+        self.assertTrue(any("schemaVersion" in e for e in errors), errors)
+        self.assertTrue(any("not_a_zone" in e for e in errors), errors)
 
     def test_rejects_invalid_json(self):
         with self.assertRaises(HTTPException) as ctx:

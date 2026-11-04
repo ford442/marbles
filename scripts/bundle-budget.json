@@ -1,0 +1,10 @@
+{
+  "description": "Size budget for the entry (index) chunk. Checked by scripts/check-bundle-budget.mjs after BUNDLE_STATS=1 npx vite build. Baseline before lazy zone chunks (2026-10-17): 2806.8 KB; after: 2660.2 KB.",
+  "mainChunkMaxKB": 2700,
+  "forbiddenInMainChunk": [
+    { "pattern": "/src/zones/[^/]+\\.js$", "reason": "zone stamps load lazily via ZONE_LOADERS (src/zone-setup/registry.js)" },
+    { "pattern": "/src/levels\\.ts$", "reason": "DEV_LEVELS loads only behind ?devLevels=1 (loadDevLevels)" },
+    { "pattern": "/src/editor/(?!mode\\.js$)", "reason": "the map editor is a lazy chunk (bootMapEditor import in init/core.js)" },
+    { "pattern": "/node_modules/ajv/", "reason": "full schema validation runs in CI and the editor only" }
+  ]
+}
