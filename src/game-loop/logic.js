@@ -1,6 +1,7 @@
 import { audio } from '../audio.js';
 import { quaternionToMat4 } from '../math.ts';
 import { tickLevelBehaviors } from '../game/level-behaviors/index.js';
+import { applyRepelPulse } from './repel-pulse.js';
 import { applyAcceleration } from '../game/systems/body-impulse.ts';
 import { getMarblePhysics, FORCE_BATCH_THRESHOLD, PhysicsBatchBuffers } from '../wasm-bridge.js';
 
@@ -474,6 +475,8 @@ export class GameLoopLogic {
             if (this.shieldEnergy < 0) this.shieldEnergy = 0
 
             if (this.playerMarble) {
+                // Repel other dynamic bodies, with a slight upward pop
+                applyRepelPulse(this, 5.0, 3.0, 1.0)
                 const playerPos = this.playerMarble.rigidBody.translation()
                 const radius = 5.0
                 const force = 3.0
@@ -540,9 +543,9 @@ export class GameLoopLogic {
             if (this.playerMarble) {
                 const playerPos = this.playerMarble.rigidBody.translation()
                 const radius = 15.0
-                const force = 0.5
 
                 // Repel other dynamic bodies
+                applyRepelPulse(this, radius, 0.5, 0)
                 const playerRb = this.playerMarble.rigidBody
                 for (const body of this.dynamicBodies) {
                     if (body === playerRb) continue

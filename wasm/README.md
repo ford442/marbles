@@ -36,9 +36,9 @@ stale artefacts.
 | `vec3Dot` / `vec3Length` / `vec3Normalize` | Vector math |
 | `applyVelocityDamping` / `*Out` / `Batch` | Frame-rate–independent damping + speed cap (Batch is SIMD128-vectorized) |
 | `computeForceField` / `*Out` / `Batch` | Inverse-power-law attraction / repulsion (Batch is SIMD128-vectorized) |
-| `computeSpringForce` / `*Out` / `Batch` | Hooke's-law spring with velocity damping |
+| `computeSpringForce` / `*Out` / `Batch` | Hooke's-law spring with velocity damping (Batch is SIMD128-vectorized) |
 | `reflectVelocity` / `*Out` | Specular velocity reflection |
-| `closestPointOnSegment` / `*Out` / `Batch` | Nearest point on a segment (grapple / rails) |
+| `closestPointOnSegment` / `*Out` / `Batch` | Nearest point on a segment (grapple / rails) (Batch is SIMD128-vectorized) |
 
 Prefer `*Out` and batch APIs from game code — they avoid Embind object allocation
 and cross the JS/WASM boundary with `HEAPF32` copies only when
@@ -133,6 +133,9 @@ node tests/benchmark_wasm_batch_simd.mjs
 # ...or compare against a previously built binary (e.g. checked out from git
 # history before a WASM perf change) to measure improvement:
 node tests/benchmark_wasm_batch_simd.mjs --baseline-dir /path/to/old/public/wasm
+# ...and fail unless named kernels improve >= 20%:
+node tests/benchmark_wasm_batch_simd.mjs --baseline-dir /path/to/old/public/wasm \
+    --require computeSpringForcesBatch,closestPointsOnSegmentBatch
 ```
 
 ## Adding New Functions
@@ -147,9 +150,20 @@ node tests/benchmark_wasm_batch_simd.mjs --baseline-dir /path/to/old/public/wasm
 
 See `wasm/CMakeLists.txt`:
 
-- `-O3`, `-msimd128`, `-ffast-math`, `-sASSERTIONS=0`
+- `-O3`, `-ffast-math`, `-sASSERTIONS=0`
+- `-msimd128` and `-mnontrapping-fptoint` on **both** compile and link lines
+  (target features must reach any link-time codegen)
 - `-sMODULARIZE=1` + `EXPORT_NAME=MarblePhysicsModule`
-- `INITIAL_MEMORY=32MB`, `ALLOW_MEMORY_GROWTH=1`
+- `INITIAL_MEMORY=32MB`, `ALLOW_MEMORY_GROWTH=1`, `MAXIMUM_MEMORY=64MB`.
+  `WasmBatchRunner` re-derives its `HEAPF32` views when growth swaps the
+  buffer (covered by the memory-growth parity test).
+- `-sMALLOC=emmalloc` (~4.7 KB smaller `.wasm` than dlmalloc; the bridge only
+  mallocs when a batch outgrows its buffers), `-sFILESYSTEM=0`,
+  `-sSUPPORT_LONGJMP=0`
+- `-sSTRICT=1` — rejects legacy settings (`ELIMINATE_DUPLICATE_FUNCTIONS` was
+  dropped for this; it was already a no-op)
+- `-flto` was evaluated and is **not** enabled: single TU, glue grew 15 B.
+  Size table per flag: `docs/PERFORMANCE_BASELINE.md` → "WASM build flags".
 - `--closure 1` minifies the JS glue (~31 KB → ~15 KB raw, ~9 KB → ~6 KB
   gzipped). Verified compatible with Embind + `MODULARIZE` + `EXPORT_ES6` in
   this project's configuration — Embind attaches its exports via
@@ -160,20 +174,29 @@ See `wasm/CMakeLists.txt`:
 
 Debug builds (`./build.sh --debug`) instead use `-O0 -g -fsanitize=address
 -sASSERTIONS=2` with no `--closure`, and permit the `node` environment — see
-"Building" above.
+"Building" above. CI compiles the Debug target as a smoke check (not run, and
+warn-only: `-Weverything` is not clean for raw HEAP pointer code).
+
+The Release build is byte-reproducible with Emscripten 3.1.50 (independent of
+checkout path), so CI runs `git diff --exit-code public/wasm/` after
+`npm run build:wasm` — commit the rebuilt artefacts with any C++/CMake change.
 
 ## Notes
 
 - Loaded asynchronously via dynamic `import()`. JS fallbacks run until WASM is ready.
 - No `SharedArrayBuffer` required for this module (unlike the Rapier physics worker).
 - Do not move Rapier body iteration or Filament transforms into C++ — numeric kernels only.
-- `computeForceFieldsBatch` and `applyVelocityDampingBatch` vectorize 4 entities
-  at a time with WASM SIMD128 (`#ifdef __wasm_simd128__`, scalar fallback
+- All four batch kernels (`computeForceFieldsBatch`,
+  `applyVelocityDampingBatch`, `computeSpringForcesBatch`,
+  `closestPointsOnSegmentBatch`) vectorize 4 entities at a time with WASM SIMD128 (`#ifdef __wasm_simd128__`, scalar fallback
   otherwise). Positions/velocities are stored AoS (interleaved xyz per
   entity); since WASM SIMD128 has no strided-gather instruction, `loadVec3x4`/
   `storeVec3x4` deinterleave/reinterleave 4 vec3s (12 contiguous floats = 3
   `v128` words) via shuffles rather than gathering lane-by-lane. `std::pow`
   has no SIMD128 intrinsic for a runtime-variable exponent, so
   `computeForceFieldsBatch`'s falloff term is computed per-lane and folded
-  back into the otherwise fully-vectorized pipeline. A non-multiple-of-4
-  remainder always falls back to the scalar kernel.
+  back into the otherwise fully-vectorized pipeline. Lanes that would divide
+  by ~0 (coincident spring endpoints, zero-length segments) are masked with
+  `wasm_v128_bitselect` — for segments, *before* the `[0,1]` clamp, since NaN
+  propagates through `f32x4` min/max. A non-multiple-of-4 remainder always
+  falls back to the scalar kernel.

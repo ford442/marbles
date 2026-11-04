@@ -18,6 +18,7 @@ if(EMSCRIPTEN)
     # Flags shared by every config.
     target_compile_options(marble_physics PRIVATE
         -msimd128              # WebAssembly SIMD — big win for vec3 math
+        -mnontrapping-fptoint  # Cheap float→int (every SIMD-capable browser has it)
         -fvisibility=hidden    # Smaller binary / better inlining
     )
 
@@ -37,6 +38,14 @@ if(EMSCRIPTEN)
 
     # ==================== LINK / EMSCRIPTEN OPTIONS ====================
     target_link_options(marble_physics PRIVATE
+        # Target features must also be on the link line, or codegen done at
+        # link time (e.g. if -flto is ever enabled) silently drops SIMD.
+        -msimd128
+        -mnontrapping-fptoint
+
+        # Reject legacy/unknown settings and implicit runtime exports.
+        -sSTRICT=1
+
         # Embind (C++ ↔ JS)
         --bind
         -lembind
@@ -53,12 +62,19 @@ if(EMSCRIPTEN)
         # the actual browser deployment target and keep the binary lean).
         -sENVIRONMENT=web,worker$<$<CONFIG:Debug>:,node>
 
-        # Memory — 32 MB initial gives good headroom without constant growth
+        # Memory — 32 MB initial gives good headroom without constant growth;
+        # the 64 MB cap stops a runaway batch from growing the heap unbounded.
         -sALLOW_MEMORY_GROWTH=1
         -sINITIAL_MEMORY=33554432
-        # -sMAXIMUM_MEMORY=268435456   # Uncomment to hard-cap at 256 MB
+        -sMAXIMUM_MEMORY=67108864
+        # emmalloc: ~4.7 KB smaller .wasm than dlmalloc. The bridge only
+        # mallocs when a batch outgrows its buffers, so allocator speed is moot.
+        -sMALLOC=emmalloc
 
-        -sELIMINATE_DUPLICATE_FUNCTIONS=1
+        # Numeric-only module: no file I/O, no setjmp/longjmp.
+        -sFILESYSTEM=0
+        -sSUPPORT_LONGJMP=0
+
         -sWASM_BIGINT=1
         -sALLOW_TABLE_GROWTH=1
         -sEXPORTED_FUNCTIONS=['_malloc','_free']
@@ -70,6 +86,8 @@ if(EMSCRIPTEN)
         # Debug: keep the sanitizer's instrumentation and runtime checks intact.
         $<$<CONFIG:Debug>:-fsanitize=address -sASSERTIONS=2>
 
+        # Evaluated and not enabled (see docs/PERFORMANCE_BASELINE.md):
+        # -flto — single TU, so no cross-TU inlining to gain; glue grew 15 B.
         # Optional extra aggressive flags (uncomment & test):
         # -sAGGRESSIVE_VARIABLE_ELIMINATION=1
     )

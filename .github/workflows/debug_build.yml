@@ -41,8 +41,18 @@ jobs:
       - name: Verify WASM artefacts
         run: npm run check:wasm
 
+      # The 3.1.50 build is byte-reproducible, so a diff here means the
+      # committed public/wasm/* was not rebuilt after a C++/CMake change.
+      - name: Committed WASM matches source
+        run: git diff --exit-code --stat -- public/wasm/
+
       - name: WASM parity tests
         run: npm run test:wasm:parity
+
+      # Compile-only smoke of the Debug/ASan target (-Weverything) so flag or
+      # sanitizer regressions surface in CI; it is not run under Node here.
+      - name: Build WASM (Debug/ASan smoke)
+        run: npm run build:wasm:debug
 
       - name: Validate assets
         run: npm run validate:assets
