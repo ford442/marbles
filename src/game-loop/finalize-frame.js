@@ -1,3 +1,5 @@
+// @ts-check
+/** @typedef {import('../types/frame-host.ts').FrameHost} FrameHost */
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
 import { quaternionToMat4, quatFromEuler } from '../math.ts';
@@ -14,6 +16,13 @@ import {
 } from './helpers.ts';
 
 export class GameLoopFinalize {
+    /**
+     * @this {FrameHost}
+     * @param {number} now
+     * @param {number} culledPowerUps
+     * @param {number} culledCollectibles
+     * @param {boolean} [shouldUpdateHUD]
+     */
     finalizeFrame(now, culledPowerUps, culledCollectibles, shouldUpdateHUD = true) {
                 this.hudController?.updateFrame(now, { shouldUpdateHUD })
         

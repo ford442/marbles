@@ -485,14 +485,21 @@ export class GameLoopSyncMethods {
         // Skip physics and game logic when paused
         if (!this.isPaused) {
             const physicsStart = performance.now()
+            const steps = this.physicsSubsteps ?? 1
+            const stepSec = this.physicsClock?.step ?? 1 / 60
             if (workerMode) {
-                // The worker runs its own fixed-step clock; this drains commands.
+                // The worker runs its own fixed-step clock and applies queued
+                // commands on its steps. Queue one registry tick (hover, …) per
+                // step this frame's clock decided on, so the simulated time they
+                // cover matches; physicsWorld.step() then just drains commands.
+                for (let i = 0; i < steps; i++) this.abilitySystem?.tickFixedStep(stepSec)
                 this.physicsWorld.step()
             } else {
                 // Fixed-step contract: run the steps the loop's clock decided on,
                 // snapshotting poses before the last one for render interpolation.
-                const steps = this.physicsSubsteps ?? 1
+                // Registry `tick` hooks run first in each step.
                 for (let i = 0; i < steps; i++) {
+                    this.abilitySystem?.tickFixedStep(stepSec)
                     if (i === steps - 1) capturePrevPoses(backend, this.marbles, this.dynamicObjects)
                     this.physicsWorld.step()
                 }

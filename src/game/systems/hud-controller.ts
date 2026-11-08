@@ -1,12 +1,13 @@
 import { HUDManager, type HudHost } from '../../hud-manager.ts';
 import { GameLoopHudTick } from '../../game-loop/hud-tick.js';
+import type { HudTickHost } from '../../types/frame-host.ts';
 import type { Vec3 } from '../../types/geometry.ts';
 
 /** Game surface `HudController.updateFrame` reads on top of what the HUD itself needs. */
-export interface HudControllerHost extends HudHost {
+export type HudControllerHost = HudHost & HudTickHost & {
     playerMarble?: { rigidBody: { translation(): Vec3 } } | null;
     updateGoalEffects(deltaSec: number, playerPos: Vec3): void;
-}
+};
 
 /** Consolidated owner for HUD DOM, cooldown bars, goal FX, and desync state. */
 export class HudController extends HUDManager<HudControllerHost> {

@@ -1,5 +1,4 @@
 import { AbilityAirDash } from './air-dash.js';
-import { AbilityHover } from './hover.js';
 import { AbilityDash } from './dash.js';
 import { AbilityStomp } from './stomp.js';
 import { installKnownMethods } from '../game/systems/method-installer.js';
@@ -26,7 +25,6 @@ export {
 export function installAbilityMethods(targetClass) {
     installKnownMethods(targetClass, AbilityDoubleJump, ['executeDoubleJump']);
     installKnownMethods(targetClass, AbilityAirDash, ['beginAirDashCharge', 'releaseAirDash']);
-    installKnownMethods(targetClass, AbilityHover, ['beginHoverCharge', 'updateHover', 'releaseHover']);
     installKnownMethods(targetClass, AbilityDash, ['beginDashCharge', 'releaseDash']);
     installKnownMethods(targetClass, AbilityStomp, ['beginStompCharge', 'releaseStomp']);
     installKnownMethods(targetClass, AbilityShockwaveDive, ['beginShockwaveCharge', 'releaseShockwave']);

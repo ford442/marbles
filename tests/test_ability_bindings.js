@@ -72,6 +72,60 @@ function testHostsNoLongerBranchOnAbilityKeys() {
     }
 }
 
+function testHoverIsRegistryOwned() {
+    const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    for (const rel of ['src/game-loop/frame-input.js', 'src/game-loop/logic.js']) {
+        assert.ok(!/hoverBarEl/.test(read(rel)), `${rel} must not paint #hover; the registry hudSlot does`);
+    }
+    assert.ok(!/KeyH|isHovering|hoverCharge/.test(read('src/game-loop/frame-input.js')), 'frame-input.js no longer special-cases hover');
+    assert.ok(!/getMarblePhysics/.test(read('src/abilities/hover.js')), 'hover is not a wasm-bridge kernel');
+
+    const def = ABILITY_REGISTRY.hover;
+    assert.equal(def.hudSlot?.barKey, 'hoverBarEl');
+    assert.equal(def.hudSlot?.mode, 'energy');
+    assert.equal(typeof def.tick, 'function', 'hover advances on the fixed step');
+
+    // The step loop ticks the registry before every physics step, both backends.
+    const sync = read('src/game-loop/sync.js');
+    assert.equal((sync.match(/abilitySystem\?\.tickFixedStep\(/g) ?? []).length, 2, 'sync.js ticks in the worker and main-thread branches');
+}
+
+function testHoverRunsOnFixedStepAndDrivesTheBar() {
+    const { game, system } = mockGame({
+        playerMarble: { rigidBody: fakeBody() },
+        hoverBarEl: { style: {} },
+        hoverBarContainerEl: { style: {}, },
+    });
+    system.handleKeyDown('KeyH');
+    assert.equal(game.hoverActive, true);
+    system.tickFixedStep(1 / 60);
+    assert.ok(game.hoverEnergy < 100 && game.hoverEnergy > 99, `one step drains ~0.83 (got ${game.hoverEnergy})`);
+    system.tickHudBars(0, true);
+    assert.equal(game.hoverBarEl.style.width, `${game.hoverEnergy}%`, 'bar shows energy through the registry hudSlot');
+    assert.equal(game.hoverBarEl.style.boxShadow, '0 0 10px #00ffcc', 'bar glows while hovering');
+    system.handleKeyUp('KeyH');
+    system.tickHudBars(0, true);
+    assert.equal(game.hoverBarEl.style.boxShadow, 'none');
+
+    // Disabled by a level mask: no tick, no drain or regen.
+    system.applyLevelMask({ enabled: ['jump'] });
+    const before = game.hoverEnergy;
+    system.tickFixedStep(1 / 60);
+    assert.equal(game.hoverEnergy, before);
+}
+
+/** Enough of a Rapier body for hover: mass, gravity scale, velocity and impulses. */
+function fakeBody() {
+    let gravityScale = 1;
+    return {
+        mass: () => 1,
+        gravityScale: () => gravityScale,
+        setGravityScale: (s) => { gravityScale = s; },
+        linvel: () => ({ x: 0, y: 0, z: 0 }),
+        applyImpulse() {},
+    };
+}
+
 function testMapsNameOnlyRegisteredAbilities() {
     const dir = path.join(ROOT, 'assets', 'maps');
     for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.json'))) {
@@ -95,6 +149,10 @@ function mockGame(extra = {}) {
         spawnBuildPiece: (piece) => calls.push(`build:${piece}`),
         startGrappleRaw: () => calls.push('grapple:start'),
         stopGrappleRaw: () => calls.push('grapple:stop'),
+        hoverActive: false,
+        hoverEnergy: 100,
+        maxHoverEnergy: 100,
+        hoverSavedGravity: null,
         lastAirDashTime: 0,
         airDashCooldown: 2000,
         lastTeleportTime: 0,
@@ -193,6 +251,8 @@ testNoBindingConflicts();
 testHostsNoLongerBranchOnAbilityKeys();
 testMapsNameOnlyRegisteredAbilities();
 testHoldDispatchAndRepeat();
+testHoverIsRegistryOwned();
+testHoverRunsOnFixedStepAndDrivesTheBar();
 testMasksBlockEveryTrigger();
 testMaskChangeReleasesHeld();
 testChargeEdgesAndCooldown();
