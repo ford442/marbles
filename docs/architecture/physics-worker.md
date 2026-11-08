@@ -37,7 +37,7 @@ Requires cross-origin isolation (COOP/COEP). See [`vite.config.js`](../../vite.c
 | Map editor (`?editor=1`) | Live body creation / inspection not wired through worker |
 | Dev-only levels (`?devLevels=1` entries not in manifest) | Opt-in spike scope; use manifest levels for worker A/B |
 
-All **24 manifest** levels (`assets/manifest.json`) are worker-eligible. Fallback to main thread on worker `INIT_ERROR` is unchanged. There is no settings-pane toggle yet; the URL flag is the only override.
+All **44 manifest** levels (`assets/manifest.json`) are worker-eligible. Fallback to main thread on worker `INIT_ERROR` is unchanged. There is no settings-pane toggle yet; the URL flag is the only override.
 
 **Party Race limitation:** `HostSim` (`src/game/network/host-sim.js`) stays on main-thread Rapier until a dedicated issue moves it into the worker (or a headless Option C). Default-on does **not** apply to Party Race or `?hostAuth=1`.
 
@@ -171,6 +171,6 @@ Record `window.perfMonitor.getLevelSummary()` and `latestSyncWork.physicsStepMs`
 - Map editor worker integration
 - Body-index reuse (free list) so long sessions cannot exhaust `MAX_BODIES`
 - Settings-pane toggle for the worker
-- Real-GPU soak of all 24 manifest ids (`docs/PERFORMANCE_BASELINE.md`)
+- Real-GPU soak of all 44 manifest ids (`docs/PERFORMANCE_BASELINE.md`)
 - Party Race / `HostSim` in worker (separate issue)
 - `RenderPipeline` extraction (Phase B)

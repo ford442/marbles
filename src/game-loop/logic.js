@@ -546,25 +546,6 @@ export class GameLoopLogic {
 
                 // Repel other dynamic bodies
                 applyRepelPulse(this, radius, 0.5, 0)
-                const playerRb = this.playerMarble.rigidBody
-                for (const body of this.dynamicBodies) {
-                    if (body === playerRb) continue
-
-                    const bodyPos = body.translation()
-                    const dx = bodyPos.x - playerPos.x
-                    const dy = bodyPos.y - playerPos.y
-                    const dz = bodyPos.z - playerPos.z
-                    const distSq = dx * dx + dy * dy + dz * dz
-
-                    if (distSq < radius * radius && distSq > 0.001) {
-                        const dist = Math.sqrt(distSq)
-                        const fx = (dx / dist) * force * body.mass()
-                        const fy = (dy / dist) * force * body.mass()
-                        const fz = (dz / dist) * force * body.mass()
-
-                        body.applyImpulse({ x: fx * step, y: fy * step, z: fz * step }, true)
-                    }
-                }
 
                 // Create or update Violet Light Entity
                 if (!this.violetLightEntity) {
