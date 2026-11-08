@@ -8,5 +8,9 @@ export function createRenderState() {
         material: null,
         cubeMesh: null,
         cueInst: null,
+        speedLinesCanvas: null,
+        speedLinesCtx: null,
+        speedLinesLines: [],
+        speedLinesIntensity: 0,
     };
 }

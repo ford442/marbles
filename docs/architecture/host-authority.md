@@ -97,8 +97,8 @@ Expect relay to remain responsive on localhost; watch for `ROOM_FULL` or `BAD_ME
 
 ## Option C (future)
 
-A Rust/C++ or Node headless Rapier service aligns with the existing [`wasm/`](../../wasm/) numeric kernel direction but is **out of scope** for Phase 3 spike. Re-evaluate when ranked seasons (Phase 4) require persistent authoritative sims.
+A headless Node or native Rapier service (`@dimforge/rapier3d-compat` or upstream Rapier) is the escape hatch. It would be a **separate service**, not new code in [`wasm/marble_physics.cpp`](../../wasm/marble_physics.cpp), which only holds batched float kernels. It is **out of scope** for the Phase 3 spike. Re-evaluate when ranked seasons (Phase 4) require persistent authoritative sims.
 
 ## Physics worker interaction
 
-The SharedArrayBuffer physics worker is default-on for desktop campaign play ([physics-worker.md](./physics-worker.md)), but Party Race and `?hostAuth=1` are hard-excluded in `shouldUsePhysicsWorker()`: `HostSim` steps the main-thread Rapier world. Moving `HostSim` into the worker (or a headless Option C) needs its own issue; do not route host sim through the worker command ring implicitly.
+The host runs on the same SharedArrayBuffer physics worker as campaign play when the level is in the manifest and the page is cross-origin isolated ([physics-worker.md](./physics-worker.md#party-race-host-sim)). `HostSim` does not step: it enqueues each player's latest input as impulses and reads the network marbles' poses back from snapshots. The worker's 120 Hz `FixedStepClock` is the only host clock. With `?physicsWorker=0` (or no isolation), the host uses main-thread Rapier, still stepped only by the frame loop's clock. Cross-browser determinism remains a non-goal: the host's Rapier WASM build is the authority.

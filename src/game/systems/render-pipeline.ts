@@ -2,7 +2,7 @@ import { GameLoopSyncMethods } from '../../game-loop/sync.js';
 
 /** Game surface the render pipeline drives each frame (the remaining game-loop mixins). */
 export interface RenderPipelineHost {
-    perfMonitor?: { beginFrame(): void } | null;
+    perfMonitor?: { beginFrame(): void; recordCoreWork(stats: Record<string, number>): void } | null;
     _lastRenderTick?: number;
     _lastHudStyleUpdate?: number;
     tickFrameInput(now: number, shouldUpdateHUD: boolean, frameDeltaSec: number, ...tuning: number[]): void;

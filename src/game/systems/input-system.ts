@@ -2,7 +2,7 @@ import type RAPIER from '@dimforge/rapier3d-compat';
 import type { PhysicsQueries } from './physics-queries.ts';
 import { findBestLockOnTarget as findBestLockOnTargetPure, type LockOnTarget } from './input-target-lock.ts';
 import type { CameraState, InputState, PhysicsState } from '../../types/game-state.ts';
-import type { FilamentHandle } from '../../types/filament.ts';
+import type { FilamentHandle, FilamentModule } from '../../types/filament.ts';
 
 /** Marble as the input system sees it: a Rapier body plus an optional render scale. */
 export interface InputMarble extends LockOnTarget {
@@ -29,7 +29,8 @@ export interface InputSystemHost extends
     playerMarble: InputMarble | null;
     view?: FilamentHandle;
     camera?: FilamentHandle;
-    Filament?: FilamentHandle;
+    /** Same required module handle as `PhysicsWorldHost.Filament`, so `GameHost` agrees on it. */
+    Filament: FilamentModule;
     getMouseSensitivity?(): number;
     startGrapple(): void;
     stopGrapple(): void;

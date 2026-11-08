@@ -15,7 +15,7 @@ export interface TransformSyncOwner {
     _lastTransformSync?: {
         x: number; y: number; z: number
         rx: number; ry: number; rz: number; rw: number
-        scaleKey: number
+        scaleKey: number | string
     }
 }
 
@@ -37,7 +37,7 @@ export function getCachedTransformInstance(
     return owner._transformInst
 }
 
-export function transformChanged(owner: TransformSyncOwner, t: Vec3, r: Quat, scaleKey = 1): boolean {
+export function transformChanged(owner: TransformSyncOwner, t: Vec3, r: Quat, scaleKey: number | string = 1): boolean {
     if (owner._forceTransformSync) {
         owner._forceTransformSync = false
         return true

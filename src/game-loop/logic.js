@@ -1,3 +1,5 @@
+// @ts-check
+/** @typedef {import('../types/frame-host.ts').FrameHost} FrameHost */
 import { audio } from '../audio.js';
 import { quaternionToMat4 } from '../math.ts';
 import { tickLevelBehaviors } from '../game/level-behaviors/index.js';
@@ -11,12 +13,15 @@ const GRAVITY = 9.81;
 /**
  * Fraction to move toward a target this frame for a smoothing filter tuned as
  * "`perFrame` of the remaining distance per 1/60 s".
+ * @param {number} perFrame
+ * @param {number} meter - frames' worth of wall time this frame
  */
 function blendPerFrame(perFrame, meter) {
     return 1 - Math.pow(1 - perFrame, meter)
 }
 
 export class GameLoopLogic {
+    /** @this {FrameHost} */
     updateGameState() {
         // Skip game updates when paused (but keep polling for pause toggle)
         if (this.isPaused) {
@@ -211,8 +216,8 @@ export class GameLoopLogic {
                 const playerRb = this.playerMarble ? this.playerMarble.rigidBody : null
                 for (const body of this.dynamicBodies) {
                     if (body !== playerRb) {
-                        if (this.timeStopSavedStates.has(body.handle)) {
-                            const state = this.timeStopSavedStates.get(body.handle)
+                        const state = this.timeStopSavedStates.get(body.handle)
+                        if (state) {
                             body.setLinvel(state.linvel, true)
                             body.setAngvel(state.angvel, true)
                             this.timeStopSavedStates.delete(body.handle)
@@ -335,10 +340,11 @@ export class GameLoopLogic {
                 this._rewindHead = (this._rewindHead - 1 + this.maxRewindFrames) % this.maxRewindFrames
                 const base = this._rewindHead * 13
                 const buf = this._rewindBuffer
-                this.playerMarble.rigidBody.setTranslation({ x: buf[base],     y: buf[base + 1], z: buf[base + 2] }, true)
-                this.playerMarble.rigidBody.setRotation(   { x: buf[base + 3], y: buf[base + 4], z: buf[base + 5], w: buf[base + 6] }, true)
-                this.playerMarble.rigidBody.setLinvel(     { x: buf[base + 7], y: buf[base + 8], z: buf[base + 9] }, true)
-                this.playerMarble.rigidBody.setAngvel(     { x: buf[base + 10], y: buf[base + 11], z: buf[base + 12] }, true)
+                const at = (/** @type {number} */ i) => buf[base + i] ?? 0
+                this.playerMarble.rigidBody.setTranslation({ x: at(0), y: at(1), z: at(2) }, true)
+                this.playerMarble.rigidBody.setRotation(   { x: at(3), y: at(4), z: at(5), w: at(6) }, true)
+                this.playerMarble.rigidBody.setLinvel(     { x: at(7), y: at(8), z: at(9) }, true)
+                this.playerMarble.rigidBody.setAngvel(     { x: at(10), y: at(11), z: at(12) }, true)
 
                 // Visual effect for rewind
                 const rcm = this.engine.getRenderableManager()
@@ -685,9 +691,9 @@ export class GameLoopLogic {
                         forceStrength, 1.0, 0.2, range, 1.0
                     );
                     body.applyImpulse({
-                        x: scalarBuf[0],
-                        y: scalarBuf[1] + 20.0,
-                        z: scalarBuf[2]
+                        x: scalarBuf[0] ?? 0,
+                        y: (scalarBuf[1] ?? 0) + 20.0,
+                        z: scalarBuf[2] ?? 0
                     }, true);
                 }
             }
@@ -696,24 +702,9 @@ export class GameLoopLogic {
             if (!this.cameraShake) this.cameraShake = { x: 0, y: 0, z: 0 };
             this.cameraShake.y += 2.0; // intense vertical shake
 
-            if (audio && audio.playImpact) audio.playImpact();
-        }
-
-        if (this.hoverActive && this.hoverEnergy > 0) {
-            if (this.playerMarble) {
-                const rb = this.playerMarble.rigidBody
-                const linvel = rb.linvel()
-                const gravityDir = rb.gravityScale() < 0 ? -1 : 1
-                if ((gravityDir > 0 && linvel.y < 0) || (gravityDir < 0 && linvel.y > 0)) {
-                    rb.setLinvel({ x: linvel.x, y: 0, z: linvel.z }, true)
-                }
-                applyAcceleration(rb, { x: 0, y: GRAVITY * gravityDir, z: 0 }, simDt)
-            }
-            this.hoverEnergy = Math.max(0, this.hoverEnergy - 0.5 * meter)
-        } else {
-            if (grounded) {
-                this.hoverEnergy = Math.min(this.maxHoverEnergy, this.hoverEnergy + 0.2 * meter)
-            }
+            // `audio` has no playImpact today; the guard keeps this a no-op until it does.
+            const impactAudio = /** @type {{ playImpact?: () => void }} */ (/** @type {unknown} */ (audio))
+            impactAudio.playImpact?.();
         }
 
         // Passive Double Jump Reset
@@ -781,12 +772,14 @@ export class GameLoopLogic {
                 const pos = rb.translation()
                 const linvel = rb.linvel()
                 // Spawn exhaust particles
-                if (this.frameCount % 2 === 0) {
+                // `frameCount` is never initialised or advanced anywhere, so (as before
+                // the type check) neither the exhaust nor the thrust sound fires.
+                if (this.frameCount !== undefined && this.frameCount % 2 === 0) {
                     this.spawnJetpackExhaust(pos, linvel)
                 }
 
                 // Play continuous thrust sound
-                if (this.frameCount % 5 === 0 && audio && audio.playBoost) {
+                if (this.frameCount !== undefined && this.frameCount % 5 === 0 && audio && audio.playBoost) {
                     // We could add a specialized loop sound, but boosting repeatedly gives a sputtering jet effect
                     audio.playBoost()
                 }
@@ -815,16 +808,6 @@ export class GameLoopLogic {
             }
         }
 
-        if (this.hoverBarEl) {
-            const pct = (this.hoverEnergy / this.maxHoverEnergy) * 100
-            this.hoverBarEl.style.width = `${pct}%`
-            if (this.hoverActive && this.hoverEnergy > 0) {
-                this.hoverBarEl.style.boxShadow = '0 0 10px #00ffcc'
-            } else {
-                this.hoverBarEl.style.boxShadow = 'none'
-            }
-        }
-
         if (this.gliderBarEl && this.gliderBarContainerEl) {
             const pct = (this.gliderEnergy / this.maxGliderEnergy) * 100
             this.gliderBarEl.style.width = `${pct}%`
@@ -842,18 +825,22 @@ export class GameLoopLogic {
             }
         }
 
-        // Gravity Flip Logic
+        // Gravity Flip Logic. This block re-asserts the marble's gravity scale
+        // every frame, so it must leave the scale alone while hover owns it
+        // (abilities/hover.js lowers it on the fixed step and restores it on
+        // release; a flip toggled mid-hover takes effect once hover ends).
+        const hoverOwnsGravity = this.hoverActive
         if (this.flipActive && this.flipEnergy > 0 && this.playerMarble) {
             this.flipEnergy = Math.max(0, this.flipEnergy - 0.5 * meter)
-            this.playerMarble.rigidBody.setGravityScale(-this.playerMarble.baseGravityScale, true)
+            if (!hoverOwnsGravity) this.playerMarble.rigidBody.setGravityScale(-this.playerMarble.baseGravityScale, true)
         } else if (this.flipActive && this.flipEnergy <= 0) {
             this.flipActive = false
-            if (this.playerMarble) {
+            if (this.playerMarble && !hoverOwnsGravity) {
                 this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
             }
         } else if (!this.flipActive) {
             this.flipEnergy = Math.min(this.maxFlipEnergy, this.flipEnergy + 0.2 * meter)
-            if (this.playerMarble) {
+            if (this.playerMarble && !hoverOwnsGravity) {
                 this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
             }
         }
@@ -882,7 +869,7 @@ export class GameLoopLogic {
             if (!this.wasPhasing) {
                 this.wasPhasing = true
                 // Set collision group to 1, ignore group 2
-                this.playerMarble.collider.setCollisionGroups(0x0001FFFD)
+                this.playerMarble.collider?.setCollisionGroups(0x0001FFFD)
 
                 // Visual feedback - tint purple
                 const rcm = this.engine.getRenderableManager()

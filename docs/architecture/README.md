@@ -6,7 +6,7 @@ Phased migration from mixin-assembled `MarblesGame` toward composable subsystems
 
 | Concern | Canonical home | Mixin bridge (deprecated) | Notes |
 |---------|----------------|---------------------------|-------|
-| Entry / wiring | `src/main.js` | — | Creates state/subsystems, installs closed compatibility lists, boots `init()` |
+| Entry / wiring | `src/main.js` | — | Creates state, calls `createRuntime(host)` (`src/game/create-runtime.ts`, typed against `GameHost` in `src/types/game-host.ts`), installs closed compatibility lists, boots `init()` |
 | Grouped state | `src/game/state/` | `this.*` mirrors via `bindGameState()` | physics, abilities, level, camera, input, hud, render |
 | Pure game logic | `src/game/systems/` | — | Unit-testable without Filament |
 | Zones (geometry) | `src/zones/` + `zone-setup/registry.js` | `zones/methods/` primitives | See `docs/PROJECT_STRUCTURE.md` |

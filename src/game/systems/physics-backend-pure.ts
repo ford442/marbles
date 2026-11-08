@@ -9,8 +9,11 @@ export interface PhysicsWorkerOptions {
     search?: string;
     crossOriginIsolated?: boolean;
     hasSharedArrayBuffer?: boolean;
+    /** Party Race. No longer an exclusion: HostSim queues inputs, the worker clock steps. */
     multiplayerMode?: boolean;
+    /** `?hostAuth=1`. No longer an exclusion (see `multiplayerMode`). */
     hostAuthorityMode?: boolean;
+    /** Map editor (`?editor=1`): stays main-thread — live body editing is not proxied. */
     editorMode?: boolean;
     levelId?: string | null;
     /** From `detectPlatformProfile().prefersLowPower` (mobile or <=4 cores). */
@@ -22,8 +25,6 @@ export function shouldUsePhysicsWorker(options: PhysicsWorkerOptions = {}): bool
         search = '',
         crossOriginIsolated = false,
         hasSharedArrayBuffer = false,
-        multiplayerMode = false,
-        hostAuthorityMode = false,
         editorMode = false,
         levelId = null,
         lowPowerDevice = false,
@@ -35,7 +36,12 @@ export function shouldUsePhysicsWorker(options: PhysicsWorkerOptions = {}): bool
     if (flag === '0') return false;
     if (flag !== '1' && lowPowerDevice) return false;
     if (!crossOriginIsolated || !hasSharedArrayBuffer) return false;
-    if (multiplayerMode || hostAuthorityMode || editorMode) return false;
+    // Main-thread by design (not routed through the ring):
+    //   - the map editor creates and edits bodies live on the main world;
+    //   - non-manifest levels (`?devLevels=1` sandbox) are not soaked on the worker.
+    // Party Race / `?hostAuth=1` are eligible: HostSim only enqueues inputs and
+    // reads snapshots; the worker's fixed-step clock is the one host clock.
+    if (editorMode) return false;
     if (levelId != null && !isManifestLevel(levelId)) return false;
     return true;
 }

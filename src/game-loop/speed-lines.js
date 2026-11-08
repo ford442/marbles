@@ -1,36 +1,43 @@
-export class GameLoopSpeedLines {
-    // Speed lines configuration
-    SPEED_THRESHOLD = 15.0
-    SPEED_MAX = 30.0
-    speedLinesIntensity = 0.0
-    speedLinesCanvas = null
-    speedLinesCtx = null
-    speedLinesLines = []
+// @ts-check
+/** @typedef {import('../types/frame-host.ts').FrameHost} FrameHost */
 
+// Speed lines configuration. These used to be class fields, but
+// `installKnownMethods` copies methods only, so on the game object they were
+// `undefined` (`speed > undefined` never held and the overlay never showed).
+// The canvas/context/lines/intensity state now lives in `RenderState`.
+const SPEED_THRESHOLD = 15.0
+const SPEED_MAX = 30.0
+
+export class GameLoopSpeedLines {
+    /** @this {FrameHost} */
     initSpeedLines() {
-        this.speedLinesCanvas = document.getElementById('speedlines-canvas')
+        this.speedLinesCanvas = /** @type {HTMLCanvasElement | null} */ (document.getElementById('speedlines-canvas'))
         if (!this.speedLinesCanvas) return
         
         this.speedLinesCtx = this.speedLinesCanvas.getContext('2d')
         this.resizeSpeedLinesCanvas()
         
         // Initialize random lines for speed effect
-        this.speedLinesLines = []
+        /** @type {import('../types/game-state.ts').SpeedLine[]} */
+        const lines = []
         const numLines = 80
         for (let i = 0; i < numLines; i++) {
-            this.speedLinesLines.push(this.createSpeedLine())
+            lines.push(this.createSpeedLine())
         }
+        this.speedLinesLines = lines
         
         // Handle resize
         window.addEventListener('resize', () => this.resizeSpeedLinesCanvas())
     }
 
+    /** @this {FrameHost} */
     resizeSpeedLinesCanvas() {
         if (!this.speedLinesCanvas) return
         this.speedLinesCanvas.width = window.innerWidth
         this.speedLinesCanvas.height = window.innerHeight
     }
 
+    /** @this {FrameHost} */
     createSpeedLine() {
         return {
             x: Math.random() - 0.5,
@@ -42,6 +49,10 @@ export class GameLoopSpeedLines {
         }
     }
 
+    /**
+     * @this {FrameHost}
+     * @param {number} speed - player speed (m/s)
+     */
     updateSpeedLines(speed) {
         // Guard against NaN or undefined speed
         if (!isFinite(speed)) {
@@ -50,8 +61,8 @@ export class GameLoopSpeedLines {
         
         // Calculate target intensity based on speed
         let targetIntensity = 0
-        if (speed > this.SPEED_THRESHOLD) {
-            targetIntensity = Math.min(1.0, (speed - this.SPEED_THRESHOLD) / (this.SPEED_MAX - this.SPEED_THRESHOLD))
+        if (speed > SPEED_THRESHOLD) {
+            targetIntensity = Math.min(1.0, (speed - SPEED_THRESHOLD) / (SPEED_MAX - SPEED_THRESHOLD))
         }
         
         // Smooth fade in/out
@@ -63,6 +74,7 @@ export class GameLoopSpeedLines {
         }
     }
 
+    /** @this {FrameHost} */
     renderSpeedLines() {
         if (!this.speedLinesCtx || !this.speedLinesCanvas || this.speedLinesIntensity <= 0.01) return
         
@@ -101,6 +113,7 @@ export class GameLoopSpeedLines {
         
         for (let i = 0; i < numActiveLines; i++) {
             const line = this.speedLinesLines[i]
+            if (!line) continue
             
             // Calculate position from center
             const distance = 0.1 + (i / numActiveLines) * 0.9

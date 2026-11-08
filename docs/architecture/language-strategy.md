@@ -58,7 +58,7 @@ The repo mixes JavaScript mixins, strict TypeScript config (unused on game JS), 
 
 **Keep unchecked `.js` (for now) for:**
 
-- Filament-heavy runtime slices: `game-loop/sync.js` (last to migrate) and the other mixin-installed `game-loop/*`, `init/*`, `game-logic/*`, `zone-setup/*` files.
+- Filament-heavy runtime slices: `game-loop/sync.js` (last to migrate) and the other mixin-installed `init/*`, `game-logic/*`, `zone-setup/*` files.
 - Zone factories (`src/zones/*.js`) — migrate per-zone only when touched for other reasons.
 - Numeric hot-loop WebGPU helpers (`webgpu/camera-math.js`, `occlusion.js`, `gpu-chores/cpu-jobs.js`, …): in `include`, but not `@ts-check` yet — `noUncheckedIndexedAccess` makes typed-array indexing noisy, so opt in per file when touched.
 - `index.html` inline scripts (none planned).
@@ -74,7 +74,8 @@ The repo mixes JavaScript mixins, strict TypeScript config (unused on game JS), 
 | **Slice 4** | `physics-world-pure`, `physics-backend-pure`, `input-target-lock`, network protocol validators | ✅ |
 | **Slice 5** (Sept 2026) | Composed systems → `.ts`: `physics-world`, `input-system`, `render-pipeline`, `level-loader`, `hud-controller`, `ability-system`, `physics-backend`; `game-loop/{helpers,loop}.ts`; `HUDManager` typed against `HudHost`; `@ts-check` on `webgpu/boot-probe.js` and `webgpu/particle-backend.js` (real `GPUDevice`/`GPUCanvasContext` via `@webgpu/types`); `wasm-bridge.js`, `webgpu/**`, `gpu-chores/**` added to `include` | ✅ |
 | **Slice 6** (Oct 2026) | Physics correctness: `physics-queries.ts`, `fixed-step-clock.ts`, `body-impulse.ts`, `types/mixin-host.ts`; `@ts-check` mixins (JSDoc `/** @this {GameMixinHost} */`) on every raycast call site: `abilities/{blink,double-jump,constructs}.js`, `zone-setup/grapple.js`, `game-loop/{camera,effects-tick,frame-input}.js` | ✅ |
-| **Not yet** | `game-loop/sync.js` (Filament-heavy, migrate last), remaining `game-loop/*`, `src/zones/**`, other `@ts-check`-less JS in `webgpu/` and `gpu-chores/` | Type when touched |
+| **Slice 7** (Nov 2026) | Wiring: `types/game-host.ts` (`GameHost` = intersection of the `*Host` interfaces, no index signature) and `game/create-runtime.ts` build the composed systems from it (negative fixture: `game/create-runtime.types-test.ts`). `@ts-check` on `abilities/hover.js` and the frame slices `game-loop/{logic,dynamics-tick,finalize-frame,speed-lines,hud-tick}.js`, typed against `types/frame-host.ts` (`FrameHost`, `HudTickHost`) and `types/world-objects.ts`. | ✅ |
+| **Not yet** | `game-loop/sync.js` (Filament-heavy, migrate last), remaining `game-loop/*` (`camera.js`, `effects-tick.js`, `frame-input.js` and the Slice 7 files are already checked), `src/zones/**`, other `@ts-check`-less JS in `webgpu/` and `gpu-chores/` | Type when touched |
 
 Current `tsconfig.json` `include` (kept in sync with the file — update both together):
 
@@ -96,12 +97,18 @@ Current `tsconfig.json` `include` (kept in sync with the file — update both to
 "src/abilities/registry.js",
 "src/abilities/blink.js",
 "src/abilities/double-jump.js",
+"src/abilities/hover.js",
 "src/abilities/constructs.js",
 "src/zone-setup/grapple.js",
 "src/game-loop/**/*.ts",
 "src/game-loop/camera.js",
 "src/game-loop/effects-tick.js",
 "src/game-loop/frame-input.js",
+"src/game-loop/logic.js",
+"src/game-loop/dynamics-tick.js",
+"src/game-loop/finalize-frame.js",
+"src/game-loop/speed-lines.js",
+"src/game-loop/hud-tick.js",
 "src/wasm-bridge.js",
 "src/webgpu/**/*.js",
 "src/gpu-chores/**/*.js"

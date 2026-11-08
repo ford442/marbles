@@ -102,7 +102,7 @@ function testShouldUsePhysicsWorkerDisabledFlags() {
             multiplayerMode: true,
             levelId: 'tutorial',
         }),
-        false,
+        true, // Party Race runs on the worker clock (HostSim only enqueues inputs)
     );
 
     assert.equal(
@@ -113,7 +113,7 @@ function testShouldUsePhysicsWorkerDisabledFlags() {
             hostAuthorityMode: true,
             levelId: 'tutorial',
         }),
-        false,
+        true, // Party Race runs on the worker clock (HostSim only enqueues inputs)
     );
 
     assert.equal(
@@ -149,18 +149,19 @@ function testShouldUsePhysicsWorkerDefaultOn() {
     // Exclusions still apply without the flag.
     assert.equal(shouldUsePhysicsWorker({ ...capable, search: '', crossOriginIsolated: false }), false);
     assert.equal(shouldUsePhysicsWorker({ ...capable, search: '', hasSharedArrayBuffer: false }), false);
-    assert.equal(shouldUsePhysicsWorker({ ...capable, search: '', multiplayerMode: true }), false);
-    assert.equal(shouldUsePhysicsWorker({ ...capable, search: '', hostAuthorityMode: true }), false);
+    assert.equal(shouldUsePhysicsWorker({ ...capable, search: '', multiplayerMode: true }), true);
+    assert.equal(shouldUsePhysicsWorker({ ...capable, search: '', hostAuthorityMode: true }), true);
     assert.equal(shouldUsePhysicsWorker({ ...capable, search: '', editorMode: true }), false);
     assert.equal(shouldUsePhysicsWorker({ ...capable, search: '?devLevels=1', levelId: 'ice_bridges_run' }), false);
 }
 
 function testMaxBodiesGuard() {
-    assert.ok(SNAPSHOT_LAYOUT_VERSION >= 3);
+    assert.ok(SNAPSHOT_LAYOUT_VERSION >= 4);
     assert.equal(MAX_BODIES, 1024);
-    const backend = Object.create(WorkerPhysicsBackend.prototype);
+    const backend = new WorkerPhysicsBackend({});
     backend._nextBodyIndex = MAX_BODIES - 1;
     assert.equal(backend.reserveBodyIndex(), MAX_BODIES - 1);
+    // Every index live (nothing removed / acked): refuse rather than wrap.
     assert.throws(() => backend.reserveBodyIndex(), RangeError);
 }
 

@@ -44,6 +44,7 @@ export function createAbilityState(doc) {
         hoverEnergy: 100,
         maxHoverEnergy: 100,
         hoverActive: false,
+        hoverSavedGravity: null,
         jetpackEnergy: 100,
         maxJetpackEnergy: 100,
         jetpackActive: false,
