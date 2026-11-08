@@ -1,3 +1,9 @@
+import type RAPIER from '@dimforge/rapier3d-compat';
+import type { Vec3 } from './geometry.ts';
+import type {
+    Collectible, DynamicObject, MovingPlatform, Portal, PowerUp, RotatingPlatform,
+} from './world-objects.ts';
+
 /** Mutable trick counters tracked while the player marble is airborne. */
 export interface TrickState {
     airTime: number;
@@ -15,6 +21,9 @@ export interface TrickState {
 export interface ActiveEffects {
     speed: number;
     jump: number;
+    gravity?: number;
+    /** Effect name → expiry (ms epoch); the HUD lists whatever is live. */
+    [effect: string]: number | undefined;
 }
 
 /** Chameleon ability material/gravity profile. */
@@ -35,8 +44,9 @@ export interface MarbleObject {
     initialPos: { x: number; y: number; z: number };
     respawnPos: { x: number; y: number; z: number };
     scoredGoals: Set<unknown>;
-    rigidBody?: unknown;
-    collider?: unknown;
+    rigidBody: RAPIER.RigidBody;
+    collider?: RAPIER.Collider | null;
+    baseGravityScale: number;
     entity?: unknown;
     [key: string]: unknown;
 }
@@ -46,16 +56,16 @@ export interface PhysicsState {
     marbles: MarbleObject[];
     staticBodies: unknown[];
     staticEntities: unknown[];
-    dynamicObjects: unknown[];
-    dynamicBodies: Set<unknown>;
+    dynamicObjects: DynamicObject[];
+    dynamicBodies: Set<RAPIER.RigidBody>;
     checkpoints: unknown[];
-    collectibles: unknown[];
+    collectibles: Collectible[];
     collectibleRotation: number;
-    powerUps: unknown[];
+    powerUps: PowerUp[];
     powerUpRotation: number;
     activeEffects: ActiveEffects;
-    movingPlatforms: unknown[];
-    rotatingPlatforms: unknown[];
+    movingPlatforms: MovingPlatform[];
+    rotatingPlatforms: RotatingPlatform[];
     temporaryPlatforms: unknown[];
     playerMarble: MarbleObject | null;
     visualParticles: unknown[];
@@ -76,8 +86,8 @@ export interface PhysicsState {
     grappleMaxDist: number;
     grappleForce: number;
     isGrappleZipping: boolean;
-    portalA: unknown;
-    portalB: unknown;
+    portalA: Portal | null;
+    portalB: Portal | null;
     lastPortalTeleportTime: number;
     portalCooldown: number;
     nearMisses: Map<unknown, unknown>;
@@ -119,6 +129,8 @@ export interface AbilityState {
     hoverEnergy: number;
     maxHoverEnergy: number;
     hoverActive: boolean;
+    /** Gravity scale hover replaced; non-null while engaged (abilities/hover.js). */
+    hoverSavedGravity: number | null;
     jetpackEnergy: number;
     maxJetpackEnergy: number;
     jetpackActive: boolean;
@@ -151,7 +163,7 @@ export interface AbilityState {
     timeStopEnergy: number;
     maxTimeStopEnergy: number;
     timeStopActive: boolean;
-    timeStopSavedStates: Map<unknown, unknown>;
+    timeStopSavedStates: Map<number, { linvel: Vec3; angvel: Vec3 }>;
     chameleonState: number;
     lastChameleonTime: number;
     chameleonCooldown: number;
@@ -320,11 +332,25 @@ export interface HudState {
 }
 
 /** Filament / engine handles (populated during init). */
+/** One streak of the speed-lines overlay (`createSpeedLine`). */
+export interface SpeedLine {
+    x: number;
+    y: number;
+    length: number;
+    width: number;
+    speed: number;
+    angle: number;
+}
+
 export interface RenderState {
     Filament: unknown;
     material: unknown;
     cubeMesh: unknown;
     cueInst: unknown;
+    speedLinesCanvas: HTMLCanvasElement | null;
+    speedLinesCtx: CanvasRenderingContext2D | null;
+    speedLinesLines: SpeedLine[];
+    speedLinesIntensity: number;
 }
 
 /** Grouped constructor state mirrored onto MarblesGame via bindGameState(). */

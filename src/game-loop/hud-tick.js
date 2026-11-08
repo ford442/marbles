@@ -1,3 +1,5 @@
+// @ts-check
+/** @typedef {import('../types/frame-host.ts').HudTickHost} HudTickHost */
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
 import { quaternionToMat4, quatFromEuler } from '../math.ts';
@@ -14,6 +16,11 @@ import {
 } from './helpers.ts';
 
 export class GameLoopHudTick {
+    /**
+     * @this {HudTickHost}
+     * @param {number} now
+     * @param {boolean} shouldUpdateHUD
+     */
     tickHudCooldownBars(now, shouldUpdateHUD) {
                 if (this.abilitySystem) {
                     this.abilitySystem.tickHudBars(now, shouldUpdateHUD)
@@ -23,7 +30,7 @@ export class GameLoopHudTick {
                 if (shouldUpdateHUD && this.activeEffectsEl) {
                     const active = []
                     for (const [type, endTime] of Object.entries(this.activeEffects)) {
-                        if (now < endTime) {
+                        if (endTime !== undefined && now < endTime) {
                             const timeLeft = Math.ceil((endTime - now) / 1000)
                             active.push(`${type.toUpperCase()}: ${timeLeft}s`)
                         } else {
@@ -47,15 +54,16 @@ export class GameLoopHudTick {
         
                 if (shouldUpdateHUD && this.chameleonBarContainerEl && this.chameleonBarEl) {
                     const timeSinceChameleon = now - this.lastChameleonTime
-                    const profile = this.chameleonProfiles[this.chameleonState]
+                    const color = this.chameleonProfiles[this.chameleonState]?.color ?? [1, 1, 1]
+                    const rgb = `rgb(${color[0] * 255}, ${color[1] * 255}, ${color[2] * 255})`
                     if (timeSinceChameleon < this.chameleonCooldown) {
                         this.chameleonBarContainerEl.style.display = 'block'
                         const pct = (timeSinceChameleon / this.chameleonCooldown) * 100
                         this.chameleonBarEl.style.width = pct + '%'
-                        this.chameleonBarEl.style.background = `rgb(${profile.color[0]*255}, ${profile.color[1]*255}, ${profile.color[2]*255})`
+                        this.chameleonBarEl.style.background = rgb
                     } else {
                         this.chameleonBarEl.style.width = '100%'
-                        this.chameleonBarEl.style.background = `rgb(${profile.color[0]*255}, ${profile.color[1]*255}, ${profile.color[2]*255})`
+                        this.chameleonBarEl.style.background = rgb
                         this.chameleonBarContainerEl.style.display = 'none'
                     }
                 }
@@ -86,7 +94,7 @@ export class GameLoopHudTick {
                 }
         
                 if (shouldUpdateHUD && this.empBarEl) {
-                    const timeSinceEMP = now - this.lastEMPTime
+                    const timeSinceEMP = now - (this.lastEMPTime ?? 0)
                     const progress = Math.min(1.0, timeSinceEMP / this.empCooldown)
                     this.empBarEl.style.width = `${progress * 100}%`
         

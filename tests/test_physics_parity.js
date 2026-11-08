@@ -17,6 +17,8 @@ import { WorkerPhysicsBackend, MainThreadPhysicsBackend } from '../src/game/syst
 import { GamePhysicsQueries } from '../src/game/systems/physics-queries.ts';
 import { FixedStepClock } from '../src/game/systems/fixed-step-clock.ts';
 import { InputSystem } from '../src/game/systems/input-system.ts';
+import { AbilitySystem } from '../src/game/systems/ability-system.ts';
+import { HOVER_DRAIN_PER_SEC, HOVER_GRAVITY_FACTOR, HOVER_LIFT_ACCEL } from '../src/abilities/hover.js';
 import { MarbleRegistry } from '../src/game/systems/marble-registry.js';
 import { AbilityBlink } from '../src/abilities/blink.js';
 import { AbilityDoubleJump } from '../src/abilities/double-jump.js';
@@ -76,6 +78,13 @@ function makeMainHarness() {
             for (let i = 0; i < steps; i++) game.physicsWorld.step();
         },
         setTimeScale(scale) { game.physicsBackend.setTimeScale(scale); },
+        /** `n` whole fixed steps; `before(dt)` is the registry tick `sync.js` runs ahead of each. */
+        fixedSteps(n, before) {
+            for (let i = 0; i < n; i++) {
+                before(game.physicsClock.step);
+                game.physicsWorld.step();
+            }
+        },
         /** Wall time → simulated time through the clock (the main loop's contract). */
         runWallClock(seconds) {
             const clock = game.physicsClock;
@@ -135,6 +144,20 @@ async function makeWorkerHarness() {
             for (let i = 0; i < ticks; i++) tick();
         },
         setTimeScale(scale) { backend.setTimeScale(scale); },
+        /**
+         * `n` fixed steps of the main-thread clock (1/60 s, what `sync.js` ticks
+         * per `physicsSubsteps`). The worker's own clock steps at `physicsHz`
+         * (120), polled once per step, so one main step is `physicsHz * step`
+         * polls; commands queued by `before` drain at the first poll.
+         */
+        fixedSteps(n, before) {
+            const step = game.physicsClock.step;
+            const polls = Math.round(backend.physicsHz * step);
+            for (let i = 0; i < n; i++) {
+                before(step);
+                for (let p = 0; p < polls; p++) tick();
+            }
+        },
         runWallClock(seconds) {
             const clock = sim.getClock();
             const before = clock.simTime;
@@ -302,6 +325,74 @@ function testMissileDoesNotTunnel(h) {
     assert.ok(z < WALL_Z, `${h.name}: 40 m/s missile stopped by the 0.1 m wall (z=${z})`);
 }
 
+/**
+ * Hover runs on the fixed step: engage lowers the gravity scale and arrests the
+ * fall, lift is a mass-independent acceleration, energy drains per step, and
+ * running dry (or release) restores the gravity scale. Identical on both backends.
+ */
+function testHover(h) {
+    resetPlayer(h, { x: 0, y: 15, z: 0 });
+    const rb = h.bodies.player;
+    const g = mixinGame(h, {
+        hoverActive: false, hoverEnergy: 100, maxHoverEnergy: 100, hoverSavedGravity: null,
+    });
+    const system = new AbilitySystem(g);
+    system.init();
+    g.abilitySystem = system;
+    const stepSec = 1 / 60;
+    const tick = (dt) => system.tickFixedStep(dt);
+
+    // Fall for 0.3 s so there is velocity to arrest.
+    h.stepTime(0.3);
+    assert.ok(rb.linvel().y < -2, `${h.name}: falling before hover (vy=${rb.linvel().y})`);
+
+    assert.equal(system.handleKeyDown('KeyH'), true);
+    assert.equal(g.hoverActive, true, `${h.name}: press engages`);
+    assert.equal(g.hoverSavedGravity, null, `${h.name}: gravity untouched until the first fixed step`);
+
+    h.fixedSteps(1, tick);
+    assert.ok(Math.abs(rb.gravityScale() - HOVER_GRAVITY_FACTOR) < 1e-6, `${h.name}: gravity scale lowered on the fixed step`);
+    assert.equal(g.hoverSavedGravity, 1);
+    assert.ok(Math.abs(g.hoverEnergy - (100 - HOVER_DRAIN_PER_SEC * stepSec)) < 1e-9, `${h.name}: one step drains one step of energy`);
+
+    // 30 steps (0.5 s): fall arrested, then a mass-independent slow rise at
+    // (lift - reduced gravity) ≈ 4.02 m/s² on the 724 kg default marble.
+    h.fixedSteps(29, tick);
+    const expectedVy = (HOVER_LIFT_ACCEL - 9.81 * HOVER_GRAVITY_FACTOR) * 30 * stepSec;
+    const vy = rb.linvel().y;
+    assert.ok(Math.abs(vy - expectedVy) < 0.4, `${h.name}: hover rise vy=${vy.toFixed(2)}, want ≈${expectedVy.toFixed(2)}`);
+    const expectedEnergy = 100 - HOVER_DRAIN_PER_SEC * 30 * stepSec;
+    assert.ok(Math.abs(g.hoverEnergy - expectedEnergy) < 1e-6, `${h.name}: energy ${g.hoverEnergy} want ${expectedEnergy}`);
+
+    // Release restores gravity at once and energy regenerates per step.
+    system.handleKeyUp('KeyH');
+    assert.equal(g.hoverActive, false);
+    assert.equal(rb.gravityScale(), 1, `${h.name}: release restores gravity`);
+    const spent = g.hoverEnergy;
+    h.fixedSteps(60, tick);
+    assert.ok(g.hoverEnergy > spent + 20, `${h.name}: energy regenerates (${spent} → ${g.hoverEnergy})`);
+
+    // Held to exhaustion (2 s from full): hover ends itself and gravity returns.
+    g.hoverEnergy = 100;
+    resetPlayer(h, { x: 0, y: 40, z: 0 });
+    system.handleKeyUp('KeyH');
+    system.handleKeyDown('KeyH');
+    h.fixedSteps(125, tick);
+    assert.equal(g.hoverActive, false, `${h.name}: hover ends when energy runs out`);
+    assert.equal(rb.gravityScale(), 1, `${h.name}: gravity restored after exhaustion`);
+    assert.equal(g.hoverSavedGravity, null);
+
+    // Respawn mid-hover clears it.
+    g.hoverEnergy = 100;
+    system.handleKeyUp('KeyH');
+    system.handleKeyDown('KeyH');
+    h.fixedSteps(3, tick);
+    assert.ok(Math.abs(rb.gravityScale() - HOVER_GRAVITY_FACTOR) < 1e-6);
+    new MarbleRegistry(g).resetPlayerAbilityState();
+    assert.equal(g.hoverActive, false, `${h.name}: respawn drops hover`);
+    assert.equal(rb.gravityScale(), 1, `${h.name}: respawn restores gravity`);
+}
+
 function testTimeScale(h) {
     h.setTimeScale(1);
     const normal = h.runWallClock(1);
@@ -332,6 +423,7 @@ const SCENARIOS = [
     testGrappleNeverTargetsCaster,
     testDoubleJump,
     testMissileDoesNotTunnel,
+    testHover,
     testTimeScale,
 ];
 

@@ -48,6 +48,8 @@ loop()                          [loop.ts]
         … particle / platform housekeeping …
         physicsWorld.step() × physicsSubsteps   main thread (prev poses captured before the last)
           — or once in worker mode (flushes commands; the worker steps itself)
+          each step is preceded by abilitySystem.tickFixedStep(step)   registry `tick` hooks (hover);
+          in worker mode the same number of ticks is queued first, then one drain
         processCollisionEvents()
         checkGameLogic()
         marble + entity transform sync   via backend.getRenderTransform() (interpolated)
@@ -69,7 +71,7 @@ The simulation advances in **fixed steps** regardless of display refresh rate; t
 Rules that follow from it:
 
 1. **Time-based state uses seconds.** Per-frame code reads `this.frameDt` (wall seconds, for UI/meters/cameras) or `this.simDt` (simulated seconds this frame, for anything that feeds physics). No frame-count counters, and no hard-coded `dt = 0.016`. Legacy per-frame constants are kept by scaling with `frameDt · 60` / `simDt · 60`.
-2. **Forces are applied once per frame, before the substeps**, so they must be expressed as velocity change: use `applyVelocityChange(rb, dv)` for instantaneous Δv (jumps, launches) and `applyAcceleration(rb, a, simDt)` for continuous forces (hover, springs, jetpack) from `game/systems/body-impulse.ts`. Both multiply by the body's mass — a raw `applyImpulse` with a hand-tuned constant does nothing on the ~724 kg default marble.
+2. **Forces are applied once per frame, before the substeps** (`updateGameState`, `tickFrameInput`), so they must be expressed as velocity change: use `applyVelocityChange(rb, dv)` for instantaneous Δv (jumps, launches) and `applyAcceleration(rb, a, simDt)` for continuous forces (hover, springs, jetpack) from `game/systems/body-impulse.ts`. Both multiply by the body's mass — a raw `applyImpulse` with a hand-tuned constant does nothing on the ~724 kg default marble. State that must advance on the simulation clock itself (hover's energy, gravity scale and lift) belongs in a registry **`tick(game, dt)`** hook instead: `AbilitySystem.tickFixedStep(dt)` runs it once per fixed step in `sync.js`, in both backends, and it must not read velocities each tick (the worker's `linvel()` is a published snapshot, one step behind).
 3. **Fast bodies use CCD.** Player/rival marbles, missiles and bombs set `setCcdEnabled(true)` (serialized as `ccd: true` for the worker) so they cannot tunnel through thin walls within a step.
 4. **Raycasts go through `this.physicsQueries`** (`castRay(origin, dir, maxToi, { excludeBody, solid, groups, excludeSensors })` → `RayHit | null`). Always pass `excludeBody` when casting from inside a body. Direct `world.castRay` is lint-forbidden outside `physics-queries.ts` / `physics-backend.ts`.
 5. **Rewind / per-step recorders** only record on frames where `physicsSubsteps > 0`.

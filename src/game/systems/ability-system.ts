@@ -11,11 +11,20 @@ import {
     isCooldownReady,
 } from './ability-cooldown.ts';
 
+/** Bar glow while an ability's `hudSlot.activeWhen` holds, unless the slot sets `activeGlow`. */
+const DEFAULT_ACTIVE_GLOW = '0 0 10px #aa00ff';
+
+/** Registry abilities that declare a fixed-step `tick` hook. */
+const TICKING_DEFS: readonly AbilityDefinition[] = ALL_ABILITY_IDS
+    .map((id) => getAbilityDefinition(id))
+    .filter((def): def is AbilityDefinition => typeof def?.tick === 'function');
+
 /**
- * The slice of the game runtime `AbilitySystem` uses. Cooldown, energy, and HUD
- * element fields are looked up by the key names each registry entry declares
- * (`lastUseKey`, `energyKey`, `barKey`, …), hence the index signature; the
- * registry hooks receive the whole game.
+ * The slice of the game runtime `AbilitySystem` uses directly. Cooldown,
+ * energy, and HUD element fields are looked up by the key names each registry
+ * entry declares (`lastUseKey`, `energyKey`, `barKey`, …); that dynamic access
+ * goes through `AbilitySystem#state`, so this interface has no index signature
+ * and composes into `GameHost`. The registry hooks receive the whole game.
  */
 export interface AbilityHost {
     playerMarble?: unknown;
@@ -27,7 +36,6 @@ export interface AbilityHost {
         markAbilityUsed(id: string): void;
         abilityElements: Map<string, HTMLElement>;
     } | null;
-    [stateKey: string]: unknown;
 }
 
 /** What `tickHudIcons` needs from the HUD. */
@@ -57,16 +65,24 @@ export class AbilitySystem {
         this._chargeDown = new Set();
     }
 
+    /**
+     * The game's fields addressed by registry key name (`lastUseKey`, `barKey`,
+     * …). The one place the typed host is widened to a string-keyed record.
+     */
+    private get state(): Record<string, unknown> {
+        return this.game as unknown as Record<string, unknown>;
+    }
+
     /** Numeric game field named by a registry key, or `undefined` when unset / not a number. */
     private _num(key: string | undefined): number | undefined {
         if (!key) return undefined;
-        const value = this.game[key];
+        const value = this.state[key];
         return typeof value === 'number' ? value : undefined;
     }
 
     /** HUD element stored on the game under a registry key. */
     private _el(key: string | undefined): HTMLElement | null {
-        return key ? (this.game[key] as HTMLElement | null | undefined) ?? null : null;
+        return key ? (this.state[key] as HTMLElement | null | undefined) ?? null : null;
     }
 
     /** Effective cooldown for a definition: the game's per-level override, else the registry default. */
@@ -241,6 +257,19 @@ export class AbilitySystem {
         }
     }
 
+    /**
+     * Run every enabled ability's `tick` hook for one fixed physics step.
+     * Call once per `FixedStepClock` step, before `PhysicsWorld.step()`, in both
+     * the main-thread and worker backends (the worker applies the queued
+     * commands on its own steps; the simulated time per frame matches).
+     */
+    tickFixedStep(dt: number): void {
+        if (!(dt > 0)) return;
+        for (const def of TICKING_DEFS) {
+            if (this.isEnabled(def.id)) def.tick?.(this.game, dt);
+        }
+    }
+
     /** Fire a `press` ability: enabled, marble present if needed, off cooldown, enough energy. */
     tryActivate(id: string, dt?: number): boolean {
         const def = getAbilityDefinition(id);
@@ -254,7 +283,7 @@ export class AbilitySystem {
         if (def.energyKey && def.energyCost) {
             const energy = this._num(def.energyKey) ?? 0;
             if (energy < def.energyCost) return false;
-            game[def.energyKey] = energy - def.energyCost;
+            this.state[def.energyKey] = energy - def.energyCost;
         }
 
         const result = def.activate(game, dt);
@@ -294,6 +323,11 @@ export class AbilitySystem {
                 const energy = this._num(def.energyKey) ?? 0;
                 const max = this._num(def.maxEnergyKey) ?? 100;
                 barEl.style.width = `${(energy / max) * 100}%`;
+                if (def.hudSlot.activeWhen) {
+                    barEl.style.boxShadow = this._resolvePath(def.hudSlot.activeWhen) > 0
+                        ? def.hudSlot.activeGlow ?? DEFAULT_ACTIVE_GLOW
+                        : 'none';
+                }
                 continue;
             }
 
@@ -315,7 +349,7 @@ export class AbilitySystem {
                         containerEl.style.display = active > 0 || progress < 1 ? 'block' : 'none';
                     }
                     if (active > 0) {
-                        barEl.style.boxShadow = '0 0 10px #aa00ff';
+                        barEl.style.boxShadow = def.hudSlot.activeGlow ?? DEFAULT_ACTIVE_GLOW;
                     } else {
                         barEl.style.boxShadow = 'none';
                     }
@@ -351,8 +385,8 @@ export class AbilitySystem {
 
     _syncCooldownDefaults(): void {
         for (const def of Object.values<AbilityDefinition>(ABILITY_REGISTRY)) {
-            if (def.cooldownSec && def.cooldownKey && this.game[def.cooldownKey] === undefined) {
-                this.game[def.cooldownKey] = def.cooldownSec * 1000;
+            if (def.cooldownSec && def.cooldownKey && this.state[def.cooldownKey] === undefined) {
+                this.state[def.cooldownKey] = def.cooldownSec * 1000;
             }
         }
     }
@@ -394,6 +428,7 @@ export class AbilitySystem {
         for (const part of path.split('.')) {
             value = (value as Record<string, unknown> | null | undefined)?.[part];
         }
+        if (typeof value === 'boolean') return value ? 1 : 0;
         return typeof value === 'number' ? value : 0;
     }
 }

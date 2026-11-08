@@ -17,19 +17,8 @@ import { EffectPoolManager } from './effect-pool.js';
 import { AutoQualityGovernor } from './auto-quality-governor.js';
 import { LevelEffectBudget } from './level-effect-budget.js';
 import { LightingBudgetManager } from './lighting-budget.js';
-import { AbilitySystem } from './game/systems/ability-system.ts';
-import { PhysicsWorld } from './game/systems/physics-world.ts';
-import { GamePhysicsQueries } from './game/systems/physics-queries.ts';
 import { FixedStepClock } from './game/systems/fixed-step-clock.ts';
-import { InputSystem } from './game/systems/input-system.ts';
-import { MarbleRegistry } from './game/systems/marble-registry.js';
-import { RenderPipeline } from './game/systems/render-pipeline.ts';
-import { HudController } from './game/systems/hud-controller.ts';
-import { LevelLoader } from './game/systems/level-loader.ts';
-import { InitLevelLoader } from './init/level-loader.js';
-import { InitCleanup } from './init/cleanup.js';
-import { assetRegistry } from './assets/AssetRegistry.js';
-import { getLevel } from './levels/catalog.js';
+import { createRuntime } from './game/create-runtime.ts';
 import { registerServiceWorker } from './pwa/register-sw.js';
 import { initInstallPrompt } from './pwa/install-prompt.js';
 import { importSharedWorkshopLevel } from './pwa/share-target.js';
@@ -104,28 +93,14 @@ class MarblesGame {
     constructor() {
         bindGameState(this, createGameState());
 
-        // Fixed-step simulation clock and the single ray-query entry point
-        // (see docs/architecture/game-loop.md).
+        // Fixed-step simulation clock (see docs/architecture/game-loop.md).
         this.physicsClock = new FixedStepClock();
-        this.physicsQueries = new GamePhysicsQueries(this);
 
-        // Phase B composed subsystems
-        this.physicsWorld = new PhysicsWorld(this);
-        this.inputSystem = new InputSystem(this);
-        this.marbleRegistry = new MarbleRegistry(this);
-        this.abilitySystem = new AbilitySystem(this);
-        this.renderPipeline = new RenderPipeline(this, {
-            physicsWorld: this.physicsWorld,
-        });
-        this.levelLoader = new LevelLoader(this, {
-            physicsWorld: this.physicsWorld,
-            marbleRegistry: this.marbleRegistry,
-            assetRegistry,
-            getLevelById: getLevel,
-            runtime: InitLevelLoader.prototype,
-            cleanupRuntime: InitCleanup.prototype,
-        });
-        this.hudController = new HudController(this);
+        // Phase B composed subsystems: physicsQueries, physicsWorld, inputSystem,
+        // marbleRegistry, abilitySystem, renderPipeline, levelLoader and
+        // hudController. Built (and installed on `this`) by a typed module so a
+        // missing host field is a compile error; see game/create-runtime.ts.
+        createRuntime(/** @type {import('./types/game-host.ts').GameHost} */ (/** @type {unknown} */ (this)));
         // Compatibility alias while call sites migrate to the composed owner.
         this.hudManager = this.hudController;
         this.campaignProgress = new CampaignProgress();

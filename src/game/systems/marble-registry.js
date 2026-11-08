@@ -9,6 +9,7 @@ import {
 import { shouldUseMarbleProxyLight, LIGHT_OWNER } from '../../lighting-budget.js';
 import { extractMarbleMaterialFields } from './marble-material-fields.js';
 import { getMarblePhysics } from '../../wasm-bridge.js';
+import { releaseHover } from '../../abilities/hover.js';
 import {
     getSelectedMarbleId,
     resolveSpawnRoster,
@@ -343,7 +344,7 @@ export class MarbleRegistry {
     }
 
     /**
-     * Clear per-life movement/ability state: double-jump, charging jump /
+     * Clear per-life movement/ability state: double-jump, hover, charging jump /
      * stomp / dash / air-dash (restoring gravity they suspended), and any
      * active grapple. Called on respawn, reset and level clear.
      */
@@ -354,6 +355,9 @@ export class MarbleRegistry {
             const base = g.playerMarble.baseGravityScale ?? 1.0;
             rb.setGravityScale(g.flipActive ? -base : base, true);
         }
+
+        if (g.hoverActive || g.hoverSavedGravity != null) releaseHover(g);
+        if (g.maxHoverEnergy) g.hoverEnergy = g.maxHoverEnergy;
 
         g.hasDoubleJumped = false;
         g.jumpCount = 0;

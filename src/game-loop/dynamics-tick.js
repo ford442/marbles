@@ -1,3 +1,5 @@
+// @ts-check
+/** @typedef {import('../types/frame-host.ts').FrameHost} FrameHost */
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
 import { quaternionToMat4, quatFromEuler } from '../math.ts';
@@ -15,6 +17,10 @@ import {
 } from './helpers.ts';
 
 export class GameLoopDynamics {
+    /**
+     * @this {FrameHost}
+     * @param {number} now - wall-clock ms
+     */
     tickSceneDynamics(now) {
                 let culledPowerUps = 0
                 let culledCollectibles = 0
@@ -142,6 +148,7 @@ export class GameLoopDynamics {
                 if (this.collectibles && this.collectibles.length > 0) {
                     for (let i = this.collectibles.length - 1; i >= 0; i--) {
                         const c = this.collectibles[i]
+                        if (!c) continue
                         const bobOffset = this.timeStopActive ? 0 : Math.sin(this.collectibleRotation * 2) * 0.2
                         const newY = c.baseY + bobOffset
         
@@ -209,8 +216,9 @@ export class GameLoopDynamics {
                     comboTimeElapsed = 0
                 }
                 if (comboTimeElapsed > this.maxComboTime && this.combo > 1) {
-                    if (this.bankedTrickScore > 0) {
-                        const finalComboScore = this.bankedTrickScore * this.combo
+                    const bankedTrickScore = this.bankedTrickScore ?? 0
+                    if (bankedTrickScore > 0) {
+                        const finalComboScore = bankedTrickScore * this.combo
                         this.score += finalComboScore
                         if (this.scoreEl) this.scoreEl.textContent = 'Score: ' + this.score
 

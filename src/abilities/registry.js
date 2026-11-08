@@ -13,6 +13,10 @@
  *              (`AbilitySystem.tickChargeInputs`) so it sees the frame's `now`
  * - `poll`   — no hooks; per-frame code asks `AbilitySystem.isHeld(id)`
  *
+ * Any entry may also declare `tick(game, dt)`: it runs once per fixed physics
+ * step (`AbilitySystem.tickFixedStep`), held or not, for state that must
+ * advance on the simulation clock (energy, gravity scale, continuous forces).
+ *
  * @typedef {'press' | 'hold' | 'charge' | 'poll'} AbilityInputTrigger
  * @typedef {'cooldown' | 'energy' | 'charge'} AbilityHudMode
  * @typedef {import('../types/map.ts').AbilityMask} AbilityMask
@@ -34,7 +38,9 @@
  * @property {AbilityHudMode} mode
  * @property {string} [readyGlow] - CSS filter when ready (legacy bars)
  * @property {boolean} [hideWhenReady] - hide container after cooldown (legacy bars)
- * @property {string} [activeWhen] - game state path checked for active styling (e.g. `activeBlackHoles.length`)
+ * @property {string} [activeWhen] - game state path checked for active styling (e.g. `activeBlackHoles.length`);
+ *   a boolean field counts as 1 when true
+ * @property {string} [activeGlow] - CSS box-shadow while `activeWhen` holds (default: purple, cooldown bars)
  *
  * @typedef {object} AbilityDefinition
  * @property {string} id
@@ -63,9 +69,11 @@
  * @property {(game: AbilityGameContext, dt?: number) => boolean | void} [activate] - `press` trigger
  * @property {(game: AbilityGameContext, now: number) => void} [press] - `hold` / `charge` start
  * @property {(game: AbilityGameContext, now: number) => void} [release] - `hold` / `charge` end
+ * @property {(game: AbilityGameContext, dt: number) => void} [tick] - once per fixed physics step; `dt` is the step in seconds
  */
 
 import { pressJump, releaseJump } from './jump.js';
+import { pressHover, releaseHover, tickHover } from './hover.js';
 import {
     cycleChameleon, cycleSizeShift, endRewind, heldFlag, toggleGravityFlip, toggleTimeStop,
 } from './held-abilities.js';
@@ -309,8 +317,19 @@ export const ABILITY_REGISTRY = {
         category: 'movement',
         netBit: 12,
         binding: { code: 'KeyH', trigger: 'hold', settingsKey: 'hover' },
+        energyKey: 'hoverEnergy',
+        maxEnergyKey: 'maxHoverEnergy',
+        hudSlot: {
+            barKey: 'hoverBarEl',
+            containerKey: 'hoverBarContainerEl',
+            mode: 'energy',
+            activeWhen: 'hoverActive',
+            activeGlow: '0 0 10px #00ffcc',
+        },
         hudIconId: 'hover',
-        ...heldFlag('hoverActive', 'hover'),
+        press: (game) => pressHover(game),
+        release: (game) => releaseHover(game),
+        tick: (game, dt) => tickHover(game, dt),
     },
     jetpack: {
         id: 'jetpack',
