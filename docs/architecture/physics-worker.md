@@ -1,6 +1,6 @@
 # Physics Worker Architecture
 
-**Status:** Default-on for capable desktops (manifest campaign) — October 2026 (fixed-step contract + snapshot layout v3)  
+**Status:** Default-on for capable desktops (manifest campaign) — October 2026 (fixed-step contract); snapshot layout v4 with recycled body slots, Party Race host sim on the worker clock — November 2026  
 **Related:** [game-loop.md](./game-loop.md), [language-strategy.md](./language-strategy.md), [host-authority.md](./host-authority.md)
 
 ## Overview
@@ -28,22 +28,29 @@ Filament **must** remain on the main thread (WebGL context affinity).
 
 Requires cross-origin isolation (COOP/COEP). See [`vite.config.js`](../../vite.config.js) and [`docs/mobile-pwa.md`](../mobile-pwa.md). Without `SharedArrayBuffer`, the game falls back to main-thread physics silently.
 
-**Permanent main-thread exclusions:**
+**Main-thread exclusions** (enforced in `shouldUsePhysicsWorker()`; these levels are never routed through the ring):
 
 | Mode | Reason |
 |------|--------|
-| Party Race / `multiplayerMode` | Host-authoritative sim on main thread ([host-authority.md](./host-authority.md)) |
-| Host authority (`?hostAuth=1`) | Same authority model — do not conflate worker vs host-sim |
-| Map editor (`?editor=1`) | Live body creation / inspection not wired through worker |
-| Dev-only levels (`?devLevels=1` entries not in manifest) | Opt-in spike scope; use manifest levels for worker A/B |
+| Map editor (`?editor=1`) | Live body creation / inspection is not wired through the worker. Applies to every level an editor session loads, including manifest levels. Stays main-thread until a later issue; slot reuse does not depend on it. |
+| Dev-only levels (`?devLevels=1` entries not in manifest) | Opt-in sandbox scope; use manifest levels for worker A/B |
 
-All **44 manifest** levels (`assets/manifest.json`) are worker-eligible. Fallback to main thread on worker `INIT_ERROR` is unchanged. There is no settings-pane toggle yet; the URL flag is the only override.
+All **44 manifest** levels (`assets/manifest.json`) are worker-eligible, in campaign **and** Party Race (`multiplayerMode`, `?hostAuth=1`). Fallback to main thread on worker `INIT_ERROR` is unchanged. There is no settings-pane toggle yet; the URL flag is the only override.
 
-**Party Race limitation:** `HostSim` (`src/game/network/host-sim.js`) stays on main-thread Rapier until a dedicated issue moves it into the worker (or a headless Option C). Default-on does **not** apply to Party Race or `?hostAuth=1`.
+### Party Race host sim
+
+| Mode | Backend | Who steps the world |
+|------|---------|---------------------|
+| Campaign, manifest level | Worker | Worker `FixedStepClock` (120 Hz) |
+| Party Race host, `?hostAuth=1`, manifest level | Worker | Worker `FixedStepClock` — the same single clock |
+| Any of the above with `?physicsWorker=0`, no COOP/COEP, or low-power | Main | Frame loop's `FixedStepClock` (`sync.js`) |
+| Editor, non-manifest dev level | Main | Frame loop's `FixedStepClock` |
+
+`HostSim.tick` ([`host-sim.js`](../../src/game/network/host-sim.js)) never calls `world.step()`. Once per frame it turns each player's latest 30 Hz input snapshot into impulses on the network marbles (`applyInputToMarble`, scaled by `simDt·60` like local held-key movement and **not** by mass) and broadcasts poses. On the worker those impulses ride the command ring and are applied on the worker's next tick; on the main-thread backend they land before the loop's `physicsWorld.step()` calls. There is no host-side accumulator. (Before this change the host stepped once from the frame loop and again from `HostSim` every 16 ms.) Client prediction (`client-prediction.js`) keeps its soft blend / hard snap; rewind is out of scope.
 
 ## SharedArrayBuffer layout
 
-**Snapshot layout version: 2** (`SNAPSHOT_LAYOUT_VERSION` in `protocol.js`). The worker writes it into the header and echoes it in `WORKER_READY`; the main thread rejects a mismatch (falls back to main-thread physics) instead of misreading the buffer. Bump it whenever any offset below changes.
+**Snapshot layout version: 4** (`SNAPSHOT_LAYOUT_VERSION` in `protocol.js`). The worker writes it into the header and echoes it in `WORKER_READY`; the main thread rejects a mismatch (falls back to main-thread physics) instead of misreading the buffer. Bump it whenever any offset below changes.
 
 ### Transform buffer (worker → main, read-only on main)
 
@@ -57,6 +64,7 @@ Double-buffered body records. 32-byte header + two slots.
 | 3 | `physicsStepMs` | `Float32` | Wall time of the last tick's steps (perf) |
 | 4 | `layoutVersion` | `Uint32` | `SNAPSHOT_LAYOUT_VERSION` |
 | 5 | `stepIntervalMs` | `Float32` | Wall ms per fixed step at the current time scale (`step·1000 / timeScale`, 0 when frozen) — drives render interpolation |
+| 6 | `removalsApplied` | `Uint32` | Atomics. Running count of `REMOVE_BODY` ring entries the worker has consumed (v4). Gates body-index reuse. |
 
 Each body record is 16 `Float32` (64 bytes):
 
@@ -70,10 +78,26 @@ Each body record is 16 `Float32` (64 bytes):
 | 14 | mass |
 | 15 | body type (`BODY_TYPE_CODE`: dynamic 0, fixed 1, kinematic-position 2, kinematic-velocity 3) |
 
-- `MAX_BODIES = 1024` (`SNAPSHOT_LAYOUT_VERSION = 3`; 256 before v3), 64 bytes per body per slot; bodies past the cap are not written (no overflow into the next slot). Bump the layout version on any size/stride change.
-- Runtime bodies (missiles, bombs, black holes, holo platforms) go through the proxy world → `ADD_BODY`. Because indices are never reused within a level, each projectile permanently consumes a slot until the level reloads. `reserveBodyIndex()` throws a `RangeError` at the limit and the worker refuses out-of-range inserts — indices never wrap.
+- `MAX_BODIES = 1024` (256 before v3), 64 bytes per body per slot; bodies past the cap are not written (no overflow into the next slot). Bump the layout version on any size/stride change or header change.
+- Runtime bodies (missiles, bombs, black holes, holo platforms, hover) go through the proxy world → `ADD_BODY`.
 - Velocities, mass and type are the **real** post-step values; proxies read them directly (no dead reckoning). They lag main-thread writes by at most one worker tick.
-- Body indices are **stable** across spawn/despawn; removed slots are nulled but indices are not reused in the same level session.
+
+### Body-index reuse (v4)
+
+`MAX_BODIES` bounds **live** bodies, not bodies spawned per level.
+
+1. `removeRigidBody(proxy)` freezes the proxy's last snapshot into a tombstone, unregisters it, enqueues `REMOVE_BODY` and records `(index, seq)`. `seq` is the main thread's running removal count.
+2. The worker drains the ring, removes the Rapier body, nulls the slot (the record publishes `valid = 0`) and bumps header word 6.
+3. On `backend.step()` and on every `reserveBodyIndex()`, indices whose `seq ≤ removalsApplied` move to a FIFO free list. `reserveBodyIndex()` takes from that list before it grows the high-water mark.
+4. A reused index is filled by `ADD_BODY`, which seeds both slots before anything reads it.
+
+Rules:
+
+- **Never recycle before the ack.** Until the worker has applied the removal it may still hold the old body at that index.
+- **A stale proxy never sees its successor.** A removed proxy's reads return its tombstone, including `getRenderTransform`. Its writes and a repeat `removeRigidBody` are dropped (`backend.isCurrentProxy(index, proxy)`), and `isValid()` is false.
+- **No wrap.** If all 1024 indices are live or awaiting their ack, `reserveBodyIndex()` throws `RangeError`, and the worker refuses out-of-range inserts.
+- If the ring is full and `REMOVE_BODY` can't be enqueued, the index stays occupied until the level reloads. It leaks; it is never double-booked.
+- `RESET_WORLD` discards leftover ring entries (except `SET_TIME_SCALE`) and still counts their removals, so a later world never receives an earlier world's commands and the counters stay aligned.
 
 ### Command ring (main → worker)
 
@@ -129,7 +153,8 @@ Stable numeric `bodyIndex` assigned at registration preserves ordering between d
 | No `SharedArrayBuffer` / not cross-origin isolated | Main-thread backend |
 | `?physicsWorker=0` | Main-thread backend |
 | Worker init / `INIT_ERROR` | Main-thread backend, worker disposed |
-| Multiplayer, hostAuth, editor | Main-thread backend |
+| Editor (any level) | Main-thread backend |
+| Snapshot layout mismatch (`WORKER_READY` header ≠ `SNAPSHOT_LAYOUT_VERSION`) | `init()` rejects → main-thread backend |
 | Non-manifest level with `?physicsWorker=1` | Main-thread backend for that level |
 
 Perf overlay reports `rapier: worker|main` and MarblePhysics backend separately.
@@ -165,12 +190,18 @@ Record `window.perfMonitor.getLevelSummary()` and `latestSyncWork.physicsStepMs`
 
 `tests/test_physics_parity.js` runs the same gameplay scenarios (grounding, velocity readback, blink, grapple, double jump, missile CCD, slow-mo) against the main-thread backend and against `WorkerPhysicsBackend` driving `createWorkerSim` in-process over real SharedArrayBuffers. Any backend divergence should fail there first.
 
+`tests/test_physics_worker_slots.js` uses the same in-process worker. It covers:
+
+- 3 × `MAX_BODIES` missile spawn/despawns in one level load, with no `RangeError`
+- no reuse before the ack
+- stale-proxy isolation
+- the full-table `RangeError`
+- layout-mismatch rejection
+- the `?hostAuth=1` host sim: one input applied on both backends, with `HostSim` never stepping the world
+
 ## Follow-up
 
-- Host-authoritative sim in worker ([host-authority.md](./host-authority.md))
-- Map editor worker integration
-- Body-index reuse (free list) so long sessions cannot exhaust `MAX_BODIES`
+- Map editor worker integration (live body creation through the proxy world)
 - Settings-pane toggle for the worker
-- Real-GPU soak of all 44 manifest ids (`docs/PERFORMANCE_BASELINE.md`)
-- Party Race / `HostSim` in worker (separate issue)
-- `RenderPipeline` extraction (Phase B)
+- Real-GPU soak of all 44 manifest ids, campaign and Party Race host (`docs/PERFORMANCE_BASELINE.md`)
+- Option C headless host (separate service on `@dimforge/rapier3d-compat` / upstream Rapier) if host-desync makes ranked unplayable — see [host-authority.md](./host-authority.md)

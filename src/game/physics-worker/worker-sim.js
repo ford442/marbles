@@ -5,6 +5,7 @@ import {
     TRANSFORM_HEADER_BYTES,
     TRANSFORM_HEADER_FRAME_TICK,
     TRANSFORM_HEADER_LAYOUT_VERSION,
+    TRANSFORM_HEADER_REMOVALS_APPLIED,
     TRANSFORM_HEADER_STEP_INTERVAL_MS,
     TRANSFORM_HEADER_STEP_MS,
     TRANSFORM_HEADER_U32,
@@ -79,6 +80,8 @@ export function createWorkerSim({
     /** @type {unknown} */
     let intervalId = null;
     let lastTickAt = 0;
+    /** REMOVE_BODY ring entries consumed over the worker's lifetime (header word 6). */
+    let removalsApplied = 0;
 
     const queries = new RapierPhysicsQueries(() => world);
 
@@ -102,7 +105,27 @@ export function createWorkerSim({
 
     function drainCommands() {
         if (!commandViews || !world) return;
-        drainCommandRing(commandViews.u32, commandViews.f32, bodies, removedIndices, world, clock);
+        const removed = drainCommandRing(commandViews.u32, commandViews.f32, bodies, removedIndices, world, clock);
+        if (removed) publishRemovals(removed);
+    }
+
+    /**
+     * Ack consumed removals. The body is already gone from `bodies` (its
+     * snapshot record reads `valid = 0` from the next publish), so the main
+     * thread may hand the index to a new body; that body's ADD_BODY seeds
+     * both slots before anything reads it.
+     * @param {number} count
+     */
+    function publishRemovals(count) {
+        removalsApplied = (removalsApplied + count) >>> 0;
+        if (transformViews) Atomics.store(transformViews.u32, TRANSFORM_HEADER_REMOVALS_APPLIED, removalsApplied);
+    }
+
+    /** Throw away ring entries addressed to a world that has been torn down. */
+    function discardCommands() {
+        if (!commandViews) return;
+        const removed = drainCommandRing(commandViews.u32, commandViews.f32, [], new Set(), null, clock, { discard: true });
+        if (removed) publishRemovals(removed);
     }
 
     function rebuildHandleIndex() {
@@ -213,6 +236,8 @@ export function createWorkerSim({
                     physicsHz = resolvePhysicsHz(msg.physicsHz);
                     clock = new FixedStepClock({ step: 1 / physicsHz });
                     transformViews.u32[TRANSFORM_HEADER_LAYOUT_VERSION] = SNAPSHOT_LAYOUT_VERSION;
+                    removalsApplied = 0;
+                    Atomics.store(transformViews.u32, TRANSFORM_HEADER_REMOVALS_APPLIED, 0);
                     await RAPIER.init();
                     post({ type: WORKER_MSG.WORKER_READY, layoutVersion: SNAPSHOT_LAYOUT_VERSION });
                     break;
@@ -246,6 +271,7 @@ export function createWorkerSim({
 
                 case WORKER_MSG.RESET_WORLD:
                     resetWorldState();
+                    discardCommands();
                     if (transformViews) {
                         transformViews.u32[TRANSFORM_HEADER_BODY_COUNT] = 0;
                     }

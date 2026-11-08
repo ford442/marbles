@@ -7,10 +7,13 @@
  *   v1: 256 bodies, pose only (8 floats)
  *   v2: pose + linvel + angvel + mass + body type (16 floats), step interval,
  *       applied-command counter
- *   v3: 256 -> 1024 bodies — body indices are not reused within a level, so
- *       missiles/bombs/holo platforms accumulate on top of the static course.
+ *   v3: 256 -> 1024 bodies (indices were never reused within a level)
+ *   v4: header word 6 = REMOVE_BODY commands the worker has applied. The main
+ *       thread recycles a removed body's index only once this counter covers
+ *       that removal, so missiles/bombs/holo platforms no longer exhaust the
+ *       table over a long level.
  */
-export const SNAPSHOT_LAYOUT_VERSION = 3;
+export const SNAPSHOT_LAYOUT_VERSION = 4;
 export const MAX_BODIES = 1024;
 
 /** Per-body record offsets (floats). */
@@ -39,6 +42,12 @@ export const TRANSFORM_HEADER_STEP_MS = 3;
 export const TRANSFORM_HEADER_LAYOUT_VERSION = 4;
 /** f32: wall-clock ms between steps at the current time scale (for interpolation). */
 export const TRANSFORM_HEADER_STEP_INTERVAL_MS = 5;
+/**
+ * u32: running count of `REMOVE_BODY` ring entries the worker has consumed
+ * (applied, or discarded on `RESET_WORLD`). Monotonic for the worker's
+ * lifetime; the main thread compares it against its own enqueue count.
+ */
+export const TRANSFORM_HEADER_REMOVALS_APPLIED = 6;
 export const TRANSFORM_HEADER_BYTES = 32;
 export const TRANSFORM_SLOT_BYTES = MAX_BODIES * BODY_STRIDE_BYTES;
 export const TRANSFORM_BUFFER_BYTES = TRANSFORM_HEADER_BYTES + 2 * TRANSFORM_SLOT_BYTES;

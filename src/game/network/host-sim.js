@@ -3,13 +3,20 @@ import { MSG, STATE_RATE_HZ } from './protocol.js';
 
 /**
  * Host-authoritative physics simulation for Party Race (Phase 3 spike).
+ *
+ * HostSim never steps the world. Each frame it queues every player's latest
+ * input as impulses on the network marbles and broadcasts the resulting poses
+ * at `STATE_RATE_HZ`; the frame loop's single fixed-step clock does the
+ * stepping (`sync.js`). On the physics worker the impulses ride the command
+ * ring and are applied on the worker's own 120 Hz `FixedStepClock`; on the
+ * main-thread backend they are applied before the loop's `physicsWorld.step()`
+ * calls. There is deliberately no second accumulator here.
  */
 export class HostSim {
     /** @param {object} game */
     constructor(game) {
         this.game = game;
         this.active = false;
-        this._lastStepMs = 0;
         this._lastBroadcastMs = 0;
         this._stateSeq = 0;
     }
@@ -29,12 +36,12 @@ export class HostSim {
         }
 
         this.active = true;
-        this._lastStepMs = 0;
         this._lastBroadcastMs = 0;
         this._stateSeq = 0;
     }
 
     /**
+     * Once per rendered frame (from `tickMultiplayer`).
      * @param {number} now
      */
     tick(now = Date.now()) {
@@ -43,17 +50,16 @@ export class HostSim {
         const g = this.game;
         if (!g.levelStartTime || !g.networkMarbles?.size) return;
 
-        this._applyRemoteInputs();
-
-        if (now - this._lastStepMs >= 16) {
-            g.physicsWorld?.step?.();
-            this._lastStepMs = now;
-        }
+        // Same contract as local held-key movement (`frame-input.js`): 0.5 per
+        // simulated 1/60 s, so a frame that runs no fixed step adds nothing.
+        const scale = (g.simDt ?? 1 / 60) * 60;
+        if (scale > 0) this._applyRemoteInputs(scale);
 
         this._broadcastSnapshots(now);
     }
 
-    _applyRemoteInputs() {
+    /** @param {number} [scale] impulse multiplier (simulated seconds × 60) */
+    _applyRemoteInputs(scale = 1) {
         const g = this.game;
 
         if (g.network?.playerId) {
@@ -62,7 +68,8 @@ export class HostSim {
                 g.network.playerId,
                 snap.bits,
                 decodeYaw(snap.yaw),
-                0
+                0,
+                scale
             );
         }
 
@@ -77,7 +84,8 @@ export class HostSim {
                 playerId,
                 latest.bits,
                 decodeYaw(latest.yaw),
-                0
+                0,
+                scale
             );
         }
     }

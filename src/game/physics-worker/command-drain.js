@@ -66,9 +66,13 @@ export function applyCommandOp(body, op, f0, f1, f2, f3, clock) {
  * @param {Set<number>} removedIndices
  * @param {import('@dimforge/rapier3d-compat').World} world
  * @param {{ timeScale: number }} clock
+ * @param {{ discard?: boolean }} [options] discard: consume entries without applying them
+ * @returns {number} REMOVE_BODY entries consumed (applied or discarded)
  */
-export function drainCommandRing(u32, f32, bodies, removedIndices, world, clock) {
+export function drainCommandRing(u32, f32, bodies, removedIndices, world, clock, options = {}) {
     const capacity = u32[2];
+    const discard = options.discard === true;
+    let removals = 0;
 
     for (;;) {
         const tail = Atomics.load(u32, CMD_HEADER_TAIL);
@@ -84,18 +88,23 @@ export function drainCommandRing(u32, f32, bodies, removedIndices, world, clock)
         const f3 = f32[entryIndex + 5];
 
         const body = bodies[bodyIndex];
-        if (op === CMD_OP.REMOVE_BODY) {
+        if (op === CMD_OP.REMOVE_BODY) removals += 1;
+        if (op === CMD_OP.SET_TIME_SCALE) {
+            // World-independent: keep it even when discarding body commands.
+            applyCommandOp(null, op, f0, f1, f2, f3, clock);
+        } else if (discard) {
+            // Body commands left over from a world that no longer exists.
+        } else if (op === CMD_OP.REMOVE_BODY) {
             if (body && !removedIndices.has(bodyIndex)) {
                 world.removeRigidBody(body);
                 bodies[bodyIndex] = null;
                 removedIndices.add(bodyIndex);
             }
-        } else if (op === CMD_OP.SET_TIME_SCALE) {
-            applyCommandOp(null, op, f0, f1, f2, f3, clock);
         } else if (body && !removedIndices.has(bodyIndex)) {
             applyCommandOp(body, op, f0, f1, f2, f3, clock);
         }
 
         Atomics.store(u32, CMD_HEADER_TAIL, (tail + 1) % capacity);
     }
+    return removals;
 }

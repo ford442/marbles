@@ -6,6 +6,7 @@ import {
     RAYCAST_BUFFER_BYTES,
     TRANSFORM_HEADER_FRAME_TICK,
     TRANSFORM_HEADER_LAYOUT_VERSION,
+    TRANSFORM_HEADER_REMOVALS_APPLIED,
     TRANSFORM_HEADER_STEP_INTERVAL_MS,
     TRANSFORM_HEADER_STEP_MS,
     TRANSFORM_HEADER_U32,
@@ -40,6 +41,7 @@ import {
 } from './physics-queries.ts';
 
 import { detectPlatformProfile } from '../../rendering-defaults.js';
+import { isEditorMode } from '../../editor/mode.js';
 import type { Vec3, Quat } from '../../types/geometry.ts';
 
 export { shouldUsePhysicsWorker, resolvePhysicsHzFromSearch, WORKER_SPIKE_LEVEL_ID } from './physics-backend-pure.ts';
@@ -254,6 +256,12 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
     _lastTick: number;
     _lastTickAt: number;
     _nextBodyIndex: number;
+    /** Indices whose removal the worker has acked; handed out before `_nextBodyIndex` grows. */
+    _freeBodyIndices: number[];
+    /** Removed indices waiting for the worker's ack (`seq` = value of `_removalsEnqueued` after enqueue). */
+    _pendingFreeIndices: { index: number; seq: number }[];
+    /** REMOVE_BODY commands enqueued over the worker's lifetime; compared with header word 6. */
+    _removalsEnqueued: number;
     // Created by init(); the worker path is only entered once `_ready` is true.
     worker: Worker | null;
     transformSab!: SharedArrayBuffer;
@@ -268,6 +276,9 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
         this.gravity = undefined;
         this.worker = null;
         this._nextBodyIndex = 0;
+        this._freeBodyIndices = [];
+        this._pendingFreeIndices = [];
+        this._removalsEnqueued = 0;
         this.mode = 'worker';
         this.physicsHz = 120;
         this.lastStepMs = 0;
@@ -375,17 +386,52 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
         this._gravityScaleCache.clear();
         this._pendingBodies.clear();
         this._nextBodyIndex = 0;
+        this._freeBodyIndices = [];
+        this._pendingFreeIndices = [];
         this._worldCommitted = false;
         this._active = true;
         this.game.world = createProxyWorld(this);
     }
 
+    /**
+     * Next body index: a recycled one if the worker has acked its removal,
+     * else a fresh one. Refuses rather than wrapping into the next SAB slot
+     * when all `MAX_BODIES` indices are live (or still awaiting their ack).
+     */
     reserveBodyIndex(): number {
-        // Indices are never reused within a level; refuse rather than overrun the SAB slot.
+        this._reclaimBodyIndices();
+        const recycled = this._freeBodyIndices.shift();
+        if (recycled !== undefined) {
+            this._gravityScaleCache.delete(recycled);
+            return recycled;
+        }
         if (this._nextBodyIndex >= MAX_BODIES) {
-            throw new RangeError(`[PhysicsWorker] body limit reached (MAX_BODIES=${MAX_BODIES}, layout v${SNAPSHOT_LAYOUT_VERSION})`);
+            throw new RangeError(`[PhysicsWorker] body limit reached (MAX_BODIES=${MAX_BODIES} live or pending removal, layout v${SNAPSHOT_LAYOUT_VERSION})`);
         }
         return this._nextBodyIndex++;
+    }
+
+    /**
+     * Move removed indices the worker has applied (header word 6 has reached
+     * their sequence number) onto the free list. Until then the worker may
+     * still hold the old body, so the index must not be handed out.
+     */
+    _reclaimBodyIndices(): void {
+        const pending = this._pendingFreeIndices;
+        if (!pending?.length || !this.transformViews) return;
+        const applied = Atomics.load(this.transformViews.u32, TRANSFORM_HEADER_REMOVALS_APPLIED);
+        let n = 0;
+        // Removals drain in ring order, so acks arrive in `seq` order.
+        while (n < pending.length && ((applied - pending[n]!.seq) | 0) >= 0) {
+            this._freeBodyIndices.push(pending[n]!.index);
+            n += 1;
+        }
+        if (n) pending.splice(0, n);
+    }
+
+    /** Live proxy for `bodyIndex`, i.e. `proxy` has not been removed or superseded. */
+    isCurrentProxy(bodyIndex: number, proxy: unknown): boolean {
+        return this._proxies.get(bodyIndex) === proxy;
     }
 
     /**
@@ -508,6 +554,7 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
             this._lastTick = tick;
             this._lastTickAt = waitStart;
         }
+        this._reclaimBodyIndices();
     }
 
     /**
@@ -541,7 +588,9 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
         };
     }
 
-    getRenderTransform(body: RigidBodyLike & { _bodyIndex?: number }): RenderTransform {
+    getRenderTransform(body: RigidBodyLike & { _bodyIndex?: number; _tombstone?: RenderTransform | null }): RenderTransform {
+        // A removed proxy keeps its last pose; its index may belong to a new body now.
+        if (body._tombstone) return body._tombstone;
         return this.getInterpolatedTransform(body._bodyIndex ?? body.handle);
     }
 
@@ -733,14 +782,32 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
     removeRigidBody(body: { handle?: number; _bodyIndex?: number } | null | undefined): void {
         const index = body?.handle ?? body?._bodyIndex;
         if (index == null) return;
-        enqueueCommand(
+        // A stale proxy (already removed, or from a previous level) must not
+        // remove whichever body now owns its recycled index.
+        if (!this.isCurrentProxy(index, body)) return;
+        const proxy = body as { _tombstone?: unknown };
+        proxy._tombstone = this._snapshotForTombstone(index);
+        this._proxies.delete(index);
+        const queued = enqueueCommand(
             this.commandViews.u32,
             this.commandViews.f32,
             CMD_OP.REMOVE_BODY,
             index,
             0,
         );
-        this._proxies.delete(index);
+        // Ring full: the worker never sees the removal, so the index stays
+        // occupied (leaked until the level reloads) rather than double-booked.
+        if (!queued) return;
+        this._removalsEnqueued = (this._removalsEnqueued + 1) >>> 0;
+        this._pendingFreeIndices.push({ index, seq: this._removalsEnqueued });
+    }
+
+    /** Last published pose + dynamics, frozen into a removed proxy. */
+    _snapshotForTombstone(bodyIndex: number) {
+        const t = this.getTranslation(bodyIndex);
+        const r = this.getRotation(bodyIndex);
+        const d = this._dynamics(bodyIndex);
+        return { translation: t, rotation: r, linvel: d.linvel, angvel: d.angvel, mass: d.mass, type: d.type };
     }
 
     /**
@@ -854,7 +921,9 @@ export async function activatePhysicsBackendForLevel(
         hasSharedArrayBuffer: typeof SharedArrayBuffer !== 'undefined',
         multiplayerMode: game.multiplayerMode ?? false,
         hostAuthorityMode: game.hostAuthorityMode ?? false,
-        editorMode: false,
+        // Same rule as createPhysicsBackend: an editor session stays main-thread
+        // for every level it loads, including manifest levels.
+        editorMode: isEditorMode(),
         levelId,
         lowPowerDevice: detectPlatformProfile().prefersLowPower,
     });

@@ -722,12 +722,16 @@ export class PhysicsWorld {
     }
 
     /** Apply decoded input snapshot to a network marble (host authority). */
-    applyInputToMarble(playerId: string, bits: number, yaw: number, pitch: number): void {
+    /**
+     * Held-key impulses for a network marble. `scale` is simulated seconds × 60
+     * (as in `frame-input.js`); the impulse is deliberately not mass-scaled.
+     */
+    applyInputToMarble(playerId: string, bits: number, yaw: number, pitch: number, scale = 1): void {
         const g = this.game;
         const entry = g.networkMarbles?.get(playerId);
         if (!entry?.rigidBody) return;
 
-        const impulseStrength = 0.5;
+        const impulseStrength = 0.5 * scale;
         const forwardX = Math.sin(yaw);
         const forwardZ = Math.cos(yaw);
         const rightX = Math.sin(yaw - Math.PI / 2);
