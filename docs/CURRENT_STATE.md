@@ -2,7 +2,7 @@
 
 Single-page dashboard for contributors and agents. Canonical detail lives in linked docs — this file is the index.
 
-Last aligned with repo audit: July 2026.
+Last aligned with repo audit: November 2026.
 
 ## Health checklist
 
@@ -24,10 +24,10 @@ Counts from [architecture/level-inventory.json](architecture/level-inventory.jso
 
 | Metric | Count |
 |--------|------:|
-| Shipped (manifest) | 24 |
-| `DEV_LEVELS` entries | 61 |
-| Unique level ids | 85 |
-| Map JSON files on disk | 28 (including 4 archived prototypes) |
+| Shipped (manifest) | 44 (5 campaign chapters) |
+| `DEV_LEVELS` entries | 39 (each with a `devOnly` reason) |
+| Unique level ids | 101 |
+| Map JSON files on disk | 48 (including 4 archived prototypes) |
 
 Policy: [architecture/level-pipeline.md](architecture/level-pipeline.md). Campaign content ships as JSON + manifest only.
 
