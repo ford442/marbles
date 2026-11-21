@@ -121,6 +121,7 @@ export function mapToRuntimeLevel(mapDef, source) {
         rivals: mapDef.rivals,
         bounds: mapDef.bounds,
         solution: mapDef.solution,
+        movementModel: mapDef.movementModel,
         goalless: mapDef.goalless,
         source,
     });

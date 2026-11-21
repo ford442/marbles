@@ -1,7 +1,7 @@
 import type { FilamentHandle, FilamentModule } from './filament.ts';
 import type RAPIER from '@dimforge/rapier3d-compat';
 import type { Vec3 } from './geometry.ts';
-import type { MapGoalDefinition } from './map.ts';
+import type { MapGoalDefinition, MovementModel } from './map.ts';
 import type { MarbleLodMesh } from '../marble-lod.js';
 import type { MaterialTier, TieredMaterialPreset } from '../marble-material-tier.ts';
 import type { CameraPose } from './render-host.ts';
@@ -288,6 +288,8 @@ export interface AbilityState {
 export interface LevelState {
     /** Id of the loaded level (`LevelLoader` sets it), null in menus / the editor. */
     currentLevel: string | null;
+    /** The loaded level's `movementModel` (null = legacy model 1). */
+    movementModel: MovementModel | null;
     levelStartTime: number;
     levelComplete: boolean;
     goalDefinitions: MapGoalDefinition[];

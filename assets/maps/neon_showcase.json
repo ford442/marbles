@@ -57,5 +57,14 @@
     "bronzeTime": 60,
     "parTime": 28
   },
-  "collectiblesTotal": 0
+  "collectiblesTotal": 0,
+  "solution": {
+    "inputs": [
+      { "frames": 20, "keys": ["forward"] },
+      { "frames": 20, "keys": [] },
+      { "frames": 1, "keys": ["jump"], "jumpCharge": 0 },
+      { "frames": 300, "keys": ["forward"] }
+    ],
+    "par": 2.13
+  }
 }

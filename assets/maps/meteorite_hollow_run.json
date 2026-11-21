@@ -133,6 +133,7 @@
       { "frames": 1, "keys": ["jump"], "yawDeg": 5 },
       { "frames": 9, "keys": [], "yawDeg": 5 }
     ],
+    "par": 10.78,
     "tolerance": 0.35
   }
 }

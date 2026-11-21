@@ -11,6 +11,7 @@ import {
 import { applyVelocityChange } from '../systems/body-impulse.ts';
 import { JUMP_DV_MAX, JUMP_DV_MIN } from '../../abilities/movement-tuning.js';
 import { DEFAULT_FIXED_STEP } from '../systems/fixed-step-clock.ts';
+import { BASE_MOVE_IMPULSE, moveImpulsePerStep } from '../movement-model.js';
 
 /** Spawn must have ground within this distance straight below it. */
 export const SPAWN_GROUND_MAX_DIST = 30;
@@ -218,12 +219,12 @@ export function reachabilitySmoke(game, level) {
     return { problems, grounded, fellAt, reachedGoal, final: marble.rigidBody.translation() };
 }
 
-/** Same impulse the game applies per 60 Hz frame for held movement keys (frame-input.js). */
-export const MOVE_IMPULSE_PER_STEP = 0.5;
+/** Same impulse the game applies per 60 Hz frame for held movement keys (frame-input.ts). */
+export const MOVE_IMPULSE_PER_STEP = BASE_MOVE_IMPULSE;
 
 /**
  * Replay a map's `solution` input track on the reference marble.
- * Movement mirrors frame-input.js (aim-relative impulses); `jump` applies a
+ * Movement mirrors frame-input.ts (aim-relative impulses); `jump` applies a
  * ground jump on the segment's first step if grounded, with Δv from
  * `jumpCharge` (0 → JUMP_DV_MIN, 1 → JUMP_DV_MAX, default 1).
  * @param {HeadlessLevel} game
@@ -243,7 +244,7 @@ export function replaySolution(game, level) {
         let done = false;
         stepHeadless(game, seg.frames, {
             beforeStep: (_g, i) => {
-                const k = MOVE_IMPULSE_PER_STEP;
+                const k = moveImpulsePerStep(level.movementModel, rb.mass());
                 let ix = 0;
                 let iz = 0;
                 if (keys.has('forward')) { ix += fwd.x * k; iz += fwd.z * k; }
@@ -273,9 +274,13 @@ export function replaySolution(game, level) {
 /** Default allowed relative deviation of a solution's time from medals.parTime. */
 export const DEFAULT_SOLUTION_TOLERANCE = 0.5;
 
+/** Default allowed relative drift of a replay from its recorded solution.par. */
+export const DEFAULT_PAR_DRIFT = 0.05;
+
 /**
- * Problems with a replayed solution: it must reach a goal, and when the map
- * has a parTime, finish within ±tolerance of it (a much faster solution means
+ * Problems with a replayed solution: it must reach a goal; when the solution
+ * records `par`, finish within ±parDrift of it; otherwise, when the map
+ * has a medals.parTime, finish within ±tolerance of it (a much faster solution means
  * par is too generous; a much slower one means the track is suspect).
  * @param {{ reached: boolean, timeSec: number, fell: boolean }} res
  * @param {RuntimeLevel} level
@@ -283,14 +288,25 @@ export const DEFAULT_SOLUTION_TOLERANCE = 0.5;
  */
 export function solutionProblems(res, level) {
     if (!res.reached) return [`solution ${res.fell ? 'fell out of the world' : 'ran out of input'} after ${res.timeSec.toFixed(2)} s`];
-    const par = level.medals?.parTime;
-    if (!par) return [];
+    const problems = [];
+    const recorded = level.solution?.par;
+    if (recorded) {
+        const drift = level.solution?.parDrift ?? DEFAULT_PAR_DRIFT;
+        if (Math.abs(res.timeSec - recorded) > recorded * drift) {
+            problems.push(`solution time ${res.timeSec.toFixed(2)} s drifted from recorded par ${recorded} s by more than ±${Math.round(drift * 100)}% — physics/movement changed; re-record with npm run level:lab if intended`);
+        }
+    }
+    // A recorded par is a far tighter regression guard than the human-facing
+    // medals.parTime, so the loose medals band only applies without one.
+    const par = recorded ? undefined : level.medals?.parTime;
+    if (!par) return problems;
     const tol = level.solution?.tolerance ?? DEFAULT_SOLUTION_TOLERANCE;
     const lo = par * (1 - tol);
     const hi = par * (1 + tol);
-    return res.timeSec < lo || res.timeSec > hi
-        ? [`solution time ${res.timeSec.toFixed(2)} s is outside parTime ${par} s ±${Math.round(tol * 100)}% [${lo.toFixed(1)}, ${hi.toFixed(1)}]`]
-        : [];
+    if (res.timeSec < lo || res.timeSec > hi) {
+        problems.push(`solution time ${res.timeSec.toFixed(2)} s is outside parTime ${par} s ±${Math.round(tol * 100)}% [${lo.toFixed(1)}, ${hi.toFixed(1)}]`);
+    }
+    return problems;
 }
 
 /**

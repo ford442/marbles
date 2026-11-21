@@ -31,7 +31,7 @@ import { requireElement } from '../ui/dom.ts';
  *         | 'cullingManager' | 'trackLodManager' | 'marbleLodManager' | 'effectPool' | 'levelEffectBudget'
  *         | 'perfMonitor' | 'cloudClient'>
  *     & Pick<FrameState,
- *         | 'currentLevel' | 'goalDefinitions' | 'checkpointDefinitions' | 'score' | 'combo' | 'comboTimer'
+ *         | 'currentLevel' | 'movementModel' | 'goalDefinitions' | 'checkpointDefinitions' | 'score' | 'combo' | 'comboTimer'
  *         | 'levelComplete' | 'levelStartTime' | 'cameraMode' | 'camAngle' | 'camHeight' | 'camRadius'
  *         | 'staticEntities' | 'marbles' | 'ghostEntity' | 'ghostMaterialInstance' | 'ghostLightEntity'
  *         | 'levelNameEl' | 'scoreEl' | 'comboEl' | 'combobarContainerEl' | 'combobarEl' | 'timerEl'>
@@ -91,6 +91,7 @@ export class InitLevelLoader {
         this.game.ghostReplay?.resetPlayback()
 
         this.game.currentLevel = levelId
+        this.game.movementModel = level.movementModel ?? null
         if (this.game.levelNameEl) this.game.levelNameEl.textContent = level.name
         this.game.goalDefinitions = level.goals
         this.game.checkpointDefinitions = level.checkpoints || []

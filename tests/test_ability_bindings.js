@@ -1,7 +1,7 @@
 /**
  * Ability registry as the single source of input truth (#451 Part E):
  * every entry is well-formed, no two abilities (or reserved UI keys) share a
- * binding, init/core.ts and frame-input.js no longer branch on ability keys,
+ * binding, init/core.ts and frame-input.ts no longer branch on ability keys,
  * and AbilitySystem dispatch honours level masks for every trigger kind.
  */
 import assert from 'node:assert/strict';
@@ -68,7 +68,7 @@ function testHostsNoLongerBranchOnAbilityKeys() {
     const frame = fs.readFileSync(path.join(ROOT, 'src/game-loop/frame-input.ts'), 'utf8');
     for (const [, code] of frame.matchAll(/keys\['(\w+)'\]/g)) {
         const isAbilityKey = ALL_ABILITY_IDS.some((id) => ABILITY_REGISTRY[id].binding.code === code);
-        assert.ok(!isAbilityKey, `frame-input.js polls ability key ${code} directly`);
+        assert.ok(!isAbilityKey, `frame-input.ts polls ability key ${code} directly`);
     }
 }
 
@@ -77,7 +77,7 @@ function testHoverIsRegistryOwned() {
     for (const rel of ['src/game-loop/frame-input.ts', 'src/game-loop/logic.js']) {
         assert.ok(!/hoverBarEl/.test(read(rel)), `${rel} must not paint #hover; the registry hudSlot does`);
     }
-    assert.ok(!/KeyH|isHovering|hoverCharge/.test(read('src/game-loop/frame-input.ts')), 'frame-input.js no longer special-cases hover');
+    assert.ok(!/KeyH|isHovering|hoverCharge/.test(read('src/game-loop/frame-input.ts')), 'frame-input.ts no longer special-cases hover');
     assert.ok(!/getMarblePhysics/.test(read('src/abilities/hover.js')), 'hover is not a wasm-bridge kernel');
 
     const def = ABILITY_REGISTRY.hover;

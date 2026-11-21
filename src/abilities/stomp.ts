@@ -45,7 +45,7 @@ export class AbilityStomp {
         this.game.isChargingStomp = false;
         this.game.isStomping = true;
         this.game.stompReleaseTime = Date.now();
-        // Cooldown starts on release (read by the Z edge detection in frame-input.js).
+        // Cooldown starts on release (read by the Z edge detection in frame-input.ts).
         this.game.lastStompTime = now ?? this.game.stompReleaseTime;
 
         // Restore gravity

@@ -17,5 +17,47 @@
     { "id": 1, "range": { "x": [-5, 5], "y": [-2, 5], "z": [85, 95] } }
   ],
   "camera": { "mode": "follow", "height": 15, "offset": -25 },
-  "medals": { "goldTime": 55, "silverTime": 110, "bronzeTime": 210, "parTime": 90 }
+  "medals": { "goldTime": 55, "silverTime": 110, "bronzeTime": 210, "parTime": 90 },
+  "solution": {
+    "inputs": [
+      { "frames": 14, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 35, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 19, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 29, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 84, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 180 },
+      { "frames": 41, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 17, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 45, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 32, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 44, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 38, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 39, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 38, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 38, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 39, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 38, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 5, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["jump"], "yawDeg": 0 },
+      { "frames": 33, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 25, "keys": [], "yawDeg": 180 },
+      { "frames": 9, "keys": ["forward"], "yawDeg": 0 }
+    ],
+    "par": 11.32
+  }
 }

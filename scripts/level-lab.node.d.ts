@@ -6,7 +6,8 @@
  */
 declare module 'node:fs' {
     export function readFileSync(path: string, encoding: 'utf8'): string;
-    const fs: { readFileSync: typeof readFileSync };
+    export function writeFileSync(path: string, data: string): void;
+    const fs: { readFileSync: typeof readFileSync; writeFileSync: typeof writeFileSync };
     export default fs;
 }
 

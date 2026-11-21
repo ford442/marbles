@@ -27,7 +27,7 @@ export const KILL_PLANE_Y = -20;
 /**
  * Reference marble for completability: the default-unlocked starter
  * (assets/marbles/classic_red.json). Held-key movement is a raw impulse
- * (frame-input.js), so recorded solutions are only valid for this marble.
+ * (frame-input.ts), so recorded solutions are only valid for this marble.
  */
 export const REFERENCE_MARBLE = Object.freeze({
     radius: 0.5, friction: 0.015, restitution: 0.8, density: 1.5, linearDamping: 0.08, angularDamping: 0.08,

@@ -1,6 +1,7 @@
 import type RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
 import { getMarblePhysics, FORCE_BATCH_THRESHOLD, PhysicsBatchBuffers } from '../wasm-bridge.js';
+import { moveImpulsePerStep } from '../game/movement-model.js';
 import type { MarbleRegistry } from '../game/systems/marble-registry.js';
 import type { InitLevelMenu } from '../init/level-menu.ts';
 import type { Vec3 } from '../types/geometry.ts';
@@ -9,7 +10,7 @@ import type { FrameExtras, FrameState } from '../types/frame-host.ts';
 /** What `tickFrameInput` (keyboard camera / movement, charge meters, magnet, HUD bars) uses on the game. */
 export type GameLoopFrameInputHost =
     & Pick<FrameState,
-        | 'keys' | 'currentLevel' | 'cameraMode' | 'aimYaw' | 'pitchAngle'
+        | 'keys' | 'currentLevel' | 'movementModel' | 'cameraMode' | 'aimYaw' | 'pitchAngle'
         | 'camAngle' | 'targetCamAngle' | 'camRadius' | 'targetCamRadius' | 'camHeight' | 'targetCamHeight'
         | 'activeEffects' | 'playerMarble' | 'marbles' | 'dynamicObjects'
         | 'lastDashTime' | 'dashCooldown' | 'isChargingDash' | 'dashCharge' | 'maxDashCharge'
@@ -77,13 +78,13 @@ export class GameLoopFrameInput {
                     this.game.camRadius += (this.game.targetCamRadius - this.game.camRadius) * 0.1
                     this.game.camHeight += (this.game.targetCamHeight - this.game.camHeight) * 0.1
                 } else if (this.game.cameraMode === 'follow' || this.game.cameraMode === 'action' || this.game.cameraMode === 'fpv' || this.game.cameraMode === 'topdown' || this.game.cameraMode === 'cinematic' || this.game.cameraMode === 'side-scroller' || this.game.cameraMode === 'drone') {
-                    let impulseStrength = 0.5 * step
-                    if (this.game.activeEffects.speed && Date.now() < this.game.activeEffects.speed) {
-                        impulseStrength *= 2.0
-                    }
-        
                     if (this.game.playerMarble) {
                         const rigidBody = this.game.playerMarble.rigidBody
+                        const movementModel = this.game.movementModel ?? undefined
+                        let impulseStrength = moveImpulsePerStep(movementModel, movementModel === 2 ? rigidBody.mass() : NaN) * step
+                        if (this.game.activeEffects.speed && Date.now() < this.game.activeEffects.speed) {
+                            impulseStrength *= 2.0
+                        }
         
                         let forwardX = Math.sin(this.game.aimYaw)
                         let forwardZ = Math.cos(this.game.aimYaw)

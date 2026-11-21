@@ -84,6 +84,7 @@
       { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
       { "frames": 23, "keys": [], "yawDeg": 110 }
     ],
+    "par": 8.43,
     "tolerance": 0.35
   }
 }

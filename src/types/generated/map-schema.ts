@@ -199,6 +199,10 @@ export type MapSchema = {
         max: Vec3;
     };
     /**
+     * Held-key movement: 1 (default) = flat impulse, light marbles accelerate harder; 2 = impulse scaled by mass so every marble accelerates like the reference marble (solutions are unaffected). See src/game/movement-model.js.
+     */
+    movementModel?: 1 | 2;
+    /**
      * Free-roam map with no finish (e.g. sandbox). Exempts it from the goal checks in tests/levels/.
      */
     goalless?: boolean;
@@ -222,6 +226,14 @@ export type MapSchema = {
          * Allowed relative deviation from medals.parTime (default 0.5).
          */
         tolerance?: number;
+        /**
+         * Recorded replay time in seconds. The harness fails if the replay drifts more than parDrift from it (catches subtle friction/impulse regressions).
+         */
+        par?: number;
+        /**
+         * Allowed relative drift of the replay time from solution.par (default 0.05).
+         */
+        parDrift?: number;
     };
     [k: string]: unknown | undefined;
 };

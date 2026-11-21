@@ -66,7 +66,7 @@ export class HostSim {
         const g = this.game;
         if (!g.levelStartTime || !g.networkMarbles?.size) return;
 
-        // Same contract as local held-key movement (`frame-input.js`): 0.5 per
+        // Same contract as local held-key movement (`frame-input.ts`): 0.5 per
         // simulated 1/60 s, so a frame that runs no fixed step adds nothing.
         const scale = (g.simDt ?? 1 / 60) * 60;
         if (scale > 0) this._applyRemoteInputs(scale);

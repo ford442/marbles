@@ -63,6 +63,8 @@ export type MapBounds = NonNullable<AuthoredMap['bounds']>;
 export type MapSolution = NonNullable<AuthoredMap['solution']>;
 export type MapSolutionSegment = MapSolution['inputs'][number];
 export type MapRotation = Rotation;
+/** Held-key movement model (`src/game/movement-model.js`); absent = 1. */
+export type MovementModel = NonNullable<AuthoredMap['movementModel']>;
 
 export type Range2 = [number, number];
 export type RgbColor = Color;

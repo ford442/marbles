@@ -88,7 +88,7 @@ Movers and spinners are posed from **simulated time** (`ZoneScope.time`, advance
 
 The headless build seeds `Math.random`, so zones that randomise their layout build identically every time and solutions replay exactly. In game those layouts still vary, so a solution there proves the seeded layout is finishable. Prefer deterministic geometry in v2 maps.
 
-**Solutions are tied to the reference marble.** Held-key movement is a raw impulse of 0.5 per 60 Hz frame (`frame-input.js`), and it is not scaled by mass. That includes full air control, as in game. A light marble therefore accelerates much harder than a heavy one, so solutions are recorded against `REFERENCE_MARBLE` (the default-unlocked `classic_red`: radius 0.5, density 1.5, friction 0.015, restitution 0.8). Mass-scaling movement would invalidate every recorded solution; re-record them if that changes.
+**Solutions are tied to the reference marble.** Held-key movement is a raw impulse of 0.5 per 60 Hz frame (`frame-input.ts`), and it is not scaled by mass. That includes full air control, as in game. A light marble therefore accelerates much harder than a heavy one, so solutions are recorded against `REFERENCE_MARBLE` (the default-unlocked `classic_red`: radius 0.5, density 1.5, friction 0.015, restitution 0.8). Mass-scaling movement would invalidate every recorded solution; re-record them if that changes.
 
 ### Authoring a solution — `npm run level:lab`
 
