@@ -3,7 +3,7 @@
 import { audio } from '../audio.js';
 import { quaternionToMat4 } from '../math.ts';
 import { tickLevelBehaviors } from '../game/level-behaviors/index.js';
-import { applyRepelPulse } from './repel-pulse.js';
+import { applyRepelPulse } from './repel-pulse.ts';
 import { applyAcceleration } from '../game/systems/body-impulse.ts';
 import { getMarblePhysics, FORCE_BATCH_THRESHOLD, PhysicsBatchBuffers } from '../wasm-bridge.js';
 
@@ -21,10 +21,14 @@ function blendPerFrame(perFrame, meter) {
 }
 
 export class GameLoopLogic {
-    /** @this {FrameHost} */
+    /** @param {FrameHost} game */
+    constructor(game) {
+        this.game = game;
+    }
+
     updateGameState() {
         // Skip game updates when paused (but keep polling for pause toggle)
-        if (this.isPaused) {
+        if (this.game.isPaused) {
             // Still render the scene, just don't update game state
             return
         }
@@ -34,38 +38,38 @@ export class GameLoopLogic {
         //   meter — wall-clock seconds × 60: energy meters, timers, UI smoothing
         //   step  — simulated seconds × 60: continuous impulses (0 on frames
         //           where the fixed-step clock runs no physics step)
-        const dt = this.frameDt ?? 1 / 60
-        const simDt = this.simDt ?? 1 / 60
+        const dt = this.game.frameDt ?? 1 / 60
+        const simDt = this.game.simDt ?? 1 / 60
         const meter = dt * 60
         const step = simDt * 60
 
-        tickLevelBehaviors(this, simDt);
+        tickLevelBehaviors(this.game, simDt);
 
         // Note: gamepads are already polled once per frame in loop(); no need
         // to poll again here.
 
         // Party race: relay transform sync (arcade mode, not physics-authoritative)
-        if (this.multiplayerMode) {
-            this.tickMultiplayer?.()
+        if (this.game.multiplayerMode) {
+            this.game.tickMultiplayer?.()
         }
 
-        this.touchControls?.tick()
+        this.game.touchControls?.tick()
 
         // Record / playback ghost replay (30 Hz, visual-only)
-        if (this.ghostReplay) {
-            this.ghostReplay.tickRecord(this)
+        if (this.game.ghostReplay) {
+            this.game.ghostReplay.tickRecord(this.game)
 
-            const ghostFrame = this.ghostReplay.tickPlayback(this)
-            if (ghostFrame && this.ghostEntity) {
-                const tcm = this.engine.getTransformManager()
+            const ghostFrame = this.game.ghostReplay.tickPlayback(this.game)
+            if (ghostFrame && this.game.ghostEntity) {
+                const tcm = this.game.engine.getTransformManager()
                 const rot = { x: ghostFrame.qx, y: ghostFrame.qy, z: ghostFrame.qz, w: ghostFrame.qw }
                 const pos = { x: ghostFrame.x, y: ghostFrame.y, z: ghostFrame.z }
                 const mat = quaternionToMat4(pos, rot)
-                const inst = tcm.getInstance(this.ghostEntity)
+                const inst = tcm.getInstance(this.game.ghostEntity)
                 tcm.setTransform(inst, mat)
 
-                if (this.ghostLightEntity) {
-                    const lightInst = tcm.getInstance(this.ghostLightEntity)
+                if (this.game.ghostLightEntity) {
+                    const lightInst = tcm.getInstance(this.game.ghostLightEntity)
                     const lightMat = quaternionToMat4(pos, { x: 0, y: 0, z: 0, w: 1 })
                     tcm.setTransform(lightInst, lightMat)
                 }
@@ -76,128 +80,128 @@ export class GameLoopLogic {
         const zoomSpeed = 0.5
 
         // Adrenaline Logic Update
-        if (this.playerMarble) {
-            const linvel = this.playerMarble.rigidBody.linvel()
+        if (this.game.playerMarble) {
+            const linvel = this.game.playerMarble.rigidBody.linvel()
             const speed = Math.hypot(linvel.x, linvel.y, linvel.z)
 
             if (speed > 15) {
                 // Increase adrenaline based on speed above 15
-                this.adrenaline = Math.min(this.maxAdrenaline, this.adrenaline + (speed - 15) * 0.05 * meter)
+                this.game.adrenaline = Math.min(this.game.maxAdrenaline, this.game.adrenaline + (speed - 15) * 0.05 * meter)
             } else {
                 // Decay adrenaline slowly
-                this.adrenaline = Math.max(0, this.adrenaline - 0.2 * meter)
+                this.game.adrenaline = Math.max(0, this.game.adrenaline - 0.2 * meter)
             }
 
             // Camera FOV target
-            const targetFov = this.baseFov + (this.adrenaline / this.maxAdrenaline) * 20.0
-            this.currentFov += (targetFov - this.currentFov) * blendPerFrame(0.1, meter)
+            const targetFov = this.game.baseFov + (this.game.adrenaline / this.game.maxAdrenaline) * 20.0
+            this.game.currentFov += (targetFov - this.game.currentFov) * blendPerFrame(0.1, meter)
 
             // Generate Camera Shake (respect accessibility setting)
-            const shakeMultiplier = this.getScreenShakeIntensity ? this.getScreenShakeIntensity() : 1.0
+            const shakeMultiplier = this.game.getScreenShakeIntensity ? this.game.getScreenShakeIntensity() : 1.0
             // Reuse a single cameraShake object instead of allocating a new one
             // every frame (this runs at 60 FPS and would otherwise churn the GC).
-            if (!this.cameraShake) this.cameraShake = { x: 0, y: 0, z: 0 }
-            const shake = this.cameraShake
-            if (this.adrenaline > 20 && shakeMultiplier > 0) {
-                const shakeIntensity = (this.adrenaline - 20) / 80.0 * 0.5 * shakeMultiplier
+            if (!this.game.cameraShake) this.game.cameraShake = { x: 0, y: 0, z: 0 }
+            const shake = this.game.cameraShake
+            if (this.game.adrenaline > 20 && shakeMultiplier > 0) {
+                const shakeIntensity = (this.game.adrenaline - 20) / 80.0 * 0.5 * shakeMultiplier
                 shake.x += (Math.random() - 0.5) * shakeIntensity
                 shake.y += (Math.random() - 0.5) * shakeIntensity
                 shake.z += (Math.random() - 0.5) * shakeIntensity
             }
 
             // Add Tremor Camera Shake
-            if (this.tremorShakeTimer && this.tremorShakeTimer > 0) {
-                const tremorIntensity = (this.tremorShakeTimer / 30.0) * 1.5 * shakeMultiplier
-                this.cameraShake.x += (Math.random() - 0.5) * tremorIntensity
-                this.cameraShake.y += (Math.random() - 0.5) * tremorIntensity
-                this.cameraShake.z += (Math.random() - 0.5) * tremorIntensity
-                this.tremorShakeTimer = Math.max(0, this.tremorShakeTimer - meter)
+            if (this.game.tremorShakeTimer && this.game.tremorShakeTimer > 0) {
+                const tremorIntensity = (this.game.tremorShakeTimer / 30.0) * 1.5 * shakeMultiplier
+                this.game.cameraShake.x += (Math.random() - 0.5) * tremorIntensity
+                this.game.cameraShake.y += (Math.random() - 0.5) * tremorIntensity
+                this.game.cameraShake.z += (Math.random() - 0.5) * tremorIntensity
+                this.game.tremorShakeTimer = Math.max(0, this.game.tremorShakeTimer - meter)
             }
 
             // Stomp camera shake decay
             const shakeDecay = Math.pow(0.9, meter)
-            this.cameraShake.x *= shakeDecay
-            this.cameraShake.y *= shakeDecay
-            this.cameraShake.z *= shakeDecay
+            this.game.cameraShake.x *= shakeDecay
+            this.game.cameraShake.y *= shakeDecay
+            this.game.cameraShake.z *= shakeDecay
 
             // Update Projection FOV each frame
-            if (this.camera && this.view && this.Filament && this.Filament.Camera$Fov) {
-                const aspect = this.canvas.width / this.canvas.height
-                this.camera.setProjectionFov(this.currentFov, aspect, 0.1, 1000.0, this.Filament.Camera$Fov.VERTICAL)
+            if (this.game.camera && this.game.view && this.game.Filament && this.game.Filament.Camera$Fov) {
+                const aspect = this.game.canvas.width / this.game.canvas.height
+                this.game.camera.setProjectionFov(this.game.currentFov, aspect, 0.1, 1000.0, this.game.Filament.Camera$Fov.VERTICAL)
             }
 
             // Update speed lines effect based on marble velocity
-            this.updateSpeedLines(speed)
+            this.game.updateSpeedLines(speed)
         }
 
-        if (this.adrenalineBarEl && this.adrenalineBarContainerEl) {
-            const pct = (this.adrenaline / this.maxAdrenaline) * 100
-            this.adrenalineBarEl.style.width = `${pct}%`
-            if (this.adrenaline > 0) {
-                this.adrenalineBarContainerEl.style.display = 'block'
+        if (this.game.adrenalineBarEl && this.game.adrenalineBarContainerEl) {
+            const pct = (this.game.adrenaline / this.game.maxAdrenaline) * 100
+            this.game.adrenalineBarEl.style.width = `${pct}%`
+            if (this.game.adrenaline > 0) {
+                this.game.adrenalineBarContainerEl.style.display = 'block'
             } else {
-                this.adrenalineBarContainerEl.style.display = 'none'
+                this.game.adrenalineBarContainerEl.style.display = 'none'
             }
 
-            if (this.adrenaline > 80) {
-                this.adrenalineBarEl.style.boxShadow = '0 0 15px #ff0000'
+            if (this.game.adrenaline > 80) {
+                this.game.adrenalineBarEl.style.boxShadow = '0 0 15px #ff0000'
             } else {
-                this.adrenalineBarEl.style.boxShadow = '0 0 5px #ff0000'
+                this.game.adrenalineBarEl.style.boxShadow = '0 0 5px #ff0000'
             }
         }
 
         // Sandbox Builder Logic
-        this.buildEnergy = Math.min(this.maxBuildEnergy, this.buildEnergy + 0.1 * meter)
-        if (this.buildbarEl) {
-            const pct = (this.buildEnergy / this.maxBuildEnergy) * 100
-            this.buildbarEl.style.width = `${pct}%`
+        this.game.buildEnergy = Math.min(this.game.maxBuildEnergy, this.game.buildEnergy + 0.1 * meter)
+        if (this.game.buildbarEl) {
+            const pct = (this.game.buildEnergy / this.game.maxBuildEnergy) * 100
+            this.game.buildbarEl.style.width = `${pct}%`
 
-            if (this.buildEnergy >= 25) {
-                this.buildbarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #00ff00)'
+            if (this.game.buildEnergy >= 25) {
+                this.game.buildbarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #00ff00)'
             } else {
-                this.buildbarEl.style.filter = 'brightness(0.7)'
+                this.game.buildbarEl.style.filter = 'brightness(0.7)'
             }
         }
 
         // Focus Mechanic Logic
         // Focus is the registry's `focus` entry (poll trigger; maps can disable it).
-        if (this.abilitySystem?.isHeld('focus') && this.focusEnergy > 0) {
-            if (!this.focusActive && this.hudManager) {
-                this.hudManager.markAbilityUsed('focus')
+        if (this.game.abilitySystem?.isHeld('focus') && this.game.focusEnergy > 0) {
+            if (!this.game.focusActive && this.game.hudManager) {
+                this.game.hudManager.markAbilityUsed('focus')
             }
-            this.focusActive = true
+            this.game.focusActive = true
             const targetScale = 0.2
-            this.timeScale += (targetScale - this.timeScale) * blendPerFrame(0.1, meter)
-            this.focusEnergy = Math.max(0, this.focusEnergy - 0.5 * meter)
+            this.game.timeScale += (targetScale - this.game.timeScale) * blendPerFrame(0.1, meter)
+            this.game.focusEnergy = Math.max(0, this.game.focusEnergy - 0.5 * meter)
         } else {
-            this.focusActive = false
+            this.game.focusActive = false
             const targetScale = 1.0
-            this.timeScale += (targetScale - this.timeScale) * blendPerFrame(0.1, meter)
-            this.focusEnergy = Math.min(this.maxFocusEnergy, this.focusEnergy + 0.2 * meter)
+            this.game.timeScale += (targetScale - this.game.timeScale) * blendPerFrame(0.1, meter)
+            this.game.focusEnergy = Math.min(this.game.maxFocusEnergy, this.game.focusEnergy + 0.2 * meter)
         }
 
         // Apply Time Scale to Physics: scales the fixed-step clock's
         // accumulated time (both backends), never the step size.
-        if (this.physicsBackend?.setTimeScale) {
-            this.physicsBackend.setTimeScale(this.timeScale)
-        } else if (this.physicsClock) {
-            this.physicsClock.timeScale = this.timeScale
+        if (this.game.physicsBackend?.setTimeScale) {
+            this.game.physicsBackend.setTimeScale(this.game.timeScale)
+        } else if (this.game.physicsClock) {
+            this.game.physicsClock.timeScale = this.game.timeScale
         }
 
         // Time Stop Mechanic Logic
-        if (this.timeStopActive && this.timeStopEnergy > 0) {
-            this.timeStopEnergy = Math.max(0, this.timeStopEnergy - 0.5 * meter)
+        if (this.game.timeStopActive && this.game.timeStopEnergy > 0) {
+            this.game.timeStopEnergy = Math.max(0, this.game.timeStopEnergy - 0.5 * meter)
 
-            if (this.playerMarble) {
-                const playerRb = this.playerMarble.rigidBody
-                for (const body of this.dynamicBodies) {
+            if (this.game.playerMarble) {
+                const playerRb = this.game.playerMarble.rigidBody
+                for (const body of this.game.dynamicBodies) {
                     if (body === playerRb) continue
 
                     // Save state if not already saved
-                    if (!this.timeStopSavedStates.has(body.handle)) {
+                    if (!this.game.timeStopSavedStates.has(body.handle)) {
                         const linvel = body.linvel()
                         const angvel = body.angvel()
-                        this.timeStopSavedStates.set(body.handle, {
+                        this.game.timeStopSavedStates.set(body.handle, {
                             linvel: { x: linvel.x, y: linvel.y, z: linvel.z },
                             angvel: { x: angvel.x, y: angvel.y, z: angvel.z }
                         })
@@ -210,199 +214,199 @@ export class GameLoopLogic {
                 }
             }
         } else {
-            if (this.timeStopActive) {
+            if (this.game.timeStopActive) {
                 // Out of energy, deactivate
-                this.timeStopActive = false
-                const playerRb = this.playerMarble ? this.playerMarble.rigidBody : null
-                for (const body of this.dynamicBodies) {
+                this.game.timeStopActive = false
+                const playerRb = this.game.playerMarble ? this.game.playerMarble.rigidBody : null
+                for (const body of this.game.dynamicBodies) {
                     if (body !== playerRb) {
-                        const state = this.timeStopSavedStates.get(body.handle)
+                        const state = this.game.timeStopSavedStates.get(body.handle)
                         if (state) {
                             body.setLinvel(state.linvel, true)
                             body.setAngvel(state.angvel, true)
-                            this.timeStopSavedStates.delete(body.handle)
+                            this.game.timeStopSavedStates.delete(body.handle)
                         }
                         body.setGravityScale(1.0, true)
                     }
                 }
-                this.timeStopSavedStates.clear()
+                this.game.timeStopSavedStates.clear()
             }
-            this.timeStopEnergy = Math.min(this.maxTimeStopEnergy, this.timeStopEnergy + 0.2 * meter)
+            this.game.timeStopEnergy = Math.min(this.game.maxTimeStopEnergy, this.game.timeStopEnergy + 0.2 * meter)
         }
 
-        if (this.timeStopbarContainerEl && this.timeStopbarEl) {
-            const pct = (this.timeStopEnergy / this.maxTimeStopEnergy) * 100
-            this.timeStopbarEl.style.width = `${pct}%`
+        if (this.game.timeStopbarContainerEl && this.game.timeStopbarEl) {
+            const pct = (this.game.timeStopEnergy / this.game.maxTimeStopEnergy) * 100
+            this.game.timeStopbarEl.style.width = `${pct}%`
 
-            if (this.timeStopEnergy < this.maxTimeStopEnergy || this.timeStopActive) {
-                this.timeStopbarContainerEl.style.display = 'block'
+            if (this.game.timeStopEnergy < this.game.maxTimeStopEnergy || this.game.timeStopActive) {
+                this.game.timeStopbarContainerEl.style.display = 'block'
             } else {
-                this.timeStopbarContainerEl.style.display = 'none'
+                this.game.timeStopbarContainerEl.style.display = 'none'
             }
 
-            if (this.timeStopActive && this.timeStopEnergy > 0) {
-                this.timeStopbarEl.style.boxShadow = '0 0 10px #ffffff'
+            if (this.game.timeStopActive && this.game.timeStopEnergy > 0) {
+                this.game.timeStopbarEl.style.boxShadow = '0 0 10px #ffffff'
                 // Optional: apply grayscale or color tint to the whole body via CSS
                 document.body.style.filter = 'grayscale(80%) contrast(1.2)'
             } else {
-                this.timeStopbarEl.style.boxShadow = 'none'
-                if (!this.focusActive) { // ensure we don't clear focus active filter
+                this.game.timeStopbarEl.style.boxShadow = 'none'
+                if (!this.game.focusActive) { // ensure we don't clear focus active filter
                     document.body.style.filter = 'none'
                 }
             }
         }
 
         // EMP Bar Logic
-        if (this.empBarEl && this.empBarContainerEl) {
+        if (this.game.empBarEl && this.game.empBarContainerEl) {
             const now = Date.now()
-            const timeSinceLastEmp = now - this.lastEmpTime
-            if (timeSinceLastEmp < this.empCooldown) {
-                this.empBarContainerEl.style.display = 'block'
-                const pct = (timeSinceLastEmp / this.empCooldown) * 100
-                this.empBarEl.style.width = `${pct}%`
+            const timeSinceLastEmp = now - this.game.lastEmpTime
+            if (timeSinceLastEmp < this.game.empCooldown) {
+                this.game.empBarContainerEl.style.display = 'block'
+                const pct = (timeSinceLastEmp / this.game.empCooldown) * 100
+                this.game.empBarEl.style.width = `${pct}%`
             } else {
-                this.empBarContainerEl.style.display = 'none'
-                this.empBarEl.style.width = '100%'
+                this.game.empBarContainerEl.style.display = 'none'
+                this.game.empBarEl.style.width = '100%'
             }
         }
 
         // Portal Teleportation Logic
         const nowTime = Date.now()
-        if (this.portalA && this.portalB && this.playerMarble && (nowTime - this.lastPortalTeleportTime > this.portalCooldown)) {
-            const playerPos = this.playerMarble.rigidBody.translation()
-            const pRadius = this.playerMarble.scale * 0.5 || 0.5
+        if (this.game.portalA && this.game.portalB && this.game.playerMarble && (nowTime - this.game.lastPortalTeleportTime > this.game.portalCooldown)) {
+            const playerPos = this.game.playerMarble.rigidBody.translation()
+            const pRadius = this.game.playerMarble.scale * 0.5 || 0.5
 
             // Check dist to Portal A
-            const distA = Math.hypot(playerPos.x - this.portalA.pos.x, playerPos.y - this.portalA.pos.y, playerPos.z - this.portalA.pos.z)
+            const distA = Math.hypot(playerPos.x - this.game.portalA.pos.x, playerPos.y - this.game.portalA.pos.y, playerPos.z - this.game.portalA.pos.z)
             if (distA < 1.5) {
                 // Teleport to B
                 const outPos = {
-                    x: this.portalB.pos.x + this.portalB.normal.x * (pRadius + 0.1),
-                    y: this.portalB.pos.y + this.portalB.normal.y * (pRadius + 0.1),
-                    z: this.portalB.pos.z + this.portalB.normal.z * (pRadius + 0.1)
+                    x: this.game.portalB.pos.x + this.game.portalB.normal.x * (pRadius + 0.1),
+                    y: this.game.portalB.pos.y + this.game.portalB.normal.y * (pRadius + 0.1),
+                    z: this.game.portalB.pos.z + this.game.portalB.normal.z * (pRadius + 0.1)
                 }
-                this.playerMarble.rigidBody.setTranslation(outPos, true)
+                this.game.playerMarble.rigidBody.setTranslation(outPos, true)
                 // Maintain velocity magnitude, change direction to out normal
-                const vel = this.playerMarble.rigidBody.linvel()
+                const vel = this.game.playerMarble.rigidBody.linvel()
                 const speed = Math.hypot(vel.x, vel.y, vel.z) || 10.0
-                this.playerMarble.rigidBody.setLinvel({
-                    x: this.portalB.normal.x * speed,
-                    y: this.portalB.normal.y * speed,
-                    z: this.portalB.normal.z * speed
+                this.game.playerMarble.rigidBody.setLinvel({
+                    x: this.game.portalB.normal.x * speed,
+                    y: this.game.portalB.normal.y * speed,
+                    z: this.game.portalB.normal.z * speed
                 }, true)
-                this.lastPortalTeleportTime = nowTime
+                this.game.lastPortalTeleportTime = nowTime
                 if (audio && audio.playTrick) audio.playTrick()
             } else {
                 // Check dist to Portal B
-                const distB = Math.hypot(playerPos.x - this.portalB.pos.x, playerPos.y - this.portalB.pos.y, playerPos.z - this.portalB.pos.z)
+                const distB = Math.hypot(playerPos.x - this.game.portalB.pos.x, playerPos.y - this.game.portalB.pos.y, playerPos.z - this.game.portalB.pos.z)
                 if (distB < 1.5) {
                     // Teleport to A
                     const outPos = {
-                        x: this.portalA.pos.x + this.portalA.normal.x * (pRadius + 0.1),
-                        y: this.portalA.pos.y + this.portalA.normal.y * (pRadius + 0.1),
-                        z: this.portalA.pos.z + this.portalA.normal.z * (pRadius + 0.1)
+                        x: this.game.portalA.pos.x + this.game.portalA.normal.x * (pRadius + 0.1),
+                        y: this.game.portalA.pos.y + this.game.portalA.normal.y * (pRadius + 0.1),
+                        z: this.game.portalA.pos.z + this.game.portalA.normal.z * (pRadius + 0.1)
                     }
-                    this.playerMarble.rigidBody.setTranslation(outPos, true)
-                    const vel = this.playerMarble.rigidBody.linvel()
+                    this.game.playerMarble.rigidBody.setTranslation(outPos, true)
+                    const vel = this.game.playerMarble.rigidBody.linvel()
                     const speed = Math.hypot(vel.x, vel.y, vel.z) || 10.0
-                    this.playerMarble.rigidBody.setLinvel({
-                        x: this.portalA.normal.x * speed,
-                        y: this.portalA.normal.y * speed,
-                        z: this.portalA.normal.z * speed
+                    this.game.playerMarble.rigidBody.setLinvel({
+                        x: this.game.portalA.normal.x * speed,
+                        y: this.game.portalA.normal.y * speed,
+                        z: this.game.portalA.normal.z * speed
                     }, true)
-                    this.lastPortalTeleportTime = nowTime
+                    this.game.lastPortalTeleportTime = nowTime
                     if (audio && audio.playTrick) audio.playTrick()
                 }
             }
         }
 
         // Update Focus UI and Effects
-        if (this.focusBarEl) {
-            const pct = (this.focusEnergy / this.maxFocusEnergy) * 100
-            this.focusBarEl.style.width = `${pct}%`
+        if (this.game.focusBarEl) {
+            const pct = (this.game.focusEnergy / this.game.maxFocusEnergy) * 100
+            this.game.focusBarEl.style.width = `${pct}%`
 
-            if (this.focusActive) {
-                this.focusBarEl.style.boxShadow = '0 0 10px #7b00ff'
+            if (this.game.focusActive) {
+                this.game.focusBarEl.style.boxShadow = '0 0 10px #7b00ff'
                 document.body.style.filter = 'contrast(1.2) saturate(0.5) brightness(1.1)'
             } else {
-                this.focusBarEl.style.boxShadow = 'none'
+                this.game.focusBarEl.style.boxShadow = 'none'
                 document.body.style.filter = 'none'
             }
         }
 
         // Rewind records and replays one entry per frame that ran physics, so
         // history length and playback speed don't depend on refresh rate.
-        const physicsFrame = (this.physicsSubsteps ?? 1) > 0
-        if (this.isRewinding && this.playerMarble) {
-            if (this._rewindCount > 0 && physicsFrame) {
+        const physicsFrame = (this.game.physicsSubsteps ?? 1) > 0
+        if (this.game.isRewinding && this.game.playerMarble) {
+            if (this.game._rewindCount > 0 && physicsFrame) {
                 // Pop last frame from ring buffer
-                this._rewindCount--
-                this._rewindHead = (this._rewindHead - 1 + this.maxRewindFrames) % this.maxRewindFrames
-                const base = this._rewindHead * 13
-                const buf = this._rewindBuffer
+                this.game._rewindCount--
+                this.game._rewindHead = (this.game._rewindHead - 1 + this.game.maxRewindFrames) % this.game.maxRewindFrames
+                const base = this.game._rewindHead * 13
+                const buf = this.game._rewindBuffer
                 const at = (/** @type {number} */ i) => buf[base + i] ?? 0
-                this.playerMarble.rigidBody.setTranslation({ x: at(0), y: at(1), z: at(2) }, true)
-                this.playerMarble.rigidBody.setRotation(   { x: at(3), y: at(4), z: at(5), w: at(6) }, true)
-                this.playerMarble.rigidBody.setLinvel(     { x: at(7), y: at(8), z: at(9) }, true)
-                this.playerMarble.rigidBody.setAngvel(     { x: at(10), y: at(11), z: at(12) }, true)
+                this.game.playerMarble.rigidBody.setTranslation({ x: at(0), y: at(1), z: at(2) }, true)
+                this.game.playerMarble.rigidBody.setRotation(   { x: at(3), y: at(4), z: at(5), w: at(6) }, true)
+                this.game.playerMarble.rigidBody.setLinvel(     { x: at(7), y: at(8), z: at(9) }, true)
+                this.game.playerMarble.rigidBody.setAngvel(     { x: at(10), y: at(11), z: at(12) }, true)
 
                 // Visual effect for rewind
-                const rcm = this.engine.getRenderableManager()
-                const inst = rcm.getInstance(this.playerMarble.entity)
+                const rcm = this.game.engine.getRenderableManager()
+                const inst = rcm.getInstance(this.game.playerMarble.entity)
                 // Tint red/orange
-                rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 0.2, 0.0])
+                rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, [1.0, 0.2, 0.0])
             }
-        } else if (this.playerMarble && physicsFrame) {
-             const rb = this.playerMarble.rigidBody
+        } else if (this.game.playerMarble && physicsFrame) {
+             const rb = this.game.playerMarble.rigidBody
              const pos = rb.translation()
              const rot = rb.rotation()
              const linvel = rb.linvel()
              const angvel = rb.angvel()
 
              // Push frame into ring buffer (overwrites oldest when full)
-             const base = this._rewindHead * 13
-             const buf = this._rewindBuffer
+             const base = this.game._rewindHead * 13
+             const buf = this.game._rewindBuffer
              buf[base]      = pos.x;    buf[base + 1]  = pos.y;    buf[base + 2]  = pos.z
              buf[base + 3]  = rot.x;    buf[base + 4]  = rot.y;    buf[base + 5]  = rot.z;   buf[base + 6]  = rot.w
              buf[base + 7]  = linvel.x; buf[base + 8]  = linvel.y; buf[base + 9]  = linvel.z
              buf[base + 10] = angvel.x; buf[base + 11] = angvel.y; buf[base + 12] = angvel.z
-             this._rewindHead = (this._rewindHead + 1) % this.maxRewindFrames
-             if (this._rewindCount < this.maxRewindFrames) this._rewindCount++
+             this.game._rewindHead = (this.game._rewindHead + 1) % this.game.maxRewindFrames
+             if (this.game._rewindCount < this.game.maxRewindFrames) this.game._rewindCount++
         }
 
-        if (this.rewindBarEl) {
-            const pct = (this._rewindCount / this.maxRewindFrames) * 100
-            this.rewindBarEl.style.width = `${pct}%`
+        if (this.game.rewindBarEl) {
+            const pct = (this.game._rewindCount / this.game.maxRewindFrames) * 100
+            this.game.rewindBarEl.style.width = `${pct}%`
         }
 
-        if (this.gravityBarEl) {
-            if (this.activeEffects.gravity && Date.now() < this.activeEffects.gravity) {
-                const timeLeft = this.activeEffects.gravity - Date.now()
+        if (this.game.gravityBarEl) {
+            if (this.game.activeEffects.gravity && Date.now() < this.game.activeEffects.gravity) {
+                const timeLeft = this.game.activeEffects.gravity - Date.now()
                 const pct = (timeLeft / 5000) * 100
-                this.gravityBarEl.style.width = `${pct}%`
-                this.gravityBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ffcc00)'
+                this.game.gravityBarEl.style.width = `${pct}%`
+                this.game.gravityBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ffcc00)'
 
-                if (this.playerMarble) {
+                if (this.game.playerMarble) {
                     // Counteract most of gravity so it feels floaty
-                    applyAcceleration(this.playerMarble.rigidBody, { x: 0, y: 0.98 * GRAVITY, z: 0 }, simDt)
+                    applyAcceleration(this.game.playerMarble.rigidBody, { x: 0, y: 0.98 * GRAVITY, z: 0 }, simDt)
                 }
             } else {
-                this.gravityBarEl.style.width = `0%`
-                this.gravityBarEl.style.filter = 'none'
+                this.game.gravityBarEl.style.width = `0%`
+                this.game.gravityBarEl.style.filter = 'none'
             }
         }
 
         // Vortex Mechanic
-        if (this.vortexActive && this.vortexEnergy > 0) {
-            this.vortexEnergy = Math.max(0, this.vortexEnergy - 1.0 * meter)
-            if (this.playerMarble) {
-                const playerPos = this.playerMarble.rigidBody.translation()
+        if (this.game.vortexActive && this.game.vortexEnergy > 0) {
+            this.game.vortexEnergy = Math.max(0, this.game.vortexEnergy - 1.0 * meter)
+            if (this.game.playerMarble) {
+                const playerPos = this.game.playerMarble.rigidBody.translation()
                 const radius = 15.0
                 const attractionForce = 2.0
                 const tangentialForce = 1.5
 
-                const playerRb = this.playerMarble.rigidBody
-                for (const body of this.dynamicBodies) {
+                const playerRb = this.game.playerMarble.rigidBody
+                for (const body of this.game.dynamicBodies) {
                     if (body === playerRb) continue
 
                     const bodyPos = body.translation()
@@ -438,58 +442,58 @@ export class GameLoopLogic {
                 }
 
                 // Visual feedback - tint magenta
-                const rcm = this.engine.getRenderableManager()
-                const inst = rcm.getInstance(this.playerMarble.entity)
+                const rcm = this.game.engine.getRenderableManager()
+                const inst = rcm.getInstance(this.game.playerMarble.entity)
                 if (inst) {
                     const matInst = rcm.getMaterialInstanceAt(inst, 0)
-                    matInst.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 0.0, 1.0])
+                    matInst.setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, [1.0, 0.0, 1.0])
                 }
             }
         } else {
-            this.vortexEnergy = Math.min(this.maxVortexEnergy, this.vortexEnergy + 0.5 * meter)
+            this.game.vortexEnergy = Math.min(this.game.maxVortexEnergy, this.game.vortexEnergy + 0.5 * meter)
 
             // Restore original color when not using vortex or out of energy
-            if (!this.shieldActive && this.playerMarble && this.playerMarble.originalColor) {
-                const rcm = this.engine.getRenderableManager()
-                const inst = rcm.getInstance(this.playerMarble.entity)
+            if (!this.game.shieldActive && this.game.playerMarble && this.game.playerMarble.originalColor) {
+                const rcm = this.game.engine.getRenderableManager()
+                const inst = rcm.getInstance(this.game.playerMarble.entity)
                 if (inst) {
                     const matInst = rcm.getMaterialInstanceAt(inst, 0)
-                    matInst.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, this.playerMarble.originalColor)
+                    matInst.setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, this.game.playerMarble.originalColor)
                 }
             }
         }
 
-        if (this.vortexbarContainerEl && this.vortexbarEl) {
-            const pct = (this.vortexEnergy / this.maxVortexEnergy) * 100
-            this.vortexbarEl.style.width = `${pct}%`
+        if (this.game.vortexbarContainerEl && this.game.vortexbarEl) {
+            const pct = (this.game.vortexEnergy / this.game.maxVortexEnergy) * 100
+            this.game.vortexbarEl.style.width = `${pct}%`
 
-            if (this.vortexEnergy < this.maxVortexEnergy || this.vortexActive) {
-                this.vortexbarContainerEl.style.display = 'block'
+            if (this.game.vortexEnergy < this.game.maxVortexEnergy || this.game.vortexActive) {
+                this.game.vortexbarContainerEl.style.display = 'block'
             } else {
-                this.vortexbarContainerEl.style.display = 'none'
+                this.game.vortexbarContainerEl.style.display = 'none'
             }
 
-            if (this.vortexActive && this.vortexEnergy > 0) {
-                this.vortexbarEl.style.boxShadow = '0 0 10px #ff00ff'
+            if (this.game.vortexActive && this.game.vortexEnergy > 0) {
+                this.game.vortexbarEl.style.boxShadow = '0 0 10px #ff00ff'
             } else {
-                this.vortexbarEl.style.boxShadow = 'none'
+                this.game.vortexbarEl.style.boxShadow = 'none'
             }
         }
 
-        if (this.shieldActive && this.shieldEnergy > 0) {
-            this.shieldEnergy -= 1.0 * meter
-            if (this.shieldEnergy < 0) this.shieldEnergy = 0
+        if (this.game.shieldActive && this.game.shieldEnergy > 0) {
+            this.game.shieldEnergy -= 1.0 * meter
+            if (this.game.shieldEnergy < 0) this.game.shieldEnergy = 0
 
-            if (this.playerMarble) {
+            if (this.game.playerMarble) {
                 // Repel other dynamic bodies, with a slight upward pop
-                applyRepelPulse(this, 5.0, 3.0, 1.0)
-                const playerPos = this.playerMarble.rigidBody.translation()
+                applyRepelPulse(this.game, 5.0, 3.0, 1.0)
+                const playerPos = this.game.playerMarble.rigidBody.translation()
                 const radius = 5.0
                 const force = 3.0
 
                 // Repel other dynamic bodies
-                const playerRb = this.playerMarble.rigidBody
-                for (const body of this.dynamicBodies) {
+                const playerRb = this.game.playerMarble.rigidBody
+                for (const body of this.game.dynamicBodies) {
                     if (body === playerRb) continue
 
                     const bodyPos = body.translation()
@@ -509,123 +513,123 @@ export class GameLoopLogic {
                 }
 
                 // Visual feedback - tint cyan
-                const rcm = this.engine.getRenderableManager()
-                const inst = rcm.getInstance(this.playerMarble.entity)
+                const rcm = this.game.engine.getRenderableManager()
+                const inst = rcm.getInstance(this.game.playerMarble.entity)
                 if (inst) {
                     const matInst = rcm.getMaterialInstanceAt(inst, 0)
-                    matInst.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.0, 1.0, 1.0])
+                    matInst.setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, [0.0, 1.0, 1.0])
                 }
             }
         } else {
-            this.shieldEnergy += 0.2 * meter
-            if (this.shieldEnergy > this.maxShieldEnergy) this.shieldEnergy = this.maxShieldEnergy
+            this.game.shieldEnergy += 0.2 * meter
+            if (this.game.shieldEnergy > this.game.maxShieldEnergy) this.game.shieldEnergy = this.game.maxShieldEnergy
 
             // Restore original color when not shielding or out of energy
-            if (this.playerMarble && this.playerMarble.originalColor && !this.violetActive) {
-                const rcm = this.engine.getRenderableManager()
-                const inst = rcm.getInstance(this.playerMarble.entity)
+            if (this.game.playerMarble && this.game.playerMarble.originalColor && !this.game.violetActive) {
+                const rcm = this.game.engine.getRenderableManager()
+                const inst = rcm.getInstance(this.game.playerMarble.entity)
                 if (inst) {
                     const matInst = rcm.getMaterialInstanceAt(inst, 0)
-                    matInst.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, this.playerMarble.originalColor)
+                    matInst.setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, this.game.playerMarble.originalColor)
                 }
             }
         }
 
-        if (this.shieldbarEl) {
-            const pct = (this.shieldEnergy / this.maxShieldEnergy) * 100
-            this.shieldbarEl.style.width = `${pct}%`
-            if (this.shieldActive && this.shieldEnergy > 0) {
-                this.shieldbarEl.style.boxShadow = '0 0 10px #00ffff'
+        if (this.game.shieldbarEl) {
+            const pct = (this.game.shieldEnergy / this.game.maxShieldEnergy) * 100
+            this.game.shieldbarEl.style.width = `${pct}%`
+            if (this.game.shieldActive && this.game.shieldEnergy > 0) {
+                this.game.shieldbarEl.style.boxShadow = '0 0 10px #00ffff'
             } else {
-                this.shieldbarEl.style.boxShadow = 'none'
+                this.game.shieldbarEl.style.boxShadow = 'none'
             }
         }
 
         // Violet Light Logic
-        if (this.violetActive && this.violetEnergy > 0) {
-            this.violetEnergy -= 1.0 * meter
-            if (this.violetEnergy < 0) this.violetEnergy = 0
+        if (this.game.violetActive && this.game.violetEnergy > 0) {
+            this.game.violetEnergy -= 1.0 * meter
+            if (this.game.violetEnergy < 0) this.game.violetEnergy = 0
 
-            if (this.playerMarble) {
-                const playerPos = this.playerMarble.rigidBody.translation()
+            if (this.game.playerMarble) {
+                const playerPos = this.game.playerMarble.rigidBody.translation()
                 const radius = 15.0
 
                 // Repel other dynamic bodies
-                applyRepelPulse(this, radius, 0.5, 0)
+                applyRepelPulse(this.game, radius, 0.5, 0)
 
                 // Create or update Violet Light Entity
-                if (!this.violetLightEntity) {
-                    this.violetLightEntity = this.Filament.EntityManager.get().create()
-                    this.Filament.LightManager.Builder(this.Filament.LightManager$Type.POINT)
+                if (!this.game.violetLightEntity) {
+                    this.game.violetLightEntity = this.game.Filament.EntityManager.get().create()
+                    this.game.Filament.LightManager.Builder(this.game.Filament.LightManager$Type.POINT)
                         .color([0.6, 0.0, 1.0])
                         .intensity(100000.0)
                         .falloff(radius)
-                        .build(this.engine, this.violetLightEntity)
-                    this.scene.addEntity(this.violetLightEntity)
+                        .build(this.game.engine, this.game.violetLightEntity)
+                    this.game.scene.addEntity(this.game.violetLightEntity)
                 }
 
-                const tcm = this.engine.getTransformManager()
-                const lightInst = tcm.getInstance(this.violetLightEntity)
+                const tcm = this.game.engine.getTransformManager()
+                const lightInst = tcm.getInstance(this.game.violetLightEntity)
                 const lightMat = quaternionToMat4(playerPos, { x: 0, y: 0, z: 0, w: 1 })
                 tcm.setTransform(lightInst, lightMat)
 
                 // Visual feedback - tint violet
-                if (!this.shieldActive) {
-                    const rcm = this.engine.getRenderableManager()
-                    const inst = rcm.getInstance(this.playerMarble.entity)
+                if (!this.game.shieldActive) {
+                    const rcm = this.game.engine.getRenderableManager()
+                    const inst = rcm.getInstance(this.game.playerMarble.entity)
                     if (inst) {
                         const matInst = rcm.getMaterialInstanceAt(inst, 0)
-                        matInst.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.6, 0.0, 1.0])
+                        matInst.setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, [0.6, 0.0, 1.0])
                     }
                 }
             }
         } else {
-            this.violetEnergy += 0.2 * meter
-            if (this.violetEnergy > this.maxVioletEnergy) this.violetEnergy = this.maxVioletEnergy
+            this.game.violetEnergy += 0.2 * meter
+            if (this.game.violetEnergy > this.game.maxVioletEnergy) this.game.violetEnergy = this.game.maxVioletEnergy
 
             // Destroy Violet Light Entity
-            if (this.violetLightEntity) {
-                this.scene.remove(this.violetLightEntity)
-                this.engine.destroyEntity(this.violetLightEntity)
-                this.Filament.EntityManager.get().destroy(this.violetLightEntity)
-                this.violetLightEntity = null
+            if (this.game.violetLightEntity) {
+                this.game.scene.remove(this.game.violetLightEntity)
+                this.game.engine.destroyEntity(this.game.violetLightEntity)
+                this.game.Filament.EntityManager.get().destroy(this.game.violetLightEntity)
+                this.game.violetLightEntity = null
             }
 
             // Restore original color when not shielding, phasing, vortexing, or violetting
-            if (this.playerMarble && this.playerMarble.originalColor && !this.shieldActive && !this.vortexActive && !this.wasPhasing) {
-                const rcm = this.engine.getRenderableManager()
-                const inst = rcm.getInstance(this.playerMarble.entity)
+            if (this.game.playerMarble && this.game.playerMarble.originalColor && !this.game.shieldActive && !this.game.vortexActive && !this.game.wasPhasing) {
+                const rcm = this.game.engine.getRenderableManager()
+                const inst = rcm.getInstance(this.game.playerMarble.entity)
                 if (inst) {
                     const matInst = rcm.getMaterialInstanceAt(inst, 0)
-                    matInst.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, this.playerMarble.originalColor)
+                    matInst.setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, this.game.playerMarble.originalColor)
                 }
             }
         }
 
-        if (this.violetbarEl && this.violetbarContainerEl) {
-            const pct = (this.violetEnergy / this.maxVioletEnergy) * 100
-            this.violetbarEl.style.width = `${pct}%`
+        if (this.game.violetbarEl && this.game.violetbarContainerEl) {
+            const pct = (this.game.violetEnergy / this.game.maxVioletEnergy) * 100
+            this.game.violetbarEl.style.width = `${pct}%`
 
-            if (this.violetEnergy < this.maxVioletEnergy || this.violetActive) {
-                this.violetbarContainerEl.style.display = 'block'
+            if (this.game.violetEnergy < this.game.maxVioletEnergy || this.game.violetActive) {
+                this.game.violetbarContainerEl.style.display = 'block'
             } else {
-                this.violetbarContainerEl.style.display = 'none'
+                this.game.violetbarContainerEl.style.display = 'none'
             }
 
-            if (this.violetActive && this.violetEnergy > 0) {
-                this.violetbarEl.style.boxShadow = '0 0 10px #ee82ee'
+            if (this.game.violetActive && this.game.violetEnergy > 0) {
+                this.game.violetbarEl.style.boxShadow = '0 0 10px #ee82ee'
             } else {
-                this.violetbarEl.style.boxShadow = 'none'
+                this.game.violetbarEl.style.boxShadow = 'none'
             }
         }
 
         // One grounding probe per frame, shared by the meters below.
-        const grounded = this.playerMarble ? this.isGrounded(this.playerMarble) : false
+        const grounded = this.game.playerMarble ? this.game.isGrounded(this.game.playerMarble) : false
 
-        if (this.awaitingShockwaveImpact && grounded && this.playerMarble) {
-            this.awaitingShockwaveImpact = false;
+        if (this.game.awaitingShockwaveImpact && grounded && this.game.playerMarble) {
+            this.game.awaitingShockwaveImpact = false;
 
-            const pt = this.playerMarble.rigidBody.translation();
+            const pt = this.game.playerMarble.rigidBody.translation();
             const range = 25.0;
             const rangeSq = range * range;
             const forceStrength = 500.0;
@@ -646,16 +650,16 @@ export class GameLoopLogic {
                 }
             };
 
-            for (const m of this.marbles) {
-                if (m !== this.playerMarble) considerBody(m.rigidBody);
+            for (const m of this.game.marbles) {
+                if (m !== this.game.playerMarble) considerBody(m.rigidBody);
             }
-            for (const obj of this.dynamicObjects) {
+            for (const obj of this.game.dynamicObjects) {
                 considerBody(obj.rigidBody);
             }
 
             if (targets.length > FORCE_BATCH_THRESHOLD) {
-                if (!this._forceBatchBuffers) this._forceBatchBuffers = new PhysicsBatchBuffers(128);
-                const buf = this._forceBatchBuffers;
+                if (!this.game._forceBatchBuffers) this.game._forceBatchBuffers = new PhysicsBatchBuffers(128);
+                const buf = this.game._forceBatchBuffers;
                 buf.ensure(targets.length);
 
                 for (const [i, { pos: p }] of targets.entries()) {
@@ -681,8 +685,8 @@ export class GameLoopLogic {
                     }, true);
                 }
             } else if (targets.length > 0) {
-                if (!this._forceBatchBuffers) this._forceBatchBuffers = new PhysicsBatchBuffers(16);
-                const scalarBuf = this._forceBatchBuffers.forces;
+                if (!this.game._forceBatchBuffers) this.game._forceBatchBuffers = new PhysicsBatchBuffers(16);
+                const scalarBuf = this.game._forceBatchBuffers.forces;
                 for (const { body, pos: bt } of targets) {
                     physics.computeForceFieldInto(
                         scalarBuf,
@@ -699,8 +703,8 @@ export class GameLoopLogic {
             }
 
             // Camera shake
-            if (!this.cameraShake) this.cameraShake = { x: 0, y: 0, z: 0 };
-            this.cameraShake.y += 2.0; // intense vertical shake
+            if (!this.game.cameraShake) this.game.cameraShake = { x: 0, y: 0, z: 0 };
+            this.game.cameraShake.y += 2.0; // intense vertical shake
 
             // `audio` has no playImpact today; the guard keeps this a no-op until it does.
             const impactAudio = /** @type {{ playImpact?: () => void }} */ (/** @type {unknown} */ (audio))
@@ -709,13 +713,13 @@ export class GameLoopLogic {
 
         // Passive Double Jump Reset
         if (grounded) {
-            this.hasDoubleJumped = false;
+            this.game.hasDoubleJumped = false;
         }
 
         // Glider Logic
-        if (this.gliderActive && this.gliderEnergy > 0) {
-            if (this.playerMarble) {
-                const rb = this.playerMarble.rigidBody
+        if (this.game.gliderActive && this.game.gliderEnergy > 0) {
+            if (this.game.playerMarble) {
+                const rb = this.game.playerMarble.rigidBody
                 const linvel = rb.linvel()
                 const gravityDir = rb.gravityScale() < 0 ? -1 : 1
 
@@ -726,11 +730,11 @@ export class GameLoopLogic {
                 }
 
                 // Apply forward thrust based on view direction
-                const cosP = Math.cos(this.pitchAngle)
-                const sinP = Math.sin(this.pitchAngle)
-                const dirX = Math.sin(this.aimYaw) * cosP
+                const cosP = Math.cos(this.game.pitchAngle)
+                const sinP = Math.sin(this.game.pitchAngle)
+                const dirX = Math.sin(this.game.aimYaw) * cosP
                 const dirY = sinP // Allowing slight pitch to affect upward/downward glide
-                const dirZ = Math.cos(this.aimYaw) * cosP
+                const dirZ = Math.cos(this.game.aimYaw) * cosP
 
                 const glideThrust = 30.0 // m/s²
                 applyAcceleration(rb, {
@@ -743,23 +747,23 @@ export class GameLoopLogic {
                     audio.playBoost() // Play sound occasionally for feedback
                 }
             }
-            this.gliderEnergy = Math.max(0, this.gliderEnergy - 0.4 * meter)
+            this.game.gliderEnergy = Math.max(0, this.game.gliderEnergy - 0.4 * meter)
         } else {
             if (grounded) {
-                this.gliderEnergy = Math.min(this.maxGliderEnergy, this.gliderEnergy + 0.3 * meter)
+                this.game.gliderEnergy = Math.min(this.game.maxGliderEnergy, this.game.gliderEnergy + 0.3 * meter)
             }
         }
 
         // Jetpack Logic
-        if (this.jetpackActive && this.jetpackEnergy > 0) {
-            if (this.playerMarble) {
-                const rb = this.playerMarble.rigidBody
-                const cosP = Math.cos(this.pitchAngle)
+        if (this.game.jetpackActive && this.game.jetpackEnergy > 0) {
+            if (this.game.playerMarble) {
+                const rb = this.game.playerMarble.rigidBody
+                const cosP = Math.cos(this.game.pitchAngle)
 
                 // Thrust vector aligned with camera aim, but mainly upwards
-                const dirX = Math.sin(this.aimYaw) * cosP
+                const dirX = Math.sin(this.game.aimYaw) * cosP
                 const dirY = 1.0 // Always push up
-                const dirZ = Math.cos(this.aimYaw) * cosP
+                const dirZ = Math.cos(this.game.aimYaw) * cosP
 
                 // Apply continuous force while active
                 // Stronger than hover (15 m/s² up vs 9.81) to actually ascend
@@ -774,54 +778,54 @@ export class GameLoopLogic {
                 // Spawn exhaust particles
                 // `frameCount` is never initialised or advanced anywhere, so (as before
                 // the type check) neither the exhaust nor the thrust sound fires.
-                if (this.frameCount !== undefined && this.frameCount % 2 === 0) {
-                    this.spawnJetpackExhaust(pos, linvel)
+                if (this.game.frameCount !== undefined && this.game.frameCount % 2 === 0) {
+                    this.game.spawnJetpackExhaust(pos, linvel)
                 }
 
                 // Play continuous thrust sound
-                if (this.frameCount !== undefined && this.frameCount % 5 === 0 && audio && audio.playBoost) {
+                if (this.game.frameCount !== undefined && this.game.frameCount % 5 === 0 && audio && audio.playBoost) {
                     // We could add a specialized loop sound, but boosting repeatedly gives a sputtering jet effect
                     audio.playBoost()
                 }
             }
-            this.jetpackEnergy = Math.max(0, this.jetpackEnergy - 1.0 * meter) // Drains faster than hover
+            this.game.jetpackEnergy = Math.max(0, this.game.jetpackEnergy - 1.0 * meter) // Drains faster than hover
         } else {
             if (grounded) {
-                this.jetpackEnergy = Math.min(this.maxJetpackEnergy, this.jetpackEnergy + 0.5 * meter)
+                this.game.jetpackEnergy = Math.min(this.game.maxJetpackEnergy, this.game.jetpackEnergy + 0.5 * meter)
             }
         }
 
-        if (this.jetpackbarEl && this.jetpackbarContainerEl) {
-            const pct = (this.jetpackEnergy / this.maxJetpackEnergy) * 100
-            this.jetpackbarEl.style.width = `${pct}%`
+        if (this.game.jetpackbarEl && this.game.jetpackbarContainerEl) {
+            const pct = (this.game.jetpackEnergy / this.game.maxJetpackEnergy) * 100
+            this.game.jetpackbarEl.style.width = `${pct}%`
 
-            if (this.jetpackEnergy < this.maxJetpackEnergy || this.jetpackActive) {
-                this.jetpackbarContainerEl.style.display = 'block'
+            if (this.game.jetpackEnergy < this.game.maxJetpackEnergy || this.game.jetpackActive) {
+                this.game.jetpackbarContainerEl.style.display = 'block'
             } else {
-                this.jetpackbarContainerEl.style.display = 'none'
+                this.game.jetpackbarContainerEl.style.display = 'none'
             }
 
-            if (this.jetpackActive && this.jetpackEnergy > 0) {
-                this.jetpackbarEl.style.boxShadow = '0 0 10px #ffaa00'
+            if (this.game.jetpackActive && this.game.jetpackEnergy > 0) {
+                this.game.jetpackbarEl.style.boxShadow = '0 0 10px #ffaa00'
             } else {
-                this.jetpackbarEl.style.boxShadow = 'none'
+                this.game.jetpackbarEl.style.boxShadow = 'none'
             }
         }
 
-        if (this.gliderBarEl && this.gliderBarContainerEl) {
-            const pct = (this.gliderEnergy / this.maxGliderEnergy) * 100
-            this.gliderBarEl.style.width = `${pct}%`
+        if (this.game.gliderBarEl && this.game.gliderBarContainerEl) {
+            const pct = (this.game.gliderEnergy / this.game.maxGliderEnergy) * 100
+            this.game.gliderBarEl.style.width = `${pct}%`
 
-            if (this.gliderEnergy < this.maxGliderEnergy || this.gliderActive) {
-                this.gliderBarContainerEl.style.display = 'block'
+            if (this.game.gliderEnergy < this.game.maxGliderEnergy || this.game.gliderActive) {
+                this.game.gliderBarContainerEl.style.display = 'block'
             } else {
-                this.gliderBarContainerEl.style.display = 'none'
+                this.game.gliderBarContainerEl.style.display = 'none'
             }
 
-            if (this.gliderActive && this.gliderEnergy > 0) {
-                this.gliderBarEl.style.boxShadow = '0 0 10px #aaffaa'
+            if (this.game.gliderActive && this.game.gliderEnergy > 0) {
+                this.game.gliderBarEl.style.boxShadow = '0 0 10px #aaffaa'
             } else {
-                this.gliderBarEl.style.boxShadow = 'none'
+                this.game.gliderBarEl.style.boxShadow = 'none'
             }
         }
 
@@ -829,128 +833,128 @@ export class GameLoopLogic {
         // every frame, so it must leave the scale alone while hover owns it
         // (abilities/hover.js lowers it on the fixed step and restores it on
         // release; a flip toggled mid-hover takes effect once hover ends).
-        const hoverOwnsGravity = this.hoverActive
-        if (this.flipActive && this.flipEnergy > 0 && this.playerMarble) {
-            this.flipEnergy = Math.max(0, this.flipEnergy - 0.5 * meter)
-            if (!hoverOwnsGravity) this.playerMarble.rigidBody.setGravityScale(-this.playerMarble.baseGravityScale, true)
-        } else if (this.flipActive && this.flipEnergy <= 0) {
-            this.flipActive = false
-            if (this.playerMarble && !hoverOwnsGravity) {
-                this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
+        const hoverOwnsGravity = this.game.hoverActive
+        if (this.game.flipActive && this.game.flipEnergy > 0 && this.game.playerMarble) {
+            this.game.flipEnergy = Math.max(0, this.game.flipEnergy - 0.5 * meter)
+            if (!hoverOwnsGravity) this.game.playerMarble.rigidBody.setGravityScale(-this.game.playerMarble.baseGravityScale, true)
+        } else if (this.game.flipActive && this.game.flipEnergy <= 0) {
+            this.game.flipActive = false
+            if (this.game.playerMarble && !hoverOwnsGravity) {
+                this.game.playerMarble.rigidBody.setGravityScale(this.game.playerMarble.baseGravityScale, true)
             }
-        } else if (!this.flipActive) {
-            this.flipEnergy = Math.min(this.maxFlipEnergy, this.flipEnergy + 0.2 * meter)
-            if (this.playerMarble && !hoverOwnsGravity) {
-                this.playerMarble.rigidBody.setGravityScale(this.playerMarble.baseGravityScale, true)
+        } else if (!this.game.flipActive) {
+            this.game.flipEnergy = Math.min(this.game.maxFlipEnergy, this.game.flipEnergy + 0.2 * meter)
+            if (this.game.playerMarble && !hoverOwnsGravity) {
+                this.game.playerMarble.rigidBody.setGravityScale(this.game.playerMarble.baseGravityScale, true)
             }
         }
 
-        if (this.flipbarContainerEl && this.flipbarEl) {
-            const pct = (this.flipEnergy / this.maxFlipEnergy) * 100
-            this.flipbarEl.style.width = `${pct}%`
+        if (this.game.flipbarContainerEl && this.game.flipbarEl) {
+            const pct = (this.game.flipEnergy / this.game.maxFlipEnergy) * 100
+            this.game.flipbarEl.style.width = `${pct}%`
 
-            if (this.flipEnergy < this.maxFlipEnergy || this.flipActive) {
-                this.flipbarContainerEl.style.display = 'block'
+            if (this.game.flipEnergy < this.game.maxFlipEnergy || this.game.flipActive) {
+                this.game.flipbarContainerEl.style.display = 'block'
             } else {
-                this.flipbarContainerEl.style.display = 'none'
+                this.game.flipbarContainerEl.style.display = 'none'
             }
 
-            if (this.flipActive && this.flipEnergy > 0) {
-                this.flipbarEl.style.boxShadow = '0 0 10px #ff00ff'
+            if (this.game.flipActive && this.game.flipEnergy > 0) {
+                this.game.flipbarEl.style.boxShadow = '0 0 10px #ff00ff'
             } else {
-                this.flipbarEl.style.boxShadow = 'none'
+                this.game.flipbarEl.style.boxShadow = 'none'
             }
         }
 
         // Phase Shift Logic
-        if (this.phaseActive && this.phaseEnergy > 1.0 && this.playerMarble) {
-            this.phaseEnergy = Math.max(0, this.phaseEnergy - 1.0 * meter)
+        if (this.game.phaseActive && this.game.phaseEnergy > 1.0 && this.game.playerMarble) {
+            this.game.phaseEnergy = Math.max(0, this.game.phaseEnergy - 1.0 * meter)
 
-            if (!this.wasPhasing) {
-                this.wasPhasing = true
+            if (!this.game.wasPhasing) {
+                this.game.wasPhasing = true
                 // Set collision group to 1, ignore group 2
-                this.playerMarble.collider?.setCollisionGroups(0x0001FFFD)
+                this.game.playerMarble.collider?.setCollisionGroups(0x0001FFFD)
 
                 // Visual feedback - tint purple
-                const rcm = this.engine.getRenderableManager()
-                const inst = rcm.getInstance(this.playerMarble.entity)
+                const rcm = this.game.engine.getRenderableManager()
+                const inst = rcm.getInstance(this.game.playerMarble.entity)
                 if (inst) {
                     const matInst = rcm.getMaterialInstanceAt(inst, 0)
-                    matInst.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.7, 0.0, 1.0])
+                    matInst.setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, [0.7, 0.0, 1.0])
                 }
             }
         } else {
-            this.phaseEnergy = Math.min(this.maxPhaseEnergy, this.phaseEnergy + 0.5 * meter)
+            this.game.phaseEnergy = Math.min(this.game.maxPhaseEnergy, this.game.phaseEnergy + 0.5 * meter)
 
-            if (this.wasPhasing && this.playerMarble) {
-                this.wasPhasing = false
+            if (this.game.wasPhasing && this.game.playerMarble) {
+                this.game.wasPhasing = false
                 // Restore normal collision (collides with everything)
-                if (this.playerMarble.collider) {
-                    this.playerMarble.collider.setCollisionGroups(0x0001FFFF)
+                if (this.game.playerMarble.collider) {
+                    this.game.playerMarble.collider.setCollisionGroups(0x0001FFFF)
                 }
 
                 // Restore original color when not phasing or out of energy
-                if (!this.shieldActive && !this.vortexActive && this.playerMarble.originalColor) {
-                    const rcm = this.engine.getRenderableManager()
-                    const inst = rcm.getInstance(this.playerMarble.entity)
+                if (!this.game.shieldActive && !this.game.vortexActive && this.game.playerMarble.originalColor) {
+                    const rcm = this.game.engine.getRenderableManager()
+                    const inst = rcm.getInstance(this.game.playerMarble.entity)
                     if (inst) {
                         const matInst = rcm.getMaterialInstanceAt(inst, 0)
-                        matInst.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, this.playerMarble.originalColor)
+                        matInst.setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, this.game.playerMarble.originalColor)
                     }
                 }
             }
         }
 
-        if (this.phasebarContainerEl && this.phasebarEl) {
-            const pct = (this.phaseEnergy / this.maxPhaseEnergy) * 100
-            this.phasebarEl.style.width = `${pct}%`
+        if (this.game.phasebarContainerEl && this.game.phasebarEl) {
+            const pct = (this.game.phaseEnergy / this.game.maxPhaseEnergy) * 100
+            this.game.phasebarEl.style.width = `${pct}%`
 
-            if (this.phaseEnergy < this.maxPhaseEnergy || this.phaseActive) {
-                this.phasebarContainerEl.style.display = 'block'
+            if (this.game.phaseEnergy < this.game.maxPhaseEnergy || this.game.phaseActive) {
+                this.game.phasebarContainerEl.style.display = 'block'
             } else {
-                this.phasebarContainerEl.style.display = 'none'
+                this.game.phasebarContainerEl.style.display = 'none'
             }
 
-            if (this.phaseActive && this.phaseEnergy > 0) {
-                this.phasebarEl.style.boxShadow = '0 0 10px #aa00ff'
+            if (this.game.phaseActive && this.game.phaseEnergy > 0) {
+                this.game.phasebarEl.style.boxShadow = '0 0 10px #aa00ff'
             } else {
-                this.phasebarEl.style.boxShadow = 'none'
+                this.game.phasebarEl.style.boxShadow = 'none'
             }
         }
 
         // Frost Bridge Logic
-        if (this.iceActive && this.iceEnergy > 0 && this.playerMarble) {
-            this.iceEnergy = Math.max(0, this.iceEnergy - 0.5 * meter)
+        if (this.game.iceActive && this.game.iceEnergy > 0 && this.game.playerMarble) {
+            this.game.iceEnergy = Math.max(0, this.game.iceEnergy - 0.5 * meter)
 
             const now = Date.now()
-            if (now - this.lastIceTime > this.iceCooldown) {
-                this.lastIceTime = now
-                const pos = this.playerMarble.rigidBody.translation()
-                this.spawnIceBlock(pos)
+            if (now - this.game.lastIceTime > this.game.iceCooldown) {
+                this.game.lastIceTime = now
+                const pos = this.game.playerMarble.rigidBody.translation()
+                this.game.spawnIceBlock(pos)
             }
         } else {
-            this.iceEnergy = Math.min(this.maxIceEnergy, this.iceEnergy + 0.2 * meter)
+            this.game.iceEnergy = Math.min(this.game.maxIceEnergy, this.game.iceEnergy + 0.2 * meter)
         }
 
-        if (this.icebarContainerEl && this.icebarEl) {
-            const pct = (this.iceEnergy / this.maxIceEnergy) * 100
-            this.icebarEl.style.width = `${pct}%`
+        if (this.game.icebarContainerEl && this.game.icebarEl) {
+            const pct = (this.game.iceEnergy / this.game.maxIceEnergy) * 100
+            this.game.icebarEl.style.width = `${pct}%`
 
-            if (this.iceEnergy < this.maxIceEnergy || this.iceActive) {
-                this.icebarContainerEl.style.display = 'block'
+            if (this.game.iceEnergy < this.game.maxIceEnergy || this.game.iceActive) {
+                this.game.icebarContainerEl.style.display = 'block'
             } else {
-                this.icebarContainerEl.style.display = 'none'
+                this.game.icebarContainerEl.style.display = 'none'
             }
 
-            if (this.iceActive && this.iceEnergy > 0) {
-                this.icebarEl.style.boxShadow = '0 0 10px #00ffff'
+            if (this.game.iceActive && this.game.iceEnergy > 0) {
+                this.game.icebarEl.style.boxShadow = '0 0 10px #00ffff'
             } else {
-                this.icebarEl.style.boxShadow = 'none'
+                this.game.icebarEl.style.boxShadow = 'none'
             }
         }
 
         if (audio && audio.setFocus) {
-            audio.setFocus(this.focusActive)
+            audio.setFocus(this.game.focusActive)
         }
     }
 }

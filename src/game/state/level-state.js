@@ -5,6 +5,7 @@
 export function createLevelState() {
     return {
         currentLevel: null,
+        movementModel: null,
         levelStartTime: 0,
         levelComplete: false,
         goalDefinitions: [],

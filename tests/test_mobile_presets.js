@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { DEFAULT_SETTINGS } from '../src/init/filament-loader.js';
+import { DEFAULT_SETTINGS } from '../src/init/filament-loader.ts';
 import {
     applyMobileGraphicsDefaults,
     resolveMobileInitQuality,

@@ -1,7 +1,14 @@
+import type { FilamentHandle, FilamentModule } from './filament.ts';
 import type RAPIER from '@dimforge/rapier3d-compat';
 import type { Vec3 } from './geometry.ts';
+import type { MapGoalDefinition, MovementModel } from './map.ts';
+import type { MarbleLodMesh } from '../marble-lod.js';
+import type { MaterialTier, TieredMaterialPreset } from '../marble-material-tier.ts';
+import type { CameraPose } from './render-host.ts';
+import type { TransformSyncOwner } from '../game-loop/helpers.ts';
 import type {
-    Collectible, DynamicObject, MovingPlatform, Portal, PowerUp, RotatingPlatform,
+    ActiveProjectile, Checkpoint, Collectible, DynamicObject, GoalEffect, GrappleAnchor, MovingPlatform, Portal, PowerUp,
+    RotatingPlatform, TemporaryPlatform, VisualParticle,
 } from './world-objects.ts';
 
 /** Mutable trick counters tracked while the player marble is airborne. */
@@ -15,6 +22,19 @@ export interface TrickState {
     wallBounces: number;
     maxAltitude: number;
     startAltitude: number;
+    /** Frames of sustained drift; created on first grounded tick (`GameLogicCore`). */
+    driftTime?: number;
+}
+
+/**
+ * A grapple-yank target: the dynamic body a grapple ray hit (Rapier body or
+ * worker proxy), which the grapple reads and pushes every frame.
+ */
+export interface GrappleTargetBody {
+    readonly handle: number;
+    translation(): Vec3;
+    mass(): number;
+    applyImpulse(impulse: Vec3, wake: boolean): void;
 }
 
 /** Speed/jump power-up timers applied to the active marble. */
@@ -34,7 +54,7 @@ export interface ChameleonProfile {
 }
 
 /** Runtime marble entry (physics + render handles populated at spawn). */
-export interface MarbleObject {
+export interface MarbleObject extends TransformSyncOwner {
     name: string;
     scale: number;
     baseScale: number;
@@ -48,6 +68,40 @@ export interface MarbleObject {
     collider?: RAPIER.Collider | null;
     baseGravityScale: number;
     entity?: unknown;
+    /** Size-shift profile index (0 normal, 1 mini, 2 giant; `cycleSizeShift`). */
+    sizeState?: number;
+    /** Collider material the size shift rebuilds the ball with. */
+    baseRestitution?: number | undefined;
+    baseFriction?: number | undefined;
+    baseDensity?: number | undefined;
+    /** Rainbow marbles cycle `baseColor` every frame (`syncTransformsAndRender`). */
+    rainbow?: boolean | undefined;
+    /** Renderable / material-instance cache for the rainbow colour write. */
+    _renderEntity?: unknown;
+    _renderInst?: FilamentHandle;
+    _renderMatInstance?: FilamentHandle;
+    /** Rainbow colour cache (`colorChanged`). */
+    _lastRainbowColor?: number[];
+    _lastRainbowColorAt?: number;
+    /** 'cube' marbles never swap LOD meshes (`MarbleLodManager`). */
+    geometry?: string;
+    /** Active sphere LOD (0 = high … 2 = low) and when it last changed. */
+    lodLevel?: number;
+    _lastLodSwitchAt?: number;
+    lodMeshes?: readonly MarbleLodMesh[] | null | undefined;
+    /** Spawn data (`MarbleRegistry.createMarbles`): catalog id, rival slot, material and glow. */
+    id?: string;
+    isRival?: boolean;
+    originalGravityScale?: number;
+    materialPresetName?: string;
+    materialPreset?: TieredMaterialPreset | null;
+    matInstance?: FilamentHandle;
+    _materialTier?: MaterialTier;
+    emissive?: boolean;
+    lightColor?: readonly number[];
+    lightIntensity?: number;
+    /** Proxy point light following the player marble (`updateActiveMarbleLight`). */
+    lightEntity?: FilamentHandle;
     [key: string]: unknown;
 }
 
@@ -58,7 +112,7 @@ export interface PhysicsState {
     staticEntities: unknown[];
     dynamicObjects: DynamicObject[];
     dynamicBodies: Set<RAPIER.RigidBody>;
-    checkpoints: unknown[];
+    checkpoints: Checkpoint[];
     collectibles: Collectible[];
     collectibleRotation: number;
     powerUps: PowerUp[];
@@ -66,23 +120,27 @@ export interface PhysicsState {
     activeEffects: ActiveEffects;
     movingPlatforms: MovingPlatform[];
     rotatingPlatforms: RotatingPlatform[];
-    temporaryPlatforms: unknown[];
+    temporaryPlatforms: TemporaryPlatform[];
     playerMarble: MarbleObject | null;
-    visualParticles: unknown[];
+    visualParticles: VisualParticle[];
     trickState: TrickState;
     isWallRiding: boolean;
     wallRideTime: number;
+    /** Normal of the wall being ridden (set by `checkGameLogic`; tilts the camera up-vector). */
+    currentWallNormal?: Vec3 | null;
     isStomping: boolean;
     stompStartTime: number;
     magnetPower: number;
     magnetActive: boolean;
     magnetMode: string | null;
-    grappleAnchors: unknown[];
+    grappleAnchors: GrappleAnchor[];
     isGrappling: boolean;
-    grappleTarget: unknown;
-    grappleTargetBody: unknown;
-    grappleEntity: unknown;
-    grappleInst: unknown;
+    /** World point the grapple line is attached to (`ZoneSetupGrapple`). */
+    grappleTarget: Vec3 | null;
+    /** Dynamic body being yanked toward the player, or null for a static anchor. */
+    grappleTargetBody: GrappleTargetBody | null;
+    grappleEntity: FilamentHandle;
+    grappleInst: FilamentHandle;
     grappleMaxDist: number;
     grappleForce: number;
     isGrappleZipping: boolean;
@@ -90,7 +148,8 @@ export interface PhysicsState {
     portalB: Portal | null;
     lastPortalTeleportTime: number;
     portalCooldown: number;
-    nearMisses: Map<unknown, unknown>;
+    /** Near-miss key (`dyn_<handle>` etc.) → last award time (ms epoch). */
+    nearMisses: Map<string, number>;
 }
 
 /** Ability cooldowns, energy pools, and active effect instances. */
@@ -98,13 +157,13 @@ export interface AbilityState {
     holoDuration: number;
     holoCooldown: number;
     lastHoloTime: number;
-    activeBombs: unknown[];
+    activeBombs: ActiveProjectile[];
     lastBombTime: number;
     bombCooldown: number;
-    activeMissiles: unknown[];
+    activeMissiles: ActiveProjectile[];
     lastMissileTime: number;
     missileCooldown: number;
-    activeBlackHoles: unknown[];
+    activeBlackHoles: ActiveProjectile[];
     lastBlackHoleTime: number;
     blackHoleCooldown: number;
     lastSizeShiftTime: number;
@@ -227,12 +286,15 @@ export interface AbilityState {
 
 /** Level progress, goals, checkpoints, ghost replay. */
 export interface LevelState {
-    currentLevel: unknown;
+    /** Id of the loaded level (`LevelLoader` sets it), null in menus / the editor. */
+    currentLevel: string | null;
+    /** The loaded level's `movementModel` (null = legacy model 1). */
+    movementModel: MovementModel | null;
     levelStartTime: number;
     levelComplete: boolean;
-    goalDefinitions: unknown[];
+    goalDefinitions: MapGoalDefinition[];
     checkpointDefinitions: unknown[];
-    goalEffects: unknown[];
+    goalEffects: GoalEffect[];
     ghostEntity: unknown;
     ghostMaterialInstance: unknown;
     ghostLightEntity: unknown;
@@ -256,6 +318,18 @@ export interface CameraState {
     cameraFollowPos: { x: number; y: number; z: number } | null;
     cameraFollowLookAt: { x: number; y: number; z: number } | null;
     followDist: number;
+    /**
+     * Written by `GameLoopCamera.updateCamera` each frame (created on first
+     * use): the last eye / look-at pose (read by culling, LOD, lighting and
+     * sync), the speed-scaled FOV, and the projection / DoF values last pushed
+     * to Filament so unchanged frames skip the call.
+     */
+    _cameraState?: CameraPose;
+    activeFov?: number;
+    _lastSetFov?: number;
+    _lastSetProjectionAspect?: number;
+    _dofEnabled?: boolean;
+    _dofFocusDistance?: number | null;
 }
 
 /** Keyboard, gamepad, aim, charge, dash, jump input. */
@@ -343,10 +417,11 @@ export interface SpeedLine {
 }
 
 export interface RenderState {
-    Filament: unknown;
-    material: unknown;
+    Filament: FilamentModule;
+    material: FilamentHandle;
     cubeMesh: unknown;
-    cueInst: unknown;
+    /** Cue-stick transform instance (`ZoneSetupGrapple.createCueStick`). */
+    cueInst: FilamentHandle;
     speedLinesCanvas: HTMLCanvasElement | null;
     speedLinesCtx: CanvasRenderingContext2D | null;
     speedLinesLines: SpeedLine[];

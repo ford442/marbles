@@ -1,3 +1,4 @@
+import type { AbilityHookHost } from '../../abilities/hook-host.ts';
 import {
     ABILITY_REGISTRY,
     ALL_ABILITY_IDS,
@@ -26,11 +27,17 @@ const TICKING_DEFS: readonly AbilityDefinition[] = ALL_ABILITY_IDS
  * goes through `AbilitySystem#state`, so this interface has no index signature
  * and composes into `GameHost`. The registry hooks receive the whole game.
  */
+/**
+ * The game as `AbilitySystem` holds it: its own fields plus everything the
+ * registry hooks it calls use (`AbilityHookHost`, abilities/hook-host.ts).
+ */
+export type AbilitySystemHost = AbilityHost & AbilityHookHost;
+
 export interface AbilityHost {
     playerMarble?: unknown;
     keys?: Record<string, boolean>;
     multiplayerMode?: boolean;
-    network?: { room?: unknown; sendAbility(id: string): void } | null;
+    network?: { room?: unknown; sendAbility(id: string, charge?: number): void } | null;
     jumpCharge?: number;
     hudManager?: {
         markAbilityUsed(id: string): void;
@@ -47,7 +54,7 @@ export interface AbilityHudIcons {
  * Unified ability cooldown/energy tick, input routing, level masks, and HUD bar binding.
  */
 export class AbilitySystem {
-    game: AbilityHost;
+    game: AbilitySystemHost;
     enabled: Set<string>;
     _codeToAbility: Map<string, string>;
     _keybindOverrides: Record<string, string>;
@@ -56,7 +63,7 @@ export class AbilitySystem {
     /** `charge` abilities whose key was down last frame (edge detection). */
     _chargeDown: Set<string>;
 
-    constructor(game: AbilityHost) {
+    constructor(game: AbilitySystemHost) {
         this.game = game;
         this.enabled = new Set(ALL_ABILITY_IDS);
         this._codeToAbility = new Map();

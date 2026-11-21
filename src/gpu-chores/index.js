@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * gpu-chores — reusable GPU job helpers (Tier B of the cross-app rollout).
  *
@@ -40,17 +41,100 @@ export const CHORE_OPS = ['reduce_f32', 'compact_f32', 'batched_distance'];
 
 /** @typedef {'auto' | 'gpu' | 'cpu'} JobPreference */
 /** @typedef {'webgpu' | 'cpu' | 'none'} ChoresBackend */
+/** @typedef {import('./cpu-jobs.js').ReduceOp} ReduceOp */
+
+/**
+ * `reduce_f32`: fold `data[0..count)` with `reduce`.
+ * @typedef {object} ReduceJob
+ * @property {'reduce_f32'} op
+ * @property {JobPreference} [prefer]
+ * @property {Float32Array | GPUBuffer} data A `GPUBuffer` only works on the GPU path.
+ * @property {number} [count]
+ * @property {ReduceOp} [reduce]
+ */
+
+/**
+ * `compact_f32`: ascending indices whose flag is `>= threshold`.
+ * @typedef {object} CompactJob
+ * @property {'compact_f32'} op
+ * @property {JobPreference} [prefer]
+ * @property {Float32Array | GPUBuffer} data A `GPUBuffer` only works on the GPU path.
+ * @property {number} [count]
+ * @property {number} [threshold]
+ * @property {boolean} [readIndices] GPU only: `false` keeps the index list on the GPU.
+ * @property {Uint32Array} [out] CPU only: reusable output.
+ */
+
+/**
+ * `batched_distance`: distance from `origin` to each packed xyz point.
+ * @typedef {object} DistanceJob
+ * @property {'batched_distance'} op
+ * @property {JobPreference} [prefer]
+ * @property {Float32Array} points
+ * @property {ArrayLike<number>} [origin]
+ * @property {boolean} [squared]
+ * @property {Float32Array} [out] CPU only: reusable output.
+ */
+
+/** @typedef {ReduceJob | CompactJob | DistanceJob} ChoreJob */
+
+/** @typedef {{ backend: 'cpu' | 'webgpu', value: number }} ReduceResult */
+/**
+ * `indices` is null only on the GPU path with `readIndices: false` or no survivors;
+ * `gpuBuffer` is the GPU-resident index list (null on the CPU).
+ * @typedef {{ backend: 'cpu' | 'webgpu', indices: Uint32Array | null, count: number, gpuBuffer: GPUBuffer | null }} CompactResult
+ */
+/** @typedef {{ backend: 'cpu' | 'webgpu', distances: Float32Array }} DistanceResult */
+/** @typedef {ReduceResult | CompactResult | DistanceResult} ChoreResult */
+
+/**
+ * The GPU backend surface `runJob` drives (`WebGPUChoresBackend`, or a test double).
+ * @typedef {Pick<import('./webgpu-jobs.js').WebGPUChoresBackend, 'reduceF32' | 'compactF32' | 'batchedDistance' | 'dispose'>} ChoresGpuBackend
+ */
 
 /** @type {GPUDevice | null} */
 let adoptedDevice = null;
-/** @type {import('./webgpu-jobs.js').WebGPUChoresBackend | null} */
+/** @type {ChoresGpuBackend | null} */
 let gpuBackend = null;
-/** @type {Promise<import('./webgpu-jobs.js').WebGPUChoresBackend | null> | null} */
+/** @type {Promise<ChoresGpuBackend | null> | null} */
 let gpuBackendPromise = null;
 /** @type {ChoresBackend} */
 let lastBackend = 'none';
 
 const stats = { gpuJobs: 0, cpuJobs: 0, gpuFallbacks: 0 };
+
+/**
+ * `String(err?.message ?? err)` for an unknown thrown value.
+ * @param {unknown} err
+ * @returns {string}
+ */
+function errorMessage(err) {
+    const message = typeof err === 'object' && err !== null && 'message' in err ? err.message : undefined;
+    return String(message ?? err);
+}
+
+/**
+ * Error for a descriptor whose `op` matched no case.
+ * @param {{ op: unknown }} job
+ * @returns {Error}
+ */
+function unknownOpError(job) {
+    return new Error(`[gpu-chores] unknown op "${String(job.op)}"`);
+}
+
+/**
+ * CPU kernels need host memory. A GPU-resident buffer has no `length`; before
+ * this check it silently produced an empty result (zero survivors, identity
+ * reduce) instead of failing, so callers pruned everything.
+ *
+ * @param {string} op
+ * @param {Float32Array | GPUBuffer} data
+ * @returns {Float32Array | readonly number[]}
+ */
+function hostData(op, data) {
+    if (data instanceof Float32Array || Array.isArray(data)) return data;
+    throw new Error(`[gpu-chores] ${op} on the CPU needs host data, not a GPU-resident buffer`);
+}
 
 /**
  * Adopt a device the renderer already owns. Chores never create one, and never
@@ -65,7 +149,7 @@ export function adoptDevice(device) {
     releaseDevice();
     adoptedDevice = device;
     breadcrumb('device-adopted', { source: 'renderer' });
-    device.lost?.then((info) => {
+    void device.lost?.then((info) => {
         if (adoptedDevice !== device) return;
         breadcrumb('device-lost', { reason: info?.reason ?? 'unknown' });
         releaseDevice();
@@ -80,6 +164,7 @@ export function adoptDevice(device) {
  * @param {GPUDevice | null} [device] When given, only release if chores still
  *     hold this device — a stale owner must not drop a replacement adopted
  *     after a device-loss recovery.
+ * @returns {void}
  */
 export function releaseDevice(device) {
     if (device !== undefined && device !== adoptedDevice) return;
@@ -123,7 +208,7 @@ function shouldTryGpu(prefer) {
 }
 
 /**
- * @returns {Promise<import('./webgpu-jobs.js').WebGPUChoresBackend | null>}
+ * @returns {Promise<ChoresGpuBackend | null>}
  */
 async function ensureGpuBackend() {
     if (gpuBackend) return gpuBackend;
@@ -133,12 +218,13 @@ async function ensureGpuBackend() {
         gpuBackendPromise = import('./webgpu-jobs.js')
             .then((mod) => {
                 if (adoptedDevice !== device) return null;
-                gpuBackend = new mod.WebGPUChoresBackend(device);
+                const backend = new mod.WebGPUChoresBackend(device);
+                gpuBackend = backend;
                 breadcrumb('webgpu-backend-ready');
-                return gpuBackend;
+                return backend;
             })
-            .catch((err) => {
-                breadcrumb('webgpu-backend-load-failed', { message: String(err?.message ?? err) });
+            .catch((/** @type {unknown} */ err) => {
+                breadcrumb('webgpu-backend-load-failed', { message: errorMessage(err) });
                 return null;
             });
     }
@@ -146,20 +232,20 @@ async function ensureGpuBackend() {
 }
 
 /**
- * @param {object} job
- * @returns {Promise<object>}
+ * @param {ChoreJob} job
+ * @returns {Promise<ChoreResult>}
  */
 async function runOnCpu(job) {
     stats.cpuJobs += 1;
     lastBackend = 'cpu';
     switch (job.op) {
         case 'reduce_f32': {
-            const data = job.data;
+            const data = hostData(job.op, job.data);
             const count = job.count ?? data.length;
             return { backend: 'cpu', value: reduceF32Cpu(data, job.reduce ?? 'sum', count) };
         }
         case 'compact_f32': {
-            const data = job.data;
+            const data = hostData(job.op, job.data);
             const count = job.count ?? data.length;
             const result = compactF32Cpu(data, job.threshold ?? 0.5, count, job.out);
             return {
@@ -179,19 +265,34 @@ async function runOnCpu(job) {
             };
         }
         default:
-            throw new Error(`[gpu-chores] unknown op "${job.op}"`);
+            throw unknownOpError(job);
     }
 }
 
 /**
- * @param {import('./webgpu-jobs.js').WebGPUChoresBackend} backend
- * @param {object} job
- * @returns {Promise<object>}
+ * Element count for a GPU job: explicit, or the host array's length. A
+ * GPU-resident buffer has no length, so it must come with `count` (without
+ * one the kernels used to be sized from `undefined`).
+ *
+ * @param {Float32Array | GPUBuffer} data
+ * @param {number | undefined} count
+ * @returns {number}
+ */
+function gpuCount(data, count) {
+    if (count !== undefined && count !== null) return count;
+    if (data instanceof Float32Array) return data.length;
+    throw new Error('[gpu-chores] `count` is required when data is a GPU-resident buffer');
+}
+
+/**
+ * @param {ChoresGpuBackend} backend
+ * @param {ChoreJob} job
+ * @returns {Promise<ChoreResult>}
  */
 async function runOnGpu(backend, job) {
     switch (job.op) {
         case 'reduce_f32': {
-            const count = job.count ?? job.data.length;
+            const count = gpuCount(job.data, job.count);
             const value = await backend.reduceF32({
                 data: job.data,
                 count,
@@ -200,7 +301,7 @@ async function runOnGpu(backend, job) {
             return { backend: 'webgpu', value };
         }
         case 'compact_f32': {
-            const count = job.count ?? job.data.length;
+            const count = gpuCount(job.data, job.count);
             const result = await backend.compactF32({
                 data: job.data,
                 count,
@@ -218,7 +319,7 @@ async function runOnGpu(backend, job) {
             return { backend: 'webgpu', distances };
         }
         default:
-            throw new Error(`[gpu-chores] unknown op "${job.op}"`);
+            throw unknownOpError(job);
     }
 }
 
@@ -238,8 +339,23 @@ async function runOnGpu(backend, job) {
  * A GPU failure is never fatal: the job is retried on the CPU and a breadcrumb
  * records why.
  *
- * @param {{ op: string, prefer?: JobPreference } & Record<string, any>} job
- * @returns {Promise<Record<string, any>>}
+ * @overload
+ * @param {ReduceJob} job
+ * @returns {Promise<ReduceResult>}
+ */
+/**
+ * @overload
+ * @param {CompactJob} job
+ * @returns {Promise<CompactResult>}
+ */
+/**
+ * @overload
+ * @param {DistanceJob} job
+ * @returns {Promise<DistanceResult>}
+ */
+/**
+ * @param {ChoreJob} job
+ * @returns {Promise<ChoreResult>}
  */
 export async function runJob(job) {
     if (!job || typeof job.op !== 'string') {
@@ -264,8 +380,9 @@ export async function runJob(job) {
         return result;
     } catch (err) {
         stats.gpuFallbacks += 1;
-        breadcrumb('gpu-job-failed', { op: job.op, message: String(err?.message ?? err) });
-        if (job.data instanceof Float32Array || job.points instanceof Float32Array) {
+        breadcrumb('gpu-job-failed', { op: job.op, message: errorMessage(err) });
+        const hostInput = job.op === 'batched_distance' ? job.points : job.data;
+        if (hostInput instanceof Float32Array) {
             return runOnCpu(job);
         }
         throw err;
@@ -281,6 +398,7 @@ export const _testExports = {
         stats.gpuFallbacks = 0;
         lastBackend = 'none';
     },
+    /** @param {ChoresGpuBackend | null} backend */
     setGpuBackendForTest(backend) {
         gpuBackend = backend;
         gpuBackendPromise = backend ? Promise.resolve(backend) : null;

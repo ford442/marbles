@@ -263,7 +263,8 @@ export function validateServerMessage(msg) {
     if (!isString(msg.type) || !SERVER_TYPES.has(msg.type)) {
         return { ok: false, error: 'Unknown server message type' };
     }
-    return { ok: true, data: /** @type {ServerMessage} */ (msg) };
+    // Only the type is whitelisted; the relay (server/relay.mjs) is trusted for the field shapes.
+    return { ok: true, data: /** @type {ServerMessage} */ (/** @type {unknown} */ (msg)) };
 }
 
 /**

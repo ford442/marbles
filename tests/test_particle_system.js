@@ -8,7 +8,7 @@
  * - Game loop integration
  */
 
-import { ParticleSystem } from '../src/particle-system.js';
+import { ParticleSystem } from '../src/particle-system.ts';
 
 console.log('=== Particle System Tests ===\n');
 

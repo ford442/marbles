@@ -66,6 +66,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Type-check coverage ratchet (typed files / LOC share / suppressions)
+        run: npm run typecheck:coverage
+
       - name: Build Vite app (with bundle stats)
         run: BUNDLE_STATS=1 npx vite build
 
@@ -125,3 +128,6 @@ jobs:
 
       - name: E2E smoke test
         run: BASE_URL=http://127.0.0.1:5173/ npm run test:e2e:smoke
+
+      - name: E2E gameplay actions (every ability / menu action on a live level)
+        run: BASE_URL=http://127.0.0.1:5173/ npm run test:e2e:actions

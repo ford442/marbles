@@ -50,41 +50,34 @@ marbles/
 │   ├── custom_material.mat # Source material definition
 │   ├── filament.js         # Filament JS loader
 │   └── filament.wasm       # Filament WASM binary
-├── src/                    # Source code
-│   ├── main.js             # Core MarblesGame class constructor
-│   ├── init-methods.js     # Initialization mixin (Filament, physics, UI)
-│   ├── input-methods.js    # Input handling mixin
-│   ├── zone-setup-methods.js    # Zone dispatcher mixin
-│   ├── physics-factory-methods.js # Physics body creation utilities
-│   ├── marble-management-methods.js # Marble spawning & management
-│   ├── game-logic-methods.js      # Scoring, goals, collectibles
-│   ├── ability-methods.js         # Abilities (dash, EMP, black hole, etc.)
-│   ├── game-loop-methods.js       # Main loop dispatcher
-│   ├── game-loop-render-methods.js # Rendering pipeline
-│   ├── game-loop-sync-methods.js  # Physics-visual sync
-│   ├── hud-manager.js             # HUD rendering and state display
-│   ├── audio.js                   # Audio system with spatial sounds
-│   ├── material-system.js         # Material management
-│   ├── material-presets.js        # Material preset definitions
-│   ├── gpu-instancing.js          # GPU instancing utilities
-│   ├── gpu-particles.js           # GPU particle system
-│   ├── levels/catalog.js   # Runtime catalog (manifest JSON + optional DEV_LEVELS)
-│   ├── levels.js           # Dev-only level definitions (?devLevels=1)
-│   ├── math.js             # quaternionToMat4 helper
-│   ├── sphere.js           # UV sphere generator with TBN frames
-│   ├── cube-geometry.js    # Cube vertex/index buffers
-│   ├── zones/              # 50+ zone implementations
-│   │   ├── methods/        # Zone utilities (creation, physics, types, visuals)
-│   │   └── *.js            # Individual zone factories
-│   ├── components/         # React/TSX UI components (AISwarmModal, MainLayout, etc.)
-│   ├── sequencer/          # React sequencer UI (EffectsChain, SequencerGrid)
-│   ├── importers/          # AI song and .rbs importers
-│   │   ├── ai-song/        # AI song importer logic
-│   │   └── rbs/            # .rbs file importer logic
-│   ├── services/           # Service modules (shaderApi.ts)
-│   ├── shaders/            # WGSL shaders (breath.wgsl, breath-swarm-merged.wgsl)
-│   ├── assets/             # Asset registry
-│   └── __tests__/          # React component tests (5 files)
+├── src/                    # Source code (typed: `npm run typecheck`, ratchet `npm run typecheck:coverage`)
+│   ├── main.js             # Builds MarblesGame: state, feature slices, composed systems
+│   ├── game/
+│   │   ├── systems/        # Composed systems (PhysicsWorld, InputSystem, RenderPipeline, …) + slice-composition.ts
+│   │   ├── create-runtime.ts # Builds the composed systems against the typed GameHost
+│   │   ├── state/          # Game state slices (createGameState / bindGameState)
+│   │   ├── headless/       # Headless game used by tests and the level lab
+│   │   ├── network/        # Multiplayer + cloud client
+│   │   └── physics-worker/ # Worker-side Rapier backend
+│   ├── init/               # Boot, menus, settings, level loading (INIT_SLICES)
+│   ├── game-loop/          # Frame slices: input, camera, effects, sync.ts (GAME_LOOP_SLICES)
+│   ├── game-logic/         # Goals, checkpoints, collectibles, medals (GAME_LOGIC_SLICES)
+│   ├── abilities/          # Ability registry + ability slices (ABILITY_SLICES)
+│   ├── zone-setup/         # Zone dispatch, v2 primitives, environment (ZONE_SETUP_SLICES)
+│   ├── zones/              # Factory zones (`createXxxZone(game, offset)`, @ts-check)
+│   │   └── methods/        # Zone-building slices (ZONE_METHOD_SLICES)
+│   ├── editor/             # Map editor (lazy chunk)
+│   ├── levels/             # Campaign, catalog (manifest JSON + optional DEV_LEVELS), map normalize
+│   ├── levels.ts           # Dev-only level definitions (?devLevels=1)
+│   ├── types/              # Shared host / engine / map types; generated/ = schema types
+│   ├── rendering/, webgpu/, gpu-chores/  # Rendering, WebGPU probe + particles, GPU jobs
+│   ├── audio.js, audio/    # Audio system with spatial sounds
+│   ├── hud-manager.ts      # HUD rendering and state display
+│   ├── material-system.ts, material-presets.ts  # Material management
+│   ├── math.ts             # quaternionToMat4 helper
+│   ├── sphere.ts           # UV sphere generator with TBN frames
+│   ├── cube-geometry.ts    # Cube vertex/index buffers
+│   └── assets/             # Asset registry, GLB / track loaders
 ├── storage/                # Python FastAPI backend (modular)
 │   ├── main.py             # FastAPI app entry point
 │   ├── config.py           # GCS storage map config
@@ -129,28 +122,29 @@ npm run preview
 
 ## Code Organization & Architecture
 
-### Mixin-Based Game Architecture
+### Composed Game Architecture
 
-The `MarblesGame` class in `src/main.js` is the core of the application. Instead of deep inheritance, functionality is composed via **mixins**:
+`src/main.js` builds the `MarblesGame` object by composition; there are no mixins
+(`method-installer.js` and every `install*Methods`/`apply*Methods` helper are gone):
 
 ```javascript
-class MarblesGame { constructor() { /* massive state initialization */ } }
-applyZoneMethods(MarblesGame);
-applyInputMethods(MarblesGame);
-applyInitMethods(MarblesGame);
-applyZoneSetupMethods(MarblesGame);
-applyPhysicsFactoryMethods(MarblesGame);
-applyMarbleManagementMethods(MarblesGame);
-applyGameLogicMethods(MarblesGame);
-applyAbilityMethods(MarblesGame);
-applyGameLoopMethods(MarblesGame);
-applyGameLoopRenderMethods(MarblesGame);
-applyGameLoopSyncMethods(MarblesGame);
+function buildGame(host) {            // host: MarblesGameHost (src/types/marbles-game-host.ts)
+    bindGameState(host, createGameState());
+    composeSlices(host, GAME_SLICES);   // one instance per slice class, at host[spec.key]
+    createRuntime(host);                // PhysicsWorld, InputSystem, RenderPipeline, …
+    host.campaignProgress = new CampaignProgress(); // …and the other services
+}
+forwardSliceMethods(MarblesGame, GAME_SLICES); // game.foo() → game[sliceKey].foo()
 ```
 
-Each mixin file exports:
-- A class (e.g., `InitMethods`, `ZoneSetupMethods`)
-- An `apply*Methods(targetClass)` function that copies all prototype methods onto the target class
+- **Feature slices** (`init/`, `game-loop/`, `game-logic/`, `abilities/`, `zone-setup/`,
+  `zones/methods/`) are classes holding the game as `this.game`, each typed against a
+  narrow `*Host` interface. Each directory index exports `*_SLICES`
+  (`defineSlice(key, Class, methods)`) and a `*SlicesHost` type.
+- **Composed systems** (`src/game/systems/*.ts`) are built by `create-runtime.ts`
+  against `GameHost`; `main.js` forwards an explicit method list to each.
+- Forwarders are explicit allowlists: a duplicate name, a missing method or a key
+  collision throws at startup. See `docs/architecture/README.md`.
 
 ### State Management
 
@@ -165,10 +159,8 @@ The `MarblesGame` constructor initializes a monolithic state object with ~300 li
 ### Level & Zone System
 
 - **Production levels** live in `assets/maps/*.json` + `assets/manifest.json`, loaded via `src/levels/catalog.js`.
-- **Dev levels** remain in `src/levels.js` (`DEV_LEVELS`) for WIP content when `?devLevels=1`.
-- **Zones** are created via `ZoneSetupMethods.createZone(zone)`, which dispatches through a large `switch` statement to either:
-  - Methods on `this` (e.g., `this.createFloorZone()`)
-  - Standalone factory functions imported from `src/zones/*.js` or legacy zone files
+- **Dev levels** remain in `src/levels.ts` (`DEV_LEVELS`) for WIP content when `?devLevels=1`.
+- **Zones** are created via `game.createZone(zone)` (`zone-setup/core.ts`): v2 primitives are built by `zone-setup/primitives.ts`; stamp zones dispatch through `zone-setup/registry.js` to lazily loaded factory functions in `src/zones/*.js`.
 - There are 50+ zone implementations covering themes like frostbite caverns, toxic swamps, volcano, laser grids, cyber ice tracks, neon alleys, gravity wells, and more.
 
 ### Physics + Rendering Sync
@@ -191,9 +183,9 @@ A subset of the project uses React/TypeScript:
 
 ### Math & Geometry Helpers
 
-- `src/math.js` — `quaternionToMat4()`, `quatFromEuler()`
-- `src/sphere.js` — `createSphere()` generates UV spheres with TBN frame quaternions
-- `src/cube-geometry.js` — Cube vertex and index buffer generation
+- `src/math.ts` — `quaternionToMat4()`, `quatFromYawPitchRoll()`
+- `src/sphere.ts` — `createSphere()` generates UV spheres with TBN frame quaternions
+- `src/cube-geometry.ts` — Cube vertex and index buffer generation
 
 ## Development Conventions
 
@@ -339,7 +331,7 @@ Archived WebGPU renderer: `docs/backups/experimental-wasm-renderer/` (not on the
 
 - **Adding new campaign levels**: Create `assets/maps/<id>.json`, register in `manifest.json`, use zone `type` stamps from `registry.js`. See `docs/CONTRIBUTING.md` and `docs/architecture/level-pipeline.md`.
 - **Adding dev/WIP levels**: Optional entry in `src/levels.js` behind `?devLevels=1`.
-- **Adding marble types**: Extend the marble data in `src/marbles_data.js` or `marble-management-methods.js`
+- **Adding marble types**: Extend the marble data in `src/marbles_data.js` or `src/game/systems/marble-registry.js`
 - **Modifying physics**: Use Rapier APIs via `RAPIER.*` namespace after `RAPIER.init()`
 - **Modifying rendering**: Use Filament APIs via `this.Filament.*` after initialization
 - **Modifying UI**: Edit React/TSX files in `src/components/` or `src/sequencer/`

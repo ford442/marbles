@@ -1,3 +1,4 @@
+// @ts-check
 import {
     ABILITY_REGISTRY,
     ALL_ABILITY_IDS,
@@ -5,15 +6,23 @@ import {
 } from '../../abilities/registry.js';
 
 /**
+ * What `encodeInputSnapshot` reads on the game. Every member is optional
+ * because the encoder falls back to "not pressed / 0" for each.
+ * @typedef {Partial<Pick<import('../../types/frame-host.ts').FrameState,
+ *   'keys' | 'charging' | 'isChargingJump' | 'isGrappling' | 'aimYaw' | 'pitchAngle'>>
+ *   & { abilitySystem?: Pick<import('../systems/ability-system.ts').AbilitySystem, 'getKeyCodes' | 'getKeyCode'> | null }} InputSnapshotHost
+ */
+
+/**
  * Abilities with their pinned bitfield index, derived from the registry. Bits
  * come from each entry's `netBit`, not its position, so adding an ability
  * can't shift the meaning of bits already on the wire; `netBit: null`
  * entries are local-only and never encoded.
- * @type {{ id: string, bit: number }[]}
+ * @type {{ id: import('../../abilities/registry.js').AbilityId, bit: number }[]}
  */
 export const NETWORKED_ABILITIES = ALL_ABILITY_IDS
     .map((id) => ({ id, bit: /** @type {number | null} */ (ABILITY_REGISTRY[id].netBit) }))
-    .filter(/** @returns {e is { id: string, bit: number }} */ (e) => e.bit !== null && e.bit >= 0 && e.bit < MAX_NETWORKED_ABILITY_IDS);
+    .filter(/** @returns {e is { id: import('../../abilities/registry.js').AbilityId, bit: number }} */ (e) => e.bit !== null && e.bit >= 0 && e.bit < MAX_NETWORKED_ABILITY_IDS);
 
 /** Movement keys in bit order [0:7]. */
 export const MOVEMENT_KEY_CODES = [
@@ -27,20 +36,22 @@ export const CHARGE_BIT = ABILITY_BIT_OFFSET + MAX_NETWORKED_ABILITY_IDS;
 export const GRAPPLE_BIT = CHARGE_BIT + 1;
 
 /**
- * @param {object} game
+ * @param {InputSnapshotHost} game
  * @returns {{ bits: number, yaw: number, pitch: number }}
  */
 export function encodeInputSnapshot(game) {
     let bits = 0;
 
+    /** @type {Record<string, boolean>} */
     const keys = game.keys || {};
-    for (let i = 0; i < MOVEMENT_KEY_CODES.length; i++) {
-        if (keys[MOVEMENT_KEY_CODES[i]]) {
+    for (const [i, code] of MOVEMENT_KEY_CODES.entries()) {
+        if (keys[code]) {
             bits |= 1 << i;
         }
     }
 
     for (const { id, bit } of NETWORKED_ABILITIES) {
+        /** @type {Array<string | undefined>} */
         const codes = game.abilitySystem?.getKeyCodes?.(id) ?? [game.abilitySystem?.getKeyCode(id)];
         if (codes.some((code) => code && keys[code])) {
             bits |= 1 << (ABILITY_BIT_OFFSET + bit);
@@ -88,6 +99,7 @@ export function decodeStatusBits(bits) {
  * @returns {string[]}
  */
 export function decodeAbilityBits(bits) {
+    /** @type {string[]} */
     const active = [];
     for (const { id, bit } of NETWORKED_ABILITIES) {
         if (bits & (1 << (ABILITY_BIT_OFFSET + bit))) {

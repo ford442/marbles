@@ -19,7 +19,7 @@ import { createBodyFromDescriptor } from '../src/game/physics-worker/world-build
 import { WorkerPhysicsBackend, MainThreadPhysicsBackend } from '../src/game/systems/physics-backend.ts';
 import { FixedStepClock } from '../src/game/systems/fixed-step-clock.ts';
 import { PhysicsWorld } from '../src/game/systems/physics-world.ts';
-import { HostSim } from '../src/game/network/host-sim.js';
+import { HostSim } from '../src/game/network/host-sim.ts';
 
 await RAPIER.init();
 

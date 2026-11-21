@@ -1,5 +1,14 @@
+// @ts-check
 import { quatFromYawPitchRoll, quatMultiply } from '../math.ts';
 
+/** @typedef {import('../types/zone-host.ts').ZoneBuildHost} ZoneBuildHost */
+/** @typedef {import('../types/geometry.ts').Vec3} Vec3 */
+/** @typedef {readonly number[]} RGB */
+
+/**
+ * @param {ZoneBuildHost} game
+ * @param {Vec3} offset
+ */
 export function createPlinkoZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
@@ -23,6 +32,16 @@ export function createPlinkoZone(game, offset) {
     const sin = Math.sin(slopeAngle);
 
     // Helper to place objects on the slanted board
+    /**
+     * @param {number} x
+     * @param {number} z
+     * @param {number} w
+     * @param {number} h
+     * @param {number} d
+     * @param {RGB} color
+     * @param {string} [mat]
+     * @param {number} [rotY]
+     */
     const placeOnBoard = (x, z, w, h, d, color, mat = 'wood', rotY = 0) => {
         const localY = thickness / 2 + h;
 

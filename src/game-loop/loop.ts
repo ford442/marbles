@@ -19,43 +19,49 @@ export interface GameLoopHost {
 }
 
 export class GameLoopLoop {
-    loop(this: GameLoopHost): void {
+    game: GameLoopHost;
+
+    constructor(game: GameLoopHost) {
+        this.game = game;
+    }
+
+    loop(): void {
         // Always update gamepads for pause toggle detection
-        this.pollGamepads()
+        this.game.pollGamepads()
 
         const now = performance.now()
-        const rawDt = this._lastLoopTime != null ? (now - this._lastLoopTime) / 1000 : 1 / 60
-        this._lastLoopTime = now
-        this.frameDt = Math.min(Math.max(rawDt, 0), MAX_FRAME_DT)
+        const rawDt = this.game._lastLoopTime != null ? (now - this.game._lastLoopTime) / 1000 : 1 / 60
+        this.game._lastLoopTime = now
+        this.game.frameDt = Math.min(Math.max(rawDt, 0), MAX_FRAME_DT)
 
         // When paused, skip game logic but keep rendering
-        if (this.isPaused) {
-            this.simDt = 0
-            this.physicsSubsteps = 0
-            this.renderAndSync()
-            requestAnimationFrame(() => this.loop())
+        if (this.game.isPaused) {
+            this.game.simDt = 0
+            this.game.physicsSubsteps = 0
+            this.game.renderAndSync()
+            requestAnimationFrame(() => this.game.loop())
             return
         }
 
         // Fixed-step contract: decide this frame's step count up front so
         // per-frame impulses can be scaled by the simulated time they cover.
-        if (this.physicsClock) {
-            this.physicsSubsteps = this.physicsClock.advance(this.frameDt)
-            this.simDt = this.physicsClock.lastSimDt
+        if (this.game.physicsClock) {
+            this.game.physicsSubsteps = this.game.physicsClock.advance(this.game.frameDt)
+            this.game.simDt = this.game.physicsClock.lastSimDt
         } else {
-            this.physicsSubsteps = 1
-            this.simDt = 1 / 60
+            this.game.physicsSubsteps = 1
+            this.game.simDt = 1 / 60
         }
 
-        if (this.mapEditor?.isActive && !this.mapEditor.isPlaytesting) {
-            this.mapEditor.tick()
-            this.renderAndSync()
-            requestAnimationFrame(() => this.loop())
+        if (this.game.mapEditor?.isActive && !this.game.mapEditor.isPlaytesting) {
+            this.game.mapEditor.tick()
+            this.game.renderAndSync()
+            requestAnimationFrame(() => this.game.loop())
             return
         }
 
-        this.updateGameState()
-        this.renderAndSync()
-        requestAnimationFrame(() => this.loop())
+        this.game.updateGameState()
+        this.game.renderAndSync()
+        requestAnimationFrame(() => this.game.loop())
     }
 }

@@ -2,42 +2,44 @@
 /** @typedef {import('../types/frame-host.ts').FrameHost} FrameHost */
 
 // Speed lines configuration. These used to be class fields, but
-// `installKnownMethods` copies methods only, so on the game object they were
+// the old mixin installer copied methods only, so on the game object they were
 // `undefined` (`speed > undefined` never held and the overlay never showed).
 // The canvas/context/lines/intensity state now lives in `RenderState`.
 const SPEED_THRESHOLD = 15.0
 const SPEED_MAX = 30.0
 
 export class GameLoopSpeedLines {
-    /** @this {FrameHost} */
+    /** @param {FrameHost} game */
+    constructor(game) {
+        this.game = game;
+    }
+
     initSpeedLines() {
-        this.speedLinesCanvas = /** @type {HTMLCanvasElement | null} */ (document.getElementById('speedlines-canvas'))
-        if (!this.speedLinesCanvas) return
+        this.game.speedLinesCanvas = /** @type {HTMLCanvasElement | null} */ (document.getElementById('speedlines-canvas'))
+        if (!this.game.speedLinesCanvas) return
         
-        this.speedLinesCtx = this.speedLinesCanvas.getContext('2d')
-        this.resizeSpeedLinesCanvas()
+        this.game.speedLinesCtx = this.game.speedLinesCanvas.getContext('2d')
+        this.game.resizeSpeedLinesCanvas()
         
         // Initialize random lines for speed effect
         /** @type {import('../types/game-state.ts').SpeedLine[]} */
         const lines = []
         const numLines = 80
         for (let i = 0; i < numLines; i++) {
-            lines.push(this.createSpeedLine())
+            lines.push(this.game.createSpeedLine())
         }
-        this.speedLinesLines = lines
+        this.game.speedLinesLines = lines
         
         // Handle resize
-        window.addEventListener('resize', () => this.resizeSpeedLinesCanvas())
+        window.addEventListener('resize', () => this.game.resizeSpeedLinesCanvas())
     }
 
-    /** @this {FrameHost} */
     resizeSpeedLinesCanvas() {
-        if (!this.speedLinesCanvas) return
-        this.speedLinesCanvas.width = window.innerWidth
-        this.speedLinesCanvas.height = window.innerHeight
+        if (!this.game.speedLinesCanvas) return
+        this.game.speedLinesCanvas.width = window.innerWidth
+        this.game.speedLinesCanvas.height = window.innerHeight
     }
 
-    /** @this {FrameHost} */
     createSpeedLine() {
         return {
             x: Math.random() - 0.5,
@@ -50,7 +52,6 @@ export class GameLoopSpeedLines {
     }
 
     /**
-     * @this {FrameHost}
      * @param {number} speed - player speed (m/s)
      */
     updateSpeedLines(speed) {
@@ -66,25 +67,24 @@ export class GameLoopSpeedLines {
         }
         
         // Smooth fade in/out
-        this.speedLinesIntensity = (this.speedLinesIntensity || 0) * 0.9 + targetIntensity * 0.1
+        this.game.speedLinesIntensity = (this.game.speedLinesIntensity || 0) * 0.9 + targetIntensity * 0.1
         
         // Update canvas opacity
-        if (this.speedLinesCanvas) {
-            this.speedLinesCanvas.style.opacity = this.speedLinesIntensity.toFixed(3)
+        if (this.game.speedLinesCanvas) {
+            this.game.speedLinesCanvas.style.opacity = this.game.speedLinesIntensity.toFixed(3)
         }
     }
 
-    /** @this {FrameHost} */
     renderSpeedLines() {
-        if (!this.speedLinesCtx || !this.speedLinesCanvas || this.speedLinesIntensity <= 0.01) return
+        if (!this.game.speedLinesCtx || !this.game.speedLinesCanvas || this.game.speedLinesIntensity <= 0.01) return
         
         // Guard against NaN intensity
-        const intensity = Math.max(0, Math.min(1, this.speedLinesIntensity || 0))
+        const intensity = Math.max(0, Math.min(1, this.game.speedLinesIntensity || 0))
         if (!isFinite(intensity)) return
         
-        const ctx = this.speedLinesCtx
-        const w = this.speedLinesCanvas.width
-        const h = this.speedLinesCanvas.height
+        const ctx = this.game.speedLinesCtx
+        const w = this.game.speedLinesCanvas.width
+        const h = this.game.speedLinesCanvas.height
         const centerX = w / 2
         const centerY = h / 2
         
@@ -109,10 +109,10 @@ export class GameLoopSpeedLines {
         }
         
         // Draw speed lines
-        const numActiveLines = Math.floor(this.speedLinesLines.length * (0.3 + intensity * 0.7))
+        const numActiveLines = Math.floor(this.game.speedLinesLines.length * (0.3 + intensity * 0.7))
         
         for (let i = 0; i < numActiveLines; i++) {
-            const line = this.speedLinesLines[i]
+            const line = this.game.speedLinesLines[i]
             if (!line) continue
             
             // Calculate position from center

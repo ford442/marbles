@@ -30,10 +30,12 @@ export function createGameState(options = {}) {
 
 /**
  * Attach grouped state to MarblesGame and mirror fields onto `this.*` for mixin compatibility.
- * @param {Record<string, unknown>} game
+ * The game is any object (`MarblesGame`, `HeadlessGame`): the fields are added dynamically.
+ * @param {object} host
  * @param {import('../../types/game-state.js').GameState} state
  */
-export function bindGameState(game, state) {
+export function bindGameState(host, state) {
+    const game = /** @type {Record<string, unknown>} */ (host);
     game.state = state;
     game.physics = state.physics;
     game.abilities = state.abilities;

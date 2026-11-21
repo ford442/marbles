@@ -1,13 +1,14 @@
+// @ts-check
 /**
  * Marble Audio System - Procedural Clink Synthesis & Audio Pipeline Orchestrator
  * Uses Web Audio API for zero-dependency, high-performance sound generation.
  */
 
-import { VoicePool } from './audio/voice-pool.js';
-import { loadSoundBank, getSoundDef, resolveSynthesisProfile, soundProperties } from './audio/sound-bank.js';
-import { resolveCollisionSound } from './audio/collision-matrix.js';
-import { MusicManager } from './audio/music-manager.js';
-import { synthesizeSurfaceHit } from './audio/surface-synth.js';
+import { VoicePool } from './audio/voice-pool.ts';
+import { loadSoundBank, getSoundDef, getSynthesisProfile, resolveSynthesisProfile, soundProperties } from './audio/sound-bank.ts';
+import { resolveCollisionSound } from './audio/collision-matrix.ts';
+import { MusicManager } from './audio/music-manager.ts';
+import { synthesizeSurfaceHit } from './audio/surface-synth.ts';
 import {
     synthesizeClink,
     synthesizeBoost,
@@ -17,11 +18,44 @@ import {
     synthesizeJump,
     synthesizeTrick,
     synthesizeStomp,
-} from './audio/procedural-sfx.js';
-import { RollingSoundManager } from './audio/rolling-sound.js';
-import { playSpatialBuffer } from './audio/spatial-audio.js';
-import { ReverbZoneManager } from './audio/reverb-zones.js';
+} from './audio/procedural-sfx.ts';
+import { RollingSoundManager } from './audio/rolling-sound.ts';
+import { playSpatialBuffer } from './audio/spatial-audio.ts';
+import { ReverbZoneManager } from './audio/reverb-zones.ts';
 
+/** @typedef {import('@dimforge/rapier3d-compat').RigidBody} RigidBody */
+/** @typedef {import('./audio/sound-bank.ts').SoundDef} SoundDef */
+/** @typedef {import('./audio/sound-bank.ts').SoundBankSource} SoundBankSource */
+/** @typedef {import('./audio/collision-matrix.ts').CollisionMatrix} CollisionMatrix */
+/** @typedef {import('./audio/rolling-sound.ts').RollingSound} RollingSound */
+/** @typedef {import('./audio/reverb-zones.ts').ReverbConfig} ReverbConfig */
+/** @typedef {import('./audio/spatial-audio.ts').SpatialPlayOptions} SpatialPlayOptions */
+/** @typedef {{ x: number, y: number, z: number }} AudioPosition */
+/** @typedef {'bomb'|'missile'|'blink'|'teleport'|'emp'|'jump'|'goal'} AbilitySoundId */
+
+/**
+ * Options for `MarbleAudio.playCollision`.
+ * @typedef {object} CollisionSoundOptions
+ * @property {number} velocity
+ * @property {number} [radius]
+ * @property {string} [marbleMaterial]
+ * @property {string} [surfaceMaterial]
+ * @property {string} [id]
+ * @property {AudioPosition | null} [position]
+ * @property {number} [dopplerRate]
+ */
+
+/**
+ * `AudioContext` constructor, falling back to the prefixed one on old Safari.
+ * @returns {typeof AudioContext | undefined}
+ */
+function getAudioContextCtor() {
+    /** @type {typeof globalThis & { webkitAudioContext?: typeof AudioContext }} */
+    const w = window;
+    return w.AudioContext || w.webkitAudioContext;
+}
+
+/** @type {Readonly<Record<AbilitySoundId, string>>} */
 const ABILITY_SOUND_IDS = {
     bomb: 'ability_bomb',
     missile: 'ability_missile',
@@ -34,10 +68,15 @@ const ABILITY_SOUND_IDS = {
 
 export class MarbleAudio {
     constructor() {
+        /** @type {AudioContext | null} */
         this.ctx = null;
         this.enabled = false;
+        /** @type {Map<string, number>} */
         this.cooldowns = new Map(); // Prevent audio spam
+        /** @type {GainNode | null} */
         this.masterGain = null;
+        /** @type {BiquadFilterNode | null} Created by `init()`. */
+        this.masterFilter = null;
         this.muted = false;
         this._volume = 0.4; // Default volume
 
@@ -47,20 +86,26 @@ export class MarbleAudio {
         this._musicVolume = 0.5;
 
         // Material type mappings for different surface sounds
+        /** @type {Map<number, string>} Rapier body handle → surface material. */
         this.materialTypes = new Map();
 
         this.voicePool = new VoicePool(28);
-        /** @type {Map<string, object> | null} */
+        /** @type {Map<string, SoundDef> | null} */
         this.soundDefs = null;
         /** @type {Map<string, AudioBuffer> | null} */
         this.soundBuffers = null;
+        /** @type {CollisionMatrix | null} */
         this.collisionMatrix = null;
+        /** @type {GainNode | null} */
         this.sfxGain = null;
+        /** @type {GainNode | null} */
         this.musicGain = null;
+        /** @type {MusicManager | null} */
         this.musicManager = null;
         this.rollingManager = new RollingSoundManager();
         this._paused = false;
         this._focusActive = false;
+        /** @type {number | null} */
         this._savedMasterVolume = null;
         this.reverbZones = new ReverbZoneManager();
     }
@@ -70,11 +115,12 @@ export class MarbleAudio {
         return this.sfxGain || this.masterGain;
     }
 
-    /** @returns {Map<string, object>} */
+    /** @returns {Map<string, RollingSound>} */
     get rollingSounds() {
         return this.rollingManager.sounds;
     }
 
+    /** @param {Map<string, RollingSound>} val */
     set rollingSounds(val) {
         if (this.rollingManager) {
             this.rollingManager.sounds = val;
@@ -83,7 +129,7 @@ export class MarbleAudio {
 
     /**
      * Register a physics body with a material type for collision sounds
-     * @param {RAPIER.RigidBody} body - The physics body
+     * @param {RigidBody} body - The physics body
      * @param {string} [material='wood'] - 'wood', 'metal', 'concrete', 'glass'
      */
     registerBodyMaterial(body, material = 'wood') {
@@ -107,39 +153,44 @@ export class MarbleAudio {
     init() {
         if (this.ctx) return;
 
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContext) {
+        const AudioContextCtor = getAudioContextCtor();
+        if (!AudioContextCtor) {
             console.warn('[Audio] Web Audio API not supported');
             return;
         }
 
-        this.ctx = new AudioContext();
-        this.masterGain = this.ctx.createGain();
-        this.masterGain.gain.value = this._volume * this._masterVolume;
+        const ctx = new AudioContextCtor();
+        this.ctx = ctx;
+        const masterGain = ctx.createGain();
+        this.masterGain = masterGain;
+        masterGain.gain.value = this._volume * this._masterVolume;
 
         // Master filter for focus effect
-        this.masterFilter = this.ctx.createBiquadFilter();
-        this.masterFilter.type = 'lowpass';
-        this.masterFilter.frequency.value = 20000; // Default open
-        this.masterFilter.Q.value = 1;
+        const masterFilter = ctx.createBiquadFilter();
+        this.masterFilter = masterFilter;
+        masterFilter.type = 'lowpass';
+        masterFilter.frequency.value = 20000; // Default open
+        masterFilter.Q.value = 1;
 
-        this.masterGain.connect(this.masterFilter);
-        this.masterFilter.connect(this.ctx.destination);
+        masterGain.connect(masterFilter);
+        masterFilter.connect(ctx.destination);
 
-        this.sfxGain = this.ctx.createGain();
-        this.musicGain = this.ctx.createGain();
-        this.sfxGain.gain.value = this._sfxVolume;
-        this.musicGain.gain.value = this._musicVolume;
-        this.sfxGain.connect(this.masterFilter);
-        this.musicGain.connect(this.masterFilter);
+        const sfxGain = ctx.createGain();
+        const musicGain = ctx.createGain();
+        this.sfxGain = sfxGain;
+        this.musicGain = musicGain;
+        sfxGain.gain.value = this._sfxVolume;
+        musicGain.gain.value = this._musicVolume;
+        sfxGain.connect(masterFilter);
+        musicGain.connect(masterFilter);
 
         // Parallel wet send for per-zone convolution reverb. The dry path
         // above (sfxGain -> masterFilter) is untouched; this send starts
         // silent and is only opened while the listener is inside a zone
         // with a `reverb` config (see ReverbZoneManager).
-        this.reverbZones.attach(this.ctx, this.sfxGain, this.masterFilter);
+        this.reverbZones.attach(ctx, sfxGain, masterFilter);
 
-        this.musicManager = new MusicManager(this.ctx, this.musicGain);
+        this.musicManager = new MusicManager(ctx, musicGain);
         this.enabled = true;
 
         console.log('[Audio] Audio context initialized');
@@ -312,7 +363,7 @@ export class MarbleAudio {
 
     /**
      * Load sound bank + collision matrix from AssetRegistry (call after registry boot).
-     * @param {import('./assets/AssetRegistry.js').AssetRegistry} registry
+     * @param {SoundBankSource | null | undefined} registry
      */
     async loadFromRegistry(registry) {
         if (!registry) return;
@@ -334,6 +385,8 @@ export class MarbleAudio {
      */
     setListenerPosition(x, y, z) {
         if (!this.ctx?.listener?.positionX) return;
+        // setTargetAtTime throws on NaN/Infinity, which would kill the frame loop.
+        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return;
         const t = this.ctx.currentTime;
         this.ctx.listener.positionX.setTargetAtTime(x, t, 0.05);
         this.ctx.listener.positionY.setTargetAtTime(y, t, 0.05);
@@ -346,7 +399,7 @@ export class MarbleAudio {
      * to apply.
      * @param {{ x: number, y: number, z: number }} center
      * @param {number} radius
-     * @param {{ decay: number, wetMix: number, preDelay?: number }} config
+     * @param {ReverbConfig} config
      */
     registerReverbZone(center, radius, config) {
         this.reverbZones.registerZone(center, radius, config);
@@ -371,7 +424,7 @@ export class MarbleAudio {
 
     /**
      * Material-aware collision with pitch variance from sound bank / matrix.
-     * @param {{ velocity: number, radius?: number, marbleMaterial?: string, surfaceMaterial?: string, id?: string, position?: { x: number, y: number, z: number } | null, dopplerRate?: number }} options
+     * @param {CollisionSoundOptions} options
      */
     playCollision({
         velocity,
@@ -401,7 +454,7 @@ export class MarbleAudio {
             this._playBuffer(buffer, {
                 volume: props.volume * this._sfxVolume,
                 pitch,
-                spatial: props.spatial && position,
+                spatial: !!(props.spatial && position),
                 position,
                 maxDistance: props.maxDistance,
                 id,
@@ -416,8 +469,8 @@ export class MarbleAudio {
 
     /**
      * Centralized ability one-shots.
-     * @param {'bomb'|'missile'|'blink'|'teleport'|'emp'|'jump'|'goal'} abilityId
-     * @param {{ x: number, y: number, z: number } | null} [position]
+     * @param {AbilitySoundId} abilityId
+     * @param {AudioPosition | null} [position]
      */
     playAbility(abilityId, position = null) {
         const soundId = ABILITY_SOUND_IDS[abilityId];
@@ -425,14 +478,14 @@ export class MarbleAudio {
 
         const def = this.soundDefs ? getSoundDef(this.soundDefs, soundId) : null;
         const props = soundProperties(def);
-        const profile = def?.synthesis?.profile;
+        const profile = getSynthesisProfile(def);
         const buffer = this.soundBuffers?.get(soundId);
 
         if (buffer) {
             this._playBuffer(buffer, {
                 volume: props.volume,
                 pitch: 1,
-                spatial: props.spatial && position,
+                spatial: !!(props.spatial && position),
                 position,
                 maxDistance: props.maxDistance,
                 id: `ability-${abilityId}`,
@@ -443,6 +496,10 @@ export class MarbleAudio {
         this._playAbilityProcedural(profile || abilityId, position);
     }
 
+    /**
+     * @param {string} kind Ability id or the sound def's `synthesis.profile`.
+     * @param {AudioPosition | null} position
+     */
     _playAbilityProcedural(kind, position) {
         switch (kind) {
             case 'stomp':
@@ -497,7 +554,7 @@ export class MarbleAudio {
 
     /**
      * @param {AudioBuffer} buffer
-     * @param {object} opts
+     * @param {SpatialPlayOptions} opts
      */
     _playBuffer(buffer, opts) {
         playSpatialBuffer(this.ctx, this.sfxBus, this.voicePool, buffer, opts);
@@ -544,6 +601,13 @@ export class MarbleAudio {
         this._playSurfaceHitInternal(velocity, radius, surfaceMaterial, id, 1, dopplerRate);
     }
 
+    /**
+     * @param {number} velocity
+     * @param {number} radius
+     * @param {string} surfaceMaterial
+     * @param {number} [volumeScale=1]
+     * @param {number} [dopplerRate=1]
+     */
     _synthesizeSurfaceHit(velocity, radius, surfaceMaterial, volumeScale = 1, dopplerRate = 1) {
         if (!this.enabled || !this.ctx || this.muted) return;
         synthesizeSurfaceHit(this.ctx, this.sfxBus, velocity, radius, surfaceMaterial, volumeScale, dopplerRate);

@@ -1,0 +1,39 @@
+# Line endings: every tracked text file is LF today; keep it that way.
+* text=auto eol=lf
+
+# ── Binary assets ────────────────────────────────────────────────────────────
+# Runtime binaries stay regular git blobs: `vite build`, the headless level
+# harness, the WASM parity tests and CI checkouts all need the real bytes, and
+# none of them run `git lfs pull`. `binary` = no diff, no merge, no EOL change.
+*.wasm      binary
+*.filmat    binary
+*.filamat   binary
+*.ktx       binary
+*.ktx2      binary
+*.glb       binary
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.webp      binary
+*.gif       binary
+*.ico       binary
+*.ogg       binary
+*.mp3       binary
+*.wav       binary
+*.woff      binary
+*.woff2     binary
+*.ttf       binary
+*.webm      binary
+
+# Heavy source / capture media goes to Git LFS. These patterns match no
+# tracked file today, so adding them leaves every existing checkout clean.
+# Install git-lfs (`git lfs install`) before committing one of these.
+*.mp4       filter=lfs diff=lfs merge=lfs -text
+*.mov       filter=lfs diff=lfs merge=lfs -text
+*.psd       filter=lfs diff=lfs merge=lfs -text
+*.blend     filter=lfs diff=lfs merge=lfs -text
+*.fbx       filter=lfs diff=lfs merge=lfs -text
+*.hdr       filter=lfs diff=lfs merge=lfs -text
+*.exr       filter=lfs diff=lfs merge=lfs -text
+*.tif       filter=lfs diff=lfs merge=lfs -text
+*.tiff      filter=lfs diff=lfs merge=lfs -text

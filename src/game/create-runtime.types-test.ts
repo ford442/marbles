@@ -10,6 +10,7 @@
  */
 import type { FrameHost } from '../types/frame-host.ts';
 import type { GameHost } from '../types/game-host.ts';
+import type { MarblesGameHost } from '../types/marbles-game-host.ts';
 import { createRuntime } from './create-runtime.ts';
 
 declare const host: GameHost;
@@ -35,10 +36,15 @@ createRuntime({} as Without<'startGrapple'>);
 type NeverKeys<T> = { [K in keyof T]-?: [T[K]] extends [never] ? K : never }[keyof T];
 const noNeverMembers: [NeverKeys<GameHost>] extends [never] ? true : NeverKeys<GameHost> = true;
 const noNeverFrameMembers: [NeverKeys<FrameHost>] extends [never] ? true : NeverKeys<FrameHost> = true;
+const noNeverGameMembers: [NeverKeys<MarblesGameHost>] extends [never] ? true : NeverKeys<MarblesGameHost> = true;
 
-// Neither may grow a string index signature (that is `GameMixinHost`'s job, for now).
+// Neither may grow a string index signature .
 type HasStringIndex<T> = string extends keyof T ? true : false;
 const noIndexSignature: HasStringIndex<GameHost> extends false ? true : never = true;
 const noFrameIndexSignature: HasStringIndex<FrameHost> extends false ? true : never = true;
+const noGameIndexSignature: HasStringIndex<MarblesGameHost> extends false ? true : never = true;
 
-export { noNeverMembers, noNeverFrameMembers, noIndexSignature, noFrameIndexSignature };
+export {
+    noNeverMembers, noNeverFrameMembers, noNeverGameMembers,
+    noIndexSignature, noFrameIndexSignature, noGameIndexSignature,
+};

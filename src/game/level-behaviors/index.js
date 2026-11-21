@@ -1,22 +1,27 @@
+// @ts-check
 /**
  * Per-level behavior modules referenced by map JSON `behaviors: ["id"]`.
  */
 import { BEHAVIOR_REGISTRY } from './registry.js';
 import './storm-peak-ambient.js';
 
+/** @typedef {import('./registry.js').LevelBehaviorHost} LevelBehaviorHost */
+/** @typedef {import('./registry.js').LevelBehaviorContext} LevelBehaviorContext */
+
 /** @type {string[]} */
 let activeBehaviorIds = [];
 
 /**
- * @param {object} game
+ * @param {LevelBehaviorHost} game
  * @param {string[]} [behaviorIds]
- * @param {{ level?: object, levelId?: string }} [meta]
+ * @param {{ level?: LevelBehaviorContext['level'], levelId?: string }} [meta]
  */
 export function loadLevelBehaviors(game, behaviorIds = [], meta = {}) {
   unloadLevelBehaviors(game);
 
   if (!behaviorIds?.length) return;
 
+  /** @type {LevelBehaviorContext} */
   const ctx = {
     level: meta.level || {},
     levelId: meta.levelId || game.currentLevel || '',
@@ -39,7 +44,7 @@ export function loadLevelBehaviors(game, behaviorIds = [], meta = {}) {
 }
 
 /**
- * @param {object} game
+ * @param {LevelBehaviorHost} game
  * @param {number} dt
  */
 export function tickLevelBehaviors(game, dt) {
@@ -54,7 +59,7 @@ export function tickLevelBehaviors(game, dt) {
   }
 }
 
-/** @param {object} game */
+/** @param {LevelBehaviorHost} game */
 export function unloadLevelBehaviors(game) {
   for (const id of activeBehaviorIds) {
     const behavior = BEHAVIOR_REGISTRY.get(id);

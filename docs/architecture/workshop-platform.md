@@ -6,7 +6,7 @@
 
 ## Context
 
-The map editor v2 can export schema-valid JSON and a client-side **workshop ZIP** (`src/editor/workshop-export.js`) containing `map.json` plus referenced GLB assets. There is no server publish path, community catalog, or moderation.
+The map editor v2 can export schema-valid JSON and a client-side **workshop ZIP** (`src/editor/workshop-export.ts`) containing `map.json` plus referenced GLB assets. There is no server publish path, community catalog, or moderation.
 
 We need a **data-only** UGC model: maps are JSON + binary assets, validated against the same rules as shipped content (`scripts/validate-assets.cjs`, `assets/schemas/`). No user-supplied JavaScript in packages.
 
@@ -98,7 +98,7 @@ On `finalize`:
 4. Verify every file path in ZIP ⊆ allowlist; no `..` segments.
 5. Hash package; store in `meta.json` for cache busting.
 
-Client-side pre-check in editor before upload (reuse `map-validator.js`) reduces failed finalize rate.
+Client-side pre-check in editor before upload (reuse `map-validator.ts`) reduces failed finalize rate.
 
 ### 7. Moderation (stubs → production)
 
@@ -140,7 +140,7 @@ Reuse device UUID bearer tokens from campaign sync. Optional future: OAuth link 
 
 ## References
 
-- Editor export: `src/editor/workshop-export.js`
+- Editor export: `src/editor/workshop-export.ts`
 - Schemas: `assets/schemas/`
 - Cloud client: `src/services/cloud-client.js` (or equivalent)
 - Existing ghosts API pattern: `POST /v1/marbles/ghosts`

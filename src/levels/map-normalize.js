@@ -10,11 +10,30 @@
  */
 
 /** @typedef {import('../types/map.ts').MapDefinition} MapDefinition */
+/** @typedef {import('../types/map.ts').MapZoneDefinition} MapZoneDefinition */
+/** @typedef {import('../types/map.ts').NormalizedZoneDefinition} NormalizedZoneDefinition */
+/** @typedef {import('../types/map.ts').NormalizedStampZone} NormalizedStampZone */
+/** @typedef {import('../types/map.ts').PrimitiveZoneDefinition} PrimitiveZoneDefinition */
+/** @typedef {import('../types/map.ts').MapGoalDefinition} MapGoalDefinition */
+/** @typedef {import('../types/map.ts').MapGoalVolume} MapGoalVolume */
+/** @typedef {import('../types/map.ts').MapVec3} Vec3 */
+/** @typedef {import('../types/map.ts').MapVec3Input} Vec3Input */
 /** @typedef {import('../types/map.ts').RuntimeLevel} RuntimeLevel */
-/** @typedef {{ x: number, y: number, z: number }} Vec3 */
 
-/** Kept in sync with primitives.ts PRIMITIVE_TYPES (asserted by tests/levels/). */
+/**
+ * Kept in sync with primitives.ts PRIMITIVE_TYPES (asserted by tests/levels/).
+ * @type {ReadonlySet<string>}
+ */
 export const PRIMITIVE_ZONE_TYPES = new Set(['box', 'ramp', 'mover', 'spinner', 'trigger']);
+
+/**
+ * A closed v2 primitive (box/ramp/mover/spinner/trigger) rather than a stamp.
+ * @param {{ type: string }} zone
+ * @returns {zone is PrimitiveZoneDefinition}
+ */
+export function isPrimitiveZone(zone) {
+    return PRIMITIVE_ZONE_TYPES.has(zone.type);
+}
 
 /**
  * @param {unknown} v
@@ -30,8 +49,18 @@ export function toVec3Object(v) {
 }
 
 /**
- * @param {{ pos: unknown, size: unknown }} goal
+ * `[x, y, z]` → {x, y, z}; an object vector is kept as-is (same reference).
+ * @param {Vec3Input} v
+ * @returns {Vec3}
+ */
+function lowerVec3(v) {
+    return Array.isArray(v) ? { x: Number(v[0]), y: Number(v[1]), z: Number(v[2]) } : v;
+}
+
+/**
+ * @param {MapGoalVolume} goal
  * @param {number} id
+ * @returns {MapGoalDefinition}
  */
 export function goalVolumeToRange(goal, id = 1) {
     const c = toVec3Object(goal.pos) ?? { x: 0, y: 0, z: 0 };
@@ -39,33 +68,37 @@ export function goalVolumeToRange(goal, id = 1) {
     return {
         id,
         range: {
-            x: /** @type {[number, number]} */ ([c.x - s.x / 2, c.x + s.x / 2]),
-            y: /** @type {[number, number]} */ ([c.y - s.y / 2, c.y + s.y / 2]),
-            z: /** @type {[number, number]} */ ([c.z - s.z / 2, c.z + s.z / 2]),
+            x: [c.x - s.x / 2, c.x + s.x / 2],
+            y: [c.y - s.y / 2, c.y + s.y / 2],
+            z: [c.z - s.z / 2, c.z + s.z / 2],
         },
     };
 }
 
 /**
  * Stamp zones' array `pos` / `size` become {x, y, z}; primitives pass through.
- * @param {Record<string, any>} zone
- * @returns {Record<string, any>}
+ * @param {MapZoneDefinition} zone
+ * @returns {NormalizedZoneDefinition}
  */
 export function normalizeStampZone(zone) {
-    if (!zone || PRIMITIVE_ZONE_TYPES.has(zone.type)) return zone;
-    const out = { ...zone };
-    if (Array.isArray(zone.pos)) out.pos = toVec3Object(zone.pos);
-    if (Array.isArray(zone.size)) out.size = toVec3Object(zone.size);
+    if (!zone || isPrimitiveZone(zone)) return zone;
+    const { size, ...rest } = zone;
+    /** @type {NormalizedStampZone} */
+    const out = { ...rest, pos: lowerVec3(zone.pos) };
+    if (size !== undefined) out.size = lowerVec3(size);
     return out;
 }
 
 /**
- * @param {MapDefinition | Record<string, any>} mapDef
+ * @param {MapDefinition} mapDef
  * @param {'json' | 'editor' | 'code'} source
  * @returns {RuntimeLevel}
  */
 export function mapToRuntimeLevel(mapDef, source) {
-    const goals = mapDef.goal ? [goalVolumeToRange(/** @type {any} */ (mapDef.goal))] : mapDef.goals;
+    const goals = mapDef.goal ? [goalVolumeToRange(mapDef.goal)] : mapDef.goals;
+    // Every runtime field is copied, absent ones as explicit `undefined` keys
+    // (which exactOptionalPropertyTypes can't express), and the input may be
+    // unvalidated JSON whose `spawn` / `goals` are missing — hence the assertion.
     return /** @type {RuntimeLevel} */ ({
         name: mapDef.name,
         description: mapDef.description || '',
@@ -101,14 +134,22 @@ export function mapToRuntimeLevel(mapDef, source) {
  * @returns {string[]}
  */
 export function structuralErrors(mapDef) {
-    const m = /** @type {Record<string, any>} */ (mapDef);
     /** @type {string[]} */
     const errors = [];
-    if (!m || typeof m !== 'object') return ['map is not an object'];
+    if (!mapDef || typeof mapDef !== 'object') return ['map is not an object'];
+    const m = /** @type {Record<string, unknown>} */ (mapDef);
     if (!Array.isArray(m.zones)) errors.push('zones must be an array');
-    else if (m.zones.some((/** @type {any} */ z) => !z || typeof z.type !== 'string')) errors.push('every zone needs a string type');
+    else if (m.zones.some((/** @type {unknown} */ z) => !hasStringType(z))) errors.push('every zone needs a string type');
     const spawn = toVec3Object(m.spawn);
     if (!spawn || ![spawn.x, spawn.y, spawn.z].every(Number.isFinite)) errors.push('spawn must be a finite vector');
     if (!m.goal && !Array.isArray(m.goals)) errors.push('goal or goals[] is required');
     return errors;
+}
+
+/**
+ * @param {unknown} z
+ * @returns {boolean}
+ */
+function hasStringType(z) {
+    return typeof z === 'object' && z !== null && 'type' in z && typeof z.type === 'string';
 }

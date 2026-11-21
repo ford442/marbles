@@ -9,7 +9,7 @@
  *   node tests/test_repel_pulse.js
  */
 
-import { applyRepelPulse } from '../src/game-loop/repel-pulse.js';
+import { applyRepelPulse } from '../src/game-loop/repel-pulse.ts';
 import { FORCE_BATCH_THRESHOLD } from '../src/wasm-bridge.js';
 
 let pass = 0;

@@ -3,7 +3,7 @@ import {
     LightingBudgetManager,
     LIGHT_BUDGETS,
     shouldUseMarbleProxyLight,
-} from '../src/lighting-budget.js';
+} from '../src/lighting-budget.ts';
 
 function mockGame(quality = 'medium') {
     const scene = {

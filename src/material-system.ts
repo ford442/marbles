@@ -7,7 +7,7 @@ import {
     marbleMaterialPresets,
     trackSurfacePresets,
     zoneSurfaceMapping
-} from './material-presets.js';
+} from './material-presets.ts';
 
 export interface TrackSurfacePreset {
     baseColor?: readonly number[];

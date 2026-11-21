@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Storm Peak ambient rain particles and lightning shaft sources.
  * Extracted from zone factory so JSON levels can opt in via behaviors.
@@ -7,10 +8,14 @@ import { registerBehavior } from './registry.js';
 /** @type {Array<{ remove?: () => void }>} */
 let ambientHandles = [];
 
-/** Legacy storm_peak stamp offset; the v2 map (assets/maps/storm_peak.json) builds at the origin. */
+/**
+ * Legacy storm_peak stamp offset; the v2 map (assets/maps/storm_peak.json) builds at the origin.
+ * Zones are normalized by then (stamp `pos` is an object).
+ * @param {{ zones?: ReadonlyArray<{ type: string, pos?: unknown }> } | undefined} level
+ */
 function findStormPeakOffset(level) {
   const zone = level?.zones?.find((z) => z.type === 'storm_peak');
-  const pos = zone?.pos || { x: 0, y: 0, z: 0 };
+  const pos = /** @type {import('../../types/geometry.ts').Vec3 | undefined} */ (zone?.pos) || { x: 0, y: 0, z: 0 };
   return { x: pos.x, y: pos.y, z: pos.z };
 }
 
@@ -44,6 +49,7 @@ registerBehavior('storm-peak-ambient', {
     }
 
     if (game.volumetricLights) {
+      /** @type {Array<{ x: number, y: number, z: number, color: [number, number, number] }>} */
       const lightningFlashes = [
         { x: pos.x - 20, y: pos.y + 10, z: pos.z + 40, color: [0.8, 0.9, 1.0] },
         { x: pos.x + 20, y: pos.y + 20, z: pos.z + 60, color: [0.9, 1.0, 1.0] },

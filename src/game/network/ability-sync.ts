@@ -1,0 +1,435 @@
+import { audio } from '../../audio.js';
+import { quaternionToMat4 } from '../../math.ts';
+import { getMarblePhysics } from '../../wasm-bridge.js';
+import type { FilamentHandle } from '../../types/filament.ts';
+import type { FrameState } from '../../types/frame-host.ts';
+import type { EngineContext } from '../../types/engine-context.ts';
+import type { Mat4, Vec3 } from '../../types/geometry.ts';
+import type { AbilityMessage, ServerAbilityMessage } from './protocol-types.ts';
+import type { NetworkClient } from './network-client.ts';
+
+/** Mutable position the remote FX integrate in place. */
+interface MutableVec3 {
+    x: number;
+    y: number;
+    z: number;
+}
+
+/** A pooled projectile / holo slot (`EffectPoolManager.acquire*`). */
+interface PooledEffectSlot {
+    entity: FilamentHandle;
+    matInstance: FilamentHandle;
+    lightEntity?: FilamentHandle;
+    halfExtents?: Vec3;
+}
+
+interface RemoteFxBase {
+    entity: FilamentHandle;
+    matInstance: FilamentHandle;
+    _poolSlot: PooledEffectSlot;
+    spawnTime: number;
+    duration: number;
+    variance: number;
+}
+
+interface RemoteBombFx extends RemoteFxBase {
+    kind: 'bomb';
+    lightEntity: FilamentHandle | undefined;
+    pos: MutableVec3;
+    exploded: boolean;
+}
+
+interface RemoteMissileFx extends RemoteFxBase {
+    kind: 'missile';
+    lightEntity: FilamentHandle | undefined;
+    pos: MutableVec3;
+    dir: MutableVec3;
+    speed: number;
+    exploded: boolean;
+}
+
+interface RemoteBlackHoleFx extends RemoteFxBase {
+    kind: 'blackhole';
+    lightEntity: FilamentHandle | undefined;
+    pos: MutableVec3;
+    dir: MutableVec3;
+    speed: number;
+}
+
+interface RemoteHoloFx extends RemoteFxBase {
+    kind: 'holo';
+}
+
+/** A visual-only effect spawned for another player's ability. */
+export type RemoteAbilityFx = RemoteBombFx | RemoteMissileFx | RemoteBlackHoleFx | RemoteHoloFx;
+
+/** Payload half of an outgoing `ability` message (`NetworkClient.sendAbility`). */
+export type AbilityPayload = Pick<AbilityMessage, 'ox' | 'oy' | 'oz' | 'dx' | 'dy' | 'dz' | 'charge'> & { id: string };
+
+/** What the remote-ability sync reads and writes on the game. */
+export type AbilitySyncHost =
+    & Pick<FrameState, 'playerMarble' | 'aimYaw' | 'pitchAngle'>
+    & Partial<Pick<EngineContext, 'particleSystem' | 'effectPool' | 'engine' | 'scene'>>
+    & {
+        network?: Pick<NetworkClient, 'playerId' | 'raceSeed'> | null;
+        remoteAbilityFx?: RemoteAbilityFx[];
+    };
+
+type Rgb = [number, number, number];
+
+/** Reusable vec3 scratch — avoids per-tick `{x,y,z}` allocations on hot paths. */
+const _forceScratch = new Float32Array(3);
+
+/** Deterministic per-(player, seq) variance shared by every client in the race. */
+export function hashPlayerSeq(playerId: string, seq: number, seed = 0): number {
+    let hash = seed >>> 0;
+    for (let i = 0; i < playerId.length; i++) {
+        hash ^= playerId.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+    }
+    hash ^= seq;
+    hash = Math.imul(hash, 16777619);
+    return hash >>> 0;
+}
+
+export function buildAbilityPayload(game: AbilitySyncHost, id: string, charge?: number): AbilityPayload | null {
+    if (!game.playerMarble?.rigidBody) return null;
+
+    const pos = game.playerMarble.rigidBody.translation();
+    const cosP = Math.cos(game.pitchAngle || 0);
+    const sinP = Math.sin(game.pitchAngle || 0);
+    let dirX = Math.sin(game.aimYaw || 0) * cosP;
+    let dirY = sinP;
+    let dirZ = Math.cos(game.aimYaw || 0) * cosP;
+
+    if (id === 'jump' || id === 'bomb') {
+        dirX = 0;
+        dirY = 1;
+        dirZ = 0;
+    }
+
+    const len = Math.hypot(dirX, dirY, dirZ) || 1;
+    const payload: AbilityPayload = {
+        id,
+        ox: pos.x,
+        oy: pos.y,
+        oz: pos.z,
+        dx: dirX / len,
+        dy: dirY / len,
+        dz: dirZ / len,
+    };
+
+    if (charge !== undefined) {
+        payload.charge = Math.max(0, Math.min(1, charge));
+    }
+
+    return payload;
+}
+
+export function initRemoteAbilityFx(game: AbilitySyncHost): RemoteAbilityFx[] {
+    if (!game.remoteAbilityFx) {
+        game.remoteAbilityFx = [];
+    }
+    return game.remoteAbilityFx;
+}
+
+export function applyRemoteAbility(game: AbilitySyncHost, msg: ServerAbilityMessage): void {
+    if (!msg?.id || msg.playerId === game.network?.playerId) return;
+    initRemoteAbilityFx(game);
+
+    const seed = game.network?.raceSeed ?? 0;
+    const variance = hashPlayerSeq(msg.playerId, msg.seq, seed);
+    const origin = { x: msg.ox, y: msg.oy, z: msg.oz };
+    const dir = { x: msg.dx, y: msg.dy, z: msg.dz };
+
+    switch (msg.id) {
+        case 'bomb':
+            spawnRemoteBomb(game, origin, variance);
+            break;
+        case 'missile':
+            spawnRemoteMissile(game, origin, dir, variance);
+            break;
+        case 'blackhole':
+            spawnRemoteBlackHole(game, origin, dir, variance);
+            break;
+        case 'holo':
+            spawnRemoteHolo(game, origin, variance);
+            break;
+        case 'blink':
+            spawnRemoteBlink(game, origin, dir, variance);
+            break;
+        case 'jump':
+            spawnRemoteJump(game, origin, msg.charge ?? 0.5, variance);
+            break;
+        default:
+            spawnRemoteGenericBurst(game, origin, variance);
+            break;
+    }
+}
+
+function spawnVisualBurst(game: AbilitySyncHost, pos: Vec3, color: Rgb, count = 8): void {
+    if (!game.particleSystem) return;
+    game.particleSystem.emitParticles('spark', pos, count, {
+        lifetime: 0.4,
+        size: 0.15,
+        color,
+    });
+}
+
+function applyExplosionToLocalMarble(game: AbilitySyncHost, pos: Vec3, radius: number, force: number): void {
+    if (!game.playerMarble?.rigidBody) return;
+    const body = game.playerMarble.rigidBody;
+    const t = body.translation();
+    const dx = t.x - pos.x;
+    const dy = t.y - pos.y;
+    const dz = t.z - pos.z;
+    const dist = Math.hypot(dx, dy, dz);
+    if (dist >= radius || dist <= 0.1) return;
+
+    const factor = 1.0 - dist / radius;
+    const nx = dx / dist;
+    const ny = dy / dist;
+    const nz = dz / dist;
+    body.applyImpulse({
+        x: nx * force * factor,
+        y: (ny * 0.5 + 0.5) * force * factor,
+        z: nz * force * factor,
+    }, true);
+}
+
+function spawnRemoteBomb(game: AbilitySyncHost, origin: Vec3, variance: number): void {
+    const slot: PooledEffectSlot | null | undefined = game.effectPool?.acquireProjectile('bomb', origin);
+    if (!slot) return;
+
+    const tcm = game.engine.getTransformManager();
+    tcm.setTransform(tcm.getInstance(slot.entity), quaternionToMat4(origin, { x: 0, y: 0, z: 0, w: 1 }));
+
+    initRemoteAbilityFx(game).push({
+        kind: 'bomb',
+        entity: slot.entity,
+        matInstance: slot.matInstance,
+        lightEntity: slot.lightEntity,
+        _poolSlot: slot,
+        pos: { ...origin },
+        spawnTime: Date.now(),
+        duration: 2500,
+        exploded: false,
+        variance,
+    });
+
+    if (audio.playAbility) audio.playAbility('bomb', origin);
+}
+
+function spawnRemoteMissile(game: AbilitySyncHost, origin: Vec3, dir: Vec3, variance: number): void {
+    const spawnPos = {
+        x: origin.x + dir.x * 1.5,
+        y: origin.y + dir.y * 1.5,
+        z: origin.z + dir.z * 1.5,
+    };
+    const slot: PooledEffectSlot | null | undefined = game.effectPool?.acquireProjectile('missile', spawnPos);
+    if (!slot) return;
+
+    initRemoteAbilityFx(game).push({
+        kind: 'missile',
+        entity: slot.entity,
+        matInstance: slot.matInstance,
+        lightEntity: slot.lightEntity,
+        _poolSlot: slot,
+        pos: { ...spawnPos },
+        dir: { ...dir },
+        speed: 40,
+        spawnTime: Date.now(),
+        duration: 3000,
+        exploded: false,
+        variance,
+    });
+
+    if (audio.playAbility) audio.playAbility('missile', spawnPos);
+}
+
+function spawnRemoteBlackHole(game: AbilitySyncHost, origin: Vec3, dir: Vec3, variance: number): void {
+    const spawnPos = {
+        x: origin.x + dir.x * 2,
+        y: origin.y + dir.y * 2,
+        z: origin.z + dir.z * 2,
+    };
+    const slot: PooledEffectSlot | null | undefined = game.effectPool?.acquireProjectile('blackHole', spawnPos);
+    if (!slot) return;
+
+    initRemoteAbilityFx(game).push({
+        kind: 'blackhole',
+        entity: slot.entity,
+        matInstance: slot.matInstance,
+        lightEntity: slot.lightEntity,
+        _poolSlot: slot,
+        pos: { ...spawnPos },
+        dir: { ...dir },
+        speed: 5,
+        spawnTime: Date.now(),
+        duration: 8000,
+        variance,
+    });
+
+    if (typeof audio !== 'undefined' && audio.playTrick) audio.playTrick();
+}
+
+/** `mat[i] *= s` (a 4×4 matrix always has index `i`). */
+function scaleMatEntry(mat: Mat4, i: number, s: number): void {
+    mat[i] = (mat[i] ?? 0) * s;
+}
+
+function spawnRemoteHolo(game: AbilitySyncHost, origin: Vec3, variance: number): void {
+    const slot: PooledEffectSlot | null | undefined = game.effectPool?.acquireHoloPlatform();
+    if (!slot) return;
+
+    const spawnPos = { x: origin.x, y: origin.y - 1.2, z: origin.z };
+    const halfExtents = slot.halfExtents || { x: 3, y: 0.2, z: 3 };
+
+    const tcm = game.engine.getTransformManager();
+    const mat = quaternionToMat4(spawnPos, { x: 0, y: 0, z: 0, w: 1 });
+    scaleMatEntry(mat, 0, halfExtents.x * 2);
+    scaleMatEntry(mat, 1, halfExtents.x * 2);
+    scaleMatEntry(mat, 2, halfExtents.x * 2);
+    scaleMatEntry(mat, 4, halfExtents.y * 2);
+    scaleMatEntry(mat, 5, halfExtents.y * 2);
+    scaleMatEntry(mat, 6, halfExtents.y * 2);
+    scaleMatEntry(mat, 8, halfExtents.z * 2);
+    scaleMatEntry(mat, 9, halfExtents.z * 2);
+    scaleMatEntry(mat, 10, halfExtents.z * 2);
+    tcm.setTransform(tcm.getInstance(slot.entity), mat);
+
+    initRemoteAbilityFx(game).push({
+        kind: 'holo',
+        entity: slot.entity,
+        matInstance: slot.matInstance,
+        _poolSlot: slot,
+        spawnTime: Date.now(),
+        duration: 5000,
+        variance,
+    });
+}
+
+function spawnRemoteBlink(game: AbilitySyncHost, origin: Vec3, dir: Vec3, variance: number): void {
+    const dist = 6 + (variance % 400) / 100;
+    const end = {
+        x: origin.x + dir.x * dist,
+        y: origin.y + dir.y * dist,
+        z: origin.z + dir.z * dist,
+    };
+    spawnVisualBurst(game, origin, [1.0, 0.8, 0.0], 6);
+    spawnVisualBurst(game, end, [1.0, 0.8, 0.0], 6);
+    if (audio.playAbility) audio.playAbility('blink', end);
+}
+
+function spawnRemoteJump(game: AbilitySyncHost, origin: Vec3, charge: number, variance: number): void {
+    const force = 5 + charge * 10;
+    spawnVisualBurst(game, origin, [0.3, 0.8, 1.0], Math.round(4 + charge * 8));
+
+    if (game.playerMarble?.rigidBody) {
+        const gravityDir = game.playerMarble.rigidBody.gravityScale() < 0 ? -1 : 1;
+        game.playerMarble.rigidBody.applyImpulse({ x: 0, y: force * gravityDir, z: 0 }, true);
+    }
+
+    if (audio.playJump) audio.playJump();
+    void variance;
+}
+
+function spawnRemoteGenericBurst(game: AbilitySyncHost, origin: Vec3, variance: number): void {
+    spawnVisualBurst(game, origin, [0.8, 0.5, 1.0], 4 + (variance % 4));
+    void variance;
+}
+
+export function tickRemoteAbilityFx(game: AbilitySyncHost, now = Date.now()): void {
+    const fxList = game.remoteAbilityFx;
+    if (!fxList?.length) return;
+
+    const tcm = game.engine?.getTransformManager();
+    const physics = getMarblePhysics();
+
+    for (let i = fxList.length - 1; i >= 0; i--) {
+        const fx = fxList[i];
+        if (!fx) continue;
+        const elapsed = now - fx.spawnTime;
+
+        if (elapsed > fx.duration) {
+            releaseRemoteFx(game, fx);
+            fxList.splice(i, 1);
+            continue;
+        }
+
+        if (fx.kind === 'missile' || fx.kind === 'blackhole') {
+            fx.pos.x += fx.dir.x * fx.speed * 0.05;
+            fx.pos.y += fx.dir.y * fx.speed * 0.05;
+            fx.pos.z += fx.dir.z * fx.speed * 0.05;
+
+            if (tcm && fx.entity) {
+                tcm.setTransform(
+                    tcm.getInstance(fx.entity),
+                    quaternionToMat4(fx.pos, { x: 0, y: 0, z: 0, w: 1 })
+                );
+                if (fx.lightEntity) {
+                    tcm.setTransform(
+                        tcm.getInstance(fx.lightEntity),
+                        quaternionToMat4(fx.pos, { x: 0, y: 0, z: 0, w: 1 })
+                    );
+                }
+            }
+
+            if (fx.kind === 'blackhole' && game.playerMarble?.rigidBody) {
+                const pos = game.playerMarble.rigidBody.translation();
+                physics.computeForceFieldInto(
+                    _forceScratch,
+                    fx.pos.x, fx.pos.y, fx.pos.z,
+                    pos.x, pos.y, pos.z,
+                    20, 1, 0.5, 25
+                );
+                game.playerMarble.rigidBody.applyImpulse({
+                    x: _forceScratch[0] ?? 0,
+                    y: _forceScratch[1] ?? 0,
+                    z: _forceScratch[2] ?? 0,
+                }, true);
+            }
+        }
+
+        if (fx.kind === 'bomb' && !fx.exploded && elapsed >= fx.duration - 50) {
+            fx.exploded = true;
+            applyExplosionToLocalMarble(game, fx.pos, 20, 120);
+            spawnVisualBurst(game, fx.pos, [1.0, 0.4, 0.1], 12);
+        }
+
+        if (fx.kind === 'missile' && !fx.exploded && elapsed >= fx.duration - 50) {
+            fx.exploded = true;
+            applyExplosionToLocalMarble(game, fx.pos, 10, 80);
+            spawnVisualBurst(game, fx.pos, [1.0, 0.5, 0.0], 10);
+        }
+    }
+}
+
+function releaseRemoteFx(game: AbilitySyncHost, fx: RemoteAbilityFx): void {
+    if (fx._poolSlot && (fx.kind === 'bomb' || fx.kind === 'missile' || fx.kind === 'blackhole')) {
+        game.effectPool?.releaseProjectile({
+            entity: fx.entity,
+            matInstance: fx.matInstance,
+            lightEntity: fx.lightEntity,
+            _poolSlot: fx._poolSlot,
+        });
+        return;
+    }
+    if (fx.kind === 'holo' && fx._poolSlot) {
+        game.effectPool?.releaseHoloPlatform?.({
+            _poolSlot: fx._poolSlot,
+            entity: fx.entity,
+            matInstance: fx.matInstance,
+        });
+        return;
+    }
+    game.scene?.remove(fx.entity);
+}
+
+export function clearRemoteAbilityFx(game: AbilitySyncHost): void {
+    if (!game.remoteAbilityFx) return;
+    for (const fx of game.remoteAbilityFx) {
+        releaseRemoteFx(game, fx);
+    }
+    game.remoteAbilityFx = [];
+}

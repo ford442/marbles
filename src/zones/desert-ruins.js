@@ -1,5 +1,12 @@
-import { decorateDesertRuins } from './methods/decorations.js';
+// @ts-check
+/** @typedef {import('../types/zone-host.ts').ZoneBuildHost} ZoneBuildHost */
+/** @typedef {import('../types/geometry.ts').Vec3} Vec3 */
+import { decorateDesertRuins } from './methods/decorations.ts';
 
+/**
+ * @param {ZoneBuildHost} game
+ * @param {Vec3} offset
+ */
 export function createDesertRuinsZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 

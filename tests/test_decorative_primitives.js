@@ -3,14 +3,14 @@ import {
     DECORATIVE_PRIMITIVES,
     DECORATIVE_VERTEX_STRIDE,
     DECORATIVE_PRIMITIVE_NAMES,
-} from '../src/decorative-primitives.js';
+} from '../src/decorative-primitives.ts';
 import {
     batchGeometry,
     batchBoxGeometry,
     computeMeshBatchBounds,
     computeBatchBounds,
 } from '../src/gpu-instancing.js';
-import { CUBE_VERTICES, CUBE_INDICES } from '../src/cube-geometry.js';
+import { CUBE_VERTICES, CUBE_INDICES } from '../src/cube-geometry.ts';
 
 function testPrimitiveMeshesExist() {
     for (const name of DECORATIVE_PRIMITIVE_NAMES) {

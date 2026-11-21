@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import RAPIER from '@dimforge/rapier3d-compat';
-import { EditorPhysicsPreview } from '../src/editor/physics-preview.js';
+import { EditorPhysicsPreview } from '../src/editor/physics-preview.ts';
 
 await RAPIER.init();
 

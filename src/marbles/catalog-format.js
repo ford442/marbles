@@ -74,6 +74,8 @@ const APPEARANCE_FIELDS = Object.freeze([
     'rainbow',
 ]);
 
+/** @typedef {import('../types/generated/marble-schema.ts').MarbleSchema} MarbleSchema */
+
 /**
  * @typedef {object} MarbleInfo
  * Runtime (game-format) marble entry, as found in `marblesInfo`.
@@ -113,11 +115,13 @@ export function slugifyMarbleName(name) {
  * Convert a marble JSON definition into the runtime format consumed by
  * `MarbleRegistry`. Only fields present in the source are emitted, so engine
  * defaults (radius 0.5, restitution 0.5, Rapier density 1) still apply.
- * @param {any} def
+ * @param {MarbleSchema} def
  * @returns {MarbleInfo & Record<string, unknown>}
  */
 export function marbleDefToGameInfo(def) {
+    /** @type {Partial<MarbleSchema['appearance']>} */
     const appearance = def?.appearance || {};
+    /** @type {MarbleSchema['physics']} */
     const physics = def?.physics || {};
     const color = appearance.color || { r: 0.5, g: 0.5, b: 0.5 };
 
@@ -137,6 +141,7 @@ export function marbleDefToGameInfo(def) {
     for (const key of APPEARANCE_FIELDS) {
         if (appearance[key] !== undefined) info[key] = appearance[key];
     }
+    /** @type {NonNullable<MarbleSchema['appearance']['shader']>} */
     const shader = appearance.shader || {};
     for (const key of SHADER_FIELDS) {
         if (shader[key] !== undefined) info[key] = shader[key];
@@ -159,7 +164,7 @@ function round(v) {
 
 /**
  * `assets/marbles/_bouncy-cap.json` → { id: max restitution }.
- * @param {Record<string, any>} json
+ * @param {Record<string, unknown>} json
  * @returns {Record<string, number>}
  */
 export function bouncyCapLimits(json) {
@@ -167,7 +172,8 @@ export function bouncyCapLimits(json) {
     const out = {};
     for (const [id, entry] of Object.entries(json || {})) {
         if (id.startsWith('$')) continue;
-        out[id] = typeof entry === 'number' ? entry : Number(entry?.max);
+        const max = entry && typeof entry === 'object' ? /** @type {{ max?: unknown }} */ (entry).max : undefined;
+        out[id] = typeof entry === 'number' ? entry : Number(max);
     }
     return out;
 }
@@ -177,21 +183,24 @@ export function bouncyCapLimits(json) {
  * restitution cap (with bouncyCap exceptions), file id ↔ manifest key, and the
  * emissive-intensity convention.
  *
- * @param {Array<{ key?: string, def: any }>} entries manifest key + parsed JSON
+ * @param {Array<{ key?: string, def: unknown }>} entries manifest key + parsed JSON
  * @param {{ bouncyCap?: Record<string, number> }} [options]
  * @returns {string[]} human-readable problems (empty = OK)
  */
 export function findCatalogProblems(entries, options = {}) {
     const bouncyCap = options.bouncyCap || {};
+    /** @type {string[]} */
     const problems = [];
-    /** @type {Map<string, string>} */
+    /** @type {Map<unknown, string>} id (as found in the file) → label */
     const ids = new Map();
     /** @type {Map<string, string>} */
     const names = new Map();
 
-    for (const { key, def } of entries) {
+    for (const { key, def: raw } of entries) {
+        // Unvalidated JSON: every field below is checked before it is trusted.
+        const def = raw && typeof raw === 'object' ? /** @type {Partial<MarbleSchema>} */ (raw) : null;
         const label = key || def?.id || '<unknown>';
-        if (!def || typeof def !== 'object') {
+        if (!def) {
             problems.push(`${label}: not an object`);
             continue;
         }
@@ -214,7 +223,7 @@ export function findCatalogProblems(entries, options = {}) {
 
         const restitution = def.physics?.restitution;
         if (typeof restitution === 'number') {
-            const cap = bouncyCap[def.id];
+            const cap = bouncyCap[String(def.id)];
             const limit = typeof cap === 'number' ? Math.min(cap, BOUNCY_CAP_HARD_MAX) : MAX_RESTITUTION;
             if (restitution > limit) {
                 problems.push(

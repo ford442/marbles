@@ -49,8 +49,8 @@ export function createRuntime(host: GameHost): GameRuntime {
         marbleRegistry,
         assetRegistry,
         getLevelById: getLevel,
-        runtime: InitLevelLoader.prototype,
-        cleanupRuntime: InitCleanup.prototype,
+        runtime: new InitLevelLoader(host),
+        cleanupRuntime: new InitCleanup(host),
     }));
     const hudController = (slots.hudController = new HudController(host));
 

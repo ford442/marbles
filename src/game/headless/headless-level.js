@@ -10,9 +10,11 @@
  */
 import RAPIER from '@dimforge/rapier3d-compat';
 import { createGameState, bindGameState } from '../state/index.js';
-import { installZoneMethods } from '../../zones/methods/index.js';
-import { installKnownMethods } from '../systems/method-installer.js';
-import { ZoneSetupCore } from '../../zone-setup/core.js';
+import { ZONE_METHOD_SLICES } from '../../zones/methods/index.ts';
+import { ZoneSetupCore } from '../../zone-setup/core.ts';
+import {
+    composeSlices, defineSlice, forwardMethods, forwardSliceMethods,
+} from '../systems/slice-composition.ts';
 import { PhysicsWorld } from '../systems/physics-world.ts';
 import { GamePhysicsQueries } from '../systems/physics-queries.ts';
 import { DEFAULT_FIXED_STEP } from '../systems/fixed-step-clock.ts';
@@ -25,7 +27,7 @@ export const KILL_PLANE_Y = -20;
 /**
  * Reference marble for completability: the default-unlocked starter
  * (assets/marbles/classic_red.json). Held-key movement is a raw impulse
- * (frame-input.js), so recorded solutions are only valid for this marble.
+ * (frame-input.ts), so recorded solutions are only valid for this marble.
  */
 export const REFERENCE_MARBLE = Object.freeze({
     radius: 0.5, friction: 0.015, restitution: 0.8, density: 1.5, linearDamping: 0.08, angularDamping: 0.08,
@@ -41,11 +43,11 @@ export function initHeadlessRapier() {
  * A callable, infinitely chainable no-op standing in for Filament, the
  * engine, scene, materials and buffers. Every property and call returns the
  * stub; it is not thenable and coerces to 0.
- * @returns {any}
+ * @returns {import('../../types/filament.ts').FilamentHandle}
  */
 export function createRenderStub() {
     const target = function renderStub() {};
-    /** @type {any} */
+    /** @type {import('../../types/filament.ts').FilamentHandle} */
     const stub = new Proxy(target, {
         get(_t, prop) {
             if (prop === 'then') return undefined;
@@ -66,35 +68,88 @@ const PHYSICS_WORLD_METHODS = [
     'createPhaseBox', 'createStaticBox', 'createDynamicBox', 'createRotatingBox',
 ];
 
+/**
+ * What the zone-building slices are constructed against.
+ * @typedef {import('../../zones/methods/index.ts').ZoneMethodSlicesHost
+ *   & import('../../zone-setup/core.ts').ZoneSetupCoreHost} HeadlessSliceHost
+ */
+
+/**
+ * The zone-building slices a level build needs: zone methods plus `createZone`.
+ * @type {import('../systems/slice-composition.ts').SliceSpec<HeadlessSliceHost>[]}
+ */
+const HEADLESS_SLICES = [
+    ...ZONE_METHOD_SLICES,
+    defineSlice('zoneSetupCoreSlice', ZoneSetupCore, ['createZone']),
+];
+
+/**
+ * A reference marble (`spawnReferenceMarble`): the only marbles a headless
+ * level ever holds.
+ * @typedef {object} HeadlessMarble
+ * @property {RAPIER.RigidBody} rigidBody
+ * @property {import('../../types/geometry.ts').Vec3} initialPos
+ * @property {import('../../types/geometry.ts').Vec3} respawnPos
+ * @property {number} radius
+ */
+
+/**
+ * A built headless level as the harness and the checks use it: the members
+ * `HeadlessGame` assigns, the grouped state `bindGameState` mirrors onto it,
+ * and the methods forwarded to its slices / `physicsWorld`.
+ * @typedef {HeadlessGame
+ *   & Pick<import('../../types/frame-host.ts').FrameState, 'movingPlatforms' | 'rotatingPlatforms'>
+ *   & Pick<import('../../zone-setup/core.ts').ZoneSetupCore, 'createZone'>
+ *   & {
+ *     marbles: HeadlessMarble[],
+ *     playerMarble: HeadlessMarble | null,
+ *     zoneScope?: import('../../zone-setup/primitives.ts').ZoneScope | null,
+ *   }} HeadlessLevel
+ */
+
 export class HeadlessGame {
     /** @param {{ gravity?: { x: number, y: number, z: number } }} [options] */
     constructor({ gravity = { x: 0, y: -9.81, z: 0 } } = {}) {
-        bindGameState(/** @type {any} */ (this), createGameState({ doc: null }));
+        bindGameState(this, createGameState({ doc: null }));
+        // Composition boundary: the grouped state is mirrored onto `this` above,
+        // the engine handles below are render stubs, and the slice methods are
+        // forwarded on the prototype, so `this` stands in for the full
+        // zone-build host (GPU-side services such as the effect pool stay unset).
+        composeSlices(/** @type {HeadlessSliceHost} */ (/** @type {unknown} */ (this)), HEADLESS_SLICES);
         const stub = createRenderStub();
         const world = new RAPIER.World(gravity);
         world.timestep = DEFAULT_FIXED_STEP;
-        Object.assign(this, {
-            Filament: stub, engine: stub, scene: stub, material: stub,
-            vb: stub, ib: stub, sphereVb: stub, sphereIb: stub,
-            headless: true,
-            world,
-            /** Simulated seconds since the level was built. */
-            simTime: 0,
-        });
-        Object.assign(this, {
-            physicsWorld: new PhysicsWorld(/** @type {any} */ (this)),
-            physicsQueries: new GamePhysicsQueries(/** @type {any} */ (this)),
-        });
+        /** @type {import('../../types/filament.ts').FilamentModule} */
+        this.Filament = stub;
+        /** @type {import('../../types/filament.ts').FilamentHandle} */
+        this.engine = stub;
+        /** @type {import('../../types/filament.ts').FilamentHandle} */
+        this.scene = stub;
+        /** @type {import('../../types/filament.ts').FilamentHandle} */
+        this.material = stub;
+        /** @type {import('../../types/filament.ts').FilamentHandle} */
+        this.vb = stub;
+        /** @type {import('../../types/filament.ts').FilamentHandle} */
+        this.ib = stub;
+        /** @type {import('../../types/filament.ts').FilamentHandle} */
+        this.sphereVb = stub;
+        /** @type {import('../../types/filament.ts').FilamentHandle} */
+        this.sphereIb = stub;
+        /** @type {true} */
+        this.headless = true;
+        this.world = world;
+        /** Simulated seconds since the level was built. */
+        this.simTime = 0;
+        // Same boundary as above: `PhysicsWorld` reads the mirrored state lists.
+        const physicsWorld = new PhysicsWorld(/** @type {import('../systems/physics-world.ts').PhysicsWorldHost} */ (/** @type {unknown} */ (this)));
+        const physicsQueries = new GamePhysicsQueries(this);
+        this.physicsWorld = physicsWorld;
+        this.physicsQueries = physicsQueries;
     }
 }
 
-installZoneMethods(HeadlessGame);
-installKnownMethods(HeadlessGame, ZoneSetupCore, ['createZone']);
-for (const name of PHYSICS_WORLD_METHODS) {
-    /** @type {any} */ (HeadlessGame.prototype)[name] = function delegated(/** @type {unknown[]} */ ...args) {
-        return this.physicsWorld[name](...args);
-    };
-}
+forwardSliceMethods(HeadlessGame, HEADLESS_SLICES);
+forwardMethods(HeadlessGame, 'physicsWorld', PHYSICS_WORLD_METHODS);
 
 /** Seed for the deterministic `Math.random` used while zones build. */
 export const HEADLESS_RANDOM_SEED = 0x5eed;
@@ -122,13 +177,13 @@ export function seededRandom(seed) {
  * so `Math.random` is seeded during the build: every build of a level is
  * identical and a recorded `solution` replays exactly. In game those layouts
  * still vary, so a solution there proves the seeded layout is finishable.
- * @param {any} level
+ * @param {{ zones?: import('../../zone-setup/registry.js').DispatchZone[] | null }} level
  * @param {{ verbose?: boolean, seed?: number }} [options]
- * @returns {Promise<HeadlessGame & Record<string, any>>}
+ * @returns {Promise<HeadlessLevel>}
  */
 export async function buildHeadlessLevel(level, { verbose = false, seed = HEADLESS_RANDOM_SEED } = {}) {
     await initHeadlessRapier();
-    const game = /** @type {any} */ (new HeadlessGame());
+    const game = /** @type {HeadlessLevel} */ (new HeadlessGame());
     const restore = verbose ? null : muteConsole();
     const realRandom = Math.random;
     Math.random = seededRandom(seed);
@@ -158,7 +213,7 @@ function muteConsole() {
 
 /**
  * Drop a reference marble at `pos`.
- * @param {any} game
+ * @param {HeadlessLevel} game
  * @param {{ x: number, y: number, z: number }} pos
  * @param {{ radius: number, friction: number, restitution: number, density: number, linearDamping?: number, angularDamping?: number }} [marble]
  */
@@ -178,6 +233,7 @@ export function spawnReferenceMarble(game, pos, marble = REFERENCE_MARBLE) {
             .setDensity(marble.density),
         body,
     );
+    /** @type {HeadlessMarble} */
     const entry = { rigidBody: body, initialPos: { ...pos }, respawnPos: { ...pos }, radius: marble.radius };
     game.marbles.push(entry);
     game.playerMarble = entry;
@@ -187,7 +243,7 @@ export function spawnReferenceMarble(game, pos, marble = REFERENCE_MARBLE) {
 /**
  * Animate legacy kinematic stamps the way game-loop/dynamics-tick.js does,
  * but from simulated time instead of the wall clock.
- * @param {any} game
+ * @param {HeadlessLevel} game
  */
 function tickLegacyPlatforms(game) {
     const t = game.simTime;
@@ -209,9 +265,9 @@ function tickLegacyPlatforms(game) {
 /**
  * Advance the level by `steps` fixed steps. `beforeStep(game, i)` can apply
  * input; `afterStep(game, i)` returning `true` stops early.
- * @param {any} game
+ * @param {HeadlessLevel} game
  * @param {number} steps
- * @param {{ beforeStep?: (game: any, i: number) => void, afterStep?: (game: any, i: number) => boolean | void }} [hooks]
+ * @param {{ beforeStep?: (game: HeadlessLevel, i: number) => void, afterStep?: (game: HeadlessLevel, i: number) => boolean | void }} [hooks]
  * @returns {number} steps actually taken
  */
 export function stepHeadless(game, steps, { beforeStep, afterStep } = {}) {
@@ -233,9 +289,11 @@ export function isFiniteVec(v) {
     return Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z);
 }
 
+/** @typedef {{ x: readonly [number, number], y: readonly [number, number], z: readonly [number, number] }} GoalRange */
+
 /**
  * True when `p` is inside a level goal range (`goals[].range`).
- * @param {{ range: { x: number[], y: number[], z: number[] } }} goal
+ * @param {{ range: GoalRange }} goal
  * @param {{ x: number, y: number, z: number }} p
  */
 export function inGoalRange(goal, p) {

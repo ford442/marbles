@@ -1,5 +1,9 @@
+// @ts-check
 // Space Station Level Module
-import { decorateSpaceStation } from './methods/decorations.js';
+import { decorateSpaceStation } from './methods/decorations.ts';
+
+/** @typedef {import('../types/zone-host.ts').ZoneBuildHost} ZoneBuildHost */
+/** @typedef {import('../types/geometry.ts').Vec3} Vec3 */
 
 export const spaceStationLevel = {
     name: 'Space Station',
@@ -17,6 +21,10 @@ export const spaceStationLevel = {
     backgroundColor: [0.0, 0.0, 0.0, 1.0]
 };
 
+/**
+ * @param {ZoneBuildHost} game
+ * @param {Vec3} offset
+ */
 export function createSpaceStationZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 

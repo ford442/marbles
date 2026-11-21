@@ -1,4 +1,9 @@
+// @ts-check
 import { quatFromYawPitchRoll, quatMultiply } from '../math.ts';
+
+/** @typedef {import('../types/zone-host.ts').ZoneBuildHost} ZoneBuildHost */
+/** @typedef {import('../types/geometry.ts').Vec3} Vec3 */
+/** @typedef {readonly number[]} RGB */
 
 export const pinballLevel = {
     name: 'Pinball Wizard',
@@ -15,6 +20,10 @@ export const pinballLevel = {
     camera: { mode: 'follow', height: 25, offset: -20, angle: 0 }
 };
 
+/**
+ * @param {ZoneBuildHost} game
+ * @param {Vec3} offset
+ */
 export function createPinballZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
@@ -63,6 +72,16 @@ export function createPinballZone(game, offset) {
     // z is along the length (Z- is back/top, Z+ is front/bottom)
     // h, w, d are half-extents
     // y_offset is height above the table surface (default 0 is centered in thickness, usually we want on top)
+    /**
+     * @param {number} x
+     * @param {number} z
+     * @param {number} w
+     * @param {number} h
+     * @param {number} d
+     * @param {RGB} color
+     * @param {string} [mat]
+     * @param {number} [rotY]
+     */
     const placeOnTable = (x, z, w, h, d, color, mat = 'wood', rotY = 0) => {
         // Local position relative to table center
         // We want the object's bottom to be on the table surface?

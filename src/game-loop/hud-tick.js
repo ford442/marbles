@@ -16,96 +16,100 @@ import {
 } from './helpers.ts';
 
 export class GameLoopHudTick {
+    /** @param {HudTickHost} game */
+    constructor(game) {
+        this.game = game;
+    }
+
     /**
-     * @this {HudTickHost}
      * @param {number} now
      * @param {boolean} shouldUpdateHUD
      */
     tickHudCooldownBars(now, shouldUpdateHUD) {
-                if (this.abilitySystem) {
-                    this.abilitySystem.tickHudBars(now, shouldUpdateHUD)
+                if (this.game.abilitySystem) {
+                    this.game.abilitySystem.tickHudBars(now, shouldUpdateHUD)
                 }
 
                 // Update Active Effects UI
-                if (shouldUpdateHUD && this.activeEffectsEl) {
+                if (shouldUpdateHUD && this.game.activeEffectsEl) {
                     const active = []
-                    for (const [type, endTime] of Object.entries(this.activeEffects)) {
+                    for (const [type, endTime] of Object.entries(this.game.activeEffects)) {
                         if (endTime !== undefined && now < endTime) {
                             const timeLeft = Math.ceil((endTime - now) / 1000)
                             active.push(`${type.toUpperCase()}: ${timeLeft}s`)
                         } else {
-                            delete this.activeEffects[type]
+                            delete this.game.activeEffects[type]
                         }
                     }
-                    this.activeEffectsEl.textContent = active.join(' | ')
+                    this.game.activeEffectsEl.textContent = active.join(' | ')
                 }
         
-                if (shouldUpdateHUD && this.sizebarContainerEl && this.sizebarEl) {
-                    const timeSinceSizeShift = now - this.lastSizeShiftTime
-                    if (timeSinceSizeShift < this.sizeShiftCooldown) {
-                        this.sizebarContainerEl.style.display = 'block'
-                        const pct = (timeSinceSizeShift / this.sizeShiftCooldown) * 100
-                        this.sizebarEl.style.width = pct + '%'
+                if (shouldUpdateHUD && this.game.sizebarContainerEl && this.game.sizebarEl) {
+                    const timeSinceSizeShift = now - this.game.lastSizeShiftTime
+                    if (timeSinceSizeShift < this.game.sizeShiftCooldown) {
+                        this.game.sizebarContainerEl.style.display = 'block'
+                        const pct = (timeSinceSizeShift / this.game.sizeShiftCooldown) * 100
+                        this.game.sizebarEl.style.width = pct + '%'
                     } else {
-                        this.sizebarEl.style.width = '100%'
-                        this.sizebarContainerEl.style.display = 'none'
+                        this.game.sizebarEl.style.width = '100%'
+                        this.game.sizebarContainerEl.style.display = 'none'
                     }
                 }
         
-                if (shouldUpdateHUD && this.chameleonBarContainerEl && this.chameleonBarEl) {
-                    const timeSinceChameleon = now - this.lastChameleonTime
-                    const color = this.chameleonProfiles[this.chameleonState]?.color ?? [1, 1, 1]
+                if (shouldUpdateHUD && this.game.chameleonBarContainerEl && this.game.chameleonBarEl) {
+                    const timeSinceChameleon = now - this.game.lastChameleonTime
+                    const color = this.game.chameleonProfiles[this.game.chameleonState]?.color ?? [1, 1, 1]
                     const rgb = `rgb(${color[0] * 255}, ${color[1] * 255}, ${color[2] * 255})`
-                    if (timeSinceChameleon < this.chameleonCooldown) {
-                        this.chameleonBarContainerEl.style.display = 'block'
-                        const pct = (timeSinceChameleon / this.chameleonCooldown) * 100
-                        this.chameleonBarEl.style.width = pct + '%'
-                        this.chameleonBarEl.style.background = rgb
+                    if (timeSinceChameleon < this.game.chameleonCooldown) {
+                        this.game.chameleonBarContainerEl.style.display = 'block'
+                        const pct = (timeSinceChameleon / this.game.chameleonCooldown) * 100
+                        this.game.chameleonBarEl.style.width = pct + '%'
+                        this.game.chameleonBarEl.style.background = rgb
                     } else {
-                        this.chameleonBarEl.style.width = '100%'
-                        this.chameleonBarEl.style.background = rgb
-                        this.chameleonBarContainerEl.style.display = 'none'
+                        this.game.chameleonBarEl.style.width = '100%'
+                        this.game.chameleonBarEl.style.background = rgb
+                        this.game.chameleonBarContainerEl.style.display = 'none'
                     }
                 }
         
         
-                if (shouldUpdateHUD && this.teleportBarEl) {
-                    const timeSinceTeleport = now - this.lastTeleportTime
-                    const progress = Math.min(1.0, timeSinceTeleport / this.teleportCooldown)
-                    this.teleportBarEl.style.width = `${progress * 100}%`
+                if (shouldUpdateHUD && this.game.teleportBarEl) {
+                    const timeSinceTeleport = now - this.game.lastTeleportTime
+                    const progress = Math.min(1.0, timeSinceTeleport / this.game.teleportCooldown)
+                    this.game.teleportBarEl.style.width = `${progress * 100}%`
         
                     if (progress >= 1.0) {
-                       this.teleportBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #cc00ff)'
+                       this.game.teleportBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #cc00ff)'
                     } else {
-                       this.teleportBarEl.style.filter = 'brightness(0.7)'
+                       this.game.teleportBarEl.style.filter = 'brightness(0.7)'
                     }
                 }
         
-                if (shouldUpdateHUD && this.gravityPulseBarContainerEl && this.gravityPulseBarEl) {
-                    const timeSincePulse = now - this.lastGravityPulseTime
-                    if (timeSincePulse < this.gravityPulseCooldown) {
-                        this.gravityPulseBarContainerEl.style.display = 'block'
-                        const pct = (timeSincePulse / this.gravityPulseCooldown) * 100
-                        this.gravityPulseBarEl.style.width = pct + '%'
+                if (shouldUpdateHUD && this.game.gravityPulseBarContainerEl && this.game.gravityPulseBarEl) {
+                    const timeSincePulse = now - this.game.lastGravityPulseTime
+                    if (timeSincePulse < this.game.gravityPulseCooldown) {
+                        this.game.gravityPulseBarContainerEl.style.display = 'block'
+                        const pct = (timeSincePulse / this.game.gravityPulseCooldown) * 100
+                        this.game.gravityPulseBarEl.style.width = pct + '%'
                     } else {
-                        this.gravityPulseBarEl.style.width = '100%'
-                        this.gravityPulseBarContainerEl.style.display = 'none'
+                        this.game.gravityPulseBarEl.style.width = '100%'
+                        this.game.gravityPulseBarContainerEl.style.display = 'none'
                     }
                 }
         
-                if (shouldUpdateHUD && this.empBarEl) {
-                    const timeSinceEMP = now - (this.lastEMPTime ?? 0)
-                    const progress = Math.min(1.0, timeSinceEMP / this.empCooldown)
-                    this.empBarEl.style.width = `${progress * 100}%`
+                if (shouldUpdateHUD && this.game.empBarEl) {
+                    const timeSinceEMP = now - (this.game.lastEMPTime ?? 0)
+                    const progress = Math.min(1.0, timeSinceEMP / this.game.empCooldown)
+                    this.game.empBarEl.style.width = `${progress * 100}%`
         
                     if (progress >= 1.0) {
-                       this.empBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #00ffff)'
+                       this.game.empBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #00ffff)'
                     } else {
-                       this.empBarEl.style.filter = 'brightness(0.7)'
+                       this.game.empBarEl.style.filter = 'brightness(0.7)'
                     }
         
-                    if (this.empBarContainerEl) {
-                        this.empBarContainerEl.style.display = 'block'
+                    if (this.game.empBarContainerEl) {
+                        this.game.empBarContainerEl.style.display = 'block'
                     }
                 }
     }

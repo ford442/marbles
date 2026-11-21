@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Optional WebGPU compute noise texture (256×256 RGBA).
  * Used for procedural marble / surface variation when ?webgpuNoise=1.
@@ -123,7 +124,16 @@ export async function generateNoiseTexture(device, options = {}) {
 }
 
 /**
- * @param {object} game
+ * The game members the noise texture reads (the live particle overlay, whose
+ * device it borrows) and writes (the generated bitmap).
+ * @typedef {object} WebGPUNoiseHost
+ * @property {{ device: GPUDevice | null } | null} [webgpuParticles]
+ * @property {ImageBitmap} [webgpuNoiseTexture]
+ */
+
+/**
+ * @param {WebGPUNoiseHost} game
+ * @returns {Promise<ImageBitmap | null>}
  */
 export async function tryInitWebGPUNoise(game) {
     if (!navigator.gpu || !game.webgpuParticles?.device) return null;

@@ -96,7 +96,7 @@ For A/B captures, compare `/?renderer=filament&perf=1` with `/?renderer=filament
 
 ## Likely Culprits
 
-- `src/game-loop/sync.js` updates all marbles every frame through `TransformManager.getInstance()` and `setTransform()`.
+- `src/game-loop/sync.ts` updates all marbles every frame through `TransformManager.getInstance()` and `setTransform()`.
 - Visual particles add per-frame JS updates and transform writes; sampled complex zones reached roughly 60-150 active visual particles.
 - Dynamic objects and temporary/moving platforms add additional physics bodies and transform writes, especially in `space_station`.
 - `src/game-loop/render.js` performs per-frame collectible hover, power-up spin, moving platform, and active effect transforms.
@@ -201,7 +201,7 @@ See [architecture/physics-worker.md](./architecture/physics-worker.md).
 
 ### quaternionToMat4Batch — go/no-go (2026-07-18)
 
-**Decision: skip.** `src/math.ts` already reuses a shared `_mat4Pool` per synchronous call. The marble sync loop in `src/game-loop/sync.js` interleaves Rapier `translation()`/`rotation()` reads with Filament `setTransform()` writes; a WASM batch would still require copying ~70 quaternions + positions into HEAP and copying 16×N matrices back before `setTransform`. Node force-field benchmarks show HEAP copy overhead dominates below ~200 entities; the same pattern applies here. Revisit only if sync-phase profiling on GPU shows quat→mat4 as >10% of sync ms **and** a prototype batch beats JS after copy costs.
+**Decision: skip.** `src/math.ts` already reuses a shared `_mat4Pool` per synchronous call. The marble sync loop in `src/game-loop/sync.ts` interleaves Rapier `translation()`/`rotation()` reads with Filament `setTransform()` writes; a WASM batch would still require copying ~70 quaternions + positions into HEAP and copying 16×N matrices back before `setTransform`. Node force-field benchmarks show HEAP copy overhead dominates below ~200 entities; the same pattern applies here. Revisit only if sync-phase profiling on GPU shows quat→mat4 as >10% of sync ms **and** a prototype batch beats JS after copy costs.
 
 ### Spring / segment batch kernels
 

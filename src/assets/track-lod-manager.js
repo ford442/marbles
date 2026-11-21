@@ -1,19 +1,35 @@
+// @ts-check
 /**
  * Distance-based LOD switching for imported track models.
  * Hooks into the render sync loop; physics colliders stay on the highest-detail mesh.
  */
 
+/** @typedef {import('./gltf-track-loader.js').TrackModelEntry} TrackModelEntry */
+/** @typedef {import('./gltf-track-loader.js').TrackRenderGroup} TrackRenderGroup */
+
+/**
+ * Game members the LOD manager reads. `_cameraState` is written by the camera
+ * slice (`game-loop/camera.js`) each frame and declared by no shared host yet.
+ * @typedef {Pick<import('../types/engine-context.ts').EngineContext, 'scene' | 'cullingManager'>
+ *   & { _cameraState?: { eye?: readonly number[] } | null }} TrackLodManagerHost
+ */
+
+/**
+ * @param {readonly number[]} a
+ * @param {readonly number[]} b
+ */
 function distanceSq(a, b) {
-    const dx = a[0] - b[0];
-    const dy = a[1] - b[1];
-    const dz = a[2] - b[2];
+    const dx = (a[0] ?? 0) - (b[0] ?? 0);
+    const dy = (a[1] ?? 0) - (b[1] ?? 0);
+    const dz = (a[2] ?? 0) - (b[2] ?? 0);
     return dx * dx + dy * dy + dz * dz;
 }
 
 export class TrackLodManager {
+    /** @param {TrackLodManagerHost} game */
     constructor(game) {
         this.game = game;
-        /** @type {import('./gltf-track-loader.js').TrackModelEntry[]} */
+        /** @type {TrackModelEntry[]} */
         this.entries = [];
     }
 
@@ -22,7 +38,7 @@ export class TrackLodManager {
     }
 
     /**
-     * @param {import('./gltf-track-loader.js').TrackModelEntry} entry
+     * @param {TrackModelEntry} entry
      */
     register(entry) {
         if (!entry?.lodLevels?.length) return;
@@ -45,9 +61,9 @@ export class TrackLodManager {
             const dist = Math.sqrt(distanceSq(eye, worldCenter));
 
             let targetLod = 0;
-            for (let i = 0; i < entry.lodLevels.length; i++) {
-                if (dist >= entry.lodLevels[i].distance) targetLod = i + 1;
-            }
+            entry.lodLevels.forEach((level, i) => {
+                if (dist >= level.distance) targetLod = i + 1;
+            });
             if (targetLod === entry.activeLod) continue;
 
             this.setActiveLod(entry, targetLod);
@@ -55,7 +71,7 @@ export class TrackLodManager {
     }
 
   /**
-   * @param {import('./gltf-track-loader.js').TrackModelEntry} entry
+   * @param {TrackModelEntry} entry
    * @param {number} lodIndex
    */
     setActiveLod(entry, lodIndex) {
@@ -63,6 +79,7 @@ export class TrackLodManager {
         const scene = game.scene;
         const culling = game.cullingManager;
 
+        /** @param {TrackRenderGroup | undefined} group */
         const hideGroup = (group) => {
             if (!group?.entities) return;
             for (const entity of group.entities) {
@@ -71,6 +88,7 @@ export class TrackLodManager {
             }
         };
 
+        /** @param {TrackRenderGroup | undefined} group */
         const showGroup = (group) => {
             if (!group?.entities) return;
             for (const entity of group.entities) {

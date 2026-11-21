@@ -1,11 +1,25 @@
+// @ts-check
+/** @typedef {import('../types/zone-host.ts').ZoneBuildHost} ZoneBuildHost */
+/** @typedef {import('../types/geometry.ts').Vec3} Vec3 */
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
 
+/**
+ * @param {ZoneBuildHost} game
+ * @param {Vec3} offset
+ */
 export function createCyberIceTrackZone(game, offset) {
     const F = game.Filament;
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
     // Helper to create a basic filament visual entity inline
+    /**
+     * @param {Vec3} pos
+     * @param {Vec3} halfExtents
+     * @param {readonly number[]} color
+     * @param {number} [roughness]
+     * @param {boolean} [bump]
+     */
     const createVisual = (pos, halfExtents, color, roughness = 0.4, bump = false) => {
         const entity = F.EntityManager.get().create();
         const matInstance = game.material.createInstance();

@@ -1,3 +1,4 @@
+// @ts-check
 /** Shared layout for physics worker SharedArrayBuffers (main + worker). */
 
 /**
@@ -28,12 +29,12 @@ export const BODY_FLOATS = 16;
 export const BODY_STRIDE_BYTES = BODY_FLOATS * 4;
 
 /** Body-type codes in `BODY_TYPE` (match `RAPIER.RigidBodyType`). */
-export const BODY_TYPE_CODE = {
+export const BODY_TYPE_CODE = /** @type {const} */ ({
     DYNAMIC: 0,
     FIXED: 1,
     KINEMATIC_POSITION: 2,
     KINEMATIC_VELOCITY: 3,
-};
+});
 
 export const TRANSFORM_HEADER_U32 = 0;
 export const TRANSFORM_HEADER_FRAME_TICK = 1;
@@ -60,7 +61,7 @@ export const CMD_ENTRY_BYTES = 32;
 export const CMD_RING_CAPACITY = 4096;
 export const CMD_RING_BYTES = CMD_HEADER_BYTES + CMD_RING_CAPACITY * CMD_ENTRY_BYTES;
 
-export const CMD_OP = {
+export const CMD_OP = /** @type {const} */ ({
     IMPULSE: 1,
     TORQUE: 2,
     KINEMATIC_POSE: 3,
@@ -76,14 +77,14 @@ export const CMD_OP = {
     SET_ROTATION: 12,
     /** f0 = 1 to enable continuous collision detection, 0 to disable. */
     SET_CCD: 13,
-};
+});
 
-export const RAYCAST_STATUS = {
+export const RAYCAST_STATUS = /** @type {const} */ ({
     IDLE: 0,
     PENDING: 1,
     READY: 2,
     ERROR: 3,
-};
+});
 
 export const RAYCAST_HEADER_BYTES = 4;
 export const RAYCAST_STATUS_INDEX = 0;
@@ -100,7 +101,7 @@ export const RAYCAST_COLLIDER_HANDLE_F64_INDEX = 6;
 export const RAYCAST_RESULT_BYTES = 52;
 export const RAYCAST_BUFFER_BYTES = RAYCAST_HEADER_BYTES + RAYCAST_RESULT_BYTES;
 
-export const WORKER_MSG = {
+export const WORKER_MSG = /** @type {const} */ ({
     INIT_BUFFERS: 'INIT_BUFFERS',
     WORKER_READY: 'WORKER_READY',
     INIT_WORLD: 'INIT_WORLD',
@@ -112,7 +113,84 @@ export const WORKER_MSG = {
     ADD_BODY: 'ADD_BODY',
     RAYCAST: 'RAYCAST',
     LOG: 'LOG',
-};
+});
+
+/** @typedef {{ x: number, y: number, z: number }} WireVec3 */
+/** @typedef {readonly [number, number, number]} WireVec3Tuple */
+/** @typedef {readonly [number, number, number, number]} WireQuatTuple */
+
+/**
+ * Collider shape on the wire (`world-builder.js` rebuilds it; producers are
+ * `rapier-desc-serializer.js` and `PhysicsBackend.registerBody` callers).
+ * @typedef {{ type: 'ball' | 'sensor_ball', radius?: number | undefined }
+ *   | { type: 'cuboid', halfExtents?: WireVec3Tuple | undefined }
+ *   | { type: 'capsule' | 'cylinder' | 'cone', halfHeight: number, radius: number }
+ *   | { type: 'trimesh', vertices: ArrayLike<number>, indices: ArrayLike<number> }} ColliderShapeDescriptor
+ */
+
+/**
+ * Collider material / placement fields shared by every shape. Optional
+ * fields may be present as `undefined` (they are skipped with `!= null`).
+ * @typedef {object} ColliderOptionsDescriptor
+ * @property {boolean} [sensor]
+ * @property {WireVec3Tuple} [offset]
+ * @property {WireQuatTuple} [offsetRotation]
+ * @property {number | undefined} [density]
+ * @property {number | undefined} [friction]
+ * @property {number | undefined} [restitution]
+ * @property {number | undefined} [collisionGroups]
+ */
+
+/** @typedef {ColliderShapeDescriptor & ColliderOptionsDescriptor} ColliderDescriptor */
+
+/**
+ * One rigid body + collider as the worker builds it (`INIT_WORLD`
+ * descriptors, `ADD_BODY` descriptor). `type` other than fixed/kinematic is
+ * dynamic.
+ * @typedef {object} WorkerBodyDescriptor
+ * @property {string} type fixed|dynamic|kinematic
+ * @property {WireVec3Tuple} [translation]
+ * @property {WireQuatTuple} [rotation]
+ * @property {ColliderDescriptor} collider
+ * @property {number | null | undefined} [gravityScale]
+ * @property {number | null | undefined} [linearDamping]
+ * @property {number | null | undefined} [angularDamping]
+ * @property {boolean | undefined} [canSleep]
+ * @property {WireVec3Tuple | undefined} [linvel]
+ * @property {boolean | undefined} [ccd]
+ */
+
+/**
+ * Main thread → worker.
+ * @typedef {{ type: 'INIT_BUFFERS', transformSab: SharedArrayBuffer, commandSab: SharedArrayBuffer, raycastSab: SharedArrayBuffer, physicsHz?: number }
+ *   | { type: 'INIT_WORLD', gravity: WireVec3, descriptors?: WorkerBodyDescriptor[] | null }
+ *   | { type: 'ADD_BODY', bodyIndex: number, descriptor: WorkerBodyDescriptor }
+ *   | { type: 'RESET_WORLD' }
+ *   | { type: 'STEP' }
+ *   | WorkerRaycastRequest} WorkerInboundMessage
+ */
+
+/**
+ * Synchronous ray query; the result is written to the raycast SAB.
+ * @typedef {object} WorkerRaycastRequest
+ * @property {'RAYCAST'} type
+ * @property {WireVec3} origin
+ * @property {WireVec3} dir
+ * @property {number | null} [maxToi]
+ * @property {boolean} [solid]
+ * @property {number | null} [groups]
+ * @property {boolean} [excludeSensors]
+ * @property {number | null} [excludeBodyIndex]
+ */
+
+/**
+ * Worker → main thread.
+ * @typedef {{ type: 'WORKER_READY', layoutVersion: number }
+ *   | { type: 'INIT_OK', bodyCount: number }
+ *   | { type: 'INIT_ERROR', message: string }
+ *   | { type: 'FRAME_READY', frameTick: number }
+ *   | { type: 'LOG', level: 'error', message: string }} WorkerOutboundMessage
+ */
 
 export const DEFAULT_PHYSICS_HZ = 120;
 
@@ -167,14 +245,15 @@ export function readBodyTransform(u32, f32, slot, bodyIndex) {
         TRANSFORM_HEADER_BYTES / 4 +
         slot * (TRANSFORM_SLOT_BYTES / 4) +
         bodyIndex * BODY_FLOATS;
+    // In-bounds reads for any slot < 2 and bodyIndex < MAX_BODIES.
     return {
-        x: f32[baseFloat],
-        y: f32[baseFloat + 1],
-        z: f32[baseFloat + 2],
-        qx: f32[baseFloat + 3],
-        qy: f32[baseFloat + 4],
-        qz: f32[baseFloat + 5],
-        qw: f32[baseFloat + 6],
+        x: /** @type {number} */ (f32[baseFloat]),
+        y: /** @type {number} */ (f32[baseFloat + 1]),
+        z: /** @type {number} */ (f32[baseFloat + 2]),
+        qx: /** @type {number} */ (f32[baseFloat + 3]),
+        qy: /** @type {number} */ (f32[baseFloat + 4]),
+        qz: /** @type {number} */ (f32[baseFloat + 5]),
+        qw: /** @type {number} */ (f32[baseFloat + 6]),
     };
 }
 
@@ -252,7 +331,8 @@ export function lerpBodyTransform(prev, curr, alpha) {
  * @returns {boolean}
  */
 export function enqueueCommand(cmdU32, cmdF32, op, bodyIndex, f0, f1 = 0, f2 = 0, f3 = 0) {
-    const capacity = cmdU32[CMD_HEADER_CAPACITY];
+    // Header word written by createCommandViews (always in bounds).
+    const capacity = /** @type {number} */ (cmdU32[CMD_HEADER_CAPACITY]);
     const head = Atomics.load(cmdU32, CMD_HEADER_HEAD);
     const tail = Atomics.load(cmdU32, CMD_HEADER_TAIL);
     const nextHead = (head + 1) % capacity;

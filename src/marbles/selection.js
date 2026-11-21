@@ -121,7 +121,10 @@ export function resolveSpawnRoster({ catalog, playerId, rivals = [] }) {
  * workshop marbles) that the generated catalog doesn't already contain.
  * Matched by id only: two marbles may never share an id, and a name clash is
  * a catalog error caught by the generator, not a reason to drop one.
- * @param {{ getAllMarbles(): any[], convertMarbleToGameFormat(def: any): MarbleInfo }} registry
+ * @param {{
+ *   getAllMarbles(): readonly import('../types/generated/marble-schema.ts').MarbleSchema[],
+ *   convertMarbleToGameFormat(def: import('../types/generated/marble-schema.ts').MarbleSchema): MarbleInfo,
+ * }} registry
  * @param {MarbleInfo[]} catalog mutated in place
  * @returns {number} how many were appended
  */

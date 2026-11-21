@@ -1,8 +1,22 @@
+// @ts-check
 import { detectPlatformProfile } from '../rendering-defaults.js';
+
+/** @typedef {import('../types/settings.ts').GameSettings} GameSettings */
+
+/**
+ * `navigator.deviceMemory` (GB; Chromium only) and core count, defaulting to 4.
+ * @returns {{ memory: number, cores: number }}
+ */
+function deviceBudget() {
+    if (typeof navigator === 'undefined') return { memory: 4, cores: 4 };
+    // deviceMemory is not in the DOM lib typings (Chromium-only API).
+    const nav = /** @type {Navigator & { deviceMemory?: number }} */ (navigator);
+    return { memory: nav.deviceMemory || 4, cores: nav.hardwareConcurrency || 4 };
+}
 
 /**
  * Apply first-run mobile graphics defaults (does not override explicit user saves).
- * @param {object} settings — merged settings object (mutated in place)
+ * @param {GameSettings} settings — merged settings object (mutated in place)
  * @param {{ isMobile?: boolean }} [platformOverride]
  * @returns {boolean} whether mobile defaults were applied
  */
@@ -10,8 +24,7 @@ export function applyMobileGraphicsDefaults(settings, platformOverride) {
     const { isMobile } = platformOverride || detectPlatformProfile();
     if (!isMobile) return false;
 
-    const memory = typeof navigator !== 'undefined' ? (navigator.deviceMemory || 4) : 4;
-    const cores = typeof navigator !== 'undefined' ? (navigator.hardwareConcurrency || 4) : 4;
+    const { memory, cores } = deviceBudget();
     const lowTier = memory <= 3 || cores <= 4;
 
     settings.graphics.quality = lowTier ? 'low' : 'medium';
@@ -39,8 +52,7 @@ export function applyMobileGraphicsDefaults(settings, platformOverride) {
 export function resolveMobileInitQuality() {
     const { isMobile } = detectPlatformProfile();
     if (!isMobile) return 'medium';
-    const memory = typeof navigator !== 'undefined' ? (navigator.deviceMemory || 4) : 4;
-    const cores = typeof navigator !== 'undefined' ? (navigator.hardwareConcurrency || 4) : 4;
+    const { memory, cores } = deviceBudget();
     return (memory <= 3 || cores <= 4) ? 'low' : 'medium';
 }
 

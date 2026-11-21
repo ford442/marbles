@@ -52,8 +52,8 @@ export interface BodyDescriptor {
     type?: string;
     translation?: readonly number[];
     rotation?: readonly number[];
-    linvel?: readonly number[];
-    gravityScale?: number | null;
+    linvel?: readonly number[] | undefined;
+    gravityScale?: number | null | undefined;
     collider?: unknown;
     [key: string]: unknown;
 }

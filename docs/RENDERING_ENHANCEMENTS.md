@@ -48,7 +48,7 @@ diffuse-only SH to full specular IBL with view-dependent reflections.
 Back-compat aliases `this.ibl` and `this.skyboxEntity` continue to point at the
 active objects, so any code that reads those properties still works.
 
-### Changes in `src/zones/methods/visuals.js`
+### Changes in `src/zones/methods/visuals.ts`
 
 - `setNightMode(true)` now also calls `applyEnvironment('space_nebula')` unless the
   level has already specified an explicit environment override.
@@ -301,13 +301,13 @@ const clearCoat = info.clearCoat !== undefined ? info.clearCoat : (preset ? pres
 
 ## 5. Dynamic / Themed Zone Lights
 
-### `createZoneLight()` factory — `src/zones/methods/visuals.js`
+### `createZoneLight()` factory — `src/zones/methods/visuals.ts`
 
 A reusable helper that creates a coloured `POINT` or `SPOT` Filament light and registers
 it as a static scene entity:
 
 ```javascript
-import { createZoneLight } from './methods/visuals.js';
+import { createZoneLight } from './methods/visuals.ts';
 
 createZoneLight(game, 'POINT', pos, color, intensity, falloff);
 ```
@@ -418,7 +418,7 @@ Enabling browser/context MSAA (`antialias: true`) would stack with View MSAA and
 
 ### Init wiring
 
-- **Filament path** — `src/init/core.js` passes `resolveWebGLContextOptions()` into `Filament.Engine.create(canvas, options)` and stores the result on `game.webglContextOptions`.
+- **Filament path** — `src/init/core.ts` passes `resolveWebGLContextOptions()` into `Filament.Engine.create(canvas, options)` and stores the result on `game.webglContextOptions`.
 - **Simple debug path** — `installSimpleDebugBackend()` in `src/rendering/simple-debug-renderer.js` uses `getSimpleDebugWebGLContextOptions()` (includes `preserveDrawingBuffer` for screenshots/readback).
 
 Context attributes are fixed at engine creation; changing the quality tier in settings does **not** recreate the WebGL context (reload required).

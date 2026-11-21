@@ -1,10 +1,21 @@
+// @ts-check
 import { hasPlayedALevel } from './pwa-state.js';
+
+/**
+ * Chromium's `beforeinstallprompt` event (not in the DOM lib typings).
+ * @typedef {Event & {
+ *     prompt(): Promise<void> | void,
+ *     userChoice: Promise<{ outcome: string }>,
+ * }} BeforeInstallPromptEvent
+ */
 
 const DISMISSED_KEY = 'marbles3d_install_prompt_dismissed';
 
+/** @type {BeforeInstallPromptEvent | null} */
 let deferredPrompt = null;
 let bannerBound = false;
 
+/** @returns {boolean} */
 function isDismissed() {
     try {
         return localStorage.getItem(DISMISSED_KEY) === '1';
@@ -59,12 +70,13 @@ function maybeShowBanner() {
  * install-eligibility heuristic in the PWA plan. No-ops where the event is
  * unsupported (Firefox, Safari — those rely on the browser's own UI).
  */
+/** @returns {void} */
 export function initInstallPrompt() {
     if (typeof window === 'undefined') return;
 
     window.addEventListener('beforeinstallprompt', (event) => {
         event.preventDefault();
-        deferredPrompt = event;
+        deferredPrompt = /** @type {BeforeInstallPromptEvent} */ (event);
         maybeShowBanner();
     });
 

@@ -26,6 +26,11 @@ export const DEFAULT_WORLD_LIMIT = 5000;
 
 const DOWN = { x: 0, y: -1, z: 0 };
 
+/** @typedef {import('./headless-level.js').HeadlessLevel} HeadlessLevel */
+/** @typedef {import('./headless-level.js').HeadlessMarble} HeadlessMarble */
+/** @typedef {import('../../types/map.ts').RuntimeLevel} RuntimeLevel */
+/** @typedef {[number, number, number]} Row3 */
+
 /** @param {{ x: number, y: number, z: number, w: number }} q */
 function isFiniteQuat(q) {
     return [q.x, q.y, q.z, q.w].every(Number.isFinite);
@@ -38,29 +43,31 @@ function isFiniteQuat(q) {
  */
 export function colliderAabb(c) {
     const t = c.translation();
-    const shape = /** @type {any} */ (c.shape);
+    const shape = c.shape;
     if (shape.type === RAPIER.ShapeType.Ball) {
-        const r = shape.radius;
+        const r = /** @type {RAPIER.Ball} */ (shape).radius;
         return { min: { x: t.x - r, y: t.y - r, z: t.z - r }, max: { x: t.x + r, y: t.y + r, z: t.z + r } };
     }
     if (shape.type !== RAPIER.ShapeType.Cuboid) return null;
-    const h = shape.halfExtents;
+    const h = /** @type {RAPIER.Cuboid} */ (shape).halfExtents;
     const q = c.rotation();
     // |R|·h — rotation matrix rows from the quaternion.
     const xx = q.x * q.x, yy = q.y * q.y, zz = q.z * q.z;
     const xy = q.x * q.y, xz = q.x * q.z, yz = q.y * q.z;
     const wx = q.w * q.x, wy = q.w * q.y, wz = q.w * q.z;
+    /** @type {[Row3, Row3, Row3]} */
     const r = [
         [1 - 2 * (yy + zz), 2 * (xy - wz), 2 * (xz + wy)],
         [2 * (xy + wz), 1 - 2 * (xx + zz), 2 * (yz - wx)],
         [2 * (xz - wy), 2 * (yz + wx), 1 - 2 * (xx + yy)],
     ];
-    const e = r.map((row) => Math.abs(row[0]) * h.x + Math.abs(row[1]) * h.y + Math.abs(row[2]) * h.z);
+    // One extent per row of the 3×3 matrix.
+    const e = /** @type {Row3} */ (r.map((row) => Math.abs(row[0]) * h.x + Math.abs(row[1]) * h.y + Math.abs(row[2]) * h.z));
     return { min: { x: t.x - e[0], y: t.y - e[1], z: t.z - e[2] }, max: { x: t.x + e[0], y: t.y + e[1], z: t.z + e[2] } };
 }
 
 /**
- * @param {any} game
+ * @param {HeadlessLevel} game
  * @returns {string[]}
  */
 export function checkFiniteBodies(game) {
@@ -69,17 +76,18 @@ export function checkFiniteBodies(game) {
     game.world.colliders.forEach((/** @type {RAPIER.Collider} */ c) => {
         const t = c.translation();
         const q = c.rotation();
-        const shape = /** @type {any} */ (c.shape);
+        const shape = c.shape;
         const where = `collider ${c.handle} at (${t.x}, ${t.y}, ${t.z})`;
         if (!isFiniteVec(t)) problems.push(`${where}: non-finite position`);
         if (!isFiniteQuat(q)) problems.push(`${where}: non-finite rotation`);
         if (shape.type === RAPIER.ShapeType.Cuboid) {
-            const h = shape.halfExtents;
+            const h = /** @type {RAPIER.Cuboid} */ (shape).halfExtents;
             if (!isFiniteVec(h) || !(h.x > 0 && h.y > 0 && h.z > 0)) {
                 problems.push(`${where}: invalid half-extents (${h.x}, ${h.y}, ${h.z})`);
             }
-        } else if (shape.type === RAPIER.ShapeType.Ball && !(Number.isFinite(shape.radius) && shape.radius > 0)) {
-            problems.push(`${where}: invalid radius ${shape.radius}`);
+        } else if (shape.type === RAPIER.ShapeType.Ball) {
+            const radius = /** @type {RAPIER.Ball} */ (shape).radius;
+            if (!(Number.isFinite(radius) && radius > 0)) problems.push(`${where}: invalid radius ${radius}`);
         }
     });
     if (game.world.colliders.len() === 0) problems.push('level built no colliders');
@@ -87,7 +95,7 @@ export function checkFiniteBodies(game) {
 }
 
 /**
- * @param {any} game
+ * @param {HeadlessLevel} game
  * @param {{ x: number, y: number, z: number }} origin
  * @param {number} maxDist
  */
@@ -96,8 +104,8 @@ function solidBelow(game, origin, maxDist) {
 }
 
 /**
- * @param {any} game
- * @param {any} level runtime level
+ * @param {HeadlessLevel} game
+ * @param {RuntimeLevel} level runtime level
  * @returns {string[]}
  */
 export function checkSpawnAndGoals(game, level) {
@@ -134,8 +142,8 @@ export function checkSpawnAndGoals(game, level) {
 }
 
 /**
- * @param {any} game
- * @param {any} level
+ * @param {HeadlessLevel} game
+ * @param {RuntimeLevel} level
  * @returns {string[]}
  */
 export function checkBounds(game, level) {
@@ -157,14 +165,17 @@ export function checkBounds(game, level) {
     return problems;
 }
 
-/** @param {any} v */
+/**
+ * @param {import('../../types/map.ts').MapVec3Input} v
+ * @returns {{ x: number, y: number, z: number }}
+ */
 function toVec(v) {
     return Array.isArray(v) ? { x: v[0], y: v[1], z: v[2] } : v;
 }
 
 /**
- * @param {any} game
- * @param {any} marble
+ * @param {HeadlessLevel} game
+ * @param {HeadlessMarble} marble
  */
 function isGrounded(game, marble) {
     const p = marble.rigidBody.translation();
@@ -178,8 +189,8 @@ function isGrounded(game, marble) {
  * SMOKE_MIN_GROUNDED_STEPS before it ever falls below the kill plane —
  * levels may legitimately roll the marble off an edge without input, but a
  * NaN or missing floor never gives it ground.
- * @param {any} game
- * @param {any} level
+ * @param {HeadlessLevel} game
+ * @param {RuntimeLevel} level
  */
 export function reachabilitySmoke(game, level) {
     const marble = spawnReferenceMarble(game, level.spawn);
@@ -192,7 +203,7 @@ export function reachabilitySmoke(game, level) {
             const p = marble.rigidBody.translation();
             if (!isFiniteVec(p)) { nonFinite = true; return true; }
             if (isGrounded(game, marble)) grounded++;
-            if ((level.goals || []).some((/** @type {any} */ goal) => inGoalRange(goal, p))) reachedGoal = true;
+            if ((level.goals || []).some((goal) => inGoalRange(goal, p))) reachedGoal = true;
             if (p.y < KILL_PLANE_Y) { fellAt = i; return true; }
             return false;
         },
@@ -208,16 +219,16 @@ export function reachabilitySmoke(game, level) {
     return { problems, grounded, fellAt, reachedGoal, final: marble.rigidBody.translation() };
 }
 
-/** Same impulse the game applies per 60 Hz frame for held movement keys (frame-input.js). */
+/** Same impulse the game applies per 60 Hz frame for held movement keys (frame-input.ts). */
 export const MOVE_IMPULSE_PER_STEP = BASE_MOVE_IMPULSE;
 
 /**
  * Replay a map's `solution` input track on the reference marble.
- * Movement mirrors frame-input.js (aim-relative impulses); `jump` applies a
+ * Movement mirrors frame-input.ts (aim-relative impulses); `jump` applies a
  * ground jump on the segment's first step if grounded, with Δv from
  * `jumpCharge` (0 → JUMP_DV_MIN, 1 → JUMP_DV_MAX, default 1).
- * @param {any} game
- * @param {any} level
+ * @param {HeadlessLevel} game
+ * @param {RuntimeLevel} level
  * @returns {{ reached: boolean, timeSec: number, fell: boolean, final: { x: number, y: number, z: number } }}
  */
 export function replaySolution(game, level) {
@@ -249,7 +260,7 @@ export function replaySolution(game, level) {
             afterStep: () => {
                 step++;
                 const p = rb.translation();
-                if (goals.some((/** @type {any} */ goal) => inGoalRange(goal, p))) { done = true; return true; }
+                if (goals.some((goal) => inGoalRange(goal, p))) { done = true; return true; }
                 return p.y < KILL_PLANE_Y || !isFiniteVec(p);
             },
         });
@@ -272,7 +283,7 @@ export const DEFAULT_PAR_DRIFT = 0.05;
  * has a medals.parTime, finish within ±tolerance of it (a much faster solution means
  * par is too generous; a much slower one means the track is suspect).
  * @param {{ reached: boolean, timeSec: number, fell: boolean }} res
- * @param {any} level
+ * @param {RuntimeLevel} level
  * @returns {string[]}
  */
 export function solutionProblems(res, level) {
@@ -300,15 +311,15 @@ export function solutionProblems(res, level) {
 
 /**
  * All static checks for one built level.
- * @param {any} game
- * @param {any} level
+ * @param {HeadlessLevel} game
+ * @param {RuntimeLevel} level
  */
 export function staticChecks(game, level) {
     return [...checkFiniteBodies(game), ...checkSpawnAndGoals(game, level), ...checkBounds(game, level)];
 }
 
 /**
- * @typedef {{ at: number[], speed?: number, jump?: number, radius?: number }} Waypoint
+ * @typedef {{ at: readonly [number, number] | readonly [number, number, number], speed?: number, jump?: number, radius?: number }} Waypoint
  * `at` is [x, z] or [x, y, z]; `speed` caps the approach speed (m/s); `jump`
  * (0–1 charge) jumps once on arrival; `radius` is the arrival distance (m).
  */
@@ -323,11 +334,11 @@ export function staticChecks(game, level) {
  * consumes), which is evidence the level can be finished.
  *
  * With no waypoints it is the greedy solver used to triage code levels.
- * @param {any} game  freshly built level (spawns its own marble)
- * @param {any} level
+ * @param {HeadlessLevel} game  freshly built level (spawns its own marble)
+ * @param {RuntimeLevel} level
  * `yawStepDeg` quantises the aim (coarser → fewer segments); `hysteresis`
  * (m/s) widens the forward-key on/off band.
- * @param {{ waypoints?: Array<Waypoint | number[]>, maxSteps?: number, maxSpeed?: number, ledgeJumps?: boolean, yawStepDeg?: number, hysteresis?: number }} [options]
+ * @param {{ waypoints?: Array<Waypoint | Waypoint['at']>, maxSteps?: number, maxSpeed?: number, ledgeJumps?: boolean, yawStepDeg?: number, hysteresis?: number }} [options]
  */
 export function autopilotSolve(game, level, { waypoints = [], maxSteps = 3600, maxSpeed = 9, ledgeJumps = true, yawStepDeg = 5, hysteresis = 0 } = {}) {
     const marble = spawnReferenceMarble(game, level.spawn);
@@ -340,9 +351,11 @@ export function autopilotSolve(game, level, { waypoints = [], maxSteps = 3600, m
         y: (target.y[0] + target.y[1]) / 2,
         z: (target.z[0] + target.z[1]) / 2,
     };
-    /** @type {Array<{ at: { x: number, y: number | null, z: number }, speed: number, jump: number | null, radius: number }>} */
+    /** @typedef {{ at: { x: number, y: number | null, z: number }, speed: number, jump: number | null, radius: number }} RouteLeg */
+    /** @type {RouteLeg[]} */
     const route = waypoints.map((w) => {
-        const wp = Array.isArray(w) ? { at: w } : w;
+        /** @type {Waypoint} */
+        const wp = isWaypointAt(w) ? { at: w } : w;
         const a = wp.at;
         const at = a.length === 2 ? { x: a[0], y: null, z: a[1] } : { x: a[0], y: a[1], z: a[2] };
         return { at, speed: wp.speed ?? maxSpeed, jump: wp.jump ?? null, radius: wp.radius ?? 2.5 };
@@ -363,11 +376,12 @@ export function autopilotSolve(game, level, { waypoints = [], maxSteps = 3600, m
         beforeStep: (_g, i) => {
             const p = rb.translation();
             const v = rb.linvel();
-            let wp = route[leg];
+            // `route` always ends with the goal leg and `leg` never passes it.
+            let wp = /** @type {RouteLeg} */ (route[leg]);
             while (leg < route.length - 1 && Math.hypot(wp.at.x - p.x, wp.at.z - p.z) < wp.radius) {
                 if (wp.jump != null && isGrounded(game, marble)) pendingJump = wp.jump;
                 leg++;
-                wp = route[leg];
+                wp = /** @type {RouteLeg} */ (route[leg]);
             }
             const dx = wp.at.x - p.x;
             const dz = wp.at.z - p.z;
@@ -416,14 +430,28 @@ export function autopilotSolve(game, level, { waypoints = [], maxSteps = 3600, m
         afterStep: () => {
             steps++;
             const p = rb.translation();
-            if (goals.some((/** @type {any} */ g) => inGoalRange(g, p))) { reached = true; return true; }
+            if (goals.some((g) => inGoalRange(g, p))) { reached = true; return true; }
             return p.y < KILL_PLANE_Y || !isFiniteVec(p);
         },
     });
     return { reached, timeSec: steps * DEFAULT_FIXED_STEP, inputs: reached ? inputs : [], final: rb.translation(), leg };
 }
 
-/** Greedy triage solver: the autopilot with no authored waypoints. */
+/**
+ * Greedy triage solver: the autopilot with no authored waypoints.
+ * @param {HeadlessLevel} game
+ * @param {RuntimeLevel} level
+ * @param {Omit<NonNullable<Parameters<typeof autopilotSolve>[2]>, 'waypoints'>} [options]
+ */
 export function greedySolve(game, level, options = {}) {
     return autopilotSolve(game, level, { ...options, waypoints: [] });
+}
+
+/**
+ * A bare `[x, z]` / `[x, y, z]` waypoint (as opposed to a `Waypoint` object).
+ * @param {Waypoint | Waypoint['at']} w
+ * @returns {w is Waypoint['at']}
+ */
+function isWaypointAt(w) {
+    return Array.isArray(w);
 }

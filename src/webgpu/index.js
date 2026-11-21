@@ -1,3 +1,4 @@
+// @ts-check
 export {
     isWebGPUAvailable,
     isWebGPUParticlesRequested,
@@ -15,6 +16,23 @@ import { isWebGPUNoiseRequested, isWebGPUParticlesRequested } from './detect.js'
 import { tryInitWebGPUParticles } from './particle-backend.js';
 import { tryInitWebGPUNoise } from './noise-texture.js';
 
+/** @typedef {import('../types/engine-context.ts').EngineContext} EngineContext */
+/** @typedef {import('../types/frame-host.ts').FrameState} FrameState */
+
+/** What the stress burst reads: the CPU particle system it emits into. */
+/** @typedef {Pick<EngineContext, 'particleSystem'>} WebGPUStressHost */
+
+/**
+ * What `scheduleWebGPUExperiments` touches: the particle backend's own host
+ * (it stores the overlay on `webgpuParticles`), the noise host, and the stress
+ * host plus the loaded level.
+ * @typedef {import('./particle-backend.js').ParticleBackendHost
+ *     & import('./noise-texture.js').WebGPUNoiseHost
+ *     & WebGPUStressHost
+ *     & Pick<FrameState, 'currentLevel'>} WebGPUExperimentsHost
+ */
+
+/** @returns {boolean} */
 function isWebGPUStressRequested() {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
@@ -23,11 +41,12 @@ function isWebGPUStressRequested() {
 
 /**
  * Burst emit for benchmarking 5k–10k particles (opt-in).
- * @param {object} game
+ * @param {WebGPUStressHost} game
+ * @returns {void}
  */
 export function runWebGPUStressBurst(game) {
-    if (!isWebGPUStressRequested() || !game.particleSystem?.gpuBackend?.ready) return;
     const ps = game.particleSystem;
+    if (!isWebGPUStressRequested() || !ps?.gpuBackend?.ready) return;
     const count = Math.min(8000, ps.maxParticles - 100);
     console.log(`[WebGPU] Stress burst: ${count} particles`);
     for (let i = 0; i < count; i++) {
@@ -41,7 +60,8 @@ export function runWebGPUStressBurst(game) {
 
 /**
  * Schedule WebGPU particle init after Filament boot (non-blocking).
- * @param {object} game
+ * @param {WebGPUExperimentsHost} game
+ * @returns {void}
  */
 export function scheduleWebGPUExperiments(game) {
     if (!isWebGPUParticlesRequested()) return;

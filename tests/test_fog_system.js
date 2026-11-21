@@ -3,7 +3,7 @@
  */
 
 import { getFogQualityConfig, getEnvironmentFogPreset } from '../src/rendering/post-fx-presets.js';
-import { ENVIRONMENT_PRESETS } from '../src/rendering/environment.js';
+import { ENVIRONMENT_PRESETS } from '../src/rendering/environment.ts';
 
 console.log('=== Testing Fog System ===\n');
 

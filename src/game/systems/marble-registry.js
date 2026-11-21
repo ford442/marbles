@@ -1,3 +1,4 @@
+// @ts-check
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../../audio.js';
 import { marblesInfo } from '../../marbles_data.js';
@@ -5,8 +6,8 @@ import {
     createMarbleMaterialInstance,
     applyMarbleMaterialPreset,
     MATERIAL_TIER,
-} from '../../marble-material-tier.js';
-import { shouldUseMarbleProxyLight, LIGHT_OWNER } from '../../lighting-budget.js';
+} from '../../marble-material-tier.ts';
+import { shouldUseMarbleProxyLight, LIGHT_OWNER } from '../../lighting-budget.ts';
 import { extractMarbleMaterialFields } from './marble-material-fields.js';
 import { getMarblePhysics } from '../../wasm-bridge.js';
 import { releaseHover } from '../../abilities/hover.js';
@@ -18,6 +19,43 @@ import {
 } from '../../marbles/selection.js';
 import { mountMarblePicker } from '../../marbles/marble-picker.js';
 
+/** @typedef {import('../../types/frame-host.ts').FrameState} FrameState */
+/** @typedef {import('../../types/engine-context.ts').EngineContext} EngineContext */
+/** @typedef {import('../../types/game-state.ts').MarbleObject} MarbleObject */
+/** @typedef {import('../../marbles/selection.js').MarbleInfo} MarbleInfo */
+
+/**
+ * What `MarbleRegistry` reads and writes on the game: engine handles, the
+ * marble / checkpoint / projectile lists, the per-life ability flags it
+ * resets, the score / combo HUD, and the methods it calls on other slices.
+ * @typedef {Pick<EngineContext,
+ *     | 'world' | 'Filament' | 'engine' | 'scene' | 'material' | 'vb' | 'ib' | 'sphereVb' | 'sphereIb'
+ *     | 'hasProceduralMaterial' | 'lightingBudget' | 'effectPool' | 'campaignProgress'
+ *     | 'autoQualityGovernor' | 'marbleLodManager'>
+ *   & Pick<FrameState,
+ *     | 'marbles' | 'playerMarble' | 'currentMarbleIndex' | 'dynamicBodies' | 'dynamicObjects' | 'checkpoints'
+ *     | 'currentLevel' | 'levelStartTime' | 'levelComplete' | '_cameraState' | 'baseFov' | 'currentFov'
+ *     | 'score' | 'scoreEl' | 'combo' | 'comboTimer' | 'comboEl' | 'combobarContainerEl' | 'combobarEl'
+ *     | 'selectedEl' | 'powerbarEl' | 'nearMisses' | 'adrenaline' | 'chameleonState' | 'flipActive' | 'jetpackActive'
+ *     | 'aimYaw' | 'chargePower' | 'charging' | '_rewindHead' | '_rewindCount'
+ *     | 'hoverActive' | 'hoverSavedGravity' | 'hoverEnergy' | 'maxHoverEnergy'
+ *     | 'hasDoubleJumped' | 'jumpCount' | 'isChargingJump' | 'jumpCharge' | 'isChargingStomp' | 'isStomping'
+ *     | 'isChargingDash' | 'dashCharge' | 'isChargingAirDash' | 'isGrappling' | 'grappleTargetBody'
+ *     | 'portalA' | 'portalB' | 'activeMissiles' | 'activeBombs' | 'activeBlackHoles'>
+ *   & Pick<import('../../types/frame-host.ts').FrameExtras, 'ghostReplay' | 'showTrickMessage'>
+ *   & Pick<import('../../types/settings.ts').SettingsContext, 'settings'>
+ *   & Pick<import('./physics-world.ts').PhysicsWorldHost, 'physicsBackend'>
+ *   & Pick<import('../../marble-lod.js').MarbleLodMeshHost, 'marbleLodMeshes'>
+ *   & Pick<import('../../abilities/constructs.ts').AbilityConstructs, 'destroyPortal'>
+ *   & Partial<Pick<import('../../game-logic/checkpoints.ts').GameLogicCheckpoints, 'triggerCheckpointFlash'>>
+ *   & Partial<Pick<import('../../zone-setup/grapple.ts').ZoneSetupGrapple, 'cancelGrapple'>>
+ *   & {
+ *     physicsQueries: import('./physics-queries.ts').PhysicsQueries,
+ *     levelLoader?: Pick<import('./level-loader.ts').LevelLoader, 'getLevel'>,
+ *     activeMarbleLightEntity?: import('../../types/filament.ts').FilamentHandle | null,
+ *   }} MarbleRegistryHost
+ */
+
 // Tuned for a musical pitch shift rather than a physically literal speed of sound
 // (marble speeds top out well under this).
 const DOPPLER_SPEED_OF_SOUND = 40;
@@ -26,7 +64,7 @@ const DOPPLER_MAX_SHIFT = 0.3;
 /**
  * Doppler playback-rate multiplier for a marble's audio, based on its velocity
  * relative to the camera. Returns 1 (no shift) when camera state isn't available yet.
- * @param {object} game
+ * @param {Pick<FrameState, '_cameraState'>} game
  * @param {RAPIER.RigidBody} rb
  * @returns {number}
  */
@@ -47,7 +85,7 @@ export function computeMarbleDopplerRate(game, rb) {
  * Marble spawn, reset, respawn, and collision-audio routing (Phase B subsystem).
  */
 export class MarbleRegistry {
-    /** @param {object} game */
+    /** @param {MarbleRegistryHost} game */
     constructor(game) {
         this.game = game;
         this.picker = mountMarblePicker(this);
@@ -91,7 +129,8 @@ export class MarbleRegistry {
         roster.forEach((info, slotIndex) => {
             const radius = info.radius || 0.5;
             const scale = radius / 0.5;
-            const slot = SPAWN_SLOTS[slotIndex] ?? SPAWN_SLOTS[0];
+            // The roster is at most 1 + MAX_RIVALS = SPAWN_SLOTS.length, and slot 0 always exists.
+            const slot = /** @type {{ x: number, y: number, z: number }} */ (SPAWN_SLOTS[slotIndex] ?? SPAWN_SLOTS[0]);
             const pos = {
                 x: baseSpawn.x + slot.x,
                 // Larger marbles start higher so they don't spawn inside the floor.
@@ -158,9 +197,11 @@ export class MarbleRegistry {
 
             const startLod = isCube ? null : (isPlayerSpawn ? 0 : 1);
             const lodMeshes = isCube ? null : g.marbleLodMeshes;
-            const vb = isCube ? g.vb : (lodMeshes?.[startLod]?.vb ?? g.sphereVb);
-            const ib = isCube ? g.ib : (lodMeshes?.[startLod]?.ib ?? g.sphereIb);
-            const castShadows = isCube ? true : (lodMeshes?.[startLod]?.castShadows !== false);
+            // Only read for spheres, where `startLod` is set.
+            const startMesh = startLod == null ? undefined : lodMeshes?.[startLod];
+            const vb = isCube ? g.vb : (startMesh?.vb ?? g.sphereVb);
+            const ib = isCube ? g.ib : (startMesh?.ib ?? g.sphereIb);
+            const castShadows = isCube ? true : (startMesh?.castShadows !== false);
 
             g.Filament.RenderableManager.Builder(1)
                 .boundingBox({ center: [0, 0, 0], halfExtent: [radius, radius, radius] })
@@ -172,6 +213,7 @@ export class MarbleRegistry {
 
             g.scene.addEntity(entity);
 
+            /** @type {MarbleObject} */
             const marbleObj = {
                 id: info.id,
                 name: info.name || `Marble ${g.marbles.length + 1}`,
@@ -202,14 +244,18 @@ export class MarbleRegistry {
                 lodLevel: startLod ?? 1,
             };
 
+            // `undefined > 0` is false: presets without a glow stay dark.
+            const presetGlow = preset?.emissiveIntensity;
             if (info.emissive) {
                 marbleObj.emissive = true;
                 marbleObj.lightColor = info.lightColor || info.color;
                 marbleObj.lightIntensity = info.lightIntensity || 10000.0;
-            } else if (preset?.emissiveIntensity > 0) {
+            } else if (presetGlow !== undefined && presetGlow > 0) {
                 marbleObj.emissive = true;
-                marbleObj.lightColor = preset.rimLightColor || preset.emissive || info.color || [1, 1, 1];
-                marbleObj.lightIntensity = preset.emissiveIntensity * 10000;
+                // Open preset field: an RGB triple when authored.
+                const rimLightColor = /** @type {readonly number[] | undefined} */ (preset?.rimLightColor);
+                marbleObj.lightColor = rimLightColor || preset?.emissive || info.color || [1, 1, 1];
+                marbleObj.lightIntensity = presetGlow * 10000;
             }
 
             g.marbles.push(marbleObj);
@@ -219,11 +265,15 @@ export class MarbleRegistry {
         });
 
         g.currentMarbleIndex = 0;
-        g.playerMarble = g.marbles[0];
+        g.playerMarble = g.marbles[0] ?? null;
         if (g.selectedEl && g.playerMarble) g.selectedEl.textContent = `Selected: ${g.playerMarble.name}`;
         this.updateActiveMarbleLight();
     }
 
+    /**
+     * @param {MarbleObject} marble
+     * @param {MarbleInfo} info
+     */
     _applyMarbleMaterialOverrides(marble, info) {
         const g = this.game;
         const mat = marble?.matInstance;
@@ -352,7 +402,7 @@ export class MarbleRegistry {
         const g = this.game;
         const rb = g.playerMarble?.rigidBody;
         if (rb && (g.isChargingStomp || g.isChargingAirDash)) {
-            const base = g.playerMarble.baseGravityScale ?? 1.0;
+            const base = g.playerMarble?.baseGravityScale ?? 1.0;
             rb.setGravityScale(g.flipActive ? -base : base, true);
         }
 
@@ -406,7 +456,7 @@ export class MarbleRegistry {
         }
 
         g.score = 0;
-        g.scoreEl.textContent = 'Score: 0';
+        if (g.scoreEl) g.scoreEl.textContent = 'Score: 0';
         g.combo = 1;
         g.comboTimer = 0;
         if (g.comboEl) {
@@ -418,8 +468,8 @@ export class MarbleRegistry {
 
         this.resetPlayerAbilityState();
         g.currentMarbleIndex = 0;
-        g.playerMarble = g.marbles[0];
-        g.selectedEl.textContent = `Selected: ${g.playerMarble ? g.playerMarble.name : 'None'}`;
+        g.playerMarble = g.marbles[0] ?? null;
+        if (g.selectedEl) g.selectedEl.textContent = `Selected: ${g.playerMarble ? g.playerMarble.name : 'None'}`;
 
         g.adrenaline = 0;
         g.currentFov = g.baseFov;
@@ -442,7 +492,7 @@ export class MarbleRegistry {
         g.aimYaw = 0;
         g.chargePower = 0;
         g.charging = false;
-        g.powerbarEl.style.width = '0%';
+        if (g.powerbarEl) g.powerbarEl.style.width = '0%';
         g.levelComplete = false;
         g._rewindHead = 0;
         g._rewindCount = 0;
@@ -454,9 +504,15 @@ export class MarbleRegistry {
         if (g.portalB) g.destroyPortal(g.portalB);
         g.portalA = null;
         g.portalB = null;
-        document.getElementById('portal-a-status').style.color = '#444';
-        document.getElementById('portal-b-status').style.color = '#444';
+        const portalAStatus = document.getElementById('portal-a-status');
+        const portalBStatus = document.getElementById('portal-b-status');
+        if (portalAStatus) portalAStatus.style.color = '#444';
+        if (portalBStatus) portalBStatus.style.color = '#444';
 
+        /**
+         * @param {import('../../types/world-objects.ts').ActiveProjectile[]} list
+         * @returns {import('../../types/world-objects.ts').ActiveProjectile[]}
+         */
         const drainProjectiles = (list) => {
             if (!list?.length) return [];
             for (const obj of [...list]) {
@@ -478,13 +534,6 @@ export class MarbleRegistry {
         for (const obj of g.dynamicObjects) g.dynamicBodies.add(obj.rigidBody);
     }
 
-    returnToMenu() {
-        const g = this.game;
-        audio.stopAllRolling();
-        g.clearLevel();
-        g.showLevelSelection();
-    }
-
     processCollisionEvents() {
         const g = this.game;
         if (!g.world) return;
@@ -493,7 +542,7 @@ export class MarbleRegistry {
         const touchingSurfaces = new Map();
 
         for (let i = 0; i < g.marbles.length; i++) {
-            const marble = g.marbles[i];
+            const marble = /** @type {MarbleObject} */ (g.marbles[i]);
             const rb = marble.rigidBody;
             const velocity = rb.linvel();
             const speed = Math.hypot(velocity.x, velocity.y, velocity.z);

@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Physics-based per-particle occlusion for the WebGPU particle overlay.
  *
@@ -23,24 +24,36 @@
 export const OCCLUSION_RAYCAST_BUDGET = 512;
 
 /**
- * @param {number[]} eye
- * @param {number[]} pos
+ * `[x, y, z]`; eye and particle positions always carry three components, so
+ * the `?? 0` fallbacks on their reads are never taken.
+ * @typedef {readonly number[]} Vec3Array
+ */
+
+/**
+ * A pooled CPU particle as this module sees it.
+ * @typedef {{ pos: Vec3Array, _poolIndex: number }} OcclusionParticle
+ */
+
+/**
+ * @param {Vec3Array} eye
+ * @param {Vec3Array} pos
  * @returns {number}
  */
 function distSq(eye, pos) {
-    const dx = pos[0] - eye[0];
-    const dy = pos[1] - eye[1];
-    const dz = pos[2] - eye[2];
+    const dx = (pos[0] ?? 0) - (eye[0] ?? 0);
+    const dy = (pos[1] ?? 0) - (eye[1] ?? 0);
+    const dz = (pos[2] ?? 0) - (eye[2] ?? 0);
     return dx * dx + dy * dy + dz * dz;
 }
 
 /**
  * @param {(originX: number, originY: number, originZ: number, dirX: number, dirY: number, dirZ: number, maxToi: number) => boolean} isOccluded
  *   Returns true when a solid, non-sensor collider blocks the ray before maxToi.
- * @param {number[]} eye camera eye position [x, y, z]
- * @param {Array<{ pos: number[], _poolIndex: number }>} activeParticles
+ * @param {Vec3Array} eye camera eye position [x, y, z]
+ * @param {readonly OcclusionParticle[]} activeParticles
  * @param {Float32Array} occlusionOut indexed by particle._poolIndex; 1 = visible, 0 = occluded
  * @param {number} [budget]
+ * @returns {void}
  */
 export function updateParticleOcclusion(isOccluded, eye, activeParticles, occlusionOut, budget = OCCLUSION_RAYCAST_BUDGET) {
     if (!isOccluded || !eye || !activeParticles || activeParticles.length === 0) return;
@@ -50,12 +63,14 @@ export function updateParticleOcclusion(isOccluded, eye, activeParticles, occlus
         candidates = candidates.slice().sort((a, b) => distSq(eye, a.pos) - distSq(eye, b.pos)).slice(0, budget);
     }
 
-    for (let i = 0; i < candidates.length; i++) {
-        const p = candidates[i];
+    const ex = eye[0] ?? 0;
+    const ey = eye[1] ?? 0;
+    const ez = eye[2] ?? 0;
+    for (const p of candidates) {
         const pos = p.pos;
-        const dx = pos[0] - eye[0];
-        const dy = pos[1] - eye[1];
-        const dz = pos[2] - eye[2];
+        const dx = (pos[0] ?? 0) - ex;
+        const dy = (pos[1] ?? 0) - ey;
+        const dz = (pos[2] ?? 0) - ez;
         const dist = Math.hypot(dx, dy, dz);
 
         if (dist < 1e-4) {
@@ -66,7 +81,7 @@ export function updateParticleOcclusion(isOccluded, eye, activeParticles, occlus
         // Stop just short of the particle so a collider it's embedded in (e.g. an
         // impact spark) doesn't immediately self-occlude it.
         const maxToi = Math.max(0, dist - 0.05);
-        const blocked = isOccluded(eye[0], eye[1], eye[2], dx / dist, dy / dist, dz / dist, maxToi);
+        const blocked = isOccluded(ex, ey, ez, dx / dist, dy / dist, dz / dist, maxToi);
         occlusionOut[p._poolIndex] = blocked ? 0 : 1;
     }
 }

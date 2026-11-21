@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Resolve model references from map JSON to fetchable URLs.
  * Paths are relative to the assets/ directory (AssetRegistry convention).

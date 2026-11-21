@@ -5,7 +5,7 @@
  * Generates synthetic KTX1 IBL cubemaps for each ENVIRONMENT_PRESET from
  * the hand-tuned spherical harmonics (SH) coefficients.  The resulting
  * `.ibl.ktx` and `.skybox.ktx` files are placed under assets/environments/
- * and loaded by src/rendering/environment.js when quality is 'high' or
+ * and loaded by src/rendering/environment.ts when quality is 'high' or
  * 'ultra'.
  *
  * These are SYNTHETIC cubemaps — they derive their colours entirely from the
@@ -28,7 +28,7 @@ const REPO_ROOT = join(__dirname, '..')
 const OUT_DIR   = join(REPO_ROOT, 'assets', 'environments')
 
 // ────────────────────────────────────────────────────────────────────────────
-// Environment presets (mirrors src/rendering/environment.js)
+// Environment presets (mirrors src/rendering/environment.ts)
 // ────────────────────────────────────────────────────────────────────────────
 const ENVIRONMENT_PRESETS = {
     default: {

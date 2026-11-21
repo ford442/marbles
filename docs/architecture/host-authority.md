@@ -73,8 +73,8 @@ Cross-browser/platform determinism is an **explicit non-goal**. The reference en
 
 | Module | Role |
 |--------|------|
-| [`src/game/network/host-sim.js`](../../src/game/network/host-sim.js) | Host tick: apply inputs, step world, broadcast snapshots |
-| [`src/game/network/client-prediction.js`](../../src/game/network/client-prediction.js) | Input buffer + reconcile |
+| [`src/game/network/host-sim.ts`](../../src/game/network/host-sim.ts) | Host tick: apply inputs, step world, broadcast snapshots |
+| [`src/game/network/client-prediction.ts`](../../src/game/network/client-prediction.ts) | Input buffer + reconcile |
 | [`src/game/systems/physics-world.ts`](../../src/game/systems/physics-world.ts) | `createNetworkMarble`, `applyInputToMarble`, `removeNetworkMarbles` |
 | [`src/game/network/input-bitfield.js`](../../src/game/network/input-bitfield.js) | Shared input encoding |
 | [`scripts/stress-relay.mjs`](../../scripts/stress-relay.mjs) | 4-client relay load test |

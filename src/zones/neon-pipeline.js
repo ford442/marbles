@@ -1,11 +1,27 @@
+// @ts-check
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
 
+/** @typedef {import('../types/zone-host.ts').ZoneBuildHost} ZoneBuildHost */
+/** @typedef {import('../types/geometry.ts').Vec3} Vec3 */
+/** @typedef {readonly number[]} RGB */
+
+/**
+ * @param {ZoneBuildHost} game
+ * @param {Vec3} offset
+ */
 export function createNeonPipelineZone(game, offset) {
     const F = game.Filament;
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
     // Helper to create a basic filament visual entity inline
+    /**
+     * @param {Vec3} pos
+     * @param {Vec3} halfExtents
+     * @param {RGB} color
+     * @param {number} [roughness]
+     * @param {boolean} [bump]
+     */
     const createVisual = (pos, halfExtents, color, roughness = 0.4, bump = false) => {
         const entity = F.EntityManager.get().create();
         const matInstance = game.material.createInstance();

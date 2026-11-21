@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Prunes the CPU-side active particle list from a GPU alive-slot index list.
  *
@@ -15,10 +16,13 @@
  */
 export function pruneToAliveIndices(indices, count, activeParticles, mask) {
     mask.fill(0);
-    const n = Math.max(0, Math.min(count, indices ? indices.length : 0));
-    for (let i = 0; i < n; i++) {
-        const slot = indices[i];
-        if (slot < mask.length) mask[slot] = 1;
+    if (indices) {
+        const n = Math.max(0, Math.min(count, indices.length));
+        for (let i = 0; i < n; i++) {
+            // i < indices.length, so `slot` is always defined.
+            const slot = indices[i];
+            if (slot !== undefined && slot < mask.length) mask[slot] = 1;
+        }
     }
 
     for (let i = activeParticles.length - 1; i >= 0; i--) {

@@ -84,7 +84,7 @@ const checks = [
     {
         name: 'Marble creation applies glass quality config',
         check: () => {
-            const content = fs.readFileSync('src/marble-material-tier.js', 'utf-8');
+            const content = fs.readFileSync('src/marble-material-tier.ts', 'utf-8');
             return content.includes('getGlassQualityConfig') &&
                    content.includes("presetName === 'classicGlass'") &&
                    content.includes('glass.refractionMode');
@@ -93,7 +93,7 @@ const checks = [
     {
         name: 'classicGlass preset includes refraction parameters',
         check: () => {
-            const content = fs.readFileSync('src/material-presets.js', 'utf-8');
+            const content = fs.readFileSync('src/material-presets.ts', 'utf-8');
             const glassMatch = content.match(/classicGlass:\s*{[\s\S]*?refractionMode:\s*2\.0[\s\S]*?}/);
             if (!glassMatch) return false;
             const preset = glassMatch[0];

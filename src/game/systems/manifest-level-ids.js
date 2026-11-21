@@ -1,3 +1,4 @@
+// @ts-check
 import manifest from '../../../assets/manifest.json' with { type: 'json' };
 
 /** @type {ReadonlySet<string>} */

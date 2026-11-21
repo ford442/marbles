@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * post-fx-presets.js
  *
@@ -8,13 +9,116 @@
  * Tiers: 'low' | 'medium' | 'high' | 'ultra'
  */
 
+/** @typedef {import('../types/filament.ts').FilamentModule} FilamentModule */
+
+/**
+ * Filament `View.setBloomOptions` fields. `blendMode` / `quality` are Filament
+ * enum values (undefined when the namespace is unavailable).
+ * @typedef {object} BloomQualityConfig
+ * @property {boolean} enabled
+ * @property {number} strength
+ * @property {number} resolution
+ * @property {number} levels
+ * @property {boolean} threshold
+ * @property {number} highlight
+ * @property {unknown} blendMode
+ * @property {unknown} quality
+ * @property {boolean} lensFlare
+ */
+
+/**
+ * Filament `View.setAmbientOcclusionOptions` fields.
+ * @typedef {object} SsaoQualityConfig
+ * @property {boolean} enabled
+ * @property {number} radius
+ * @property {number} power
+ * @property {number} bias
+ * @property {number} resolution
+ * @property {number} intensity
+ * @property {unknown} quality
+ */
+
+/**
+ * Filament `View.setVignetteOptions` fields (only `enabled` when off).
+ * @typedef {object} VignetteConfig
+ * @property {boolean} enabled
+ * @property {number} [midPoint]
+ * @property {number} [roundness]
+ * @property {number} [feather]
+ * @property {number[]} [color] RGBA
+ */
+
+/**
+ * Quality-tier colour-grading base.
+ * @typedef {object} ColorGradingConfig
+ * @property {number} contrast
+ * @property {number} saturation
+ */
+
+/**
+ * Per-environment colour-grading overrides; omitted keys keep the tier base.
+ * @typedef {object} EnvironmentColorGradingPreset
+ * @property {number} [contrast]
+ * @property {number} [saturation]
+ * @property {number} [vibrance]
+ */
+
+/**
+ * Filament `View.setDepthOfFieldOptions` fields.
+ * @typedef {object} DofConfig
+ * @property {boolean} enabled
+ * @property {number} focusDistance
+ * @property {number} blurScale
+ * @property {number} cocScale
+ * @property {number} maxApertureDiameter
+ */
+
+/**
+ * Environment fog overrides merged over the quality-tier `FogConfig`.
+ * @typedef {object} EnvironmentFogPreset
+ * @property {number[]} [color] RGBA tint
+ * @property {number} [distance]
+ * @property {number} [density]
+ * @property {number} [heightFalloff]
+ * @property {number} [inScatteringStart]
+ * @property {number} [inScatteringSize]
+ */
+
+/**
+ * Filament `View.setFogOptions` fields (only `enabled` when off).
+ * @typedef {EnvironmentFogPreset & {
+ *   enabled: boolean,
+ *   maximumVisibleDistance?: number,
+ *   fogColorMode?: number,
+ *   skyDistance?: number,
+ * }} FogConfig
+ */
+
+/**
+ * Glass refraction uniforms for one quality tier.
+ * @typedef {object} GlassQualityConfig
+ * @property {number} refractionMode 0 = off, 1 = cheap caustics, 2 = full refraction
+ * @property {number} thickness
+ * @property {number} causticIntensity
+ * @property {number} chromaticDispersion
+ * @property {number} fresnelStrength
+ */
+
+/**
+ * Volumetric light-shaft limits for one quality tier.
+ * @typedef {object} VolumetricConfig
+ * @property {number} maxShafts
+ * @property {number} shaftOpacity
+ * @property {boolean} caustics
+ */
+
 /**
  * Returns Filament bloom options for the given quality tier.
  * Requires the Filament namespace so enum constants can be resolved.
  *
- * @param {string} quality
- * @param {object} Filament - The Filament WASM namespace
- * @returns {object}
+ * @param {string | undefined} quality - defaults to 'medium'
+ * @param {FilamentModule} Filament - The Filament WASM namespace
+ * @returns {BloomQualityConfig}
  */
 export function getBloomQualityConfig(quality = 'medium', Filament) {
     const QualityLevel = Filament?.['View$QualityLevel']
@@ -75,10 +179,10 @@ export function getBloomQualityConfig(quality = 'medium', Filament) {
 /**
  * Returns Filament ambient-occlusion (SSAO) options for the given quality tier.
  *
- * @param {string} quality
- * @param {object} Filament - The Filament WASM namespace
+ * @param {string | undefined} quality - defaults to 'medium'
+ * @param {FilamentModule} Filament - The Filament WASM namespace
  * @param {boolean} [enabled=true] - Honour the user's SSAO toggle
- * @returns {object}
+ * @returns {SsaoQualityConfig}
  */
 export function getSsaoQualityConfig(quality = 'medium', Filament, enabled = true) {
     const QualityLevel = Filament?.['View$QualityLevel']
@@ -131,8 +235,8 @@ export function getSsaoQualityConfig(quality = 'medium', Filament, enabled = tru
  * Returns Filament vignette options for the given quality tier.
  * Vignette is enabled on high and ultra for a filmic, premium feel.
  *
- * @param {string} quality
- * @returns {object}
+ * @param {string} [quality]
+ * @returns {VignetteConfig}
  */
 export function getVignetteConfig(quality = 'medium') {
     switch (quality) {
@@ -164,8 +268,8 @@ export function getVignetteConfig(quality = 'medium') {
  * quality tier.  All tiers use ACES tone-mapping; higher tiers push slightly
  * richer contrast and saturation for a more cinematic look.
  *
- * @param {string} quality
- * @returns {{ contrast: number, saturation: number }}
+ * @param {string} [quality]
+ * @returns {ColorGradingConfig}
  */
 export function getColorGradingConfig(quality = 'medium') {
     switch (quality) {
@@ -193,8 +297,8 @@ export function getColorGradingConfig(quality = 'medium') {
  *   vibrance   – Vibrance (protects already-saturated hues; 0 = off, applied
  *                with a safe try-catch in case the Filament build omits it)
  *
- * @param {string} envName - Environment preset key (matches ENVIRONMENT_PRESETS)
- * @returns {{ contrast: number, saturation: number, vibrance?: number }}
+ * @param {string} [envName] - Environment preset key (matches ENVIRONMENT_PRESETS)
+ * @returns {EnvironmentColorGradingPreset}
  */
 export function getEnvironmentColorGradingPreset(envName = 'default') {
     switch (envName) {
@@ -237,10 +341,10 @@ export function getEnvironmentColorGradingPreset(envName = 'default') {
  *   - 'follow' / 'action' – high and ultra only (subtle, speed-tracked)
  *
  * @param {string} cameraMode
- * @param {string} quality
+ * @param {string} [quality]
  * @param {number} [focusDistance=20] - Distance from camera eye to subject in world units (meters).
  *   Typical cinematic orbit is ~25, follow/action ranges from ~15 to ~35 depending on speed.
- * @returns {object|null}
+ * @returns {DofConfig | null}
  */
 export function getDofConfig(cameraMode, quality = 'medium', focusDistance = 20) {
     const isHighQuality = quality === 'high' || quality === 'ultra'
@@ -281,8 +385,8 @@ export function getDofConfig(cameraMode, quality = 'medium', focusDistance = 20)
  *   - skyDistance: sky box distance
  *   - heightFalloff: how quickly fog fades with height (0=uniform, 1=max falloff)
  *
- * @param {string} quality
- * @returns {object}
+ * @param {string} [quality]
+ * @returns {FogConfig}
  */
 export function getFogQualityConfig(quality = 'medium') {
     switch (quality) {
@@ -341,8 +445,8 @@ export function getFogQualityConfig(quality = 'medium') {
  *   - density: custom exponential density
  *   - heightFalloff: how fog thins toward sky
  *
- * @param {string} envName - Environment preset name (e.g., 'default', 'space_nebula', 'underwater')
- * @returns {object} Partial fog config to merge with quality config
+ * @param {string} [envName] - Environment preset name (e.g., 'default', 'space_nebula', 'underwater')
+ * @returns {EnvironmentFogPreset} Partial fog config to merge with quality config
  */
 export function getEnvironmentFogPreset(envName = 'default') {
     switch (envName) {
@@ -415,8 +519,8 @@ export function getEnvironmentFogPreset(envName = 'default') {
  * Supports quality-gated glass rendering: low/medium = cheap opaque + Fresnel,
  * high/ultra = full refraction + caustics + chromatic dispersion.
  *
- * @param {string} quality - Quality tier: 'low', 'medium', 'high', 'ultra'
- * @returns {object} Glass refraction config with refractionMode and effect strength
+ * @param {string | null} [quality] - Quality tier: 'low', 'medium', 'high', 'ultra'
+ * @returns {GlassQualityConfig} Glass refraction config with refractionMode and effect strength
  */
 export function getGlassQualityConfig(quality = 'medium') {
     switch (quality?.toLowerCase()) {
@@ -466,15 +570,18 @@ export function getGlassQualityConfig(quality = 'medium') {
 /**
  * Returns quality-tiered configuration for the volumetric light shaft system.
  *
- * @param {string} quality
- * @returns {{ maxShafts:number, shaftOpacity:number, caustics:boolean }}
+ * @param {string} [quality]
+ * @returns {VolumetricConfig}
  */
 export function getVolumetricConfig(quality = 'medium') {
+    /** @satisfies {Record<'low' | 'medium' | 'high' | 'ultra', VolumetricConfig>} */
     const map = {
         low:    { maxShafts: 0, shaftOpacity: 0,    caustics: false },
         medium: { maxShafts: 2, shaftOpacity: 0.25,  caustics: false },
         high:   { maxShafts: 4, shaftOpacity: 0.40,  caustics: true },
         ultra:  { maxShafts: 6, shaftOpacity: 0.55,  caustics: true },
     }
-    return map[quality] || map.medium
+    /** @type {Readonly<Record<string, VolumetricConfig | undefined>>} */
+    const byQuality = map
+    return byQuality[quality] || map.medium
 }

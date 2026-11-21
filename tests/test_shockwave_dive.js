@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { AbilityShockwaveDive } from '../src/abilities/shockwave-dive.js';
+import { AbilityShockwaveDive } from '../src/abilities/shockwave-dive.ts';
 
 class MockRigidBody {
     constructor() {
@@ -18,12 +18,15 @@ class MockRigidBody {
     }
 }
 
-class MockGame extends AbilityShockwaveDive {
+/** A game whose ability methods forward to the composed slice (as MarblesGame does). */
+class MockGame {
     constructor() {
-        super();
         this.playerMarble = { rigidBody: new MockRigidBody() };
         this.hudManager = { markAbilityUsed: () => {} };
+        this.slice = new AbilityShockwaveDive(this);
     }
+    beginShockwaveCharge(now) { this.slice.beginShockwaveCharge(now); }
+    releaseShockwave(now) { this.slice.releaseShockwave(now); }
 }
 
 async function runTests() {
@@ -62,4 +65,7 @@ async function runTests() {
     console.log("Shockwave Dive logic tests passed.");
 }
 
-runTests().catch(console.error);
+runTests().catch((err) => {
+    console.error(err);
+    process.exitCode = 1;
+});

@@ -9,7 +9,7 @@
  *    what recorded `solution`s replay with) models 1 and 2 are identical, so
  *    opting a map into model 2 never invalidates its solution.
  *
- * Shared by game-loop/frame-input.js and the headless harness.
+ * Shared by game-loop/frame-input.ts and the headless harness.
  */
 
 /** Legacy impulse per 1/60 s step for a held movement key. */

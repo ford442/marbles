@@ -1,10 +1,13 @@
-import type { AbilityHost } from '../game/systems/ability-system.ts';
+import type { AbilitySystemHost } from '../game/systems/ability-system.ts';
 import type { HudControllerHost } from '../game/systems/hud-controller.ts';
 import type { InputSystemHost } from '../game/systems/input-system.ts';
 import type { PhysicsBackendHost } from '../game/systems/physics-backend.ts';
 import type { PhysicsQueriesHost } from '../game/systems/physics-queries.ts';
 import type { PhysicsWorldHost } from '../game/systems/physics-world.ts';
 import type { RenderPipelineHost } from '../game/systems/render-pipeline.ts';
+import type { MarbleRegistryHost } from '../game/systems/marble-registry.js';
+import type { InitLevelLoaderHost } from '../init/level-loader.js';
+import type { InitCleanupHost } from '../init/cleanup.js';
 
 /**
  * Everything the composed systems read from the game object: the intersection
@@ -12,7 +15,7 @@ import type { RenderPipelineHost } from '../game/systems/render-pipeline.ts';
  * type, so `new PhysicsWorld(host)` (and the rest) stop compiling if a field
  * one of them requires is no longer part of the contract.
  *
- * Deliberately **no index signature** (unlike `GameMixinHost`). Where two host
+ * Deliberately **no index signature**. Where two host
  * interfaces describe the same field differently, fix the owning interface so
  * the intersection stays honest rather than widening this type: the
  * compile-time checks in `game/create-runtime.types-test.ts` fail if any
@@ -21,8 +24,11 @@ import type { RenderPipelineHost } from '../game/systems/render-pipeline.ts';
 export type GameHost =
     & PhysicsWorldHost
     & InputSystemHost
-    & AbilityHost
+    & AbilitySystemHost
     & HudControllerHost
     & PhysicsBackendHost
     & PhysicsQueriesHost
-    & RenderPipelineHost;
+    & RenderPipelineHost
+    & MarbleRegistryHost
+    & InitLevelLoaderHost
+    & InitCleanupHost;

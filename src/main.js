@@ -1,42 +1,38 @@
+// @ts-check
+/** @typedef {import('./types/marbles-game-host.ts').MarblesGameHost} MarblesGameHost */
+/** @template T @typedef {import('./game/systems/slice-composition.ts').MethodNames<T>} MethodNames */
 import './styles/index.css';
-import { mountShell } from './ui/mount-shell.js';
+import { mountShell } from './ui/mount-shell.ts';
 
 mountShell();
 
 import { createGameState, bindGameState } from './game/state/index.js';
-import { installZoneMethods } from './zones/methods/index.js';
-import { installInitMethods } from './init/index.js';
-import { installZoneSetupMethods } from './zone-setup/index.js';
-import { installGameLogicMethods } from './game-logic/index.js';
-import { installAbilityMethods } from './abilities/index.js';
-import { installGameLoopMethods } from './game-loop/index.js';
+import { ZONE_METHOD_SLICES } from './zones/methods/index.ts';
+import { INIT_SLICES } from './init/index.ts';
+import { ZONE_SETUP_SLICES } from './zone-setup/index.ts';
+import { GAME_LOGIC_SLICES } from './game-logic/index.ts';
+import { ABILITY_SLICES } from './abilities/index.ts';
+import { GAME_LOOP_SLICES } from './game-loop/index.ts';
+import { composeSlices, forwardMethods, forwardSliceMethods } from './game/systems/slice-composition.ts';
 import { PerfMonitor } from './perf-monitor.js';
 import { CullingManager } from './culling-manager.js';
 import { MarbleLodManager } from './marble-lod.js';
-import { EffectPoolManager } from './effect-pool.js';
+import { EffectPoolManager } from './effect-pool.ts';
 import { AutoQualityGovernor } from './auto-quality-governor.js';
 import { LevelEffectBudget } from './level-effect-budget.js';
-import { LightingBudgetManager } from './lighting-budget.js';
+import { LightingBudgetManager } from './lighting-budget.ts';
 import { FixedStepClock } from './game/systems/fixed-step-clock.ts';
 import { createRuntime } from './game/create-runtime.ts';
-import { registerServiceWorker } from './pwa/register-sw.js';
+import { registerServiceWorker } from './pwa/register-sw.ts';
 import { initInstallPrompt } from './pwa/install-prompt.js';
-import { importSharedWorkshopLevel } from './pwa/share-target.js';
-import { applyLaunchShortcut } from './pwa/shortcuts.js';
+import { importSharedWorkshopLevel } from './pwa/share-target.ts';
+import { applyLaunchShortcut } from './pwa/shortcuts.ts';
 import { CampaignProgress } from './game/systems/campaign-progress.ts';
-import { GhostReplay } from './game/systems/ghost-replay.js';
+import { GhostReplay } from './game/systems/ghost-replay.ts';
 import { CloudClient } from './game/network/cloud-client.ts';
 import { TrackLodManager } from './assets/track-lod-manager.js';
 
-/** Explicit prototype delegation — not the deprecated apply*Methods mixin copier. */
-function delegateTo(subsystemKey, methodNames) {
-    for (const name of methodNames) {
-        MarblesGame.prototype[name] = function delegatedSubsystemMethod(...args) {
-            return this[subsystemKey][name](...args);
-        };
-    }
-}
-
+/** @type {readonly MethodNames<import('./game/systems/physics-world.ts').PhysicsWorld>[]} */
 const PHYSICS_WORLD_METHODS = [
     'isStaticBatchingEnabled',
     'resolveStaticSurfacePreset',
@@ -53,6 +49,7 @@ const PHYSICS_WORLD_METHODS = [
     'createRotatingBox',
 ];
 
+/** @type {readonly MethodNames<import('./game/systems/input-system.ts').InputSystem>[]} */
 const INPUT_SYSTEM_METHODS = [
     'initMouseControls',
     'pollGamepads',
@@ -62,17 +59,18 @@ const INPUT_SYSTEM_METHODS = [
     'findBestLockOnTarget',
 ];
 
+/** @type {readonly MethodNames<import('./game/systems/marble-registry.js').MarbleRegistry>[]} */
 const MARBLE_REGISTRY_METHODS = [
     'createMarbles',
     'updateActiveMarbleLight',
     'getLeader',
     'respawnToLastCheckpoint',
     'resetMarbles',
-    'returnToMenu',
     'processCollisionEvents',
     'resetPlayerAbilityState',
 ];
 
+/** @type {readonly MethodNames<import('./game/systems/level-loader.ts').LevelLoader>[]} */
 const LEVEL_LOADER_METHODS = [
     'loadLevel',
     'clearLevel',
@@ -83,70 +81,84 @@ const LEVEL_LOADER_METHODS = [
     'createGhostMarble',
 ];
 
+/** @type {readonly MethodNames<import('./game/systems/render-pipeline.ts').RenderPipeline>[]} */
 const RENDER_PIPELINE_METHODS = [
     'renderAndSync',
     'syncTransformsAndRender',
     'flushStaticBatches',
 ];
 
+/**
+ * Feature slices composed onto the game (each one a class holding the game as
+ * `this.game`); see game/systems/slice-composition.ts.
+ * @type {import('./game/systems/slice-composition.ts').SliceSpec<MarblesGameHost>[]}
+ */
+const GAME_SLICES = [
+    ...ZONE_METHOD_SLICES,
+    ...INIT_SLICES,
+    ...ZONE_SETUP_SLICES,
+    ...GAME_LOGIC_SLICES,
+    ...ABILITY_SLICES,
+    ...GAME_LOOP_SLICES,
+];
+
+/**
+ * Build the game object in place: state slices, feature slices, composed
+ * systems and services, each constructed against the typed `MarblesGameHost`
+ * contract the object fulfils once this returns.
+ * @param {MarblesGameHost} host
+ */
+function buildGame(host) {
+    bindGameState(host, createGameState());
+    composeSlices(host, GAME_SLICES);
+
+    // Fixed-step simulation clock (see docs/architecture/game-loop.md).
+    host.physicsClock = new FixedStepClock();
+
+    // Phase B composed subsystems: physicsQueries, physicsWorld, inputSystem,
+    // marbleRegistry, abilitySystem, renderPipeline, levelLoader and
+    // hudController. Built (and installed on the game) by a typed module so a
+    // missing host field is a compile error; see game/create-runtime.ts.
+    createRuntime(host);
+    // Compatibility alias while call sites migrate to the composed owner.
+    host.hudManager = host.hudController;
+    host.campaignProgress = new CampaignProgress();
+    host.ghostReplay = new GhostReplay();
+    host.cloudClient = new CloudClient(host);
+    host.perfMonitor = new PerfMonitor(host);
+    host.autoQualityGovernor = new AutoQualityGovernor(host);
+    host.levelEffectBudget = new LevelEffectBudget(host);
+    host.lightingBudget = new LightingBudgetManager(host);
+    host.cullingManager = new CullingManager(host);
+    host.trackLodManager = new TrackLodManager(host);
+    host.marbleLodManager = new MarbleLodManager(host);
+    host.effectPool = new EffectPoolManager(host);
+}
+
 class MarblesGame {
     constructor() {
-        bindGameState(this, createGameState());
-
-        // Fixed-step simulation clock (see docs/architecture/game-loop.md).
-        this.physicsClock = new FixedStepClock();
-
-        // Phase B composed subsystems: physicsQueries, physicsWorld, inputSystem,
-        // marbleRegistry, abilitySystem, renderPipeline, levelLoader and
-        // hudController. Built (and installed on `this`) by a typed module so a
-        // missing host field is a compile error; see game/create-runtime.ts.
-        createRuntime(/** @type {import('./types/game-host.ts').GameHost} */ (/** @type {unknown} */ (this)));
-        // Compatibility alias while call sites migrate to the composed owner.
-        this.hudManager = this.hudController;
-        this.campaignProgress = new CampaignProgress();
-        this.ghostReplay = new GhostReplay();
-        this.cloudClient = new CloudClient(this);
-        this.perfMonitor = new PerfMonitor(this);
-        this.autoQualityGovernor = new AutoQualityGovernor(this);
-        this.levelEffectBudget = new LevelEffectBudget(this);
-        this.lightingBudget = new LightingBudgetManager(this);
-        this.cullingManager = new CullingManager(this);
-        this.trackLodManager = new TrackLodManager(this);
-        this.marbleLodManager = new MarbleLodManager(this);
-        this.effectPool = new EffectPoolManager(this);
+        buildGame(/** @type {MarblesGameHost} */ (/** @type {unknown} */ (this)));
     }
 }
 
-delegateTo('physicsWorld', PHYSICS_WORLD_METHODS);
-delegateTo('inputSystem', INPUT_SYSTEM_METHODS);
-delegateTo('marbleRegistry', MARBLE_REGISTRY_METHODS);
-delegateTo('levelLoader', LEVEL_LOADER_METHODS);
-delegateTo('renderPipeline', RENDER_PIPELINE_METHODS);
-
-/**
- * Closed compatibility wiring for legacy folders. Each installer owns an
- * explicit method list; first-class subsystems are delegated above.
- */
-function installLegacyMethodGroups(targetClass) {
-    installZoneMethods(targetClass);
-    installInitMethods(targetClass);
-    installZoneSetupMethods(targetClass);
-    installGameLogicMethods(targetClass);
-    installAbilityMethods(targetClass);
-    installGameLoopMethods(targetClass);
-}
-
-installLegacyMethodGroups(MarblesGame);
+// Explicit forwarding to composed owners: each name is forwarded exactly once.
+forwardMethods(MarblesGame, 'physicsWorld', PHYSICS_WORLD_METHODS);
+forwardMethods(MarblesGame, 'inputSystem', INPUT_SYSTEM_METHODS);
+forwardMethods(MarblesGame, 'marbleRegistry', MARBLE_REGISTRY_METHODS);
+forwardMethods(MarblesGame, 'levelLoader', LEVEL_LOADER_METHODS);
+forwardMethods(MarblesGame, 'renderPipeline', RENDER_PIPELINE_METHODS);
+forwardSliceMethods(MarblesGame, GAME_SLICES);
 
 registerServiceWorker();
 initInstallPrompt();
 
-window.game = new MarblesGame();
+const game = /** @type {MarblesGameHost} */ (/** @type {unknown} */ (new MarblesGame()));
+window.game = game;
 (async () => {
     await importSharedWorkshopLevel();
-    await window.game.init();
+    await game.init();
     window.gameReady = true;
-    applyLaunchShortcut(window.game);
+    applyLaunchShortcut(game);
 })().catch(err => {
     console.error('[FATAL] Game initialization failed:', err)
     const loading = document.getElementById('loading')

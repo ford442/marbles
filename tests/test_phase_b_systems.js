@@ -10,7 +10,9 @@ import { extractMarbleMaterialFields } from '../src/game/systems/marble-material
 import { LevelLoader } from '../src/game/systems/level-loader.ts';
 import { RenderPipeline } from '../src/game/systems/render-pipeline.ts';
 import { HudController } from '../src/game/systems/hud-controller.ts';
-import { installKnownMethods } from '../src/game/systems/method-installer.js';
+import {
+    composeSlices, defineSlice, forwardMethods, forwardSliceMethods,
+} from '../src/game/systems/slice-composition.ts';
 
 function testMaterialAliases() {
     assert.equal(MATERIAL_SURFACE_ALIASES.glass, 'crystal');
@@ -81,22 +83,28 @@ async function testLevelLoaderDependenciesAndDelegation() {
     const assetRegistry = {};
     const calls = [];
     const level = { id: 'factory-test' };
+    // Composed slices (InitLevelLoader / InitCleanup in production) hold the
+    // game themselves; LevelLoader calls them as plain instances.
+    const runtime = {
+        game,
+        loadLevel(id) {
+            calls.push(['load', this, id]);
+            return true;
+        },
+    };
+    const cleanupRuntime = {
+        game,
+        clearLevel() {
+            calls.push(['clear', this]);
+        },
+    };
     const loader = new LevelLoader(game, {
         physicsWorld,
         marbleRegistry,
         assetRegistry,
         getLevelById: (id) => id === level.id ? level : null,
-        runtime: {
-            loadLevel(id) {
-                calls.push(['load', this, id]);
-                return true;
-            },
-        },
-        cleanupRuntime: {
-            clearLevel() {
-                calls.push(['clear', this]);
-            },
-        },
+        runtime,
+        cleanupRuntime,
     });
 
     assert.equal(loader.physicsWorld, physicsWorld);
@@ -106,8 +114,9 @@ async function testLevelLoaderDependenciesAndDelegation() {
     assert.equal(await loader.loadLevel('factory-test'), true);
     loader.clearLevel();
     assert.deepEqual(calls.map(([name]) => name), ['load', 'clear']);
-    assert.equal(calls[0][1], game);
-    assert.equal(calls[1][1], game);
+    assert.equal(calls[0][1], runtime);
+    assert.equal(calls[0][1].game, game);
+    assert.equal(calls[1][1], cleanupRuntime);
 }
 
 function testRenderPipelineFrameOrder() {
@@ -156,18 +165,34 @@ function testHudControllerSingleFrameEntry() {
     ]);
 }
 
-function testClosedMethodInstaller() {
-    class Source {
-        known() { return this.value; }
-        accidental() { return 'not installed'; }
+function testSliceComposition() {
+    class Slice {
+        constructor(game) { this.game = game; }
+        known(delta) { return this.game.value + delta; }
+        notForwarded() { return 'not forwarded'; }
     }
-    class Target {}
-    installKnownMethods(Target, Source, ['known']);
+    const specs = [defineSlice('slice', Slice, ['known'])];
+    class Target {
+        constructor() {
+            this.value = 7;
+            composeSlices(this, specs);
+        }
+    }
+    forwardSliceMethods(Target, specs);
     const target = new Target();
-    target.value = 7;
-    assert.equal(target.known(), 7);
-    assert.equal(target.accidental, undefined);
-    assert.throws(() => installKnownMethods(Target, Source, ['missing']), /missing method/);
+    assert.ok(target.slice instanceof Slice, 'slice instance installed under its key');
+    assert.equal(target.slice.game, target, 'slice holds the game as its host');
+    assert.equal(target.known(1), 8, 'forwarded method runs on the slice against the host');
+    assert.equal(target.notForwarded, undefined, 'only listed methods are forwarded');
+    assert.equal(Object.hasOwn(Target.prototype, 'known'), true);
+    assert.notEqual(Target.prototype.known, Slice.prototype.known, 'forwarder, not a copied body');
+
+    class Other { constructor() {} }
+    assert.throws(() => forwardSliceMethods(Other, [defineSlice('slice', Slice, ['missing'])]), /missing method/);
+    assert.throws(() => forwardMethods(Target, 'elsewhere', ['known']), /already forwarded/);
+    class WithOwn { own() {} }
+    assert.throws(() => forwardMethods(WithOwn, 'slice', ['own']), /defined on the class/);
+    assert.throws(() => composeSlices({ slice: 1 }, specs), /collides/);
 }
 
 testMaterialAliases();
@@ -179,5 +204,5 @@ testExtractMarbleMaterialFields();
 await testLevelLoaderDependenciesAndDelegation();
 testRenderPipelineFrameOrder();
 testHudControllerSingleFrameEntry();
-testClosedMethodInstaller();
+testSliceComposition();
 console.log('All Phase B subsystem pure API tests passed');

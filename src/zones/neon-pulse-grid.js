@@ -1,11 +1,29 @@
+// @ts-check
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
 
+/** @typedef {import('../types/zone-host.ts').ZoneBuildHost} ZoneBuildHost */
+/** @typedef {import('../types/geometry.ts').Vec3} Vec3 */
+/** @typedef {import('../types/geometry.ts').Quat} Quat */
+/** @typedef {readonly number[]} RGB */
+/** @typedef {import('../types/filament.ts').FilamentHandle} FilamentHandle */
+
+/**
+ * @param {ZoneBuildHost} game
+ * @param {Vec3} offset
+ */
 export function createNeonPulseGridZone(game, offset) {
     const F = game.Filament;
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
     // Helper to create a basic filament visual entity inline
+    /**
+     * @param {Vec3} pos
+     * @param {Vec3} halfExtents
+     * @param {RGB} color
+     * @param {number} [roughness]
+     * @param {boolean} [bump]
+     */
     const createVisual = (pos, halfExtents, color, roughness = 0.4, bump = false) => {
         const entity = F.EntityManager.get().create();
         const matInstance = game.material.createInstance();
@@ -30,6 +48,12 @@ export function createNeonPulseGridZone(game, offset) {
     };
 
     // Helper for visual matrix update
+    /**
+     * @param {FilamentHandle} entity
+     * @param {Vec3} pos
+     * @param {Vec3} hExtents
+     * @param {Quat} [q]
+     */
     const updateVisualMatrix = (entity, pos, hExtents, q = floorQ) => {
         // Filament transforms are column-major
         const x2 = q.x + q.x, y2 = q.y + q.y, z2 = q.z + q.z;

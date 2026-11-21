@@ -32,13 +32,13 @@ The `MarblesGame` class is the central hub that manages:
 - HUD and input systems
 - Game loop execution
 
-Phase B subsystems (`PhysicsWorld`, `InputSystem`, `MarbleRegistry`, `AbilitySystem`, `RenderPipeline`, `HudController`, `LevelLoader`) are composed classes that `main.js` delegates to; remaining legacy slices are attached through closed `install*Methods` allowlists. See `docs/architecture/README.md`.
+Phase B subsystems (`PhysicsWorld`, `InputSystem`, `MarbleRegistry`, `AbilitySystem`, `RenderPipeline`, `HudController`, `LevelLoader`) are composed classes that `main.js` delegates to. Every other feature area is a list of slice classes (`*_SLICES` in each directory's `index.ts`, composed by `game/systems/slice-composition.ts`); there are no mixins and `method-installer.js` is gone. The whole game object is typed as `MarblesGameHost` (`src/types/marbles-game-host.ts`). See `docs/architecture/README.md`.
 
-### Game Systems (Mixins)
+### Game Systems (composed slices)
 
 **Physics & Rendering**
 - `game/systems/physics-world.ts` - Creates rigid bodies, colliders, and entities (`PhysicsWorld`); `game/systems/physics-backend.ts` selects main-thread vs worker Rapier
-- `game-loop/sync.js` - Synchronizes physics state with Filament entities (driven by `RenderPipeline`)
+- `game-loop/sync.ts` - Synchronizes physics state with Filament entities (driven by `RenderPipeline`)
 - `game/systems/render-pipeline.ts` - Frame ordering and Filament draw (`RenderPipeline`)
 
 **Game Logic**
@@ -160,10 +160,11 @@ Output: `public/wasm/marble_physics.{js,wasm}`
 
 ### Creating Game Logic
 
-- **Game state**: Add to `MarblesGame` constructor
-- **Physics events**: Trigger in `game-loop-sync-methods.js` (step callback)
-- **Rendering updates**: Apply in `game-loop-render-methods.js`
-- **Input handling**: Define in `input-methods.js`
+- **Game state**: Add to the matching `src/game/state/*.js` factory (mirrored onto the game by `bindGameState`)
+- **New behaviour**: a slice class (`this.game: XxxHost`, host built from `Pick`s of `EngineContext` / `FrameState` / other slices) listed with `defineSlice` in its directory's `*_SLICES`, or a composed system in `src/game/systems/`
+- **Physics events**: `game-loop/sync.ts` (fixed-step callback) and `MarbleRegistry.processCollisionEvents`
+- **Rendering updates**: `RenderPipeline` (`game/systems/render-pipeline.ts`)
+- **Input handling**: `InputSystem` (`game/systems/input-system.ts`) and `game-loop/frame-input.ts`
 
 ### Important Interfaces
 
@@ -226,7 +227,7 @@ Special abilities use internal cooldown tracking:
 
 ## TypeScript Support
 
-Project includes `tsconfig.json` for type checking. TSX components exist in `src/components/` for UI modals.
+`tsconfig.json` type-checks all of `src/` (`.ts` plus `@ts-check` JS). Node tests run `.ts` via `--experimental-strip-types`, so keep TS erasable (no enums, namespaces or parameter properties) and import with explicit `.ts` extensions.
 
 ## Git & Contributing
 
@@ -242,6 +243,12 @@ Project includes `tsconfig.json` for type checking. TSX components exist in `src
 npm run dev                    # Start dev server with hot reload
 npm run build                  # Production build to dist/
 
+# Types
+npm run typecheck              # Strict tsc over all of src/
+npm run typecheck:coverage     # Coverage ratchet (scripts/ts-coverage-baseline.json)
+npm run gen:schema-types       # Regenerate src/types/generated/ from assets/schemas/
+npm run test:e2e:actions       # Fire every ability/menu action on a loaded level (dev server on :5173)
+
 # Review & Debug
 # Check console in browser for physics logs and rendering status
 # Inspect Elements to debug HUD/canvas rendering
@@ -251,10 +258,11 @@ npm run build                  # Production build to dist/
 ## Known issues / blockers
 
 - Level Format v2 (#451) resolved the dev-only zone backlog. The 11 post-August JS zones were ported to v2 JSON maps or deleted, and the manifest now ships 44 maps across 5 campaign chapters. `DEV_LEVELS` (38 entries) is sandbox-only: each entry carries a `devOnly` reason, and `tests/levels/test_dev_levels_policy.js` enforces that. Do **not** add new JS zones/levels without a JSON map. See `docs/architecture/level-pipeline.md`.
-- `pinball-zone.js`, `plinko-zone.js`, `helix-zone.js` (and `createSpiralZone` in `zones/methods/track-creation.js`) pass `rotY` as a **roll**. This was preserved exactly during the `quatFromEuler` → `quatFromYawPitchRoll` migration, but it looks unintended; revisit when those levels are ported to v2.
+- `pinball-zone.js`, `plinko-zone.js`, `helix-zone.js` (and `createSpiralZone` in `zones/methods/track-creation.ts`) pass `rotY` as a **roll**. This was preserved exactly during the `quatFromEuler` → `quatFromYawPitchRoll` migration, but it looks unintended; revisit when those levels are ported to v2.
 - Held-key movement is a raw impulse that isn't scaled by mass, so light marbles accelerate much harder. Recorded level `solution`s are tied to the reference marble (`classic_red`).
 - `docs/backups/` (including the `_backup_*` files and `orphan-react-stack/`) is intentionally archived and excluded from `tsconfig.json` — not dead weight to clean up, already correctly documented in AGENTS.md's "Non-obvious gotchas".
-- `npm run lint` and `npm run typecheck` were re-verified clean as of this check (2026-09-26) — the doc's claim still holds. `typecheck` covers the composed systems (`src/game/systems/*.ts`), `wasm-bridge.js`, `src/webgpu/**`, and `src/gpu-chores/**`; JS is only checked where a file has `// @ts-check` (see `docs/architecture/language-strategy.md`).
+- `npm run lint` and `npm run typecheck` are clean (2026-11-21). `typecheck` is strict (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `erasableSyntaxOnly`) and covers all of `src/` plus `scripts/level-lab.mjs`; JS is checked only where a file has `// @ts-check`, and every `src/` file now does or is `.ts`. `npm run typecheck:coverage` (CI) fails if typed files / typed LOC share drop or suppressions grow — run `node scripts/ts-coverage.mjs --update` after raising coverage. Map/marble/sound types are generated from `assets/schemas/*.json` (`npm run gen:schema-types`; `validate:assets` checks they are fresh). See `docs/architecture/language-strategy.md`.
+- The entry chunk sits at ~2700 KB against the 2710 KB budget (`scripts/bundle-budget.json`). Typed-only class fields must be `declare foo: T` (otherwise ES2022 emits them as field initialisers, which grows the bundle and changes construction order).
 - `backend/core/app_storage_manager.py` is the single copy of the legacy monolithic storage module (the byte-identical `backend/shared/hf/` duplicate was removed 2026-09-26; nothing imported either). The live API is `backend/storage/` (`uvicorn storage.main:app`).
 - The WebGPU boot probe (`src/webgpu/boot-probe.js`, run from `InitCore.init()` before Filament loads) is **not** a hard requirement: on failure Filament still boots on WebGL2, `window.webgpuProbe.ok === false`, `window.rendererFallbackReason` is set, and particles/gpu-chores run on the CPU. The probe requests a descriptor sized to the particle + chores working set, matches the WebGL `powerPreference`, and allows one device recovery after a loss. `?renderer=simple` is a dev/e2e-only flag. See `docs/WEBGPU_BOOT_PROBE.md` and `docs/RENDERER_FALLBACK.md`.
 
