@@ -49,5 +49,32 @@
     "bronzeTime": 90,
     "parTime": 35
   },
-  "collectiblesTotal": 0
+  "collectiblesTotal": 0,
+  "solution": {
+    "inputs": [
+      { "frames": 14, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 35, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 19, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 29, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 84, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 180 },
+      { "frames": 61, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["jump"], "yawDeg": 0 },
+      { "frames": 8, "keys": [], "yawDeg": 0 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 0 },
+      { "frames": 29, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 180 },
+      { "frames": 2, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 180 },
+      { "frames": 1, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 180 },
+      { "frames": 2, "keys": [], "yawDeg": 180 },
+      { "frames": 1, "keys": ["forward"], "yawDeg": 180 },
+      { "frames": 2, "keys": [], "yawDeg": 180 }
+    ],
+    "par": 4.93
+  }
 }

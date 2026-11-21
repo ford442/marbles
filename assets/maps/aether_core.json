@@ -98,6 +98,7 @@
       {"frames": 54, "keys": [], "yawDeg": 130},
       {"frames": 1, "keys": ["forward"], "yawDeg": 0},
       {"frames": 36, "keys": [], "yawDeg": 110}
-    ]
+    ],
+    "par": 15.32
   }
 }

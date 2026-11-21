@@ -1,6 +1,7 @@
 // @ts-check
 import { audio } from '../audio.js';
 import { getMarblePhysics, FORCE_BATCH_THRESHOLD, PhysicsBatchBuffers } from '../wasm-bridge.js';
+import { moveImpulsePerStep } from '../game/movement-model.js';
 
 /** @typedef {import('../types/mixin-host.ts').GameMixinHost} GameMixinHost */
 
@@ -59,13 +60,13 @@ export class GameLoopFrameInput {
                     this.camRadius += (this.targetCamRadius - this.camRadius) * 0.1
                     this.camHeight += (this.targetCamHeight - this.camHeight) * 0.1
                 } else if (this.cameraMode === 'follow' || this.cameraMode === 'action' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown' || this.cameraMode === 'cinematic' || this.cameraMode === 'side-scroller' || this.cameraMode === 'drone') {
-                    let impulseStrength = 0.5 * step
-                    if (this.activeEffects.speed && Date.now() < this.activeEffects.speed) {
-                        impulseStrength *= 2.0
-                    }
-        
                     if (this.playerMarble) {
                         const rigidBody = this.playerMarble.rigidBody
+                        const movementModel = /** @type {any} */ (this.currentLevel)?.movementModel
+                        let impulseStrength = moveImpulsePerStep(movementModel, movementModel === 2 ? rigidBody.mass() : NaN) * step
+                        if (this.activeEffects.speed && Date.now() < this.activeEffects.speed) {
+                            impulseStrength *= 2.0
+                        }
         
                         let forwardX = Math.sin(this.aimYaw)
                         let forwardZ = Math.cos(this.aimYaw)

@@ -8,6 +8,7 @@
  *   npm run level:lab -- assets/maps/quantum_core.json --greedy   # try the greedy autopilot, print its inputs
  *   npm run level:lab -- assets/maps/x.json --waypoints '[[0,40],[8,52],[0,70]]' [--speed 9] [--yaw-step 5] [--hysteresis 0]
  *                                                                 # drive waypoints, print a solution
+ *   add --write to a --greedy / --waypoints run to store the solution (inputs + par) in the map file
  *   npm run level:lab -- --dev neon_drift_run                     # a DEV_LEVELS entry instead of a file
  */
 import fs from 'node:fs';
@@ -24,6 +25,7 @@ const devIdx = args.indexOf('--dev');
 
 let level;
 let label;
+let file;
 if (devIdx >= 0) {
     const { DEV_LEVELS } = await import('../src/levels.ts');
     const id = args[devIdx + 1];
@@ -31,13 +33,49 @@ if (devIdx >= 0) {
     level = { ...DEV_LEVELS[id], source: 'code' };
     label = `DEV_LEVELS.${id}`;
 } else {
-    const file = args.find((a) => !a.startsWith('--'));
+    file = args.find((a) => !a.startsWith('--') && a.endsWith('.json'));
     if (!file) {
         console.error('usage: level-lab.mjs <map.json> [--trace] [--greedy] | --dev <id>');
         process.exit(2);
     }
     level = mapToRuntimeLevel(JSON.parse(fs.readFileSync(file, 'utf8')), 'json');
     label = path.relative(process.cwd(), file);
+}
+
+/**
+ * Replace (or append) the top-level "solution" block in a map's source text,
+ * leaving the rest of the hand-formatted file untouched.
+ */
+function spliceSolution(text, solution) {
+    const prev = JSON.parse(text).solution;
+    const sol = { ...(prev?.tolerance !== undefined ? { tolerance: prev.tolerance } : {}), ...solution };
+    const lines = sol.inputs.map((seg) => `      ${JSON.stringify(seg).replace(/^\{/, '{ ').replace(/\}$/, ' }').replace(/":/g, '": ').replace(/,"/g, ', "')}`);
+    const extra = Object.entries(sol).filter(([k]) => k !== 'inputs').map(([k, v]) => `,\n    "${k}": ${JSON.stringify(v)}`).join('');
+    const block = `"solution": {\n    "inputs": [\n${lines.join(',\n')}\n    ]${extra}\n  }`;
+    const start = text.search(/\n {2}"solution"\s*:/);
+    if (start >= 0) {
+        const open = text.indexOf('{', start);
+        let depth = 0;
+        let end = open;
+        for (; end < text.length; end++) {
+            if (text[end] === '{') depth++;
+            else if (text[end] === '}' && --depth === 0) break;
+        }
+        return `${text.slice(0, start)}\n  ${block}${text.slice(end + 1)}`;
+    }
+    const close = text.lastIndexOf('}');
+    return `${text.slice(0, close).trimEnd()},\n  ${block}\n}\n`;
+}
+
+/** A recordable solution: inputs plus the replay time as `par` (drift-checked by the harness). */
+function record(res) {
+    const solution = { inputs: res.inputs, par: Number(res.timeSec.toFixed(2)) };
+    if (flag('--write') && file) {
+        // Keep any hand-tuned medals tolerance; replace inputs + par.
+        fs.writeFileSync(file, spliceSolution(fs.readFileSync(file, 'utf8'), solution));
+        console.log(`  wrote solution to ${file}`);
+    }
+    return solution;
 }
 
 const fmt = (p) => `(${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)})`;
@@ -76,7 +114,7 @@ if (level.solution) {
 if (flag('--greedy')) {
     const res = greedySolve(await buildHeadlessLevel(level), level);
     console.log(res.reached
-        ? `✓ greedy autopilot reached the goal in ${res.timeSec.toFixed(2)} s:\n${JSON.stringify({ inputs: res.inputs })}`
+        ? `✓ greedy autopilot reached the goal in ${res.timeSec.toFixed(2)} s:\n${JSON.stringify(record(res))}`
         : '✗ greedy autopilot did not reach the goal');
 }
 
@@ -90,7 +128,7 @@ if (wpIdx >= 0) {
         waypoints, ...Object.fromEntries(Object.entries(opts).filter(([, v]) => v !== undefined)),
     });
     console.log(res.reached
-        ? `✓ autopilot reached the goal in ${res.timeSec.toFixed(2)} s (${res.inputs.length} segments):\n"solution": ${JSON.stringify({ inputs: res.inputs })}`
+        ? `✓ autopilot reached the goal in ${res.timeSec.toFixed(2)} s (${res.inputs.length} segments):\n"solution": ${JSON.stringify(record(res))}`
         : `✗ autopilot stopped at ${fmt(res.final)} on leg ${res.leg} after ${res.timeSec.toFixed(2)} s`);
 }
 
