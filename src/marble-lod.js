@@ -1,5 +1,47 @@
-import { createSphere } from './sphere.js';
-import { applyMarbleMaterialPreset } from './marble-material-tier.js';
+// @ts-check
+import { createSphere } from './sphere.ts';
+import { applyMarbleMaterialPreset } from './marble-material-tier.ts';
+
+/** @typedef {import('./types/filament.ts').FilamentHandle} FilamentHandle */
+/** @typedef {import('./types/engine-context.ts').EngineContext} EngineContext */
+/** @typedef {import('./types/frame-host.ts').FrameState} FrameState */
+/** @typedef {import('./types/game-state.ts').MarbleObject} MarbleObject */
+/** @typedef {import('./types/geometry.ts').Vec3} Vec3 */
+
+/** Filament buffers for one procedural sphere. */
+/** @typedef {{ vb: FilamentHandle, ib: FilamentHandle, indexCount: number, vertexCount: number }} SphereMeshBuffers */
+
+/**
+ * One shared marble LOD mesh (`game.marbleLodMeshes[level]`).
+ * @typedef {SphereMeshBuffers & { level: number, castShadows: boolean, widthSegments: number, heightSegments: number }} MarbleLodMesh
+ */
+
+/** Marbles per LOD tier this frame (also mirrored to `window.lodStats`). */
+/** @typedef {{ lod0: number, lod1: number, lod2: number }} LodStats */
+
+/** What building a sphere mesh needs: the Filament module / engine and the renderer kind. */
+/**
+ * @typedef {Pick<EngineContext, 'engine' | 'Filament'>
+ *     & Pick<import('./game/systems/physics-world.ts').PhysicsWorldHost, 'rendererType'>} SphereMeshHost
+ */
+
+/**
+ * `buildMarbleLodMeshes` also publishes the meshes and repoints the legacy
+ * sphere buffers at LOD1.
+ * @typedef {SphereMeshHost & Pick<EngineContext, 'sphereVb' | 'sphereIb'>
+ *     & { marbleLodMeshes?: MarbleLodMesh[] | null }} MarbleLodMeshHost
+ */
+
+/**
+ * The game members `MarbleLodManager` reads each frame (marbles, camera pose /
+ * FOV, viewport, quality) plus what `applyMarbleMaterialPreset` needs after a
+ * mesh swap.
+ * @typedef {MarbleLodMeshHost
+ *     & import('./marble-material-tier.ts').MaterialTierHost
+ *     & Pick<FrameState, 'marbles' | 'playerMarble' | '_cameraState' | 'activeFov' | 'currentFov'>
+ *     & Pick<import('./types/game-state.ts').GameState, 'canvas'>
+ *     & Pick<import('./types/settings.ts').SettingsContext, 'settings'>} MarbleLodHost
+ */
 
 /** Distance thresholds (meters) — aligned with docs/MARBLE_RENDERING_GUIDE.md */
 export const LOD_DISTANCE = {
@@ -14,12 +56,29 @@ export const LOD0_MIN_SCREEN_PX = 28;
 /** Dynamic culling show distance — never assign LOD0 beyond this. */
 export const LOD0_MAX_CAMERA_DIST = 180;
 
+/** @type {ReadonlyArray<{ widthSegments: number, heightSegments: number, castShadows: boolean }>} */
 const LOD_SPECS = [
     { widthSegments: 48, heightSegments: 24, castShadows: true },
     { widthSegments: 16, heightSegments: 8, castShadows: true },
     { widthSegments: 8, heightSegments: 4, castShadows: false },
 ];
 
+/**
+ * @template T
+ * @param {Array<T | null>} list
+ * @returns {list is T[]}
+ */
+function allPresent(list) {
+    return !list.some(item => !item);
+}
+
+/**
+ * @param {SphereMeshHost} game
+ * @param {number} radius
+ * @param {number} widthSegments
+ * @param {number} heightSegments
+ * @returns {SphereMeshBuffers | null} null on the simple-WebGL renderer or before Filament is up.
+ */
 export function createFilamentSphereMesh(game, radius, widthSegments, heightSegments) {
     if (!game.engine || !game.Filament || game.rendererType === 'simple-webgl') {
         return null;
@@ -55,6 +114,10 @@ export function createFilamentSphereMesh(game, radius, widthSegments, heightSegm
 /**
  * Build shared LOD0/1/2 sphere meshes once at init.
  * Sets game.marbleLodMeshes and points sphereVb/sphereIb at LOD1 for legacy callers.
+ *
+ * @param {MarbleLodMeshHost} game
+ * @param {number} [radius]
+ * @returns {MarbleLodMesh[] | null}
  */
 export function buildMarbleLodMeshes(game, radius = 0.5) {
     if (game.rendererType === 'simple-webgl') {
@@ -74,17 +137,28 @@ export function buildMarbleLodMeshes(game, radius = 0.5) {
         };
     });
 
-    if (meshes.some(mesh => !mesh)) {
+    if (!allPresent(meshes)) {
         game.marbleLodMeshes = null;
         return null;
     }
 
     game.marbleLodMeshes = meshes;
-    game.sphereVb = meshes[1].vb;
-    game.sphereIb = meshes[1].ib;
+    // LOD_SPECS has three entries, so meshes[1] always exists here.
+    const lod1 = meshes[1];
+    if (lod1) {
+        game.sphereVb = lod1.vb;
+        game.sphereIb = lod1.ib;
+    }
     return meshes;
 }
 
+/**
+ * @param {number} worldRadius
+ * @param {number} distance
+ * @param {number} viewportHeight px
+ * @param {number} fovDeg vertical FOV
+ * @returns {number} Projected radius in px (0 for degenerate input).
+ */
 export function projectScreenRadiusPx(worldRadius, distance, viewportHeight, fovDeg) {
     if (!distance || distance <= 0.001 || !viewportHeight || !fovDeg) return 0;
     const halfFovRad = (fovDeg * 0.5) * (Math.PI / 180);
@@ -92,6 +166,12 @@ export function projectScreenRadiusPx(worldRadius, distance, viewportHeight, fov
     return projected;
 }
 
+/**
+ * @param {number | null | undefined} currentLod
+ * @param {number} distance
+ * @param {number} [hysteresis]
+ * @returns {number} 0, 1 or 2.
+ */
 export function resolveLodWithHysteresis(currentLod, distance, hysteresis = LOD_HYSTERESIS_M) {
     let lod = Math.max(0, Math.min(currentLod ?? 1, 2));
 
@@ -117,7 +197,21 @@ export function resolveLodWithHysteresis(currentLod, distance, hysteresis = LOD_
 }
 
 /**
+ * @typedef {object} LodSelectionInput
+ * @property {number} [currentLod]
+ * @property {number} distance
+ * @property {number} [screenRadiusPx]
+ * @property {boolean} [isPlayer]
+ * @property {boolean} [allowLod0]
+ * @property {string | null} [quality]
+ * @property {number | null} [forceMaxLod]
+ */
+
+/**
  * Pure LOD tier selection — quality caps, player priority, screen-size boost.
+ *
+ * @param {LodSelectionInput} input
+ * @returns {number} 0, 1 or 2.
  */
 export function selectMarbleLodLevel({
     currentLod = 1,
@@ -155,24 +249,34 @@ export function selectMarbleLodLevel({
 }
 
 export class MarbleLodManager {
+    /** @param {MarbleLodHost} game */
     constructor(game) {
         this.game = game;
+        /** @type {LodStats} */
         this.stats = { lod0: 0, lod1: 0, lod2: 0 };
+        /** @type {number | null} Cap set by the quality governor (null = none). */
         this.forceMaxLod = null;
+        /** @type {Set<MarbleObject>} Non-player marbles allowed LOD0 on 'medium'. */
         this._nearestLod0Keys = new Set();
         window.lodStats = this.stats;
     }
 
+    /** @returns {void} */
     reset() {
         this.stats = { lod0: 0, lod1: 0, lod2: 0 };
         this._nearestLod0Keys = new Set();
         window.lodStats = this.stats;
     }
 
+    /**
+     * @param {number | null | undefined} level
+     * @returns {void}
+     */
     setForceMaxLod(level) {
         this.forceMaxLod = level === null || level === undefined ? null : Math.max(0, Math.min(level, 2));
     }
 
+    /** @returns {Vec3} Camera eye, else the player, else the origin. */
     getReferencePosition() {
         const camera = this.game._cameraState?.eye;
         if (camera) return { x: camera[0], y: camera[1], z: camera[2] };
@@ -181,6 +285,12 @@ export class MarbleLodManager {
         return { x: 0, y: 0, z: 0 };
     }
 
+    /**
+     * @param {readonly MarbleObject[] | null | undefined} marbles
+     * @param {Vec3 | null | undefined} playerPos
+     * @param {number} [limit]
+     * @returns {Set<MarbleObject>}
+     */
     computeNearestLod0Candidates(marbles, playerPos, limit = 3) {
         if (!playerPos || !marbles?.length) return new Set();
 
@@ -199,6 +309,12 @@ export class MarbleLodManager {
         return new Set(ranked.map(entry => entry.marble));
     }
 
+    /**
+     * @param {MarbleObject} marble
+     * @param {number} cameraDist
+     * @param {boolean} culledHidden
+     * @returns {boolean}
+     */
     canUseLod0(marble, cameraDist, culledHidden) {
         if (marble.geometry === 'cube') return false;
         if (culledHidden) return false;
@@ -206,13 +322,19 @@ export class MarbleLodManager {
         return true;
     }
 
+    /**
+     * @param {MarbleObject} marble
+     * @param {number} lodLevel
+     * @returns {boolean} true when the renderable's geometry was swapped.
+     */
     swapMarbleGeometry(marble, lodLevel) {
         const game = this.game;
         if (game.rendererType === 'simple-webgl' || marble.geometry === 'cube') return false;
-        if (!game.marbleLodMeshes?.[lodLevel]) return false;
+        const lodMeshes = game.marbleLodMeshes;
+        const mesh = lodMeshes?.[lodLevel];
+        if (!lodMeshes || !mesh) return false;
         if (marble.lodLevel === lodLevel) return false;
 
-        const mesh = game.marbleLodMeshes[lodLevel];
         const rcm = game.engine.getRenderableManager();
         const inst = marble._renderInst ?? rcm.getInstance(marble.entity);
         if (!inst) return false;
@@ -234,12 +356,16 @@ export class MarbleLodManager {
         marble.lodLevel = lodLevel;
         marble._renderInst = inst;
         marble._renderEntity = marble.entity;
-        marble.lodMeshes = game.marbleLodMeshes;
+        marble.lodMeshes = lodMeshes;
         marble._lastLodSwitchAt = performance.now();
         applyMarbleMaterialPreset(marble, game);
         return true;
     }
 
+    /**
+     * @param {number} [now]
+     * @returns {void}
+     */
     updateMarbles(now = performance.now()) {
         const game = this.game;
         if (!game.marbles?.length || !game.marbleLodMeshes || game.rendererType === 'simple-webgl') {
@@ -290,7 +416,9 @@ export class MarbleLodManager {
                 forceMaxLod: this.forceMaxLod,
             });
 
-            stats[`lod${desiredLod}`] += 1;
+            if (desiredLod === 0) stats.lod0 += 1;
+            else if (desiredLod === 1) stats.lod1 += 1;
+            else stats.lod2 += 1;
 
             const canSwitch = !marble._lastLodSwitchAt || (now - marble._lastLodSwitchAt) >= LOD_SWITCH_THROTTLE_MS;
             if (canSwitch && desiredLod !== marble.lodLevel) {

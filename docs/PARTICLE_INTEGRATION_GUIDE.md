@@ -136,7 +136,7 @@ if (this.playerMarble && this.particleSystem) {
 }
 
 // ===== EXAMPLE 2: Impact particles on collision =====
-// In game-loop-sync-methods.js processCollisionEvents():
+// In game/systems/marble-registry.js processCollisionEvents():
 function onCollision(event) {
     const collisionPos = event.position || { x: 0, y: 0, z: 0 };
     const force = event.force || 1.0;

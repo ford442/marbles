@@ -46,7 +46,7 @@ All **44 manifest** levels (`assets/manifest.json`) are worker-eligible, in camp
 | Any of the above with `?physicsWorker=0`, no COOP/COEP, or low-power | Main | Frame loop's `FixedStepClock` (`sync.js`) |
 | Editor, non-manifest dev level | Main | Frame loop's `FixedStepClock` |
 
-`HostSim.tick` ([`host-sim.js`](../../src/game/network/host-sim.js)) never calls `world.step()`. Once per frame it turns each player's latest 30 Hz input snapshot into impulses on the network marbles (`applyInputToMarble`, scaled by `simDt·60` like local held-key movement and **not** by mass) and broadcasts poses. On the worker those impulses ride the command ring and are applied on the worker's next tick; on the main-thread backend they land before the loop's `physicsWorld.step()` calls. There is no host-side accumulator. (Before this change the host stepped once from the frame loop and again from `HostSim` every 16 ms.) Client prediction (`client-prediction.js`) keeps its soft blend / hard snap; rewind is out of scope.
+`HostSim.tick` ([`host-sim.ts`](../../src/game/network/host-sim.ts)) never calls `world.step()`. Once per frame it turns each player's latest 30 Hz input snapshot into impulses on the network marbles (`applyInputToMarble`, scaled by `simDt·60` like local held-key movement and **not** by mass) and broadcasts poses. On the worker those impulses ride the command ring and are applied on the worker's next tick; on the main-thread backend they land before the loop's `physicsWorld.step()` calls. There is no host-side accumulator. (Before this change the host stepped once from the frame loop and again from `HostSim` every 16 ms.) Client prediction (`client-prediction.ts`) keeps its soft blend / hard snap; rewind is out of scope.
 
 ## SharedArrayBuffer layout
 

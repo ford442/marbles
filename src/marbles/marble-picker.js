@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Marble picker in the level menu (`#marble-picker`, src/ui/templates/menus.html).
  *
@@ -9,6 +10,7 @@
 import { marblesInfo } from '../marbles_data.js';
 import { isMarbleUnlocked } from './selection.js';
 
+/** @type {Readonly<Partial<Record<import('./catalog-format.js').MarbleInfo['unlock'], string>>>} */
 const LOCK_HINT = {
     campaign: 'earn gold medals in the campaign',
     premium: 'premium',
@@ -70,6 +72,7 @@ export function renderMarblePicker(registry, root) {
  * Render now and again every time the level menu is shown (unlocks change
  * after a run). No-op without a DOM or the picker mount point.
  * @param {Parameters<typeof renderMarblePicker>[0]} registry
+ * @returns {MutationObserver | null}
  */
 export function mountMarblePicker(registry) {
     if (typeof document === 'undefined') return null;

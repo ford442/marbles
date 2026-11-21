@@ -61,10 +61,10 @@ Host ──start──► Relay ──starting(startAtMs, seed)──► aligned
 |-----------|------|
 | Protocol + validation | `src/game/network/protocol.js` (v2) |
 | Input bitfield | `src/game/network/input-bitfield.js` |
-| Ability sync | `src/game/network/ability-sync.js` |
-| Desync HUD | `src/game/network/desync-indicator.js` |
-| WebSocket client | `src/game/network/network-client.js` |
-| Remote marble rendering | `src/game/network/remote-players.js` |
+| Ability sync | `src/game/network/ability-sync.ts` |
+| Desync HUD | `src/game/network/desync-indicator.ts` |
+| WebSocket client | `src/game/network/network-client.ts` |
+| Remote marble rendering | `src/game/network/remote-players.ts` |
 | Lobby UI | `src/init/multiplayer-menu.js` |
 | Relay server | `server/relay.mjs` |
 
@@ -105,7 +105,7 @@ On `start`, relay sets `startAtMs = Date.now() + 3200` (3×800 ms + GO). All cli
 
 - Caster runs full local ability (Rapier projectiles, cooldowns).
 - On success, client emits `ability` message.
-- Peers spawn **visual-only** FX via `ability-sync.js`.
+- Peers spawn **visual-only** FX via `ability-sync.ts`.
 - Explosions / black holes apply forces to the **local `playerMarble` only** (party feel without shared physics).
 - Deterministic cosmetic variance: `seed ^ hash(playerId, seq)`.
 

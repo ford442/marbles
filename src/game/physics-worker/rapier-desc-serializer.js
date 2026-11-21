@@ -1,3 +1,4 @@
+// @ts-check
 import RAPIER from '@dimforge/rapier3d-compat';
 
 const BODY_TYPE = {
@@ -17,7 +18,13 @@ const SHAPE_TYPE = {
 };
 
 /**
+ * Body half of a worker descriptor; `createCollider` adds the `collider`.
+ * @typedef {Omit<import('./protocol.js').WorkerBodyDescriptor, 'collider'>} SerializedBodyDesc
+ */
+
+/**
  * @param {import('@dimforge/rapier3d-compat').RigidBodyDesc} bodyDesc
+ * @returns {SerializedBodyDesc}
  */
 export function serializeRigidBodyDesc(bodyDesc) {
     const status = bodyDesc.status;
@@ -45,29 +52,39 @@ export function serializeRigidBodyDesc(bodyDesc) {
 
 /**
  * Shape fields for a descriptor. Throws on shapes the worker cannot rebuild
- * rather than silently substituting a box.
- * @param {any} shape
+ * rather than silently substituting a box. Each case narrows `shape` to the
+ * Rapier class its `type` code identifies.
+ * @param {import('@dimforge/rapier3d-compat').Shape | null | undefined} shape
+ * @returns {import('./protocol.js').ColliderShapeDescriptor}
  */
 function serializeShape(shape) {
     switch (shape?.type) {
         case SHAPE_TYPE.ball:
-            return { type: 'ball', radius: shape.radius };
+            return { type: 'ball', radius: /** @type {RAPIER.Ball} */ (shape).radius };
         case SHAPE_TYPE.cuboid: {
-            const h = shape.halfExtents;
+            const h = /** @type {RAPIER.Cuboid} */ (shape).halfExtents;
             return { type: 'cuboid', halfExtents: [h.x, h.y, h.z] };
         }
-        case SHAPE_TYPE.capsule:
-            return { type: 'capsule', halfHeight: shape.halfHeight, radius: shape.radius };
-        case SHAPE_TYPE.cylinder:
-            return { type: 'cylinder', halfHeight: shape.halfHeight, radius: shape.radius };
-        case SHAPE_TYPE.cone:
-            return { type: 'cone', halfHeight: shape.halfHeight, radius: shape.radius };
-        case SHAPE_TYPE.trimesh:
+        case SHAPE_TYPE.capsule: {
+            const c = /** @type {RAPIER.Capsule} */ (shape);
+            return { type: 'capsule', halfHeight: c.halfHeight, radius: c.radius };
+        }
+        case SHAPE_TYPE.cylinder: {
+            const c = /** @type {RAPIER.Cylinder} */ (shape);
+            return { type: 'cylinder', halfHeight: c.halfHeight, radius: c.radius };
+        }
+        case SHAPE_TYPE.cone: {
+            const c = /** @type {RAPIER.Cone} */ (shape);
+            return { type: 'cone', halfHeight: c.halfHeight, radius: c.radius };
+        }
+        case SHAPE_TYPE.trimesh: {
+            const m = /** @type {RAPIER.TriMesh} */ (shape);
             return {
                 type: 'trimesh',
-                vertices: Array.from(shape.vertices),
-                indices: Array.from(shape.indices),
+                vertices: Array.from(m.vertices),
+                indices: Array.from(m.indices),
             };
+        }
         default:
             throw new Error(
                 `[PhysicsWorker] cannot serialize collider shape type ${shape?.type}; `
@@ -78,9 +95,10 @@ function serializeShape(shape) {
 
 /**
  * @param {import('@dimforge/rapier3d-compat').ColliderDesc} colliderDesc
+ * @returns {import('./protocol.js').ColliderDescriptor}
  */
 export function serializeColliderDesc(colliderDesc) {
-    /** @type {Record<string, unknown>} */
+    /** @type {import('./protocol.js').ColliderDescriptor} */
     const collider = {
         ...serializeShape(colliderDesc.shape),
         friction: colliderDesc.friction,

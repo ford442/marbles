@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * gpu-chores — CPU (WASM/JS) job implementations.
  *
@@ -25,7 +26,7 @@ export function reduceIdentity(reduce) {
 /**
  * Reduce a Float32 range to a single scalar.
  *
- * @param {Float32Array | number[]} data
+ * @param {Float32Array | readonly number[]} data
  * @param {ReduceOp} [reduce]
  * @param {number} [count] Elements to consider (defaults to the whole input).
  * @returns {number}
@@ -34,7 +35,8 @@ export function reduceF32Cpu(data, reduce = 'sum', count = data.length) {
     const n = Math.max(0, Math.min(count, data.length));
     let acc = reduceIdentity(reduce);
     for (let i = 0; i < n; i++) {
-        const v = data[i];
+        // i < n <= data.length: always defined.
+        const v = data[i] ?? 0;
         if (reduce === 'min') acc = v < acc ? v : acc;
         else if (reduce === 'max') acc = v > acc ? v : acc;
         else acc += v;
@@ -48,7 +50,7 @@ export function reduceF32Cpu(data, reduce = 'sum', count = data.length) {
  *
  * Mirrors the GPU prefix-sum kernel, which is also stable by construction.
  *
- * @param {Float32Array | number[]} flags
+ * @param {Float32Array | readonly number[]} flags
  * @param {number} [threshold]
  * @param {number} [count]
  * @param {Uint32Array} [out] Optional reusable output (must hold `count` entries).
@@ -59,7 +61,9 @@ export function compactF32Cpu(flags, threshold = 0.5, count = flags.length, out 
     const indices = out && out.length >= n ? out : new Uint32Array(n);
     let written = 0;
     for (let i = 0; i < n; i++) {
-        if (flags[i] >= threshold) {
+        // i < n <= flags.length, so `flag` is defined; the guard only narrows.
+        const flag = flags[i];
+        if (flag !== undefined && flag >= threshold) {
             indices[written] = i;
             written += 1;
         }
@@ -73,7 +77,7 @@ export function compactF32Cpu(flags, threshold = 0.5, count = flags.length, out 
  * Exposed on its own because the GPU compact is built from the same scan, and
  * pinning the scan directly makes parity failures far easier to localise.
  *
- * @param {Float32Array | number[]} flags
+ * @param {Float32Array | readonly number[]} flags
  * @param {number} [threshold]
  * @param {number} [count]
  * @returns {{ offsets: Uint32Array, total: number }}
@@ -84,7 +88,8 @@ export function prefixSumCpu(flags, threshold = 0.5, count = flags.length) {
     let running = 0;
     for (let i = 0; i < n; i++) {
         offsets[i] = running;
-        if (flags[i] >= threshold) running += 1;
+        const flag = flags[i];
+        if (flag !== undefined && flag >= threshold) running += 1;
     }
     return { offsets, total: running };
 }
@@ -95,7 +100,7 @@ export function prefixSumCpu(flags, threshold = 0.5, count = flags.length) {
  * Routes through the MarblePhysics WASM bridge when the native module is live;
  * the bridge's JS fallback is the same arithmetic, so results do not drift.
  *
- * @param {Float32Array | number[]} points Packed xyz triples.
+ * @param {Float32Array | readonly number[]} points Packed xyz triples.
  * @param {ArrayLike<number>} origin
  * @param {{ squared?: boolean, out?: Float32Array }} [options]
  * @returns {Float32Array}
@@ -111,18 +116,19 @@ export function batchedDistanceCpu(points, origin, options = {}) {
     if (isWasmActive()) {
         const physics = getMarblePhysics();
         const fn = squared ? physics.vec3DistanceSq : physics.vec3Distance;
+        // n = floor(points.length / 3), so b + 2 < points.length below.
         for (let i = 0; i < n; i++) {
             const b = i * 3;
-            out[i] = fn(ox, oy, oz, points[b], points[b + 1], points[b + 2]);
+            out[i] = fn(ox, oy, oz, points[b] ?? 0, points[b + 1] ?? 0, points[b + 2] ?? 0);
         }
         return out;
     }
 
     for (let i = 0; i < n; i++) {
         const b = i * 3;
-        const dx = points[b] - ox;
-        const dy = points[b + 1] - oy;
-        const dz = points[b + 2] - oz;
+        const dx = (points[b] ?? 0) - ox;
+        const dy = (points[b + 1] ?? 0) - oy;
+        const dz = (points[b + 2] ?? 0) - oz;
         const d2 = dx * dx + dy * dy + dz * dz;
         out[i] = squared ? d2 : Math.sqrt(d2);
     }

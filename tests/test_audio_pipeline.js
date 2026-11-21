@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
-import { resolveCollisionSound } from '../src/audio/collision-matrix.js';
-import { soundProperties } from '../src/audio/sound-bank.js';
-import { VoicePool } from '../src/audio/voice-pool.js';
+import { resolveCollisionSound } from '../src/audio/collision-matrix.ts';
+import { soundProperties } from '../src/audio/sound-bank.ts';
+import { VoicePool } from '../src/audio/voice-pool.ts';
 import { MarbleAudio, audio } from '../src/audio.js';
-import { RollingSoundManager, ROLLING_MATERIAL_PARAMS } from '../src/audio/rolling-sound.js';
-import { SURFACE_MATERIAL_SYNTH_PARAMS, synthesizeSurfaceHit } from '../src/audio/surface-synth.js';
-import { synthesizeClink } from '../src/audio/procedural-sfx.js';
-import { generateSyntheticImpulseResponse } from '../src/audio/impulse-response.js';
-import { ReverbZoneManager } from '../src/audio/reverb-zones.js';
+import { RollingSoundManager, ROLLING_MATERIAL_PARAMS } from '../src/audio/rolling-sound.ts';
+import { SURFACE_MATERIAL_SYNTH_PARAMS, synthesizeSurfaceHit } from '../src/audio/surface-synth.ts';
+import { synthesizeClink } from '../src/audio/procedural-sfx.ts';
+import { generateSyntheticImpulseResponse } from '../src/audio/impulse-response.ts';
+import { ReverbZoneManager } from '../src/audio/reverb-zones.ts';
 
 /** Minimal fake AudioContext for exercising oscillator/filter-based synthesis and recording what pitch they were given. */
 function makeSynthMockContext() {

@@ -1,15 +1,68 @@
+// @ts-check
 import { getLevel } from '../levels/catalog.js';
 import { preloadZoneModules } from '../zone-setup/registry.js';
 import { runWebGPUStressBurst } from '../webgpu/index.js';
 import { audio } from '../audio.js';
 import { loadLevelBehaviors } from '../game/level-behaviors/index.js';
 import { activatePhysicsBackendForLevel } from '../game/systems/physics-backend.ts';
+import { requireElement } from '../ui/dom.ts';
 
+/** @typedef {import('../types/engine-context.ts').EngineContext} EngineContext */
+/** @typedef {import('../types/frame-host.ts').FrameState} FrameState */
+/** @typedef {import('../types/frame-host.ts').FrameExtras} FrameExtras */
+/** @typedef {import('../game/systems/level-loader.ts').LevelLoader} LevelLoader */
+/** @typedef {import('../game/systems/level-loader.ts').LevelStartOptions} LevelStartOptions */
+/** @typedef {import('../game/systems/physics-backend.ts').PhysicsBackendHost} PhysicsBackendHost */
+/** @typedef {import('../game/systems/input-system.ts').InputSystemHost} InputSystemHost */
+/** @typedef {import('../game-logic/level-complete.ts').GameLogicLevelCompleteScratch} GameLogicLevelCompleteScratch */
+/** @typedef {import('../zone-setup/core.ts').ZoneSetupCore} ZoneSetupCore */
+/** @typedef {import('../zone-setup/environment.ts').ZoneSetupEnvironment} ZoneSetupEnvironment */
+/** @typedef {import('../zones/methods/visuals.ts').ZoneVisuals} ZoneVisuals */
+/** @typedef {import('./level-menu.ts').InitLevelMenu} InitLevelMenu */
+/** @typedef {import('./multiplayer-menu.ts').MultiplayerContext} MultiplayerContext */
+/** @typedef {import('./touch-init.ts').TouchControlsContext} TouchControlsContext */
+
+/**
+ * What `InitLevelLoader` uses on the game, plus the hosts of the physics
+ * backend, level behaviors and WebGPU stress burst it hands the game to.
+ * @typedef {GameLogicLevelCompleteScratch
+ *     & Pick<EngineContext,
+ *         | 'Filament' | 'engine' | 'scene' | 'material' | 'vb' | 'ib' | 'sphereVb' | 'sphereIb'
+ *         | 'cullingManager' | 'trackLodManager' | 'marbleLodManager' | 'effectPool' | 'levelEffectBudget'
+ *         | 'perfMonitor' | 'cloudClient'>
+ *     & Pick<FrameState,
+ *         | 'currentLevel' | 'goalDefinitions' | 'checkpointDefinitions' | 'score' | 'combo' | 'comboTimer'
+ *         | 'levelComplete' | 'levelStartTime' | 'cameraMode' | 'camAngle' | 'camHeight' | 'camRadius'
+ *         | 'staticEntities' | 'marbles' | 'ghostEntity' | 'ghostMaterialInstance' | 'ghostLightEntity'
+ *         | 'levelNameEl' | 'scoreEl' | 'comboEl' | 'combobarContainerEl' | 'combobarEl' | 'timerEl'>
+ *     & Pick<FrameExtras, 'abilitySystem' | 'ghostReplay' | 'collectiblesCollected'>
+ *     & Pick<InputSystemHost, 'isPaused'>
+ *     & { levelLoader: Pick<LevelLoader, 'getLevel' | 'physicsWorld' | 'marbleRegistry'> }
+ *     & Pick<LevelLoader, 'clearLevel'>
+ *     & Pick<ZoneSetupCore, 'createZone'>
+ *     & Pick<ZoneSetupEnvironment, 'applyColorGradingForEnvironment'>
+ *     & Pick<ZoneVisuals, 'setNightMode' | 'setEnvironment'>
+ *     & Pick<InitLevelMenu, 'transitionCameraToGameplay'>
+ *     & Partial<Pick<MultiplayerContext, 'network'>>
+ *     & TouchControlsContext
+ *     & PhysicsBackendHost
+ *     & Parameters<typeof loadLevelBehaviors>[0]
+ *     & Parameters<typeof runWebGPUStressBurst>[0]
+ * } InitLevelLoaderHost
+ */
+
+/** Level load + entry sequence (`LevelRuntime`); `LevelLoader` delegates here. */
 export class InitLevelLoader {
+    /** @param {InitLevelLoaderHost} game */
     constructor(game) {
         this.game = game;
     }
 
+    /**
+     * @param {string} levelId
+     * @param {LevelStartOptions} [options]
+     * @returns {Promise<false | undefined>} `false` when called before boot finished.
+     */
     async loadLevel(levelId, options = {}) {
         if (!window.__FILAMENT_FULLY_READY__ || !this.game.engine || !this.game.vb || !this.game.ib) {
             console.error('loadLevel called too early');
@@ -20,7 +73,7 @@ export class InitLevelLoader {
         const level = this.game.levelLoader.getLevel(levelId)
         if (!level) {
             console.error(`[LEVEL] Level ${levelId} not found!`)
-            return
+            return undefined
         }
 
         this.game.clearLevel()
@@ -38,12 +91,12 @@ export class InitLevelLoader {
         this.game.ghostReplay?.resetPlayback()
 
         this.game.currentLevel = levelId
-        this.game.levelNameEl.textContent = level.name
+        if (this.game.levelNameEl) this.game.levelNameEl.textContent = level.name
         this.game.goalDefinitions = level.goals
         this.game.checkpointDefinitions = level.checkpoints || []
         this.game.abilitySystem?.applyLevelMask(level.abilities)
         this.game.score = 0
-        this.game.scoreEl.textContent = 'Score: 0'
+        if (this.game.scoreEl) this.game.scoreEl.textContent = 'Score: 0'
         this.game.combo = 1
         this.game.comboTimer = 0
         if (this.game.comboEl) {
@@ -103,7 +156,7 @@ export class InitLevelLoader {
         console.log(`[LEVEL] Created ${this.game.marbles.length} marbles`)
 
         if (this.game.ghostReplay?.loadPlayback(levelId)) {
-            this.game.createGhostMarble()
+            this.createGhostMarble()
         }
 
         if (this.game._pendingLeaderboardGhostId && this.game.cloudClient) {
@@ -111,7 +164,7 @@ export class InitLevelLoader {
             this.game._pendingLeaderboardGhostId = null
             const loaded = await this.game.cloudClient.loadLeaderboardGhost(ghostId, levelId)
             if (loaded && this.game.ghostReplay?.playbackFrames?.length) {
-                this.game.createGhostMarble()
+                this.createGhostMarble()
             }
         }
 
@@ -122,18 +175,23 @@ export class InitLevelLoader {
         runWebGPUStressBurst(this.game)
 
         // Start the level entry sequence
-        await this.game.startLevelSequence(options)
+        await this.startLevelSequence(options)
+        return undefined
     }
 
+    /**
+     * @param {LevelStartOptions} [options]
+     * @returns {Promise<void>}
+     */
     async startLevelSequence(options = {}) {
         const { startAtMs, seed } = options;
         if (seed !== undefined && this.game.network) {
             this.game.network.raceSeed = seed;
         }
-        const gameUI = document.getElementById('ui')
-        const fadeOverlay = document.getElementById('fade-overlay')
-        const countdownOverlay = document.getElementById('countdown-overlay')
-        const countdownDisplay = document.getElementById('countdown-display')
+        const gameUI = requireElement('ui')
+        const fadeOverlay = requireElement('fade-overlay')
+        const countdownOverlay = requireElement('countdown-overlay')
+        const countdownDisplay = requireElement('countdown-display')
 
         // Show game UI but keep it hidden until countdown finishes
         gameUI.style.display = 'block'
@@ -143,7 +201,7 @@ export class InitLevelLoader {
         fadeOverlay.classList.remove('fade-out')
         
         // Wait a moment at black screen
-        await this.game.delay(200)
+        await this.delay(200)
 
         // Fade out from black
         fadeOverlay.classList.add('fade-out')
@@ -161,7 +219,7 @@ export class InitLevelLoader {
             ];
 
             for (const step of steps) {
-                await this.game._waitUntil(step.at);
+                await this._waitUntil(step.at);
                 countdownDisplay.className = step.className;
                 countdownDisplay.textContent = step.text;
                 void countdownDisplay.offsetWidth;
@@ -177,7 +235,7 @@ export class InitLevelLoader {
                 countdownDisplay.textContent = num;
                 void countdownDisplay.offsetWidth;
                 countdownDisplay.className = 'countdown-number';
-                await this.game.delay(800);
+                await this.delay(800);
             }
 
             countdownDisplay.className = 'countdown-go';
@@ -190,18 +248,18 @@ export class InitLevelLoader {
 
         // Animate HUD elements in
         gameUI.style.opacity = '1'
-        this.game.animateHUDIn()
+        this.animateHUDIn()
 
         // Hide countdown after GO
-        await this.game.delay(600)
+        await this.delay(600)
         countdownOverlay.classList.remove('active')
 
         // Transition camera smoothly
         await this.game.transitionCameraToGameplay(1000)
     }
 
+    /** @returns {void} */
     animateHUDIn() {
-        const gameUI = document.getElementById('ui')
         const hudAbilities = document.getElementById('hud-abilities')
         
         // Add slide animations to HUD sections
@@ -228,27 +286,37 @@ export class InitLevelLoader {
         }
     }
 
+    /**
+     * @param {number} ms
+     * @returns {Promise<void>}
+     */
     delay(ms) {
         return new Promise(resolve => setTimeout(resolve, ms))
     }
 
+    /**
+     * @param {number} targetMs epoch ms
+     * @returns {Promise<void>}
+     */
     _waitUntil(targetMs) {
         const delayMs = targetMs - Date.now();
         if (delayMs <= 0) return Promise.resolve();
-        return this.game.delay(delayMs);
+        return this.delay(delayMs);
     }
 
+    /** @returns {void} */
     createGhostMarble() {
         this.game.ghostEntity = this.game.Filament.EntityManager.get().create()
-        this.game.ghostMaterialInstance = this.game.material.createInstance()
-        this.game.ghostMaterialInstance.setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, [0.0, 1.0, 1.0])
-        this.game.ghostMaterialInstance.setFloatParameter('roughness', 0.2)
+        const ghostMaterialInstance = this.game.material.createInstance()
+        this.game.ghostMaterialInstance = ghostMaterialInstance
+        ghostMaterialInstance.setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, [0.0, 1.0, 1.0])
+        ghostMaterialInstance.setFloatParameter('roughness', 0.2)
 
         // Ghost is slightly larger/smaller or translucent, but we use existing material limits
         // We render it similarly to a regular marble
         this.game.Filament.RenderableManager.Builder(1)
             .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
-            .material(0, this.game.ghostMaterialInstance)
+            .material(0, ghostMaterialInstance)
             .geometry(0, this.game.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.game.sphereVb, this.game.sphereIb)
             .receiveShadows(true)
             .castShadows(true)

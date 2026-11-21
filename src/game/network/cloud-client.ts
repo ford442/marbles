@@ -9,7 +9,8 @@ export type { CampaignSave };
 
 export interface GhostPayload {
     levelId: string;
-    blob: unknown;
+    /** Replay share string (`GhostReplay` encoding); the backend stores it as text. */
+    blob: string;
     bestTime: number;
 }
 
@@ -18,7 +19,7 @@ export type QueueItem =
     | { op: 'ghost'; payload: GhostPayload; ts: number };
 
 export interface GhostReplayClient {
-    importReplay: (blob: unknown, levelId: string) => void;
+    importReplay: (shareString: string, expectedLevelId?: string) => unknown;
     loadPlayback: (levelId: string) => void;
 }
 
@@ -265,7 +266,7 @@ export function scheduleProgressSync(campaignSave: Partial<CampaignSave> | null 
     });
 }
 
-export function scheduleGhostUpload(levelId: string, blob: unknown, bestTime: number): void {
+export function scheduleGhostUpload(levelId: string, blob: string, bestTime: number): void {
     if (!isCloudEnabled() || !blob || !levelId) return;
     enqueue({ op: 'ghost', payload: { levelId, blob, bestTime }, ts: Date.now() });
 }
@@ -315,7 +316,8 @@ export async function fetchAndImportGhost(
     try {
         const res = await apiFetch(`/v1/marbles/ghosts/${ghostId}`);
         if (!res?.ok) return false;
-        const data = (await res.json()) as { blob: unknown; levelId: string };
+        const data = (await res.json()) as { blob?: unknown; levelId?: string };
+        if (typeof data.blob !== 'string') return false;
         ghostReplay.importReplay(data.blob, levelId || data.levelId);
         return true;
     } catch (e) {
@@ -346,7 +348,7 @@ export class CloudClient {
         scheduleProgressSync(campaignSave);
     }
 
-    scheduleGhostUpload(levelId: string, blob: unknown, bestTime: number): void {
+    scheduleGhostUpload(levelId: string, blob: string, bestTime: number): void {
         scheduleGhostUpload(levelId, blob, bestTime);
     }
 

@@ -1,4 +1,13 @@
+// @ts-check
 import { serializeColliderDesc, serializeRigidBodyDesc } from './rapier-desc-serializer.js';
+
+/** @typedef {import('../../types/geometry.ts').Vec3} Vec3 */
+/** @typedef {import('../../types/geometry.ts').Quat} Quat */
+
+/**
+ * Last published snapshot frozen into a removed proxy (`_snapshotForTombstone`).
+ * @typedef {{ translation: Vec3, rotation: Quat, linvel: Vec3, angvel: Vec3, mass: number, type: number }} ProxyTombstone
+ */
 
 /**
  * Rapier-shaped facade backed by SharedArrayBuffer + command ring. Reads
@@ -18,7 +27,7 @@ export function createProxyRigidBody(backend, bodyIndex) {
         handle: bodyIndex,
         _bodyIndex: bodyIndex,
         _backend: backend,
-        /** @type {null | { translation: any, rotation: any, linvel: any, angvel: any, mass: number, type: number }} */
+        /** @type {null | ProxyTombstone} */
         _tombstone: null,
         translation() {
             return proxy._tombstone ? { ...proxy._tombstone.translation } : backend.getTranslation(bodyIndex);
@@ -44,33 +53,43 @@ export function createProxyRigidBody(backend, bodyIndex) {
         gravityScale() {
             return backend.getGravityScale(bodyIndex);
         },
+        /** @param {boolean} enabled */
         enableCcd(enabled) {
             if (current()) backend.queueSetCcd(bodyIndex, enabled);
         },
+        /** @param {Vec3} force */
         applyImpulse(force, wake = true) {
             if (current()) backend.queueImpulse(bodyIndex, force, wake);
         },
+        /** @param {Vec3} torque */
         applyTorqueImpulse(torque, wake = true) {
             if (current()) backend.queueTorque(bodyIndex, torque, wake);
         },
+        /** @param {Vec3} v */
         setLinvel(v, wake = true) {
             if (current()) backend.queueSetLinvel(bodyIndex, v, wake);
         },
+        /** @param {Vec3} v */
         setAngvel(v, wake = true) {
             if (current()) backend.queueSetAngvel(bodyIndex, v, wake);
         },
+        /** @param {number} scale */
         setGravityScale(scale, wake = true) {
             if (current()) backend.queueSetGravityScale(bodyIndex, scale, wake);
         },
+        /** @param {Vec3} t */
         setNextKinematicTranslation(t) {
             if (current()) backend.queueKinematicTranslation(bodyIndex, t);
         },
+        /** @param {Quat} r */
         setNextKinematicRotation(r) {
             if (current()) backend.queueKinematicRotation(bodyIndex, r);
         },
+        /** @param {Vec3} t */
         setTranslation(t, wake = true) {
             if (current()) backend.queueSetTranslation(bodyIndex, t, wake);
         },
+        /** @param {Quat} r */
         setRotation(r, wake = true) {
             if (current()) backend.queueSetRotation(bodyIndex, r, wake);
         },
@@ -79,6 +98,8 @@ export function createProxyRigidBody(backend, bodyIndex) {
     return proxy;
 }
 
+/** @typedef {ReturnType<typeof createProxyRigidBody>} ProxyRigidBody */
+
 /**
  * @param {import('../systems/physics-backend.ts').WorkerPhysicsBackend} backend
  */
@@ -86,18 +107,24 @@ export function createProxyWorld(backend) {
     // Ray queries go through `game.physicsQueries`, which routes to
     // `backend.castRay`; the proxy world deliberately has no `castRay`.
     return {
+        /** @param {Parameters<typeof backend.removeRigidBody>[0]} body */
         removeRigidBody(body) {
             backend.removeRigidBody(body);
         },
         step() {
             // Worker loop owns simulation; main thread only drains commands via backend.step().
         },
+        /** @param {import('@dimforge/rapier3d-compat').RigidBodyDesc} bodyDesc */
         createRigidBody(bodyDesc) {
             const bodyIndex = backend.reserveBodyIndex();
             const partial = serializeRigidBodyDesc(bodyDesc);
             backend._pendingBodies.set(bodyIndex, partial);
             return createProxyRigidBody(backend, bodyIndex);
         },
+        /**
+         * @param {import('@dimforge/rapier3d-compat').ColliderDesc} colliderDesc
+         * @param {ProxyRigidBody | null | undefined} body
+         */
         createCollider(colliderDesc, body) {
             const bodyIndex = body?.handle ?? body?._bodyIndex;
             if (bodyIndex == null) {

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { ParticleSystem } from '../src/particle-system.js';
+import { ParticleSystem } from '../src/particle-system.ts';
 
 function makeFakeBackend(maxParticles = 8192) {
     return {

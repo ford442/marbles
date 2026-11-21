@@ -1,3 +1,4 @@
+// @ts-check
 export const DEFAULT_SSAO_INTENSITY = 1.0
 export const DEFAULT_MSAA_SAMPLE_COUNT = 4
 
@@ -7,8 +8,84 @@ import { resolveMobileInitQuality } from './platform/mobile-presets.js'
 export const DEFAULT_GRAPHICS_QUALITY = 'medium'
 
 /**
+ * @typedef {{ isMobile: boolean, prefersLowPower: boolean }} PlatformProfile
+ */
+
+/**
+ * WebGL2 context attributes passed to Filament's `Engine.create(canvas, options)`
+ * (and to `canvas.getContext('webgl2', ...)` by the simple debug renderer).
+ * `majorVersion` / `minorVersion` are Filament-specific; the rest are standard
+ * `WebGLContextAttributes`.
+ *
+ * @typedef {object} WebGLContextOptions
+ * @property {number} majorVersion
+ * @property {number} minorVersion
+ * @property {boolean} depth
+ * @property {boolean} alpha
+ * @property {boolean} antialias
+ * @property {boolean} preserveDrawingBuffer
+ * @property {boolean} failIfMajorPerformanceCaveat
+ * @property {boolean} xrCompatible
+ * @property {boolean} desynchronized
+ * @property {WebGLPowerPreference} powerPreference
+ */
+
+/**
+ * Feature flags for the post-processing pipeline at one quality tier.
+ * @typedef {object} PostFxQualityFlags
+ * @property {boolean} taaEnabled
+ * @property {boolean} heavyFxEnabled
+ * @property {boolean} motionBlurEnabled
+ * @property {boolean} ssrEnabled
+ * @property {boolean} vignetteEnabled
+ * @property {boolean} dofEnabled
+ */
+
+/**
+ * Filament `View.setShadowOptions` fields (hints only on high / ultra).
+ * @typedef {object} ShadowOptions
+ * @property {number} mapSize
+ * @property {number} cascades
+ * @property {number} constantBias
+ * @property {number} normalBias
+ * @property {boolean} stable
+ * @property {boolean} screenSpaceContactShadows
+ * @property {number} [shadowNearHint]
+ * @property {number} [shadowFarHint]
+ * @property {number} [polygonOffsetConstant]
+ * @property {number} [polygonOffsetSlope]
+ * @property {number} [stepCount]
+ */
+
+/**
+ * Filament `View.setVsmShadowOptions` fields.
+ * @typedef {object} VsmShadowOptions
+ * @property {number} anisotropy
+ * @property {boolean} mipmapping
+ * @property {number} msaaSamples
+ * @property {boolean} highPrecision
+ * @property {number} minVarianceScale
+ * @property {number} lightBleedReduction
+ */
+
+/**
+ * Filament `View.setSoftShadowOptions` fields.
+ * @typedef {object} SoftShadowOptions
+ * @property {number} penumbraScale
+ * @property {number} penumbraRatioScale
+ */
+
+/**
+ * @typedef {object} ShadowQualityConfig
+ * @property {ShadowOptions} shadowOptions
+ * @property {VsmShadowOptions | null} vsmOptions
+ * @property {SoftShadowOptions | null} softOptions
+ */
+
+/**
  * Read persisted graphics quality from localStorage (mirrors init/settings.js key).
  * Used before `loadSettings()` runs so WebGL context matches saved tier.
+ * @param {string} [fallback]
  * @returns {string}
  */
 export function resolveGraphicsQualityForInit(fallback = DEFAULT_GRAPHICS_QUALITY) {
@@ -20,7 +97,7 @@ export function resolveGraphicsQualityForInit(fallback = DEFAULT_GRAPHICS_QUALIT
         if (!saved) {
             return detectPlatformProfile().isMobile ? resolveMobileInitQuality() : fallback
         }
-        const parsed = JSON.parse(saved)
+        const parsed = /** @type {{ graphics?: { quality?: string } } | null} */ (JSON.parse(saved))
         return parsed?.graphics?.quality || fallback
     } catch {
         return fallback
@@ -29,7 +106,7 @@ export function resolveGraphicsQualityForInit(fallback = DEFAULT_GRAPHICS_QUALIT
 
 /**
  * Lightweight platform hints for context attribute selection.
- * @returns {{ isMobile: boolean, prefersLowPower: boolean }}
+ * @returns {PlatformProfile}
  */
 export function detectPlatformProfile() {
     if (typeof navigator === 'undefined') {
@@ -42,6 +119,7 @@ export function detectPlatformProfile() {
     return { isMobile, prefersLowPower }
 }
 
+/** @returns {boolean} */
 function isSafariBrowser() {
     if (typeof navigator === 'undefined') return false
     const ua = navigator.userAgent || ''
@@ -56,13 +134,13 @@ function isSafariBrowser() {
  *
  * @param {string} [quality='medium']
  * @param {{ isMobile?: boolean, prefersLowPower?: boolean }} [platform]
- * @returns {Record<string, unknown>}
+ * @returns {WebGLContextOptions}
  */
 export function getWebGLContextOptions(quality = DEFAULT_GRAPHICS_QUALITY, platform = detectPlatformProfile()) {
     const tier = (quality || DEFAULT_GRAPHICS_QUALITY).toLowerCase()
     const mobile = platform.isMobile ?? detectPlatformProfile().isMobile
 
-    /** @type {Record<string, unknown>} */
+    /** @type {WebGLContextOptions} */
     const options = {
         majorVersion: 2,
         minorVersion: 0,
@@ -119,6 +197,7 @@ export function toWebGPUPowerPreference(glPowerPreference) {
  * Context options for the simple WebGL2 debug renderer (`?renderer=simple`).
  * Same tier matrix as Filament; keeps `preserveDrawingBuffer` for readback/screenshots.
  * @param {string} [quality]
+ * @returns {WebGLContextOptions}
  */
 export function getSimpleDebugWebGLContextOptions(quality = DEFAULT_GRAPHICS_QUALITY) {
     return {
@@ -127,6 +206,7 @@ export function getSimpleDebugWebGLContextOptions(quality = DEFAULT_GRAPHICS_QUA
     }
 }
 
+/** URL param → context option it overrides. */
 const DEV_GL_PARAM_MAP = {
     glPowerPreference: 'powerPreference',
     glAlpha: 'alpha',
@@ -137,6 +217,10 @@ const DEV_GL_PARAM_MAP = {
     glXrCompatible: 'xrCompatible',
 }
 
+/**
+ * @param {string | null} value
+ * @returns {boolean | undefined}
+ */
 function parseDevBool(value) {
     if (value === '1' || value === 'true') return true
     if (value === '0' || value === 'false') return false
@@ -172,6 +256,7 @@ export function applyDevWebGLContextOverrides(baseOptions) {
 /**
  * Quality-aware WebGL2 options with optional dev URL overrides.
  * @param {{ quality?: string, forSimpleDebug?: boolean }} [config]
+ * @returns {Record<string, unknown>}
  */
 export function resolveWebGLContextOptions(config = {}) {
     const quality = config.quality ?? resolveGraphicsQualityForInit()
@@ -181,6 +266,10 @@ export function resolveWebGLContextOptions(config = {}) {
     return applyDevWebGLContextOverrides(base)
 }
 
+/**
+ * @param {string} [quality]
+ * @returns {PostFxQualityFlags}
+ */
 export function getPostFxQualityFlags(quality = 'medium') {
     const taaEnabled = quality !== 'low'
     const heavyFxEnabled = quality === 'high' || quality === 'ultra'
@@ -206,8 +295,8 @@ export { getBloomQualityConfig, getSsaoQualityConfig, getVignetteConfig, getColo
  * All three objects (shadowOptions, vsmOptions, softOptions) are returned;
  * vsmOptions and softOptions may be null for lower quality tiers.
  *
- * @param {string} quality - 'low' | 'medium' | 'high' | 'ultra'
- * @returns {{ shadowOptions: object, vsmOptions: object|null, softOptions: object|null }}
+ * @param {string} [quality] - 'low' | 'medium' | 'high' | 'ultra'
+ * @returns {ShadowQualityConfig}
  */
 export function getShadowQualityConfig(quality = 'medium') {
     switch (quality) {

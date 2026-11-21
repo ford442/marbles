@@ -1,13 +1,41 @@
+// @ts-check
 /**
  * Runtime quality governor — adapts Filament cost to sustained frame time.
  * Filament path only; simple WebGL renderer is unaffected.
  */
 
 import { downgradeQualityTier } from './level-effect-budget.js';
-import { applyMarbleMaterialPreset, updateMarbleMaterialTiers, MATERIAL_TIER } from './marble-material-tier.js';
+import { applyMarbleMaterialPreset, updateMarbleMaterialTiers, MATERIAL_TIER } from './marble-material-tier.ts';
 
+/** @typedef {import('./types/engine-context.ts').EngineContext} EngineContext */
+/** @typedef {import('./types/settings.ts').RuntimeGraphicsOverrides} RuntimeGraphicsOverrides */
+
+/** @typedef {'HEADROOM' | 'TARGET' | 'STRESS' | 'CRITICAL'} PerfState */
+/** p95 frame-time ceilings (ms) for each state. */
+/** @typedef {{ headroom: number, target: number, stress: number, critical: number }} PerfThresholds */
+
+/**
+ * What the governor reads and drives: settings and the runtime override layer,
+ * the renderer kind, and every subsystem a downshift step touches (plus what
+ * the marble material tiering it re-applies needs).
+ * @typedef {import('./marble-material-tier.ts').MaterialTierHost
+ *     & Pick<import('./types/settings.ts').SettingsContext, 'settings' | '_runtimeGraphicsOverrides'>
+ *     & import('./init/settings.ts').EnvironmentNameContext
+ *     & Pick<EngineContext, 'lightingSystem' | 'volumetricLights' | 'particleSystem' | 'lightingBudget' | 'marbleLodManager'>
+ *     & Pick<import('./game/systems/physics-world.ts').PhysicsWorldHost, 'rendererType'>
+ *     & Pick<import('./zone-setup/environment.ts').ZoneSetupEnvironmentHost, '_iblTexture'>
+ *     & {
+ *         setupEnvironmentLighting?(envName?: string): void,
+ *         applyGraphicsSettings?(): void,
+ *     }} AutoQualityGovernorHost
+ */
+
+/** @typedef {{ frameMs: number }} FrameTimeSample */
+
+/** @type {readonly PerfState[]} */
 export const PERF_STATES = ['HEADROOM', 'TARGET', 'STRESS', 'CRITICAL'];
 
+/** @type {PerfThresholds} */
 const DEFAULT_THRESHOLDS = {
     headroom: 14,
     target: 18,
@@ -15,12 +43,14 @@ const DEFAULT_THRESHOLDS = {
     critical: 33,
 };
 
+/** @type {Readonly<Partial<Record<number, PerfThresholds>>>} */
 const TARGET_FPS_THRESHOLDS = {
     30: { headroom: 28, target: 33, stress: 40, critical: 50 },
     60: DEFAULT_THRESHOLDS,
     120: { headroom: 7, target: 9, stress: 12, critical: 16 },
 };
 
+/** @type {ReadonlyArray<{ step: number, label: string }>} */
 export const DOWNSHIFT_STEPS = [
     { step: 1, label: 'particles ↓' },
     { step: 2, label: 'zone lights ↓' },
@@ -36,6 +66,11 @@ const FRAMES_DOWNSHIFT = 20;
 const FRAMES_UPSHIFT = 300;
 const P95_WINDOW = 120;
 
+/**
+ * @param {number} p95
+ * @param {PerfThresholds} thresholds
+ * @returns {PerfState}
+ */
 function classifyState(p95, thresholds) {
     if (p95 <= thresholds.headroom) return 'HEADROOM';
     if (p95 <= thresholds.target) return 'TARGET';
@@ -43,15 +78,22 @@ function classifyState(p95, thresholds) {
     return 'CRITICAL';
 }
 
+/** @type {Readonly<Record<PerfState, number>>} */
+const STATE_ORDER = { HEADROOM: 0, TARGET: 1, STRESS: 2, CRITICAL: 3 };
+
 export class AutoQualityGovernor {
+    /** @param {AutoQualityGovernorHost} game */
     constructor(game) {
         this.game = game;
         this.enabled = true;
+        /** @type {PerfState} */
         this.state = 'TARGET';
         this.autoQualityStep = 0;
         this.lastStepLabel = '';
         this._stateStreak = 0;
+        /** @type {PerfState} */
         this._pendingState = 'TARGET';
+        /** @type {number | null} User render scale saved while step 7 lowers it. */
         this._savedRenderScale = null;
         this._cubemapWasActive = false;
         if (typeof window !== 'undefined') {
@@ -59,33 +101,42 @@ export class AutoQualityGovernor {
         }
     }
 
+    /** @returns {boolean} */
     isActive() {
         if (this.game.rendererType === 'simple-webgl' || (typeof window !== 'undefined' && window.usingSimpleRenderer)) return false;
         const mode = this.game.settings?.graphics?.performanceMode || 'auto';
         return mode === 'auto' || mode === 'maxPerformance';
     }
 
+    /** @returns {number | 'unlimited'} */
     getTargetFps() {
         const raw = this.game.settings?.graphics?.targetFps;
         if (raw === 'unlimited' || raw === 0) return 'unlimited';
         return Number(raw) || 60;
     }
 
+    /** @returns {PerfThresholds | null} null when the frame rate is uncapped. */
     getThresholds() {
         const target = this.getTargetFps();
         if (target === 'unlimited') return null;
         return TARGET_FPS_THRESHOLDS[target] || DEFAULT_THRESHOLDS;
     }
 
+    /** @returns {number} Quality tiers to drop zone effects by (0–2). */
     getEffectQualityBias() {
         if (this.autoQualityStep >= 1) return Math.min(2, 1 + Math.floor((this.autoQualityStep - 1) / 3));
         return 0;
     }
 
+    /** @returns {RuntimeGraphicsOverrides} */
     getRuntimeOverrides() {
         return this.game._runtimeGraphicsOverrides || {};
     }
 
+    /**
+     * @param {RuntimeGraphicsOverrides} patch
+     * @returns {void}
+     */
     setRuntimeOverrides(patch) {
         this.game._runtimeGraphicsOverrides = {
             ...(this.game._runtimeGraphicsOverrides || {}),
@@ -93,6 +144,7 @@ export class AutoQualityGovernor {
         };
     }
 
+    /** @returns {void} */
     clearRuntimeOverrides() {
         this.game._runtimeGraphicsOverrides = null;
         if (this._savedRenderScale !== null && this.game.settings?.graphics) {
@@ -101,6 +153,7 @@ export class AutoQualityGovernor {
         }
     }
 
+    /** Snapshot for the perf overlay / DevTools. */
     getStatus() {
         return {
             enabled: this.isActive(),
@@ -114,6 +167,7 @@ export class AutoQualityGovernor {
         };
     }
 
+    /** @returns {void} */
     reset() {
         this.state = 'TARGET';
         this._stateStreak = 0;
@@ -121,6 +175,10 @@ export class AutoQualityGovernor {
         this.setStep(0, 'reset');
     }
 
+    /**
+     * @param {number} p95FrameMs Rolling p95 frame time (`computeP95`).
+     * @returns {void}
+     */
     tick(p95FrameMs) {
         if (!this.isActive()) {
             if (this.autoQualityStep !== 0) this.setStep(0, 'governor off');
@@ -159,22 +217,35 @@ export class AutoQualityGovernor {
         }
     }
 
+    /**
+     * @param {PerfState} nextState
+     * @returns {boolean}
+     */
     _isWorsening(nextState) {
-        const order = { HEADROOM: 0, TARGET: 1, STRESS: 2, CRITICAL: 3 };
-        return order[nextState] > order[this.state];
+        return STATE_ORDER[nextState] > STATE_ORDER[this.state];
     }
 
+    /**
+     * @param {number} step Clamped to 0..DOWNSHIFT_STEPS.length.
+     * @param {string} [reason]
+     * @returns {void}
+     */
     setStep(step, reason = '') {
         step = Math.max(0, Math.min(DOWNSHIFT_STEPS.length, step));
         if (step === this.autoQualityStep) return;
 
         const prev = this.autoQualityStep;
         this.autoQualityStep = step;
-        this.lastStepLabel = step > 0 ? DOWNSHIFT_STEPS[step - 1].label : '';
+        this.lastStepLabel = step > 0 ? DOWNSHIFT_STEPS[step - 1]?.label ?? '' : '';
         this._applyStep(prev, step);
         console.info(`[AUTO-Q] step ${step}${this.lastStepLabel ? ` — ${this.lastStepLabel}` : ''}${reason ? ` (${reason})` : ''}`);
     }
 
+    /**
+     * @param {number} prev
+     * @param {number} step
+     * @returns {void}
+     */
     _applyStep(prev, step) {
         const game = this.game;
         if (step === 0) {
@@ -191,6 +262,7 @@ export class AutoQualityGovernor {
             return;
         }
 
+        /** @type {RuntimeGraphicsOverrides} */
         const overrides = {};
         if (step >= 1) {
             game.particleSystem?.setStressScale(0.55);
@@ -230,7 +302,10 @@ export class AutoQualityGovernor {
                 this._savedRenderScale = game.settings.graphics.renderScale ?? 1.0;
             }
             const base = this._savedRenderScale ?? 1.0;
-            game.settings.graphics.renderScale = Math.min(base, Math.max(0.65, base * 0.85));
+            // Guarded: settings are unset until boot finishes (this used to throw).
+            if (game.settings?.graphics) {
+                game.settings.graphics.renderScale = Math.min(base, Math.max(0.65, base * 0.85));
+            }
         }
         if (step >= 8) {
             overrides.forceShOnlyIbl = true;
@@ -255,13 +330,18 @@ export class AutoQualityGovernor {
         game.applyGraphicsSettings?.()
     }
 
-    /** Rolling p95 from perf samples (~2 s window). */
+    /**
+     * Rolling p95 from perf samples (~2 s window).
+     * @param {readonly FrameTimeSample[]} samples
+     * @returns {number}
+     */
     static computeP95(samples) {
         const window = samples.slice(-P95_WINDOW).filter(s => s.frameMs > 0);
         if (!window.length) return 16.67;
         const sorted = window.map(s => s.frameMs).sort((a, b) => a - b);
         const idx = Math.min(sorted.length - 1, Math.floor((sorted.length - 1) * 0.95));
-        return sorted[idx];
+        // 0 <= idx < sorted.length (non-empty), so the fallback never fires.
+        return sorted[idx] ?? 16.67;
     }
 }
 

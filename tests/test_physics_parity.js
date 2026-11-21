@@ -20,10 +20,10 @@ import { InputSystem } from '../src/game/systems/input-system.ts';
 import { AbilitySystem } from '../src/game/systems/ability-system.ts';
 import { HOVER_DRAIN_PER_SEC, HOVER_GRAVITY_FACTOR, HOVER_LIFT_ACCEL } from '../src/abilities/hover.js';
 import { MarbleRegistry } from '../src/game/systems/marble-registry.js';
-import { AbilityBlink } from '../src/abilities/blink.js';
-import { AbilityDoubleJump } from '../src/abilities/double-jump.js';
-import { AbilityMissiles } from '../src/abilities/missiles.js';
-import { ZoneSetupGrapple } from '../src/zone-setup/grapple.js';
+import { AbilityBlink } from '../src/abilities/blink.ts';
+import { AbilityDoubleJump } from '../src/abilities/double-jump.ts';
+import { AbilityMissiles } from '../src/abilities/missiles.ts';
+import { ZoneSetupGrapple } from '../src/zone-setup/grapple.ts';
 
 await RAPIER.init();
 

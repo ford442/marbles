@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * gpu-chores — kill switch, session-mode detection and breadcrumbs.
  *
@@ -11,13 +12,30 @@ export const CHORES_WORKGROUP_SIZE = 64;
 /** Maximum breadcrumbs retained in the ring buffer. */
 export const BREADCRUMB_LIMIT = 64;
 
-/** @type {Array<{ t: number, tag: string, detail: Record<string, unknown> }>} */
+/** @typedef {{ t: number, tag: string, detail: Record<string, unknown> }} ChoresBreadcrumb */
+
+/**
+ * The globals chores read and write. Browser globals (`location`, the flags the
+ * renderer sets on `window`) are optional so the module also runs in Node.
+ * @typedef {object} ChoresRuntimeGlobals
+ * @property {{ search?: string }} [location]
+ * @property {boolean} [MARBLES_DISABLE_GPU_COMPUTE]
+ * @property {boolean} [usingSimpleRenderer]
+ * @property {boolean} [webgpuParticlesReady]
+ * @property {ChoresBreadcrumb[]} [gpuChoresBreadcrumbs]
+ */
+
+/** @type {ChoresBreadcrumb[]} */
 const breadcrumbs = [];
 
+/** @returns {ChoresRuntimeGlobals} */
 function runtimeGlobal() {
-    return globalThis;
+    // Boundary: `globalThis` is `window` in the browser and bare in Node; these
+    // members are the only ones chores touch.
+    return /** @type {ChoresRuntimeGlobals} */ (globalThis);
 }
 
+/** @returns {URLSearchParams} */
 function searchParams() {
     const search = runtimeGlobal().location?.search ?? '';
     return new URLSearchParams(search);
@@ -62,6 +80,7 @@ export function isWebGLOnlySession() {
  *
  * @param {string} tag
  * @param {Record<string, unknown>} [detail]
+ * @returns {void}
  */
 export function breadcrumb(tag, detail = {}) {
     const entry = { t: Date.now(), tag, detail };
@@ -71,13 +90,16 @@ export function breadcrumb(tag, detail = {}) {
 }
 
 /**
- * @returns {Array<{ t: number, tag: string, detail: Record<string, unknown> }>}
+ * @returns {ChoresBreadcrumb[]}
  */
 export function getBreadcrumbs() {
     return breadcrumbs.slice();
 }
 
-/** @internal Test helper. */
+/**
+ * @internal Test helper.
+ * @returns {void}
+ */
 export function clearBreadcrumbs() {
     breadcrumbs.length = 0;
     runtimeGlobal().gpuChoresBreadcrumbs = breadcrumbs;

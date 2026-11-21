@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// @ts-check
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference -- a script .d.ts (no @types/node) can only be included this way
+/// <reference path="./level-lab.node.d.ts" />
 /**
  * Level lab: build a map headlessly and report what the CI harness
  * (tests/levels/) will say about it, plus tools for authoring a `solution`.
@@ -12,23 +15,33 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import process from 'node:process';
 import { mapToRuntimeLevel } from '../src/levels/map-normalize.js';
 import { buildHeadlessLevel, stepHeadless, spawnReferenceMarble } from '../src/game/headless/headless-level.js';
 import {
     staticChecks, reachabilitySmoke, replaySolution, solutionProblems, greedySolve, autopilotSolve,
 } from '../src/game/headless/level-checks.js';
 
+/** @typedef {import('../src/types/map.ts').MapDefinition} MapDefinition */
+/** @typedef {import('../src/types/map.ts').RuntimeLevel} RuntimeLevel */
+/** @typedef {{ x: number, y: number, z: number }} XYZ */
+
 const args = process.argv.slice(2);
+/** @param {string} name */
 const flag = (name) => args.includes(name);
 const devIdx = args.indexOf('--dev');
 
+/** @type {RuntimeLevel} */
 let level;
+/** @type {string} */
 let label;
 if (devIdx >= 0) {
     const { DEV_LEVELS } = await import('../src/levels.ts');
-    const id = args[devIdx + 1];
-    if (!DEV_LEVELS[id]) throw new Error(`no DEV_LEVELS entry "${id}"`);
-    level = { ...DEV_LEVELS[id], source: 'code' };
+    const id = args[devIdx + 1] ?? '';
+    const devLevel = DEV_LEVELS[id];
+    if (!devLevel) throw new Error(`no DEV_LEVELS entry "${id}"`);
+    // Same assertion as catalog.js loadDevLevels: DEV_LEVELS entries are code-authored runtime levels.
+    level = /** @type {RuntimeLevel} */ ({ ...devLevel, source: 'code' });
     label = `DEV_LEVELS.${id}`;
 } else {
     const file = args.find((a) => !a.startsWith('--'));
@@ -36,10 +49,13 @@ if (devIdx >= 0) {
         console.error('usage: level-lab.mjs <map.json> [--trace] [--greedy] | --dev <id>');
         process.exit(2);
     }
-    level = mapToRuntimeLevel(JSON.parse(fs.readFileSync(file, 'utf8')), 'json');
+    // Boundary: an authored map file; the checks below are what report on it.
+    const mapDef = /** @type {MapDefinition} */ (JSON.parse(fs.readFileSync(file, 'utf8')));
+    level = mapToRuntimeLevel(mapDef, 'json');
     label = path.relative(process.cwd(), file);
 }
 
+/** @param {XYZ} p */
 const fmt = (p) => `(${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)})`;
 console.log(`▶ ${label} — ${level.name}`);
 
@@ -61,13 +77,15 @@ if (level.solution) {
 
     if (flag('--trace')) {
         // Per-segment end positions (replays each prefix of the track).
-        const traced = { ...level, solution: level.solution };
+        const inputs = level.solution.inputs;
         let total = 0;
-        for (let n = 1; n <= traced.solution.inputs.length; n++) {
-            const partial = { ...traced, solution: { inputs: traced.solution.inputs.slice(0, n) } };
+        for (let n = 1; n <= inputs.length; n++) {
+            const seg = inputs[n - 1];
+            if (!seg) break;
+            const partial = { ...level, solution: { inputs: inputs.slice(0, n) } };
             const r = replaySolution(await buildHeadlessLevel(level), partial);
-            total += traced.solution.inputs[n - 1].frames;
-            console.log(`  seg ${n} (${traced.solution.inputs[n - 1].keys?.join('+') || 'coast'} @${traced.solution.inputs[n - 1].yawDeg ?? 0}°) → ${fmt(r.final)} t=${(total / 60).toFixed(2)}${r.reached ? ' GOAL' : ''}${r.fell ? ' FELL' : ''}`);
+            total += seg.frames;
+            console.log(`  seg ${n} (${seg.keys?.join('+') || 'coast'} @${seg.yawDeg ?? 0}°) → ${fmt(r.final)} t=${(total / 60).toFixed(2)}${r.reached ? ' GOAL' : ''}${r.fell ? ' FELL' : ''}`);
             if (r.reached || r.fell) break;
         }
     }
@@ -83,7 +101,9 @@ if (flag('--greedy')) {
 const wpIdx = args.indexOf('--waypoints');
 if (wpIdx >= 0) {
     // --waypoints '[[0,40],{"at":[8,50],"speed":6},[0,70]]' [--speed 9]
-    const waypoints = JSON.parse(args[wpIdx + 1]);
+    // Boundary: CLI JSON, passed through to autopilotSolve as before.
+    const waypoints = JSON.parse(args[wpIdx + 1] ?? '');
+    /** @param {string} name */
     const num = (name) => { const i = args.indexOf(name); return i >= 0 ? Number(args[i + 1]) : undefined; };
     const opts = { maxSpeed: num('--speed'), yawStepDeg: num('--yaw-step'), hysteresis: num('--hysteresis') };
     const res = autopilotSolve(await buildHeadlessLevel(level), level, {

@@ -3,7 +3,7 @@
  * The one map rule set: `assets/schemas/map-schema.json` compiled with ajv,
  * plus the semantic checks a schema can't express. Shared by
  *   - scripts/validate-assets.cjs (CI),
- *   - src/editor/map-validator.js (editor + workshop import),
+ *   - src/editor/map-validator.ts (editor + workshop import),
  * and mirrored by backend/storage/services/map_validation.py (same schema
  * file via `jsonschema`).
  *
@@ -15,7 +15,7 @@ import { PRIMITIVE_ZONE_TYPES } from './map-normalize.js';
 
 /** @typedef {{ instancePath: string, message?: string, keyword: string, params?: Record<string, unknown> }} AjvError */
 /** @typedef {{ (data: unknown): boolean, errors?: AjvError[] | null }} CompiledValidator */
-/** @typedef {new (opts: Record<string, unknown>) => { compile(schema: object): CompiledValidator }} AjvClass */
+/** @typedef {new (opts: { allErrors: boolean, strict: boolean }) => { compile(schema: object): CompiledValidator }} AjvClass */
 
 /**
  * @param {AjvClass} Ajv  the `ajv` default export (passed in so CJS and ESM callers share this module)
@@ -67,7 +67,7 @@ export function formatAjvErrors(errors) {
 /**
  * Checks beyond schema shape. `zoneTypes` is the registered zone.type set
  * (zone-handlers.json / registry ZONE_TYPES).
- * @param {any} map
+ * @param {unknown} map
  * @param {Iterable<string>} zoneTypes
  * @returns {{ errors: string[], warnings: string[] }}
  */
@@ -77,11 +77,14 @@ export function semanticChecks(map, zoneTypes) {
     const errors = [];
     /** @type {string[]} */
     const warnings = [];
-    const zones = Array.isArray(map?.zones) ? map.zones : [];
-    const version = map?.schemaVersion ?? 1;
+    const m = asRecord(map);
+    const zones = Array.isArray(m.zones) ? m.zones : [];
+    // Number() is the coercion `<` applies, so a malformed version compares as before.
+    const version = Number(m.schemaVersion ?? 1);
 
-    zones.forEach((/** @type {any} */ zone, /** @type {number} */ i) => {
-        const type = zone?.type;
+    zones.forEach((/** @type {unknown} */ z, /** @type {number} */ i) => {
+        const zone = asRecord(z);
+        const type = zone.type;
         if (typeof type !== 'string') return;
         if (!known.has(type)) {
             warnings.push(`zones[${i}]: unknown type "${type}" — no zone handler registered`);
@@ -95,11 +98,20 @@ export function semanticChecks(map, zoneTypes) {
     });
 
     if (version < 2) {
-        if (map?.goal) errors.push('map.goal requires "schemaVersion": 2 (v1 maps use goals[])');
-        if (map?.rivals) errors.push('map.rivals requires "schemaVersion": 2');
+        if (m.goal) errors.push('map.goal requires "schemaVersion": 2 (v1 maps use goals[])');
+        if (m.rivals) errors.push('map.rivals requires "schemaVersion": 2');
     }
-    if (map?.goal && Array.isArray(map?.goals) && map.goals.length > 0) {
+    if (m.goal && Array.isArray(m.goals) && m.goals.length > 0) {
         errors.push('map: set either goal (v2) or goals[], not both');
     }
     return { errors, warnings };
+}
+
+/**
+ * Property access on unvalidated JSON (`x?.prop` semantics: non-objects read as empty).
+ * @param {unknown} v
+ * @returns {Record<string, unknown>}
+ */
+function asRecord(v) {
+    return v !== null && typeof v === 'object' ? /** @type {Record<string, unknown>} */ (v) : {};
 }

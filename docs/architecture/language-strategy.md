@@ -12,7 +12,7 @@ The repo mixes JavaScript mixins, strict TypeScript config (unused on game JS), 
 
 | Layer | Language | Rationale |
 |-------|----------|-----------|
-| Game runtime core | **JavaScript → TypeScript (gradual)** | Phase B composition is done; the composed systems in `src/game/systems/` are `.ts`. Remaining mixin-installed slices (`game-loop/*`, `init/*`, zones) stay JS until touched. |
+| Game runtime core | **JavaScript → TypeScript (gradual)** | Done (Phase D): composed systems and feature slices are `.ts` or `@ts-check` JS; all of `src/` is type-checked. New runtime code is `.ts`. |
 | UI / HUD | **Vanilla HTML + TS** | `index.html` + `src/hud-manager.ts` ship today; no React in `package.json`. |
 | Orphan sequencer / importers | **Archived** | React TSX under `docs/backups/orphan-react-stack/` — not restored without a separate product decision. |
 | Numeric physics helpers | **C++ WASM + JS fallbacks** | `wasm/marble_physics.cpp` for batched kernels only; JS mirrors in `wasm-bridge.js` (`@ts-check`, in `tsconfig.json` `include`). |
@@ -54,67 +54,59 @@ The repo mixes JavaScript mixins, strict TypeScript config (unused on game JS), 
 - Composed subsystems (`PhysicsWorld`, `InputSystem`, `RenderPipeline`, `HudController`, `LevelLoader`, `AbilitySystem`, physics backends). Each declares a narrow `*Host` interface for the slice of the game it touches; Filament handles cross that boundary as `FilamentHandle` / `FilamentModule` (`src/types/filament.ts`).
 - Public APIs consumed by multiple modules.
 
-**Use `.js` + `// @ts-check` + JSDoc when** a file is stable but tied to browser/GPU globals or SharedArrayBuffer views (`wasm-bridge.js`, `webgpu/boot-probe.js`, `webgpu/particle-backend.js`, `game/state/*`, `levels/*`, `abilities/registry.js`, `game/network/protocol.js`). A plain `.js` file is **not** type-checked: `checkJs` is `false`, so JS is checked only when it is in `include` **and** carries `@ts-check`.
+**Use `.js` + `// @ts-check` + JSDoc when** a file is stable but tied to browser/GPU globals or SharedArrayBuffer views (`wasm-bridge.js`, `webgpu/*`, `gpu-chores/*`), is imported by Node tests or the relay under its `.js` name (`game/state/*`, `levels/*`, `game/network/protocol.js`, `pwa/pwa-state.js`), is generated (`marbles_data.js`), or is a zone factory (`src/zones/*.js`, typed `@param {ZoneBuildHost} game`). A plain `.js` file is **not** type-checked: `checkJs` is `false`, so a JS file without `@ts-check` is outside the typed set, and `npm run typecheck:coverage` reports it.
 
-**Keep unchecked `.js` (for now) for:**
+**Every file in `src/` is now typed** (Phase D, Nov 2026): 146 `.ts` files and 136 `@ts-check` `.js` files, 100% of `src/` LOC (`src/types/generated/` excluded from the count).
 
-- Filament-heavy runtime slices: `game-loop/sync.js` (last to migrate) and the other mixin-installed `init/*`, `game-logic/*`, `zone-setup/*` files.
-- Zone factories (`src/zones/*.js`) — migrate per-zone only when touched for other reasons.
-- Numeric hot-loop WebGPU helpers (`webgpu/camera-math.js`, `occlusion.js`, `gpu-chores/cpu-jobs.js`, …): in `include`, but not `@ts-check` yet — `noUncheckedIndexedAccess` makes typed-array indexing noisy, so opt in per file when touched.
-- `index.html` inline scripts (none planned).
+### Compiler settings
+
+`tsconfig.json`: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `erasableSyntaxOnly`, `compilerOptions.types: ["@webgpu/types"]`, and
+
+```json
+"include": ["src/**/*.ts", "src/**/*.js", "scripts/level-lab.mjs"]
+```
+
+`erasableSyntaxOnly` keeps every `.ts` file runnable under Node's `--experimental-strip-types` (tests, level lab): no enums, namespaces or constructor parameter properties, and explicit `.ts` import extensions. Class fields that are only typed — assigned in the constructor, as the original JS did — are written `declare foo: T`, so they are erased instead of being emitted as ES2022 field initialisers (which also kept the entry chunk inside its size budget).
+
+### Coverage ratchet
+
+`npm run typecheck:coverage` (`scripts/ts-coverage.mjs`, run in CI after Typecheck) counts the files in the tsconfig program that are `.ts` or `@ts-check` JS and compares against `scripts/ts-coverage-baseline.json`:
+
+- typed file count and typed LOC share may not drop;
+- `@ts-ignore` / `@ts-expect-error` / `@ts-nocheck` count may not grow (the baseline's 8 are the deliberate negative fixtures in `game/create-runtime.types-test.ts` and similar).
+
+`--list` prints untyped files, `--json` emits machine-readable output, `--update` rewrites the baseline after coverage improves.
+
+### Host types (no mixins)
+
+The game object is assembled from feature slices (`*_SLICES`, see `game/systems/slice-composition.ts`) and composed systems (`game/create-runtime.ts`). Every slice and system declares a narrow `*Host` built from `Pick`s of shared contracts instead of re-declaring fields:
+
+- `types/engine-context.ts` — `EngineContext`: Rapier world, Filament handles, lights, budgets, services.
+- `types/frame-host.ts` — `FrameState` / `FrameHost` for frame slices.
+- `types/zone-host.ts` — `ZoneBuildHost` for zone factories and `zones/methods/*`.
+- `types/settings.ts` — `GameSettings`.
+- `types/game-host.ts` — `GameHost`, the intersection of the composed systems' hosts (what `createRuntime` takes).
+- `types/marbles-game-host.ts` — `MarblesGameHost` = `GameHost` & every directory's `*SlicesHost`; `main.js` builds the object against it.
+
+`game/create-runtime.types-test.ts` fails the typecheck if `createRuntime` stops rejecting a host missing a required field, if any member of `GameHost`, `FrameHost` or `MarblesGameHost` collapses to `never` (two hosts disagree about a field), or if any of them grows an index signature.
+
+### Schema-generated types
+
+`npm run gen:schema-types` (`scripts/gen-schema-types.mjs`, `json-schema-to-typescript`) writes `src/types/generated/{map,marble,sound}-schema.ts` from `assets/schemas/*.json`; `npm run validate:assets` runs it with `--check`, so CI fails on a stale file. `types/map.ts` names parts of the generated `MapSchema` (it declares no authored field itself); `zone-setup/primitives.ts`, the map editor, `levels/map-normalize.js`, workshop import/export and `scripts/level-lab.mjs` all use it. Edit the schema, regenerate, commit both.
 
 **Type-checking rollout:**
 
-| Phase | `include` scope | Status |
-|-------|-----------------|--------|
-| **Pilot** | `src/math.ts`, `types/geometry.ts` | ✅ (the old `math.js` re-export shim has been removed; import `../math.ts` directly) |
+| Phase | Scope | Status |
+|-------|-------|--------|
+| **Pilot** | `src/math.ts`, `types/geometry.ts` | ✅ |
 | **Slice 1** | `src/wasm-bridge.js`, `src/game/state/*.js` | ✅ `@ts-check` + `types/game-state.ts`, `types/wasm-physics.ts` |
 | **Slice 2** | Pure systems → `.ts`: `ability-cooldown`, `trick-scoring`, `campaign-progress`, `replay-codec` | ✅ |
 | **Slice 3** | `levels/catalog.js`, `levels/campaign.js`, `types/map.ts`, `abilities/registry.js` | ✅ |
 | **Slice 4** | `physics-world-pure`, `physics-backend-pure`, `input-target-lock`, network protocol validators | ✅ |
-| **Slice 5** (Sept 2026) | Composed systems → `.ts`: `physics-world`, `input-system`, `render-pipeline`, `level-loader`, `hud-controller`, `ability-system`, `physics-backend`; `game-loop/{helpers,loop}.ts`; `HUDManager` typed against `HudHost`; `@ts-check` on `webgpu/boot-probe.js` and `webgpu/particle-backend.js` (real `GPUDevice`/`GPUCanvasContext` via `@webgpu/types`); `wasm-bridge.js`, `webgpu/**`, `gpu-chores/**` added to `include` | ✅ |
-| **Slice 6** (Oct 2026) | Physics correctness: `physics-queries.ts`, `fixed-step-clock.ts`, `body-impulse.ts`, `types/mixin-host.ts`; `@ts-check` mixins (JSDoc `/** @this {GameMixinHost} */`) on every raycast call site: `abilities/{blink,double-jump,constructs}.js`, `zone-setup/grapple.js`, `game-loop/{camera,effects-tick,frame-input}.js` | ✅ |
-| **Slice 7** (Nov 2026) | Wiring: `types/game-host.ts` (`GameHost` = intersection of the `*Host` interfaces, no index signature) and `game/create-runtime.ts` build the composed systems from it (negative fixture: `game/create-runtime.types-test.ts`). `@ts-check` on `abilities/hover.js` and the frame slices `game-loop/{logic,dynamics-tick,finalize-frame,speed-lines,hud-tick}.js`, typed against `types/frame-host.ts` (`FrameHost`, `HudTickHost`) and `types/world-objects.ts`. | ✅ |
-| **Not yet** | `game-loop/sync.js` (Filament-heavy, migrate last), remaining `game-loop/*` (`camera.js`, `effects-tick.js`, `frame-input.js` and the Slice 7 files are already checked), `src/zones/**`, other `@ts-check`-less JS in `webgpu/` and `gpu-chores/` | Type when touched |
-
-Current `tsconfig.json` `include` (kept in sync with the file — update both together):
-
-```json
-"src/types/**/*.d.ts",
-"src/types/**/*.ts",
-"src/game/**/*.ts",
-"src/game/state/**/*.js",
-"src/game/systems/**/*.js",
-"src/game/network/**/*.js",
-"src/game/physics-worker/**/*.js",
-"src/game/level-behaviors/**/*.js",
-"src/hud-manager.ts",
-"src/material-system.ts",
-"src/levels.ts",
-"src/math.ts",
-"src/levels/catalog.js",
-"src/levels/campaign.js",
-"src/abilities/registry.js",
-"src/abilities/blink.js",
-"src/abilities/double-jump.js",
-"src/abilities/hover.js",
-"src/abilities/constructs.js",
-"src/zone-setup/grapple.js",
-"src/game-loop/**/*.ts",
-"src/game-loop/camera.js",
-"src/game-loop/effects-tick.js",
-"src/game-loop/frame-input.js",
-"src/game-loop/logic.js",
-"src/game-loop/dynamics-tick.js",
-"src/game-loop/finalize-frame.js",
-"src/game-loop/speed-lines.js",
-"src/game-loop/hud-tick.js",
-"src/wasm-bridge.js",
-"src/webgpu/**/*.js",
-"src/gpu-chores/**/*.js"
-```
-
-`compilerOptions.types` is `["@webgpu/types"]`. `npm run typecheck` must pass at each phase before widening `include`.
+| **Slice 5** (Sept 2026) | Composed systems → `.ts`; `game-loop/{helpers,loop}.ts`; `HUDManager` typed against `HudHost`; `@webgpu/types` | ✅ |
+| **Slice 6** (Oct 2026) | Physics correctness: `physics-queries.ts`, `fixed-step-clock.ts`, `body-impulse.ts`; raycast call sites checked | ✅ |
+| **Slice 7** (Nov 2026) | `GameHost` + `create-runtime.ts` (negative fixture `create-runtime.types-test.ts`); frame slices typed against `FrameHost` | ✅ |
+| **Phase D** (Nov 2026) | Every `install*Methods` slice composed (`method-installer.js` and `types/mixin-host.ts` deleted); `init/`, `game-loop/` (incl. `sync.ts`), `game-logic/`, `abilities/`, `zone-setup/`, `zones/**`, editor, audio, rendering, perf, `webgpu/`, `gpu-chores/`, `main.js` typed; `include` = all of `src/`; ratchet + schema types | ✅ 100% |
 
 ## UI stack
 
@@ -155,7 +147,7 @@ Previously lived at repo root `wasm_renderer/`; moved July 2026. Only referenced
 First fully typed runtime module:
 
 - `src/types/geometry.ts` — `Vec3`, `Quat`, `Mat4`
-- `src/math.ts` — `quatFromEuler`, `quaternionToMat4`
+- `src/math.ts` — `quatFromYawPitchRoll`, `quaternionToMat4`
 
 There is no `math.js` shim any more; JS and TS callers import `math.ts` directly (Vite and Node's type stripping both resolve the explicit `.ts` extension).
 
@@ -167,22 +159,25 @@ There is no `math.js` shim any more; JS and TS callers import `math.ts` directly
 - `src/types/filament.ts` — `FilamentModule` / `FilamentHandle` boundary aliases (deliberately `any`)
 - `src/game/state/*.js` — `@ts-check` factories; JSDoc `@returns` wired to `GameState` slices
 - Pure systems in `.ts`, imported directly (no `.js` shims): `ability-cooldown`, `trick-scoring`, `campaign-progress`, `replay-codec`, `physics-world-pure`, `physics-backend-pure`, `input-target-lock`
-- Composed systems in `.ts`, each exporting its `*Host` interface: `PhysicsWorldHost`, `InputSystemHost`, `RenderPipelineHost`, `HudControllerHost` (extends `HudHost`), `AbilityHost`, `PhysicsBackendHost`, `LevelLoaderDeps`. `main.js` (JS, unchecked) still wires them together, so these interfaces document the contract the game object must satisfy but are not enforced at the `new X(this)` call sites.
-- `src/types/map.ts` mirrors the declared map schema while retaining `unknown` extension fields used by legacy and specialized maps.
+- Composed systems in `.ts`, each exporting its `*Host` interface: `PhysicsWorldHost`, `InputSystemHost`, `RenderPipelineHost`, `HudControllerHost` (extends `HudHost`), `AbilityHost`, `PhysicsBackendHost`, `LevelLoaderDeps`. `main.js` (`@ts-check`) builds the game as a `MarblesGameHost`, so these contracts are enforced at every `new X(host)` call site.
+- `src/types/map.ts` is derived from the schema-generated `MapSchema`; `RuntimeLevel` retains `unknown` extension fields used by zone handlers.
 - `src/levels/{catalog,campaign}.js` and `src/abilities/registry.js` are strict checked JavaScript with typed public catalog, chapter, registry, and mask APIs.
 - `src/game/network/protocol.js` remains strict checked JavaScript because the browser and Node 20 relay execute the same file; discriminated wire contracts live in `protocol-types.ts`.
 
 Tests run under Node's native type stripping, so `.ts` modules must stay erasable-syntax only (no enums, namespaces, or constructor parameter properties) and use explicit `.ts` import extensions.
 
-Intentional remaining exclusions are `game-loop/sync.js`, the other mixin-installed frame slices, `src/zones/**`, renderer/material implementations, and editor implementation files.
+There are no intentional exclusions left in `src/`; the only untyped TypeScript surface is the Filament boundary (`FilamentHandle` / `FilamentModule`, deliberately `any`).
 
 ## Compatibility shims
+
+The `install*Methods` installers and `game/systems/method-installer.js` were **deleted** in Phase D (Nov 2026); see [README.md](./README.md#adding-behaviour-no-mixins).
+
 
 The root `src/*-methods.js` deprecation shims (`ability-`, `init-`, `game-logic-`, `zone-setup-`, `marble-management-`, `physics-factory-`, `input-methods.js`) were **deleted** in September 2026 once no import remained; `main.js` imports the canonical `abilities/`, `init/`, `game-logic/`, and `zone-setup/` index modules directly. There are no `.js` re-export shims for the `.ts` systems. Do not add new ones.
 
 ## Consequences
 
-- **Positive:** Clear boundary for C++ vs JS vs TS; less accidental React/WebGPU scope creep; `typecheck` becomes meaningful as `include` grows.
+- **Positive:** Clear boundary for C++ vs JS vs TS; less accidental React/WebGPU scope creep; `typecheck` covers all of `src/` and the ratchet keeps it there.
 - **Negative:** Contributors must read this ADR before adding languages; `@ts-check` files need JSDoc for anything TypeScript cannot infer.
 - **Neutral:** Python backend unchanged; Filament/Rapier versions follow upstream.
 
@@ -190,7 +185,7 @@ The root `src/*-methods.js` deprecation shims (`ability-`, `init-`, `game-logic-
 
 Revisit this ADR when:
 
-- `game-loop/sync.js` or the zone factories are migrated to TypeScript.
+- The Filament boundary gets real types (replacing `FilamentHandle` / `FilamentModule`).
 - Multiplayer or worker threads require SharedArrayBuffer physics sharing.
 - A second UI product (sequencer) is greenlit.
 - WebGPU post-processing ships inside the main game (not a side tool).

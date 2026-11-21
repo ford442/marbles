@@ -63,13 +63,6 @@ module.exports = {
     },
     overrides: [
         {
-            files: ['src/rendering/simple-debug-renderer.js'],
-            rules: {
-                'no-dupe-keys': 'off',
-                'no-dupe-class-members': 'off',
-            },
-        },
-        {
             // The facade and the backends implement the queries.
             files: [
                 'src/game/systems/physics-queries.ts',

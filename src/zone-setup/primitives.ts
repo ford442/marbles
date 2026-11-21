@@ -19,6 +19,7 @@ import type {
 } from '../types/generated/map-schema.ts';
 import { quatFromYawPitchRoll, quatMultiply, quatRotateVec3, type Quat, type Vec3 } from '../math.ts';
 import { applyVelocityChange, type ImpulseBody } from '../game/systems/body-impulse.ts';
+import type { SimColliderSpec } from '../game/systems/physics-world.ts';
 
 export type Vec3Input = readonly [number, number, number] | { x: number; y: number; z: number };
 
@@ -340,9 +341,9 @@ export interface ScopeMarble {
 
 /** Host fields `ZoneScope` reads; satisfied by MarblesGame and the headless host. */
 export interface ZoneScopeHost {
-    world?: { removeRigidBody(body: unknown): void } | null;
-    physicsBackend?: { isWorkerMode?(): boolean } | null;
-    scene?: { remove(entity: unknown): void; addEntity?(entity: unknown): void } | null;
+    world?: { removeRigidBody(body: unknown): void } | null | undefined;
+    physicsBackend?: { isWorkerMode?(): boolean } | null | undefined;
+    scene?: { remove(entity: unknown): void; addEntity?(entity: unknown): void } | null | undefined;
     engine?: {
         destroyEntity(entity: unknown): void;
         destroyMaterialInstance(mi: unknown): void;
@@ -350,8 +351,8 @@ export interface ZoneScopeHost {
             getInstance(entity: unknown): unknown;
             setTransform(inst: unknown, mat: ArrayLike<number>): void;
         };
-    } | null;
-    marbles?: ScopeMarble[];
+    } | null | undefined;
+    marbles?: ScopeMarble[] | undefined;
 }
 
 /**
@@ -472,7 +473,7 @@ export interface PrimitiveBuildHost extends ZoneScopeHost {
             type: 'fixed' | 'dynamic' | 'kinematic',
             pos: Vec3,
             rotation: Quat,
-            collider: Record<string, unknown>,
+            collider: SimColliderSpec,
         ): ScopeBody;
         isStaticBatchingEnabled(): boolean;
         resolveStaticSurfacePreset(preset: string | undefined): unknown;
@@ -504,7 +505,7 @@ export function buildPrimitive(host: PrimitiveBuildHost, zone: PrimitiveZone, of
         return compiled;
     }
 
-    const collider: Record<string, unknown> = { type: 'cuboid', halfExtents: body.halfExtents };
+    const collider: SimColliderSpec = { type: 'cuboid', halfExtents: body.halfExtents };
     if (body.friction != null) collider.friction = body.friction;
     if (body.restitution != null) collider.restitution = body.restitution;
     const rb = scope.addBody(pw._createSimBody(body.kind, body.pos, body.rot, collider));

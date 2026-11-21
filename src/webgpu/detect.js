@@ -1,3 +1,4 @@
+// @ts-check
 /** WebGPU feature detection and experimental flags (non-blocking, opt-in). */
 
 import { runWebGPUBootProbe } from './boot-probe.js';

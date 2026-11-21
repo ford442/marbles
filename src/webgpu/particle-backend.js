@@ -25,7 +25,7 @@ export { packParticle, PARTICLE_STRIDE } from './particle-data.js';
 /**
  * The slice of the game runtime this backend touches.
  * @typedef {object} ParticleBackendHost
- * @property {import('../particle-system.js').ParticleSystem} [particleSystem]
+ * @property {import('../particle-system.ts').ParticleSystem | null} [particleSystem]
  * @property {import('../game/systems/physics-queries.ts').PhysicsQueries} [physicsQueries] Ray queries used for occlusion.
  * @property {WebGPUParticleBackend | null} [webgpuParticles] The live overlay, if any.
  */
@@ -71,7 +71,7 @@ export class WebGPUParticleBackend {
 
     /**
      * @param {ParticleBackendHost} game
-     * @param {import('../particle-system.js').ParticleSystem | null} particleSystem
+     * @param {import('../particle-system.ts').ParticleSystem | null} particleSystem
      */
     constructor(game, particleSystem) {
         this.game = game;

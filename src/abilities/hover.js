@@ -33,14 +33,14 @@ export const HOVER_MIN_START_ENERGY = 25;
  * Game fields hover reads and writes. Deliberately no index signature: a field
  * missing here is a type error, not a silent `undefined`.
  * @typedef {object} HoverHost
- * @property {import('../types/mixin-host.ts').MixinMarble | null} playerMarble
+ * @property {Pick<import('../types/game-state.ts').MarbleObject, 'rigidBody'> | null} playerMarble
  * @property {boolean} hoverActive - held and engaged
  * @property {number} hoverEnergy - 0..`maxHoverEnergy`; also read by the HUD icon
  * @property {number} maxHoverEnergy
  * @property {number | null} hoverSavedGravity - gravity scale to restore; non-null once engaged
- * @property {{ markAbilityUsed(id: string): void } | null} [hudManager]
- * @property {unknown} [effectPool]
- * @property {(pos: import('../types/geometry.ts').Vec3, linvel: import('../types/geometry.ts').Vec3) => void} [spawnJetpackExhaust]
+ * @property {Pick<NonNullable<import('../game/systems/ability-system.ts').AbilityHost['hudManager']>, 'markAbilityUsed'> | null} [hudManager]
+ * @property {import('../types/engine-context.ts').EngineContext['effectPool'] | null} [effectPool]
+ * @property {import('../types/frame-host.ts').FrameExtras['spawnJetpackExhaust']} [spawnJetpackExhaust]
  */
 
 /**

@@ -1,3 +1,4 @@
+// @ts-check
 import RAPIER from '@dimforge/rapier3d-compat';
 import {
     BODY_ANGVEL,
@@ -9,24 +10,14 @@ import {
     MAX_BODIES,
 } from './protocol.js';
 
-/**
- * @typedef {object} BodyDescriptor
- * @property {string} type fixed|dynamic|kinematic
- * @property {number[]} translation
- * @property {number[]} rotation
- * @property {object} collider
- * @property {number} [gravityScale]
- * @property {number} [linearDamping]
- * @property {number} [angularDamping]
- * @property {boolean} [canSleep]
- * @property {number[]} [linvel]
- * @property {boolean} [ccd]
- */
+/** @typedef {import('./protocol.js').WorkerBodyDescriptor} BodyDescriptor */
+/** @typedef {import('./protocol.js').ColliderDescriptor} ColliderDescriptor */
 
 /**
  * @param {BodyDescriptor} desc
  */
 function buildBodyDesc(desc) {
+    /** @type {RAPIER.RigidBodyDesc} */
     let bodyDesc;
     if (desc.type === 'fixed') {
         bodyDesc = RAPIER.RigidBodyDesc.fixed();
@@ -51,7 +42,8 @@ function buildBodyDesc(desc) {
 }
 
 /**
- * @param {BodyDescriptor['collider']} collider
+ * @param {ColliderDescriptor} collider
+ * @returns {RAPIER.ColliderDesc}
  */
 function buildShapeDesc(collider) {
     switch (collider.type) {
@@ -74,12 +66,12 @@ function buildShapeDesc(collider) {
                 new Uint32Array(collider.indices),
             );
         default:
-            throw new Error(`[PhysicsWorker] unsupported collider type '${collider.type}'`);
+            throw new Error(`[PhysicsWorker] unsupported collider type '${/** @type {{ type: unknown }} */ (collider).type}'`);
     }
 }
 
 /**
- * @param {BodyDescriptor['collider']} collider
+ * @param {ColliderDescriptor} collider
  */
 function buildColliderDesc(collider) {
     const colliderDesc = buildShapeDesc(collider);
@@ -102,7 +94,9 @@ function buildColliderDesc(collider) {
 }
 
 /**
+ * @param {RAPIER.World} world
  * @param {BodyDescriptor} desc
+ * @returns {RAPIER.RigidBody}
  */
 export function createBodyFromDescriptor(world, desc) {
     const bodyDesc = buildBodyDesc(desc);
@@ -126,6 +120,7 @@ export function createBodyFromDescriptor(world, desc) {
  */
 export function buildWorldFromDescriptors(gravity, descriptors) {
     const world = new RAPIER.World(gravity);
+    /** @type {Array<RAPIER.RigidBody | null>} */
     const bodies = [];
 
     for (const desc of descriptors) {
@@ -149,12 +144,13 @@ export function insertBodyAtIndex(world, bodies, desc, bodyIndex) {
     while (bodies.length <= bodyIndex) {
         bodies.push(null);
     }
-    bodies[bodyIndex] = createBodyFromDescriptor(world, desc);
-    return bodies[bodyIndex];
+    const body = createBodyFromDescriptor(world, desc);
+    bodies[bodyIndex] = body;
+    return body;
 }
 
 /**
- * @param {import('@dimforge/rapier3d-compat').RigidBody[]} bodies
+ * @param {ReadonlyArray<import('@dimforge/rapier3d-compat').RigidBody | null>} bodies
  * @returns {number}
  */
 export function getBodySlotCount(bodies) {

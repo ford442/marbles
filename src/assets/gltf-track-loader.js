@@ -1,3 +1,4 @@
+// @ts-check
 import RAPIER from '@dimforge/rapier3d-compat';
 import { quatFromEuler } from '../math.ts';
 import { audio } from '../audio.js';
@@ -9,21 +10,54 @@ import {
     computeMeshBounds,
 } from './glb-mesh-parser.js';
 
+/** @typedef {import('../types/geometry.ts').Vec3} Vec3 */
+/** @typedef {import('../types/filament.ts').FilamentHandle} FilamentHandle */
+/** @typedef {import('../types/map.ts').StampZone} StampZone */
+
+/**
+ * One loaded glTF asset (or LOD level): the gltfio asset and its renderable
+ * entities (Filament entity handles).
+ * @typedef {{ asset: FilamentHandle, entities: FilamentHandle[] }} TrackRenderGroup
+ */
+
 /**
  * @typedef {object} TrackModelEntry
  * @property {string} modelPath
  * @property {{ x: number, y: number, z: number }} offset
- * @property {{ center: number[], halfExtent: number[], radius: number }} bounds
- * @property {object[]} renderGroups
+ * @property {import('./glb-mesh-parser.js').MeshBounds} bounds
+ * @property {TrackRenderGroup[]} renderGroups
  * @property {number} activeLod
  * @property {{ distance: number, model: string }[]} lodLevels
- * @property {object} [asset]
- * @property {number[]} entities
+ * @property {FilamentHandle} [asset]
+ * @property {FilamentHandle[]} entities
+ */
+
+/**
+ * The fields of a `model` stamp zone this loader reads. `material` (audio /
+ * surface name) is an open stamp field, not part of the declared schema.
+ * @typedef {Pick<StampZone, 'model' | 'scale' | 'rotY' | 'collider' | 'friction' | 'lod' | 'color' | 'materialPreset'>
+ *   & { material?: string }} ModelZone
+ */
+
+/**
+ * Game members the model-zone loader uses. `gltfAssetLoader`,
+ * `loadedTrackModels` and `trackLodManager` are owned by this module (created
+ * here / in `MarblesGame`) and declared by no shared host.
+ * @typedef {Pick<import('../types/engine-context.ts').EngineContext, 'world' | 'engine' | 'scene' | 'material'>
+ *   & Pick<import('../game/systems/physics-world.ts').PhysicsWorldHost, 'rendererType' | 'staticBodies'>
+ *   & Pick<import('../game/systems/physics-world.ts').PhysicsWorld, 'createStaticBox' | 'createStaticMaterialInstance'>
+ *   & Pick<import('../zones/methods/track-creation.ts').ZoneTrackCreation, 'createTrackZone'>
+ *   & {
+ *     gltfAssetLoader?: FilamentHandle,
+ *     loadedTrackModels?: TrackModelEntry[],
+ *     trackLodManager?: import('./track-lod-manager.js').TrackLodManager | null,
+ *   }} ModelZoneHost
  */
 
 /**
  * Ensure a singleton Filament gltfio AssetLoader exists on the game instance.
- * @param {object} game
+ * @param {Pick<ModelZoneHost, 'engine' | 'gltfAssetLoader'>} game
+ * @returns {FilamentHandle}
  */
 export function ensureGltfAssetLoader(game) {
     if (game.gltfAssetLoader || !game.engine?.createAssetLoader) return game.gltfAssetLoader;
@@ -35,9 +69,10 @@ export function ensureGltfAssetLoader(game) {
  * Load a GLB/GLTF track model: Filament renderables + Rapier collider.
  * Falls back to box track geometry when fetch or parse fails.
  *
- * @param {object} game
- * @param {object} zone
+ * @param {ModelZoneHost} game
+ * @param {ModelZone} zone
  * @param {{ x: number, y: number, z: number }} offset
+ * @returns {Promise<void>}
  */
 export async function createModelZone(game, zone, offset) {
     const modelRef = zone.model;
@@ -126,8 +161,8 @@ export async function createModelZone(game, zone, offset) {
 
         if (entry.renderGroups.length > 1) {
             game.trackLodManager?.register(entry);
-            for (let i = 1; i < entry.renderGroups.length; i++) {
-                for (const entity of entry.renderGroups[i].entities) {
+            for (const group of entry.renderGroups.slice(1)) {
+                for (const entity of group.entities) {
                     game.scene.remove(entity);
                 }
             }
@@ -141,7 +176,7 @@ export async function createModelZone(game, zone, offset) {
 }
 
 /**
- * @param {object} game
+ * @param {ModelZoneHost} game
  * @param {Float32Array} positions
  * @param {Uint32Array} indices
  * @param {{ x: number, y: number, z: number }} offset
@@ -176,13 +211,14 @@ function createMeshCollider(game, positions, indices, offset, rotY, colliderType
 }
 
 /**
- * @param {object} game
+ * @param {ModelZoneHost} game
  * @param {ArrayBuffer} buffer
  * @param {string} modelPath
  * @param {{ x: number, y: number, z: number }} offset
  * @param {number} rotY
  * @param {number} scale
- * @param {object} zone
+ * @param {ModelZone} zone
+ * @returns {Promise<TrackRenderGroup>}
  */
 async function loadFilamentRenderGroup(game, buffer, modelPath, offset, rotY, scale, zone) {
     const loader = ensureGltfAssetLoader(game);
@@ -191,15 +227,16 @@ async function loadFilamentRenderGroup(game, buffer, modelPath, offset, rotY, sc
     const asset = loader.createAsset(new Uint8Array(buffer));
     const basePath = modelBasePath(modelPath);
 
-    await new Promise((resolve, reject) => {
+    await /** @type {Promise<void>} */ (new Promise((resolve, reject) => {
         const timeout = setTimeout(() => reject(new Error('GLTF resource load timeout')), 30000);
         asset.loadResources(
             () => { clearTimeout(timeout); resolve(); },
             null,
             basePath
         );
-    });
+    }));
 
+    /** @type {FilamentHandle[]} */
     const entities = asset.getRenderableEntities();
     if (!entities.length) throw new Error('No renderable entities in model');
 
@@ -214,8 +251,8 @@ async function loadFilamentRenderGroup(game, buffer, modelPath, offset, rotY, sc
 }
 
 /**
- * @param {object} game
- * @param {number[]} entities
+ * @param {Pick<ModelZoneHost, 'engine'>} game
+ * @param {FilamentHandle[]} entities
  * @param {{ x: number, y: number, z: number }} offset
  * @param {number} rotY
  * @param {number} scale
@@ -246,8 +283,8 @@ function applyZoneTransform(game, entities, offset, rotY, scale) {
 
 /**
  * Optional: remap all primitives to the game's PBR material preset.
- * @param {object} game
- * @param {number[]} entities
+ * @param {Pick<ModelZoneHost, 'engine' | 'createStaticMaterialInstance'>} game
+ * @param {FilamentHandle[]} entities
  * @param {string} materialPreset
  * @param {number[] | undefined} color
  */
@@ -269,6 +306,10 @@ function applyMaterialPresetOverride(game, entities, materialPreset, color) {
 
 /**
  * Simple-renderer / failed-render fallback: approximate mesh bounds with boxes.
+ * @param {Pick<ModelZoneHost, 'createStaticBox'>} game
+ * @param {{ x: number, y: number, z: number }} offset
+ * @param {TrackModelEntry['bounds']} bounds
+ * @param {readonly number[] | undefined} color
  */
 function spawnDebugBoxesFromBounds(game, offset, bounds, color) {
     const c = color || [0.5, 0.2, 0.8];
@@ -288,7 +329,7 @@ function spawnDebugBoxesFromBounds(game, offset, bounds, color) {
 
 /**
  * Release loaded track model GPU resources.
- * @param {object} game
+ * @param {Pick<ModelZoneHost, 'scene' | 'engine' | 'loadedTrackModels'>} game
  */
 export function destroyLoadedTrackModels(game) {
     if (!game.loadedTrackModels?.length) return;

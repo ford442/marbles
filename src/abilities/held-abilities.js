@@ -1,22 +1,25 @@
 // @ts-check
 /**
  * Effects for the abilities that used to be hard-coded key branches in
- * init/core.js (time stop, size shift, chameleon, gravity flip, rewind). The
+ * init/core.ts (time stop, size shift, chameleon, gravity flip, rewind). The
  * registry entries in registry.js call these; cooldown gating happens in
  * AbilitySystem before they run.
  */
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
 
-/** @param {any} game */
+/** @param {import('./hook-host.ts').GravityFlipHost} game */
 export function toggleGravityFlip(game) {
     game.flipActive = !game.flipActive
-    const rb = game.playerMarble.rigidBody
-    rb.setGravityScale(game.flipActive ? -game.playerMarble.baseGravityScale : game.playerMarble.baseGravityScale, true)
+    // Registry gating (`requiresMarble`) guarantees a player marble.
+    const marble = game.playerMarble
+    if (!marble) return
+    const rb = marble.rigidBody
+    rb.setGravityScale(game.flipActive ? -marble.baseGravityScale : marble.baseGravityScale, true)
     if (game.hudManager) game.hudManager.markAbilityUsed('flip')
 }
 
-/** @param {any} game */
+/** @param {import('./hook-host.ts').TimeStopHost} game */
 export function toggleTimeStop(game) {
     game.timeStopActive = !game.timeStopActive
     if (game.timeStopActive) {
@@ -26,11 +29,11 @@ export function toggleTimeStop(game) {
         return
     }
     // Restore velocities immediately
-    const playerRb = game.playerMarble.rigidBody
+    const playerRb = game.playerMarble?.rigidBody
     for (const body of game.dynamicBodies) {
         if (body !== playerRb) {
-            if (game.timeStopSavedStates.has(body.handle)) {
-                const state = game.timeStopSavedStates.get(body.handle)
+            const state = game.timeStopSavedStates.get(body.handle)
+            if (state !== undefined) {
                 body.setLinvel(state.linvel, true)
                 body.setAngvel(state.angvel, true)
                 game.timeStopSavedStates.delete(body.handle)
@@ -47,10 +50,12 @@ const SIZE_PROFILES = [
     { name: 'Giant', scale: 2.0 },
 ]
 
-/** Cycle Normal → Mini → Giant by rebuilding the marble's ball collider. @param {any} game */
+/** Cycle Normal → Mini → Giant by rebuilding the marble's ball collider. @param {import('./hook-host.ts').SizeShiftHost} game */
 export function cycleSizeShift(game) {
     const marble = game.playerMarble
     game.lastSizeShiftTime = Date.now()
+    // Registry gating (`requiresMarble`) guarantees a player marble.
+    if (!marble) return
     marble.sizeState = ((marble.sizeState || 0) + 1) % 3
     const sizeProfile = SIZE_PROFILES[marble.sizeState] ?? SIZE_PROFILES[0]
     if (!sizeProfile) return
@@ -80,17 +85,20 @@ export function cycleSizeShift(game) {
     if (audio && audio.playCollect) audio.playCollect()
 }
 
-/** Cycle the chameleon gravity/colour profile. @param {any} game */
+/** Cycle the chameleon gravity/colour profile. @param {import('./hook-host.ts').ChameleonHost} game */
 export function cycleChameleon(game) {
     game.chameleonState = (game.chameleonState + 1) % game.chameleonProfiles.length
     const profile = game.chameleonProfiles[game.chameleonState]
+    // Registry gating (`requiresMarble`) guarantees a player marble; profiles are never empty.
+    const marble = game.playerMarble
+    if (!profile || !marble) return
 
-    game.playerMarble.baseGravityScale = profile.gravityScale
-    game.playerMarble.rigidBody.setGravityScale(game.flipActive ? -profile.gravityScale : profile.gravityScale, true)
+    marble.baseGravityScale = profile.gravityScale
+    marble.rigidBody.setGravityScale(game.flipActive ? -profile.gravityScale : profile.gravityScale, true)
 
-    game.playerMarble.color = profile.color
+    marble.color = profile.color
     const rcm = game.engine.getRenderableManager()
-    const inst = rcm.getInstance(game.playerMarble.entity)
+    const inst = rcm.getInstance(marble.entity)
     rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', game.Filament.RgbType.sRGB, profile.color)
 
     game.lastChameleonTime = Date.now()
@@ -99,7 +107,7 @@ export function cycleChameleon(game) {
     if (game.hudManager) game.hudManager.markAbilityUsed('chameleon')
 }
 
-/** Stop rewinding and restore the marble's own colour. @param {any} game */
+/** Stop rewinding and restore the marble's own colour. @param {import('./hook-host.ts').EndRewindHost} game */
 export function endRewind(game) {
     game.isRewinding = false
     if (!game.playerMarble) return
@@ -113,19 +121,20 @@ export function endRewind(game) {
 
 /**
  * Factory for the simple held abilities: press sets `flag`, release clears it.
- * @param {string} flag  game field toggled while held
+ * @param {import('./hook-host.ts').HeldFlagKey} flag  game field toggled while held
  * @param {string} [hudId]  HUD icon to mark as used on press
  */
 export function heldFlag(flag, hudId) {
     return {
-        /** @param {any} game */
-        press(game) {
+        /** @param {import('../game/systems/ability-system.ts').AbilitySystemHost} host */
+        press(host) {
+            const game = host
             game[flag] = true
             if (hudId && game.hudManager) game.hudManager.markAbilityUsed(hudId)
         },
-        /** @param {any} game */
-        release(game) {
-            game[flag] = false
+        /** @param {import('../game/systems/ability-system.ts').AbilitySystemHost} host */
+        release(host) {
+            host[flag] = false
         },
     }
 }

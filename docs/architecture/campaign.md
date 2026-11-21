@@ -78,7 +78,7 @@ Ghost personal bests can upload to global leaderboards (`POST /v1/marbles/ghosts
 | Path | Role |
 |------|------|
 | `src/levels/campaign.js` | Chapters, unlock rules, medal math |
-| `src/levels/campaign-menu.js` | Chapter UI rendering |
+| `src/levels/campaign-menu.ts` | Chapter UI rendering |
 | `src/game/systems/campaign-progress.js` | Save/load, unlock evaluation |
 | `src/init/level-menu.js` | Campaign menu integration |
 

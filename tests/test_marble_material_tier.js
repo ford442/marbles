@@ -4,7 +4,7 @@ import {
     buildTieredPreset,
     getMaterialDetailConfig,
     resolveMarbleMaterialTier,
-} from '../src/marble-material-tier.js';
+} from '../src/marble-material-tier.ts';
 
 function mockMarble(overrides = {}) {
     return {

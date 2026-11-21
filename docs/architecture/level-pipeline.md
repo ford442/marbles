@@ -66,7 +66,7 @@ Movers and spinners are posed from **simulated time** (`ZoneScope.time`, advance
 | Where | How |
 |---|---|
 | CI | `scripts/validate-assets.cjs` compiles it with ajv through `src/levels/map-rules.js` (`compileMapSchema` + `semanticChecks`). |
-| Editor | `src/editor/map-validator.js` uses the same `map-rules.js` (ajv ships only in the lazy editor chunk). |
+| Editor | `src/editor/map-validator.ts` uses the same `map-rules.js` (ajv ships only in the lazy editor chunk). |
 | Workshop publish | `backend/storage/services/map_validation.py` validates the same file with `jsonschema` and mirrors `semanticChecks`. Unknown zone types are **errors** there, but only warnings in the editor while drafting. |
 | Game loader | `structuralErrors()` (no ajv): only the fields the loader dereferences. |
 

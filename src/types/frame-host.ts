@@ -1,9 +1,10 @@
 import type { CullingManager } from '../culling-manager.js';
 import type { AbilitySystem } from '../game/systems/ability-system.ts';
-import type { GhostReplay } from '../game/systems/ghost-replay.js';
+import type { GhostReplay } from '../game/systems/ghost-replay.ts';
 import type { HudController } from '../game/systems/hud-controller.ts';
 import type { PhysicsBatchBuffers } from '../wasm-bridge.js';
 import type { ZoneScope } from '../zone-setup/primitives.ts';
+import type { EngineContext } from './engine-context.ts';
 import type { GameHost } from './game-host.ts';
 import type {
     AbilityState, CameraState, HudState, InputState, LevelState, PhysicsState, RenderState, SpeedLine,
@@ -65,9 +66,13 @@ export interface FrameExtras {
     tickMultiplayer?(): void;
     getScreenShakeIntensity?(): number;
     showTrickMessage?(text: string, color: string): void;
+    awardTrickPoints?(message: string, points: number, color: string): void;
     triggerCollectionEffect?(pos: Vec3, value: number, type: string): void;
     spawnJetpackExhaust(pos: Vec3, linvel: Vec3): void;
     spawnIceBlock(pos: Vec3): void;
+
+    // DOM handles looked up during boot (`InitCore`), absent in headless runs.
+    muteBtn?: HTMLElement | null;
 
     // Scratch state created on first use.
     timeStopOffset?: number;
@@ -81,8 +86,8 @@ export interface FrameExtras {
 }
 
 /**
- * `this` for the frame slices. Intersects the grouped state with `GameHost`
- * (the composed systems' contract) and `FrameExtras`; no string index
+ * `this` for the frame slices. Intersects the grouped state and the engine
+ * handles with `GameHost` (the composed systems' contract) and `FrameExtras`; no string index
  * signature, so a misspelled or undeclared member is a type error.
  */
-export type FrameHost = FrameState & GameHost & FrameExtras;
+export type FrameHost = FrameState & EngineContext & GameHost & FrameExtras;

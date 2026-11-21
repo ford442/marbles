@@ -1,6 +1,13 @@
-import { createZoneLight } from './methods/visuals.js';
-import { decorateIceBridges } from './methods/decorations.js';
+// @ts-check
+/** @typedef {import('../types/zone-host.ts').ZoneBuildHost} ZoneBuildHost */
+/** @typedef {import('../types/geometry.ts').Vec3} Vec3 */
+import { createZoneLight } from './methods/visuals.ts';
+import { decorateIceBridges } from './methods/decorations.ts';
 
+/**
+ * @param {ZoneBuildHost} game
+ * @param {Vec3} offset
+ */
 export function createIceBridgesZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 

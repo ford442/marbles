@@ -5,7 +5,7 @@ import type { FilamentHandle, FilamentModule } from '../../types/filament.ts';
 import type { PhysicsState } from '../../types/game-state.ts';
 import { audio } from '../../audio.js';
 import { applyFullPreset } from '../../material-system.ts';
-import { CUBE_VERTICES, CUBE_INDICES } from '../../cube-geometry.js';
+import { CUBE_VERTICES, CUBE_INDICES } from '../../cube-geometry.ts';
 import { DEFAULT_FIXED_STEP } from './fixed-step-clock.ts';
 import {
     batchBoxGeometry,
@@ -18,7 +18,7 @@ import {
 import {
     DECORATIVE_PRIMITIVES,
     DECORATIVE_VERTEX_STRIDE,
-} from '../../decorative-primitives.js';
+} from '../../decorative-primitives.ts';
 import {
     getStaticBatchKey,
     isStaticBatchingEnabled,

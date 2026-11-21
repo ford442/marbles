@@ -46,16 +46,16 @@ Factory stamps export as `{ type, pos }` only. Full procedural detail stays in t
 
 | Module | Role |
 |--------|------|
-| `src/editor/map-document.js` | Map state, `MapDocument` undo stack, serialize, drafts |
-| `src/editor/map-commands.js` | Command pattern mutations (place/move/delete/rotate) |
-| `src/editor/snap.js` | Grid and rotation snap helpers |
-| `src/editor/map-validator.js` | Schema validation (same rules as `validate-assets.cjs`) |
-| `src/editor/stamps.js` | Editor palette definitions |
-| `src/editor/track-catalog.js` | GLB track picker entries |
-| `src/editor/editor-session.js` | Playtest snapshot save/restore |
-| `src/editor/workshop-export.js` | Client-side workshop ZIP |
-| `src/editor/camera.js` | Top-down + orbit camera |
-| `src/editor/map-editor.js` | UI, input, preview rebuild, playtest |
+| `src/editor/map-document.ts` | Map state, `MapDocument` undo stack, serialize, drafts |
+| `src/editor/map-commands.ts` | Command pattern mutations (place/move/delete/rotate) |
+| `src/editor/snap.ts` | Grid and rotation snap helpers |
+| `src/editor/map-validator.ts` | Schema validation (same rules as `validate-assets.cjs`) |
+| `src/editor/stamps.ts` | Editor palette definitions |
+| `src/editor/track-catalog.ts` | GLB track picker entries |
+| `src/editor/editor-session.ts` | Playtest snapshot save/restore |
+| `src/editor/workshop-export.ts` | Client-side workshop ZIP |
+| `src/editor/camera.ts` | Top-down + orbit camera |
+| `src/editor/map-editor.ts` | UI, input, preview rebuild, playtest |
 | `src/levels/catalog.js` | `registerCustomLevel()` for playtest |
 
 ## Workflow

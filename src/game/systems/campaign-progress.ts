@@ -37,10 +37,11 @@ export interface LevelCompletionResult {
     time: number;
     level: {
         collectiblesTotal?: number;
+        /** Authored (possibly partial); getMedalThresholds fills gaps from the difficulty defaults. */
         medals?: {
-            goldTime: number;
-            silverTime: number;
-            bronzeTime: number;
+            goldTime?: number;
+            silverTime?: number;
+            bronzeTime?: number;
             parTime?: number;
         };
         difficulty?: string;

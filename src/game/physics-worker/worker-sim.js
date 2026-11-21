@@ -1,3 +1,4 @@
+// @ts-check
 import RAPIER from '@dimforge/rapier3d-compat';
 import {
     SNAPSHOT_LAYOUT_VERSION,
@@ -37,6 +38,15 @@ import { RapierPhysicsQueries } from '../systems/physics-queries.ts';
 const NO_BODY = 0xffffffff;
 
 /**
+ * `err?.message` for a thrown value (undefined when it has none).
+ * @param {unknown} err
+ * @returns {string | undefined}
+ */
+function errorMessage(err) {
+    return err != null ? /** @type {{ message?: string }} */ (err).message : undefined;
+}
+
+/**
  * Physics-worker state machine, independent of the worker global so it can be
  * driven in-process by unit tests. `physics-worker.js` wires it to `self`.
  *
@@ -45,7 +55,7 @@ const NO_BODY = 0xffffffff;
  * steps, the same contract as the main-thread loop.
  *
  * @param {object} io
- * @param {(msg: object) => void} io.post
+ * @param {(msg: import('./protocol.js').WorkerOutboundMessage) => void} io.post
  * @param {() => number} [io.now] wall clock in ms
  * @param {(fn: () => void, ms: number) => unknown} [io.setInterval]
  * @param {(id: unknown) => void} [io.clearInterval]
@@ -54,7 +64,7 @@ export function createWorkerSim({
     post,
     now = () => performance.now(),
     setInterval: startTimer = (fn, ms) => setInterval(fn, ms),
-    clearInterval: stopTimer = (id) => clearInterval(/** @type {any} */ (id)),
+    clearInterval: stopTimer = (id) => clearInterval(/** @type {ReturnType<typeof setInterval>} */ (id)),
 }) {
     /** @type {ReturnType<typeof createTransformViews> | null} */
     let transformViews = null;
@@ -90,6 +100,7 @@ export function createWorkerSim({
         return scale > 0 ? (clock.step * 1000) / scale : 0;
     }
 
+    /** @param {number} stepMs */
     function publishTransforms(stepMs) {
         if (!transformViews) return;
         const { u32, f32 } = transformViews;
@@ -186,7 +197,7 @@ export function createWorkerSim({
         clock.reset();
     }
 
-    /** @param {any} data */
+    /** @param {import('./protocol.js').WorkerRaycastRequest} data */
     function handleRaycastRequest(data) {
         if (!raycastViews) return;
         const { i32, f32, u32, f64 } = raycastViews;
@@ -221,11 +232,11 @@ export function createWorkerSim({
             Atomics.store(i32, 0, RAYCAST_STATUS.READY);
         } catch (err) {
             Atomics.store(i32, 0, RAYCAST_STATUS.ERROR);
-            post({ type: WORKER_MSG.LOG, level: 'error', message: `raycast failed: ${err?.message || err}` });
+            post({ type: WORKER_MSG.LOG, level: 'error', message: `raycast failed: ${errorMessage(err) || err}` });
         }
     }
 
-    /** @param {any} msg */
+    /** @param {import('./protocol.js').WorkerInboundMessage} msg */
     async function handleMessage(msg) {
         try {
             switch (msg.type) {
@@ -292,7 +303,7 @@ export function createWorkerSim({
         } catch (err) {
             post({
                 type: WORKER_MSG.INIT_ERROR,
-                message: err?.message || String(err),
+                message: errorMessage(err) || String(err),
             });
         }
     }

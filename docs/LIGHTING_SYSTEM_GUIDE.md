@@ -52,7 +52,7 @@ Animations are quality-gated for performance:
 Zone authors can attach animation to zone lights via `createZoneLight()`:
 
 ```javascript
-import { createZoneLight } from './zones/methods/visuals.js';
+import { createZoneLight } from './zones/methods/visuals.ts';
 
 // Static zone light (no animation)
 const light = createZoneLight(
@@ -87,10 +87,10 @@ const animatedLight = createZoneLight(
 ### Files
 - **`src/lighting-system.js`** - Core LightingSystem class with animation logic
 - **`src/rendering/environment.js`** - Updated presets with backColor/backIntensity
-- **`src/init/core.js`** - Initialize LightingSystem after Filament engine
-- **`src/game-loop-sync-methods.js`** - Update animated lights each frame
+- **`src/init/core.ts`** - Initialize LightingSystem after Filament engine
+- **`src/game-loop/effects-tick.ts`** - Update animated lights each frame
 - **`src/zone-setup-methods.js`** - Apply environment lighting when environment changes
-- **`src/zones/methods/visuals.js`** - Updated createZoneLight() with animation support
+- **`src/zones/methods/visuals.ts`** - Updated createZoneLight() with animation support
 - **`src/init/cleanup.js`** - Clear animated lights on zone unload
 
 ### Environment Presets Structure

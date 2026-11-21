@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { GhostReplay } from '../src/game/systems/ghost-replay.js';
+import { GhostReplay } from '../src/game/systems/ghost-replay.ts';
 
 function testSaveBestOnFasterTime() {
     const storage = {};

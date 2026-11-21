@@ -13,9 +13,9 @@ const {
     importWorkshopPackage,
     publishWorkshopLevel,
     collectMapAssetPaths,
-} = await import('../src/editor/workshop-export.js');
-const { createEmptyMap, serializeMap, syncGoalsFromZones } = await import('../src/editor/map-document.js');
-const { createZoneFromStamp, STAMP_BY_ID } = await import('../src/editor/stamps.js');
+} = await import('../src/editor/workshop-export.ts');
+const { createEmptyMap, serializeMap, syncGoalsFromZones } = await import('../src/editor/map-document.ts');
+const { createZoneFromStamp, STAMP_BY_ID } = await import('../src/editor/stamps.ts');
 const {
     listWorkshopLevels,
     saveWorkshopLevel,

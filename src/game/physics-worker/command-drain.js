@@ -1,4 +1,7 @@
-import { CMD_HEADER_BYTES, CMD_ENTRY_BYTES, CMD_HEADER_HEAD, CMD_HEADER_TAIL, CMD_OP } from './protocol.js';
+// @ts-check
+import {
+    CMD_HEADER_BYTES, CMD_ENTRY_BYTES, CMD_HEADER_CAPACITY, CMD_HEADER_HEAD, CMD_HEADER_TAIL, CMD_OP,
+} from './protocol.js';
 
 /**
  * Apply one command-ring entry to a Rapier rigid body (shared by worker + unit tests).
@@ -64,13 +67,14 @@ export function applyCommandOp(body, op, f0, f1, f2, f3, clock) {
  * @param {Float32Array} f32
  * @param {Array<import('@dimforge/rapier3d-compat').RigidBody | null>} bodies
  * @param {Set<number>} removedIndices
- * @param {import('@dimforge/rapier3d-compat').World} world
+ * @param {import('@dimforge/rapier3d-compat').World | null} world null only when `options.discard` is set
  * @param {{ timeScale: number }} clock
  * @param {{ discard?: boolean }} [options] discard: consume entries without applying them
  * @returns {number} REMOVE_BODY entries consumed (applied or discarded)
  */
 export function drainCommandRing(u32, f32, bodies, removedIndices, world, clock, options = {}) {
-    const capacity = u32[2];
+    // Header word written by createCommandViews (always in bounds).
+    const capacity = /** @type {number} */ (u32[CMD_HEADER_CAPACITY]);
     const discard = options.discard === true;
     let removals = 0;
 
@@ -80,12 +84,13 @@ export function drainCommandRing(u32, f32, bodies, removedIndices, world, clock,
         if (tail === head) break;
 
         const entryIndex = CMD_HEADER_BYTES / 4 + tail * (CMD_ENTRY_BYTES / 4);
-        const op = u32[entryIndex];
-        const bodyIndex = u32[entryIndex + 1];
-        const f0 = f32[entryIndex + 2];
-        const f1 = f32[entryIndex + 3];
-        const f2 = f32[entryIndex + 4];
-        const f3 = f32[entryIndex + 5];
+        // Ring entries are in bounds for any tail < capacity.
+        const op = /** @type {number} */ (u32[entryIndex]);
+        const bodyIndex = /** @type {number} */ (u32[entryIndex + 1]);
+        const f0 = /** @type {number} */ (f32[entryIndex + 2]);
+        const f1 = /** @type {number} */ (f32[entryIndex + 3]);
+        const f2 = /** @type {number} */ (f32[entryIndex + 4]);
+        const f3 = /** @type {number} */ (f32[entryIndex + 5]);
 
         const body = bodies[bodyIndex];
         if (op === CMD_OP.REMOVE_BODY) removals += 1;
@@ -95,7 +100,7 @@ export function drainCommandRing(u32, f32, bodies, removedIndices, world, clock,
         } else if (discard) {
             // Body commands left over from a world that no longer exists.
         } else if (op === CMD_OP.REMOVE_BODY) {
-            if (body && !removedIndices.has(bodyIndex)) {
+            if (body && world && !removedIndices.has(bodyIndex)) {
                 world.removeRigidBody(body);
                 bodies[bodyIndex] = null;
                 removedIndices.add(bodyIndex);

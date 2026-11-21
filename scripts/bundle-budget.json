@@ -4,7 +4,7 @@
   "forbiddenInMainChunk": [
     { "pattern": "/src/zones/[^/]+\\.js$", "reason": "zone stamps load lazily via ZONE_LOADERS (src/zone-setup/registry.js)" },
     { "pattern": "/src/levels\\.ts$", "reason": "DEV_LEVELS loads only behind ?devLevels=1 (loadDevLevels)" },
-    { "pattern": "/src/editor/(?!mode\\.js$)", "reason": "the map editor is a lazy chunk (bootMapEditor import in init/core.js)" },
+    { "pattern": "/src/editor/(?!mode\\.js$)", "reason": "the map editor is a lazy chunk (bootMapEditor import in init/core.ts)" },
     { "pattern": "/node_modules/ajv/", "reason": "full schema validation runs in CI and the editor only" }
   ]
 }

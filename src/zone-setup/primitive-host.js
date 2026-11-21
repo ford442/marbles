@@ -8,9 +8,20 @@ import { scaledTransform } from '../game-loop/helpers.ts';
 import { ZoneScope } from './primitives.ts';
 
 /** @typedef {import('./primitives.ts').PrimitiveBuildHost} PrimitiveBuildHost */
+/** @typedef {import('../types/geometry.ts').Vec3} Vec3 */
 
 /**
- * @param {any} game
+ * Game members `gamePrimitiveHost` adapts. `zoneScope` is created on first use;
+ * `marbles` / `physicsBackend` are absent on a bare `ZoneBuildHost`.
+ * @typedef {Pick<import('../types/engine-context.ts').EngineContext,
+ *     'world' | 'physicsWorld' | 'Filament' | 'engine' | 'scene' | 'vb' | 'ib'>
+ *   & Pick<import('../types/frame-host.ts').FrameExtras, 'zoneScope'>
+ *   & Partial<Pick<import('../types/frame-host.ts').FrameState, 'marbles'>>
+ *   & Pick<import('../game/systems/physics-backend.ts').PhysicsBackendHost, 'physicsBackend'>} GamePrimitiveSource
+ */
+
+/**
+ * @param {GamePrimitiveSource} game
  * @returns {PrimitiveBuildHost}
  */
 export function gamePrimitiveHost(game) {
@@ -18,7 +29,7 @@ export function gamePrimitiveHost(game) {
     const canRender = Boolean(game.Filament && game.engine && game.scene && game.vb && game.ib);
 
     return {
-        get zoneScope() { return game.zoneScope; },
+        get zoneScope() { return game.zoneScope ?? (game.zoneScope = new ZoneScope()); },
         get physicsWorld() { return game.physicsWorld; },
         get world() { return game.world; },
         get physicsBackend() { return game.physicsBackend; },
@@ -26,7 +37,7 @@ export function gamePrimitiveHost(game) {
         get engine() { return game.engine; },
         get marbles() { return game.marbles; },
         createPrimitiveRenderable: canRender
-            ? (materialInstance, _halfExtents) => {
+            ? (/** @type {unknown} */ materialInstance, /** @type {unknown} */ _halfExtents) => {
                 const F = game.Filament;
                 const entity = F.EntityManager.get().create();
                 F.RenderableManager.Builder(1)
@@ -40,15 +51,17 @@ export function gamePrimitiveHost(game) {
                 return entity;
             }
             : undefined,
-        setEntityTransform: canRender ? (entity, pose, halfExtents) => setPrimitiveTransform(game, entity, pose, halfExtents) : undefined,
+        setEntityTransform: canRender
+            ? (/** @type {unknown} */ entity, /** @type {import('./primitives.ts').Pose} */ pose, /** @type {Vec3} */ halfExtents) => setPrimitiveTransform(game, entity, pose, halfExtents)
+            : undefined,
     };
 }
 
 /**
- * @param {any} game
+ * @param {Pick<import('../types/engine-context.ts').EngineContext, 'engine'>} game
  * @param {unknown} entity
  * @param {import('./primitives.ts').Pose} pose
- * @param {{ x: number, y: number, z: number }} halfExtents
+ * @param {Vec3} halfExtents
  */
 export function setPrimitiveTransform(game, entity, pose, halfExtents) {
     if (!entity || !game.engine) return;

@@ -33,7 +33,7 @@ global.window = {
     addEventListener: () => {}
 }
 
-import('../src/rendering/volumetric-lights.js').then(mod => {
+import('../src/rendering/volumetric-lights.ts').then(mod => {
     const { VolumetricLightsSystem, getVolumetricConfig } = mod
 
     let passed = 0

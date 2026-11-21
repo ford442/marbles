@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { buildImportedGlbStamp } from '../src/editor/glb-import.js';
-import { createZoneFromStamp } from '../src/editor/stamps.js';
+import { buildImportedGlbStamp } from '../src/editor/glb-import.ts';
+import { createZoneFromStamp } from '../src/editor/stamps.ts';
 import { resolveAssetModelPath } from '../src/assets/model-paths.js';
-import { validateMap } from '../src/editor/map-validator.js';
-import { createEmptyMap, serializeMap, syncGoalsFromZones } from '../src/editor/map-document.js';
+import { validateMap } from '../src/editor/map-validator.ts';
+import { createEmptyMap, serializeMap, syncGoalsFromZones } from '../src/editor/map-document.ts';
 
 const FAKE_DATA_URL = 'data:model/gltf-binary;base64,Z2xURgAAAAA=';
 

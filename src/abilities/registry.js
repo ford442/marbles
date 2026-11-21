@@ -21,9 +21,9 @@
  * @typedef {'cooldown' | 'energy' | 'charge'} AbilityHudMode
  * @typedef {import('../types/map.ts').AbilityMask} AbilityMask
  *
- * The game runtime (MarblesGame / GameMixinHost): hooks read and write its
- * ability fields directly, so it is loosely typed here.
- * @typedef {any} AbilityGameContext
+ * The game as `AbilitySystem` holds it and hands it to every hook
+ * (`AbilityHost & AbilityHookHost`).
+ * @typedef {import('../game/systems/ability-system.ts').AbilitySystemHost} AbilityGameContext
  *
  * @typedef {object} AbilityBinding
  * @property {string} code - default `KeyboardEvent.code`; `Mouse0..2` for mouse buttons
@@ -94,10 +94,12 @@ export const ABILITY_REGISTRY = {
         lastUseKey: 'lastAirDashTime',
         cooldownKey: 'airDashCooldown',
         hudSlot: { barKey: 'airDashBarEl', mode: 'charge' },
-        press(game, now) {
+        press(host, now) {
+            const game = host;
             if (!game.isGrounded(game.playerMarble) && !game.isChargingAirDash) game.beginAirDashCharge?.(now)
         },
-        release(game, now) {
+        release(host, now) {
+            const game = host;
             if (game.isChargingAirDash && game.playerMarble) game.releaseAirDash?.(now)
         },
     },
@@ -114,10 +116,12 @@ export const ABILITY_REGISTRY = {
         hudIconId: 'dash',
         // The legacy boost icon mirrors the dash (Shift used to be boost).
         hudIconAliases: ['boost'],
-        press(game, now) {
+        press(host, now) {
+            const game = host;
             if (!game.isChargingDash) game.beginDashCharge?.(now)
         },
-        release(game, now) {
+        release(host, now) {
+            const game = host;
             if (game.isChargingDash) game.releaseDash?.(now)
         },
     },
@@ -128,8 +132,8 @@ export const ABILITY_REGISTRY = {
         netBit: 2,
         binding: { code: 'Space', trigger: 'hold', settingsKey: 'jump' },
         hudSlot: { barKey: 'jumpBarEl', mode: 'charge' },
-        press: (game) => pressJump(game),
-        release: (game) => releaseJump(game),
+        press: (host) => pressJump(host),
+        release: (host) => releaseJump(host),
     },
     stomp: {
         id: 'stomp',
@@ -140,10 +144,12 @@ export const ABILITY_REGISTRY = {
         cooldownSec: 2,
         lastUseKey: 'lastStompTime',
         cooldownKey: 'stompCooldown',
-        press(game, now) {
+        press(host, now) {
+            const game = host;
             if (!game.isChargingStomp) game.beginStompCharge?.(now)
         },
-        release(game, now) {
+        release(host, now) {
+            const game = host;
             if (game.isChargingStomp) game.releaseStomp?.(now)
         },
     },
@@ -163,7 +169,8 @@ export const ABILITY_REGISTRY = {
             readyGlow: 'brightness(1.2) drop-shadow(0 0 5px #ff4500)',
         },
         hudIconId: 'bomb',
-        activate(game) {
+        activate(host) {
+            const game = host;
             game.spawnBomb();
             return true;
         },
@@ -186,7 +193,8 @@ export const ABILITY_REGISTRY = {
             readyGlow: 'brightness(1.2) drop-shadow(0 0 5px #ff8800)',
         },
         hudIconId: 'missile',
-        activate(game) {
+        activate(host) {
+            const game = host;
             game.spawnMissile();
             return true;
         },
@@ -209,7 +217,8 @@ export const ABILITY_REGISTRY = {
             activeWhen: 'activeBlackHoles.length',
         },
         hudIconId: 'blackhole',
-        activate(game) {
+        activate(host) {
+            const game = host;
             game.spawnBlackHole();
             return true;
         },
@@ -232,7 +241,8 @@ export const ABILITY_REGISTRY = {
             hideWhenReady: true,
         },
         hudIconId: 'holo',
-        activate(game) {
+        activate(host) {
+            const game = host;
             game.spawnHoloPlatform();
             if (game.hudManager) game.hudManager.markAbilityUsed('holo');
             return true;
@@ -255,7 +265,8 @@ export const ABILITY_REGISTRY = {
             readyGlow: 'brightness(1.2) drop-shadow(0 0 5px #ffcc00)',
         },
         hudIconId: 'blink',
-        activate(game) {
+        activate(host) {
+            const game = host;
             game.triggerBlink();
             return true;
         },
@@ -282,12 +293,14 @@ export const ABILITY_REGISTRY = {
         binding: { code: 'KeyE', trigger: 'hold', settingsKey: 'magnet_attract' },
         requiresMarble: false,
         hudIconId: MAGNET_ICON,
-        press(game) {
+        press(host) {
+            const game = host;
             game.magnetMode = 'attract';
             game.magnetActive = true;
             if (game.hudManager) game.hudManager.markAbilityUsed(MAGNET_ICON);
         },
-        release(game) {
+        release(host) {
+            const game = host;
             game.magnetActive = false;
             game.magnetMode = null;
         },
@@ -301,12 +314,14 @@ export const ABILITY_REGISTRY = {
         binding: { code: 'Minus', trigger: 'hold', settingsKey: 'magnet_repel' },
         requiresMarble: false,
         hudIconId: MAGNET_ICON,
-        press(game) {
+        press(host) {
+            const game = host;
             game.magnetMode = 'repel';
             game.magnetActive = true;
             if (game.hudManager) game.hudManager.markAbilityUsed(MAGNET_ICON);
         },
-        release(game) {
+        release(host) {
+            const game = host;
             game.magnetActive = false;
             game.magnetMode = null;
         },
@@ -327,9 +342,9 @@ export const ABILITY_REGISTRY = {
             activeGlow: '0 0 10px #00ffcc',
         },
         hudIconId: 'hover',
-        press: (game) => pressHover(game),
-        release: (game) => releaseHover(game),
-        tick: (game, dt) => tickHover(game, dt),
+        press: (host) => pressHover(host),
+        release: (host) => releaseHover(host),
+        tick: (host, dt) => tickHover(host, dt),
     },
     jetpack: {
         id: 'jetpack',
@@ -388,11 +403,12 @@ export const ABILITY_REGISTRY = {
         binding: { code: 'KeyT', trigger: 'hold', settingsKey: 'rewind' },
         requiresMarble: false,
         hudIconId: 'rewind',
-        press(game) {
+        press(host) {
+            const game = host;
             game.isRewinding = true;
             if (game.hudManager) game.hudManager.markAbilityUsed('rewind');
         },
-        release: (game) => endRewind(game),
+        release: (host) => endRewind(host),
     },
     focus: {
         id: 'focus',
@@ -416,7 +432,7 @@ export const ABILITY_REGISTRY = {
         lastUseKey: 'lastGravityPulseTime',
         cooldownKey: 'gravityPulseCooldown',
         hudIconId: 'gravitypulse',
-        activate: (game) => game.fireGravityPulse?.(),
+        activate: (host) => host.fireGravityPulse?.(),
     },
     flip: {
         id: 'flip',
@@ -425,7 +441,7 @@ export const ABILITY_REGISTRY = {
         netBit: null,
         binding: { code: 'KeyU', trigger: 'press', settingsKey: 'flip' },
         hudIconId: 'flip',
-        activate: (game) => toggleGravityFlip(game),
+        activate: (host) => toggleGravityFlip(host),
     },
     tremor: {
         id: 'tremor',
@@ -437,7 +453,7 @@ export const ABILITY_REGISTRY = {
         lastUseKey: 'lastTremorTime',
         cooldownKey: 'tremorCooldown',
         hudIconId: 'groundslam',
-        activate: (game) => game.fireTremor?.(),
+        activate: (host) => host.fireTremor?.(),
     },
     build_ramp: buildPiece('build_ramp', 'Build Ramp', 'Digit1', 'ramp'),
     build_floor: buildPiece('build_floor', 'Build Floor', 'Digit2', 'floor'),
@@ -451,7 +467,7 @@ export const ABILITY_REGISTRY = {
         netBit: null, // freezes the local world only
         binding: { code: 'Digit8', trigger: 'press', settingsKey: 'timestop' },
         hudIconId: 'timestop',
-        activate: (game) => toggleTimeStop(game),
+        activate: (host) => toggleTimeStop(host),
     },
     teleport: {
         id: 'teleport',
@@ -463,7 +479,7 @@ export const ABILITY_REGISTRY = {
         lastUseKey: 'lastTeleportTime',
         cooldownKey: 'teleportCooldown',
         hudIconId: 'teleport',
-        activate: (game) => game.triggerTeleport(),
+        activate: (host) => host.triggerTeleport(),
     },
     sizeshift: {
         id: 'sizeshift',
@@ -475,7 +491,7 @@ export const ABILITY_REGISTRY = {
         lastUseKey: 'lastSizeShiftTime',
         cooldownKey: 'sizeShiftCooldown',
         hudIconId: 'size',
-        activate: (game) => cycleSizeShift(game),
+        activate: (host) => cycleSizeShift(host),
     },
     emp: {
         id: 'emp',
@@ -487,7 +503,8 @@ export const ABILITY_REGISTRY = {
         lastUseKey: 'lastEmpTime',
         cooldownKey: 'empCooldown',
         hudIconId: 'emp',
-        activate(game) {
+        activate(host) {
+            const game = host;
             game.fireEMP?.();
             if (game.hudManager) game.hudManager.markAbilityUsed('emp');
         },
@@ -503,7 +520,7 @@ export const ABILITY_REGISTRY = {
         lastUseKey: 'lastChameleonTime',
         cooldownKey: 'chameleonCooldown',
         hudIconId: 'chameleon',
-        activate: (game) => cycleChameleon(game),
+        activate: (host) => cycleChameleon(host),
     },
     grapple: {
         id: 'grapple',
@@ -512,10 +529,10 @@ export const ABILITY_REGISTRY = {
         // Carried by the input bitfield's dedicated GRAPPLE_BIT status bit.
         netBit: null,
         // Right mouse: InputSystem calls game.startGrapple / stopGrapple, which
-        // init/core.js routes through AbilitySystem.pressAbility / releaseAbility.
+        // init/core.ts routes through AbilitySystem.pressAbility / releaseAbility.
         binding: { code: 'Mouse2', trigger: 'hold' },
-        press: (game) => game.startGrappleRaw?.(),
-        release: (game) => game.stopGrappleRaw?.(),
+        press: (host) => host.startGrappleRaw?.(),
+        release: (host) => host.stopGrappleRaw?.(),
     },
 };
 
@@ -534,7 +551,7 @@ function buildPiece(id, name, code, piece) {
         // spawnBuildPiece checks the marble and spends 25 buildEnergy itself.
         requiresMarble: false,
         hudIconId: 'build',
-        activate: (game) => game.spawnBuildPiece(piece),
+        activate: (host) => host.spawnBuildPiece(piece),
     };
 }
 
@@ -549,7 +566,7 @@ function portal(id, name, code, which) {
         category: 'utility',
         netBit: null,
         binding: { code, trigger: 'press', settingsKey: id },
-        activate: (game) => game.firePortal(which),
+        activate: (host) => host.firePortal(which),
     };
 }
 

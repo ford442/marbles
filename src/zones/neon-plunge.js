@@ -1,6 +1,16 @@
+// @ts-check
 import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
 
+/** @typedef {import('../types/zone-host.ts').ZoneBuildHost} ZoneBuildHost */
+/** @typedef {import('../types/geometry.ts').Vec3} Vec3 */
+/** @typedef {import('../types/geometry.ts').Quat} Quat */
+/** @typedef {readonly number[]} RGB */
+
+/**
+ * @param {ZoneBuildHost} game
+ * @param {Vec3} offset
+ */
 export function createNeonPlungeZone(game, offset) {
     const F = game.Filament;
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
@@ -15,6 +25,13 @@ export function createNeonPlungeZone(game, offset) {
     };
 
     // Helper to create a basic filament visual entity inline
+    /**
+     * @param {Vec3} pos
+     * @param {Vec3} halfExtents
+     * @param {RGB} color
+     * @param {number} [roughness]
+     * @param {Quat} [rotation]
+     */
     const createVisual = (pos, halfExtents, color, roughness = 0.4, rotation = floorQ) => {
         const entity = F.EntityManager.get().create();
         const matInstance = game.material.createInstance();
@@ -34,6 +51,11 @@ export function createNeonPlungeZone(game, offset) {
     };
 
     // Helper for generating matrix from rotation quat and position
+    /**
+     * @param {Vec3} pos
+     * @param {Vec3} halfExtents
+     * @param {Quat} q
+     */
     const buildTransformMatrix = (pos, halfExtents, q) => {
         const x2 = q.x + q.x, y2 = q.y + q.y, z2 = q.z + q.z;
         const xx = q.x * x2, xy = q.x * y2, xz = q.x * z2;

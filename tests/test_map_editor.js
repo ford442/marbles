@@ -10,24 +10,24 @@ import {
     syncCheckpointsFromZones,
     parseMapJson,
     serializeMapJson,
-} from '../src/editor/map-document.js';
+} from '../src/editor/map-document.ts';
 import {
     cmdDeleteZones,
     cmdMoveZones,
     cmdPlaceZone,
     cmdRotateZones,
-} from '../src/editor/map-commands.js';
-import { validateMap, collectWarnings } from '../src/editor/map-validator.js';
-import { createZoneFromStamp, STAMP_BY_ID, EDITOR_PRIMITIVE_STAMPS } from '../src/editor/stamps.js';
-import { mapDefToLevel } from '../src/editor/map-document.js';
-import { roundTripSession } from '../src/editor/editor-session.js';
+} from '../src/editor/map-commands.ts';
+import { validateMap, collectWarnings } from '../src/editor/map-validator.ts';
+import { createZoneFromStamp, STAMP_BY_ID, EDITOR_PRIMITIVE_STAMPS } from '../src/editor/stamps.ts';
+import { mapDefToLevel } from '../src/editor/map-document.ts';
+import { roundTripSession } from '../src/editor/editor-session.ts';
 import {
     snapPosition,
     snapRotation,
     snapScalar,
     rotationStepRad,
-} from '../src/editor/snap.js';
-import { collectMapAssetPaths } from '../src/editor/workshop-export.js';
+} from '../src/editor/snap.ts';
+import { collectMapAssetPaths } from '../src/editor/workshop-export.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

@@ -1,7 +1,7 @@
 /**
  * Ability registry as the single source of input truth (#451 Part E):
  * every entry is well-formed, no two abilities (or reserved UI keys) share a
- * binding, init/core.js and frame-input.js no longer branch on ability keys,
+ * binding, init/core.ts and frame-input.js no longer branch on ability keys,
  * and AbilitySystem dispatch honours level masks for every trigger kind.
  */
 import assert from 'node:assert/strict';
@@ -62,10 +62,10 @@ function testNoBindingConflicts() {
 }
 
 function testHostsNoLongerBranchOnAbilityKeys() {
-    const core = fs.readFileSync(path.join(ROOT, 'src/init/core.js'), 'utf8');
+    const core = fs.readFileSync(path.join(ROOT, 'src/init/core.ts'), 'utf8');
     const codes = [...core.matchAll(/e\.code === '(\w+)'/g)].map((m) => m[1]);
     assert.deepEqual([...new Set(codes)].sort(), ['Escape', 'KeyC', 'Tab'], 'core.js only handles UI keys itself');
-    const frame = fs.readFileSync(path.join(ROOT, 'src/game-loop/frame-input.js'), 'utf8');
+    const frame = fs.readFileSync(path.join(ROOT, 'src/game-loop/frame-input.ts'), 'utf8');
     for (const [, code] of frame.matchAll(/keys\['(\w+)'\]/g)) {
         const isAbilityKey = ALL_ABILITY_IDS.some((id) => ABILITY_REGISTRY[id].binding.code === code);
         assert.ok(!isAbilityKey, `frame-input.js polls ability key ${code} directly`);
@@ -74,10 +74,10 @@ function testHostsNoLongerBranchOnAbilityKeys() {
 
 function testHoverIsRegistryOwned() {
     const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
-    for (const rel of ['src/game-loop/frame-input.js', 'src/game-loop/logic.js']) {
+    for (const rel of ['src/game-loop/frame-input.ts', 'src/game-loop/logic.js']) {
         assert.ok(!/hoverBarEl/.test(read(rel)), `${rel} must not paint #hover; the registry hudSlot does`);
     }
-    assert.ok(!/KeyH|isHovering|hoverCharge/.test(read('src/game-loop/frame-input.js')), 'frame-input.js no longer special-cases hover');
+    assert.ok(!/KeyH|isHovering|hoverCharge/.test(read('src/game-loop/frame-input.ts')), 'frame-input.js no longer special-cases hover');
     assert.ok(!/getMarblePhysics/.test(read('src/abilities/hover.js')), 'hover is not a wasm-bridge kernel');
 
     const def = ABILITY_REGISTRY.hover;
@@ -86,7 +86,7 @@ function testHoverIsRegistryOwned() {
     assert.equal(typeof def.tick, 'function', 'hover advances on the fixed step');
 
     // The step loop ticks the registry before every physics step, both backends.
-    const sync = read('src/game-loop/sync.js');
+    const sync = read('src/game-loop/sync.ts');
     assert.equal((sync.match(/abilitySystem\?\.tickFixedStep\(/g) ?? []).length, 2, 'sync.js ticks in the worker and main-thread branches');
 }
 

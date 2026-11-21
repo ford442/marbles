@@ -2,13 +2,13 @@
 /**
  * Jump (registry `jump`, held on Space): press starts a ground charge, or —
  * airborne — launches off a wall or fires the double jump; release spends the
- * charge. Moved verbatim from the init/core.js key handlers.
+ * charge. Moved verbatim from the init/core.ts key handlers.
  */
 import { audio } from '../audio.js';
 import { applyVelocityChange } from '../game/systems/body-impulse.ts';
 import { JUMP_DV_MAX, JUMP_DV_MIN, WALL_LAUNCH_DV } from './movement-tuning.js';
 
-/** @param {any} game */
+/** @param {import('./hook-host.ts').JumpHost} game */
 export function pressJump(game) {
     if (!game.playerMarble) return
     if (game.isGrounded(game.playerMarble)) {
@@ -42,18 +42,13 @@ export function pressJump(game) {
         if (typeof game.executeDoubleJump === 'function') {
             game.executeDoubleJump()
         }
-        // Visual effect for double jump (burst particle)
-        if (game.particleSystem && game.particleSystem.createEmitter) {
-            game.particleSystem.createEmitter(
-                game.playerMarble.rigidBody.translation(),
-                { r: 0, g: 1, b: 1, a: 1 }, // Cyan burst
-                0.5,
-            )
-        }
+        // (A cyan "double jump burst" used to be requested here through
+        // `particleSystem.createEmitter`, which ParticleSystem has never had,
+        // so it never ran; removed while typing. `emitParticles` is the API.)
     }
 }
 
-/** @param {any} game */
+/** @param {import('./hook-host.ts').JumpHost} game */
 export function releaseJump(game) {
     if (game.isChargingJump && game.playerMarble) {
         let dv = JUMP_DV_MIN + game.jumpCharge * (JUMP_DV_MAX - JUMP_DV_MIN)

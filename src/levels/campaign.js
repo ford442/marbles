@@ -174,15 +174,34 @@ export const DEFAULT_MEDALS_BY_DIFFICULTY = {
     extreme: { goldTime: 75, silverTime: 150, bronzeTime: 270, parTime: 120 },
 };
 
+/** @typedef {import('../types/map.ts').MedalThresholds} AuthoredMedals */
+
 /**
- * @param {{ medals?: MedalThresholds, difficulty?: string }} level
+ * The level's medal thresholds: authored `medals` merged per field over the
+ * difficulty defaults (a partial block, e.g. only `goldTime`, keeps the
+ * defaults for the rest). A block with all three times is used as authored.
+ * @param {{ medals?: AuthoredMedals | undefined, difficulty?: string | undefined } | null | undefined} level
  * @returns {MedalThresholds}
  */
 export function getMedalThresholds(level) {
-    if (level?.medals) return level.medals;
     const diff = level?.difficulty || 'medium';
-    return DEFAULT_MEDALS_BY_DIFFICULTY[/** @type {Difficulty} */ (diff)]
+    const defaults = DEFAULT_MEDALS_BY_DIFFICULTY[/** @type {Difficulty} */ (diff)]
         || DEFAULT_MEDALS_BY_DIFFICULTY.medium;
+    const authored = level?.medals;
+    if (!authored) return defaults;
+    const { goldTime, silverTime, bronzeTime, parTime } = authored;
+    if (goldTime !== undefined && silverTime !== undefined && bronzeTime !== undefined) {
+        return { goldTime, silverTime, bronzeTime, ...(parTime !== undefined ? { parTime } : {}) };
+    }
+    /** @type {MedalThresholds} */
+    const merged = {
+        goldTime: goldTime ?? defaults.goldTime,
+        silverTime: silverTime ?? defaults.silverTime,
+        bronzeTime: bronzeTime ?? defaults.bronzeTime,
+    };
+    const par = parTime ?? defaults.parTime;
+    if (par !== undefined) merged.parTime = par;
+    return merged;
 }
 
 /**

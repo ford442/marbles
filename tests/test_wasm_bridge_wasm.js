@@ -212,7 +212,7 @@ async function main() {
     }
 
     // Shield / Violet repel parameters: falloffExp = 0 (constant magnitude),
-    // minDist = 0, negative per-body strength. See src/game-loop/repel-pulse.js.
+    // minDist = 0, negative per-body strength. See src/game-loop/repel-pulse.ts.
     {
         const rpCount = 13;
         const rpPositions = new Float32Array(rpCount * 3);

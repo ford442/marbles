@@ -1,14 +1,67 @@
+// @ts-check
 import { destroyLoadedTrackModels } from '../assets/gltf-track-loader.js';
 import { audio } from '../audio.js';
 import { unloadLevelBehaviors } from '../game/level-behaviors/index.js';
-import { clearRemoteAbilityFx } from '../game/network/ability-sync.js';
-import { resetDesyncIndicator } from '../game/network/desync-indicator.js';
+import { clearRemoteAbilityFx } from '../game/network/ability-sync.ts';
+import { resetDesyncIndicator } from '../game/network/desync-indicator.ts';
 
+/** @typedef {import('../types/engine-context.ts').EngineContext} EngineContext */
+/** @typedef {import('../types/frame-host.ts').FrameState} FrameState */
+/** @typedef {import('../types/frame-host.ts').FrameExtras} FrameExtras */
+/** @typedef {import('../types/filament.ts').FilamentHandle} FilamentHandle */
+/** @typedef {import('../game/systems/physics-backend.ts').PhysicsBackendHost} PhysicsBackendHost */
+/** @typedef {import('../game/systems/physics-world.ts').PhysicsWorldHost} PhysicsWorldHost */
+/** @typedef {import('../game/systems/marble-registry.js').MarbleRegistry} MarbleRegistry */
+/** @typedef {import('../abilities/constructs.ts').AbilityConstructs} AbilityConstructs */
+/** @typedef {import('../zones/methods/visuals.ts').ZoneVisuals} ZoneVisuals */
+/** @typedef {import('./multiplayer-menu.ts').MultiplayerContext} MultiplayerContext */
+/** @typedef {import('./touch-init.ts').TouchControlsContext} TouchControlsContext */
+
+/**
+ * Level-scoped render members other slices create and `clearLevel` tears down.
+ * @typedef {object} LevelTeardownContext
+ * @property {FilamentHandle | null} [activeMarbleLightEntity] Point light following the player (`updateActiveMarbleLight`).
+ * @property {{ dispose(): void } | null} [webgpuParticles] WebGPU particle overlay (`scheduleWebGPUExperiments`).
+ */
+
+/**
+ * What `InitCleanup` uses on the game, plus what the teardown helpers it hands
+ * the game to need. `world` is the intersection of the Rapier world and the
+ * backend's view of it (`removeRigidBody(unknown)`), as on the game itself.
+ * @typedef {LevelTeardownContext
+ *     & Pick<EngineContext,
+ *         | 'world' | 'Filament' | 'engine' | 'scene' | 'lightingBudget' | 'lightingSystem'
+ *         | 'volumetricLights' | 'particleSystem' | 'effectPool' | 'levelEffectBudget' | 'cullingManager'
+ *         | 'trackLodManager' | 'marbleLodManager'>
+ *     & Pick<PhysicsBackendHost, 'world' | 'physicsBackend' | 'multiplayerMode' | 'hostAuthorityMode'>
+ *     & Pick<FrameState,
+ *         | 'marbles' | 'playerMarble' | 'staticBodies' | 'staticEntities' | 'dynamicObjects' | 'checkpoints'
+ *         | 'collectibles' | 'grappleAnchors' | 'powerUps' | 'activeEffects' | 'movingPlatforms'
+ *         | 'rotatingPlatforms' | 'ghostEntity' | 'ghostMaterialInstance' | 'ghostLightEntity'
+ *         | 'portalA' | 'portalB' | 'adrenaline' | 'nearMisses' | 'dynamicBodies'>
+ *     & Pick<PhysicsWorldHost, 'staticBatchResources' | 'staticBatchStats' | '_staticBoxBatchGroups' | '_decorativeBatchGroups'>
+ *     & Pick<FrameExtras, 'zoneScope'>
+ *     & Partial<MultiplayerContext>
+ *     & TouchControlsContext
+ *     & Pick<MarbleRegistry, 'resetPlayerAbilityState'>
+ *     & Pick<AbilityConstructs, 'destroyPortal'>
+ *     & Pick<ZoneVisuals, 'setNightMode'>
+ *     & Parameters<typeof unloadLevelBehaviors>[0]
+ *     & Parameters<typeof destroyLoadedTrackModels>[0]
+ *     & Parameters<typeof clearRemoteAbilityFx>[0]
+ *     & Parameters<typeof resetDesyncIndicator>[0]
+ *     & import('../zone-setup/primitives.ts').ZoneScopeHost
+ * } InitCleanupHost
+ */
+
+/** Level teardown (`LevelCleanupRuntime`); `LevelLoader.clearLevel` delegates here. */
 export class InitCleanup {
+    /** @param {InitCleanupHost} game */
     constructor(game) {
         this.game = game;
     }
 
+    /** @returns {void} */
     clearLevel() {
         unloadLevelBehaviors(this.game);
         // Before marbles are removed: drops grapple/double-jump/charge state.
@@ -52,13 +105,23 @@ export class InitCleanup {
         this.game.staticEntities = []
         if (this.game.staticBatchResources) {
             for (const batch of this.game.staticBatchResources) {
-                if (batch.matInstance) this.game.engine.destroyMaterialInstance(batch.matInstance)
+                // Entries are the `{ entity, vb, ib, matInstance, ... }` records PhysicsWorld batches push.
+                const matInstance = typeof batch === 'object' && batch !== null && 'matInstance' in batch
+                    ? batch.matInstance
+                    : undefined
+                if (matInstance) this.game.engine.destroyMaterialInstance(matInstance)
             }
             this.game.staticBatchResources = []
         }
         if (this.game._staticBoxBatchGroups) this.game._staticBoxBatchGroups.clear()
         if (this.game._decorativeBatchGroups) this.game._decorativeBatchGroups.clear()
-        this.game.staticBatchStats = { groups: 0, boxes: 0, collapsedEntities: 0 }
+        this.game.staticBatchStats = {
+            groups: 0,
+            boxes: 0,
+            collapsedEntities: 0,
+            // Same shape PhysicsWorld writes; readers default a missing one to 0 anyway.
+            decorative: { groups: 0, instances: 0, collapsedEntities: 0 },
+        }
         this.game.cullingManager?.reset()
         this.game.marbleLodManager?.reset()
         this.game.effectPool?.reset()
@@ -118,7 +181,8 @@ export class InitCleanup {
             this.game.engine.destroyEntity(p.entity)
         }
         this.game.powerUps = []
-        this.game.activeEffects = {}
+        // Same as the initial state (createGameState); zero expiries read as "not active".
+        this.game.activeEffects = { speed: 0, jump: 0 }
 
         for (const platform of this.game.movingPlatforms) {
             if (!workerActive) this.game.world.removeRigidBody(platform.rigidBody)
@@ -165,8 +229,10 @@ export class InitCleanup {
         if (this.game.portalB) this.game.destroyPortal(this.game.portalB)
         this.game.portalA = null
         this.game.portalB = null
-        document.getElementById('portal-a-status').style.color = '#444'
-        document.getElementById('portal-b-status').style.color = '#444'
+        const portalAStatus = document.getElementById('portal-a-status')
+        const portalBStatus = document.getElementById('portal-b-status')
+        if (portalAStatus) portalAStatus.style.color = '#444'
+        if (portalBStatus) portalBStatus.style.color = '#444'
 
         this.game.effectPool?.drainAllActiveVisuals()
 

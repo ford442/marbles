@@ -1,7 +1,7 @@
-import { GameLoopSyncMethods } from '../../game-loop/sync.js';
+import { GameLoopSyncMethods, type GameLoopSyncMethodsHost } from '../../game-loop/sync.ts';
 
 /** Game surface the render pipeline drives each frame (the remaining game-loop mixins). */
-export interface RenderPipelineHost {
+export interface RenderPipelineFrameHost {
     perfMonitor?: { beginFrame(): void; recordCoreWork(stats: Record<string, number>): void } | null;
     _lastRenderTick?: number;
     _lastHudStyleUpdate?: number;
@@ -17,6 +17,9 @@ export interface RenderPipelineHost {
     ): void;
 }
 
+/** The frame drivers plus what the transform sync / Filament draw (`GameLoopSyncMethods`) reads. */
+export type RenderPipelineHost = RenderPipelineFrameHost & GameLoopSyncMethodsHost;
+
 /** The part of `PhysicsWorld` the pipeline forwards to. */
 export interface StaticBatchFlusher {
     flushStaticBatches(...args: unknown[]): unknown;
@@ -29,7 +32,7 @@ export interface StaticBatchFlusher {
 export class RenderPipeline {
     game: RenderPipelineHost;
     physicsWorld: StaticBatchFlusher | undefined;
-    /** Physics step + transform sync + Filament draw (`game-loop/sync.js`). */
+    /** Physics step + transform sync + Filament draw (`game-loop/sync.ts`). */
     sync: GameLoopSyncMethods;
 
     constructor(game: RenderPipelineHost, { physicsWorld }: { physicsWorld?: StaticBatchFlusher } = {}) {

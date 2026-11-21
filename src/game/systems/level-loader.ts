@@ -1,18 +1,26 @@
+import type { AssetRegistry } from '../../assets/AssetRegistry.js';
 import type { getLevel } from '../../levels/catalog.js';
 import type { PhysicsWorld } from './physics-world.ts';
 import type { MarbleRegistry } from './marble-registry.js';
+
+/** Party Race start (`NetworkClient.onStarting`): shared countdown deadline and race seed. */
+export interface LevelStartOptions {
+    startAtMs?: number;
+    seed?: number;
+}
 
 /**
  * Level lifecycle methods implemented by the composed `InitLevelLoader` slice
  * (`init/level-loader.js`), constructed against the same game.
  */
 export interface LevelRuntime {
-    loadLevel(levelId: string, options?: Record<string, unknown>): Promise<unknown>;
-    startLevelSequence(options?: { startAtMs?: number; seed?: number }): Promise<unknown>;
+    /** Resolves `false` when called before boot finished; otherwise once the countdown starts the run. */
+    loadLevel(levelId: string, options?: LevelStartOptions): Promise<false | undefined>;
+    startLevelSequence(options?: LevelStartOptions): Promise<void>;
     animateHUDIn(): void;
     delay(ms: number): Promise<void>;
     _waitUntil(targetMs: number): Promise<void>;
-    createGhostMarble(): unknown;
+    createGhostMarble(): void;
 }
 
 /** Teardown implemented by the composed `InitCleanup` slice (`init/cleanup.js`). */
@@ -23,7 +31,7 @@ export interface LevelCleanupRuntime {
 export interface LevelLoaderDeps {
     physicsWorld: PhysicsWorld;
     marbleRegistry: MarbleRegistry;
-    assetRegistry: unknown;
+    assetRegistry: AssetRegistry;
     getLevelById: typeof getLevel;
     runtime: LevelRuntime;
     cleanupRuntime: LevelCleanupRuntime;
@@ -34,7 +42,7 @@ export class LevelLoader {
     game: unknown;
     physicsWorld: PhysicsWorld;
     marbleRegistry: MarbleRegistry;
-    assetRegistry: unknown;
+    assetRegistry: AssetRegistry;
     getLevelById: typeof getLevel;
     runtime: LevelRuntime;
     cleanupRuntime: LevelCleanupRuntime;

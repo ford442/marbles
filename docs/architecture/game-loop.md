@@ -1,20 +1,20 @@
 # Game Loop Architecture
 
-**Status:** Canonical — July 2026  
-**Entry:** `src/main.js` → composed `RenderPipeline` plus the closed `installGameLoopMethods` compatibility list
+**Status:** Canonical — November 2026  
+**Entry:** `src/main.js` → composed `RenderPipeline` plus the `GAME_LOOP_SLICES` frame slices
 
 ## Live runtime graph
 
 ```
 main.js
   ├── RenderPipeline                      # game/systems/render-pipeline.ts
-  │     └── sync.js                       # transform/physics/draw runtime slice
+  │     └── sync.ts                       # transform/physics/draw runtime slice
   ├── HudController                       # game/systems/hud-controller.ts
   │     └── hud-tick.js                   # legacy cooldown implementation
-  └── installGameLoopMethods              # closed allowlist in game-loop/index.js
+  └── GAME_LOOP_SLICES                    # slice classes listed in game-loop/index.ts
         ├── loop.ts, logic.js, speed-lines.js
-        ├── frame-input.js, camera.js, dynamics-tick.js
-        └── effects-tick.js, finalize-frame.js
+        ├── frame-input.ts, camera.ts, dynamics-tick.js
+        └── effects-tick.ts, finalize-frame.js
 ```
 
 **Not on the runtime path** (archived under `docs/backups/`):
@@ -22,7 +22,7 @@ main.js
 - `game-runtime-drafts/core.js.orig`, `core.js.broken` — old monolithic loop drafts
 - `unused-game-modules/unwired-game-loop/` — `abilities.js`, `camera.js`, `hud.js`, `input.js` never wired to `index.js`
 
-Root `game-loop-*-methods.js` shims (and the later `*-methods.js` ones) were removed; import `game-loop/index.js` directly.
+Root `game-loop-*-methods.js` shims (and the later `*-methods.js` ones) were removed; import `game-loop/index.ts` directly.
 
 ## Per-frame call order
 
@@ -44,7 +44,7 @@ loop()                          [loop.ts]
         tickHudCooldownBars()   per-ability DOM bar widths
         updateAllAbilities()    consolidated ability HUD
         updateGoalEffects()     goal-zone presentation
-      syncTransformsAndRender() [sync.js]
+      syncTransformsAndRender() [sync.ts]
         … particle / platform housekeeping …
         physicsWorld.step() × physicsSubsteps   main thread (prev poses captured before the last)
           — or once in worker mode (flushes commands; the worker steps itself)
@@ -71,7 +71,7 @@ The simulation advances in **fixed steps** regardless of display refresh rate; t
 Rules that follow from it:
 
 1. **Time-based state uses seconds.** Per-frame code reads `this.frameDt` (wall seconds, for UI/meters/cameras) or `this.simDt` (simulated seconds this frame, for anything that feeds physics). No frame-count counters, and no hard-coded `dt = 0.016`. Legacy per-frame constants are kept by scaling with `frameDt · 60` / `simDt · 60`.
-2. **Forces are applied once per frame, before the substeps** (`updateGameState`, `tickFrameInput`), so they must be expressed as velocity change: use `applyVelocityChange(rb, dv)` for instantaneous Δv (jumps, launches) and `applyAcceleration(rb, a, simDt)` for continuous forces (hover, springs, jetpack) from `game/systems/body-impulse.ts`. Both multiply by the body's mass — a raw `applyImpulse` with a hand-tuned constant does nothing on the ~724 kg default marble. State that must advance on the simulation clock itself (hover's energy, gravity scale and lift) belongs in a registry **`tick(game, dt)`** hook instead: `AbilitySystem.tickFixedStep(dt)` runs it once per fixed step in `sync.js`, in both backends, and it must not read velocities each tick (the worker's `linvel()` is a published snapshot, one step behind).
+2. **Forces are applied once per frame, before the substeps** (`updateGameState`, `tickFrameInput`), so they must be expressed as velocity change: use `applyVelocityChange(rb, dv)` for instantaneous Δv (jumps, launches) and `applyAcceleration(rb, a, simDt)` for continuous forces (hover, springs, jetpack) from `game/systems/body-impulse.ts`. Both multiply by the body's mass — a raw `applyImpulse` with a hand-tuned constant does nothing on the ~724 kg default marble. State that must advance on the simulation clock itself (hover's energy, gravity scale and lift) belongs in a registry **`tick(game, dt)`** hook instead: `AbilitySystem.tickFixedStep(dt)` runs it once per fixed step in `sync.ts`, in both backends, and it must not read velocities each tick (the worker's `linvel()` is a published snapshot, one step behind).
 3. **Fast bodies use CCD.** Player/rival marbles, missiles and bombs set `setCcdEnabled(true)` (serialized as `ccd: true` for the worker) so they cannot tunnel through thin walls within a step.
 4. **Raycasts go through `this.physicsQueries`** (`castRay(origin, dir, maxToi, { excludeBody, solid, groups, excludeSensors })` → `RayHit | null`). Always pass `excludeBody` when casting from inside a body. Direct `world.castRay` is lint-forbidden outside `physics-queries.ts` / `physics-backend.ts`.
 5. **Rewind / per-step recorders** only record on frames where `physicsSubsteps > 0`.
@@ -82,16 +82,16 @@ Tests: `tests/test_fixed_step_clock.js` (same distance at 30/60/144/240 Hz withi
 
 | Phase | Primary module | Notes |
 |-------|----------------|-------|
-| Input poll | `game/systems/input-system.ts` | Gamepad + pause; keyboard read in `frame-input.js` |
+| Input poll | `game/systems/input-system.ts` | Gamepad + pause; keyboard read in `frame-input.ts` |
 | Logic / abilities (pre-step) | `logic.js` | Focus, time-stop, vortex, phase, ice, rewind, etc. |
-| Frame input + forces | `frame-input.js`, `effects-tick.js` | Impulses applied **before** `world.step()` |
-| Camera | `camera.js` | Uses adrenaline shake from `logic.js` |
-| Physics step | `sync.js` | `physicsSubsteps` fixed steps (0…5) per frame — see below |
-| Game rules | `sync.js` | `checkGameLogic()` after step |
-| Sync + render | `sync.js` | Transforms → Filament, `view.render()` |
+| Frame input + forces | `frame-input.ts`, `effects-tick.ts` | Impulses applied **before** `world.step()` |
+| Camera | `camera.ts` | Uses adrenaline shake from `logic.js` |
+| Physics step | `sync.ts` | `physicsSubsteps` fixed steps (0…5) per frame — see below |
+| Game rules | `sync.ts` | `checkGameLogic()` after step |
+| Sync + render | `sync.ts` | Transforms → Filament, `view.render()` |
 | HUD | `game/systems/hud-controller.ts` | Single frame entry for bars, ability HUD, goal FX, desync display |
 
-Ability **spawn** handlers remain in `src/abilities/` (installed via `abilities/index.js`; `AbilitySystem` in `game/systems/ability-system.ts` routes input and HUD). Ability **per-frame tick** is split between `logic.js` (energy/state) and `effects-tick.js` (projectiles).
+Ability **spawn** handlers remain in `src/abilities/` (composed via `ABILITY_SLICES` in `abilities/index.ts`; `AbilitySystem` in `game/systems/ability-system.ts` routes input and HUD). Ability **per-frame tick** is split between `logic.js` (energy/state) and `effects-tick.ts` (projectiles).
 
 ## Module responsibilities
 
@@ -99,14 +99,14 @@ Ability **spawn** handlers remain in `src/abilities/` (installed via `abilities/
 |------|---------|----------------|
 | `loop.ts` | `loop` | rAF scheduling, pause branch, `frameDt` / `physicsClock.advance()` → `simDt`, `physicsSubsteps` |
 | `logic.js` | `updateGameState` | Ghost, adrenaline/FOV/shake, ability state machine |
-| `frame-input.js` | `tickFrameInput` | Key debounce, marble impulses, magnet |
-| `camera.js` | `updateCamera` | All camera modes + collision avoidance |
+| `frame-input.ts` | `tickFrameInput` | Key debounce, marble impulses, magnet |
+| `camera.ts` | `updateCamera` | All camera modes + collision avoidance |
 | `dynamics-tick.js` | `tickSceneDynamics` | Kinematic bodies, collectible pickup |
 | `hud-tick.js` | `tickHudCooldownBars` | Legacy runtime slice called only by `HudController` |
-| `effects-tick.js` | `tickActiveProjectiles` | Active bomb/missile/black-hole visuals + forces |
+| `effects-tick.ts` | `tickActiveProjectiles` | Active bomb/missile/black-hole visuals + forces |
 | `finalize-frame.js` | `finalizeFrame` | Single HUD-controller entry + perf counters |
 | `game/systems/render-pipeline.ts` | `renderAndSync` | Main-thread frame and draw orchestrator |
-| `sync.js` | `syncTransformsAndRender` | Fixed substeps, interpolated transform sync, Filament draw |
+| `sync.ts` | `syncTransformsAndRender` | Fixed substeps, interpolated transform sync, Filament draw |
 | `speed-lines.js` | `init/update/renderSpeedLines` | Canvas overlay |
 | `helpers.ts` | transform/color helpers | Shared by render-phase modules |
 
@@ -115,10 +115,10 @@ Ability **spawn** handlers remain in `src/abilities/` (installed via `abilities/
 1. **One directory** — all loop code lives under `src/game-loop/`. No new `game-loop-*.js` at `src/` root.
 2. **Orchestrator stays thin** — `RenderPipeline` only sequences subsystem/tick calls and owns draw dispatch.
 3. **No duplicate loops** — do not revive `core.js` monoliths from `docs/backups/`.
-4. **New per-frame behavior** — add it to a composed subsystem or the appropriate tick module and explicitly list compatibility methods in `index.js`.
-5. **Physics impulses** that must affect the next step go in `frame-input.js`, `effects-tick.js`, or `logic.js` — before `syncTransformsAndRender()` — and follow the [fixed-step rules](#fixed-step-simulation) (Δv / acceleration × `simDt`, never per-frame constants).
+4. **New per-frame behavior** — add it to a composed subsystem or the appropriate tick module and list its forwarded methods in that file's `defineSlice(...)` entry in `index.ts`, typed against the slice's `*Host`.
+5. **Physics impulses** that must affect the next step go in `frame-input.ts`, `effects-tick.ts`, or `logic.js` — before `syncTransformsAndRender()` — and follow the [fixed-step rules](#fixed-step-simulation) (Δv / acceleration × `simDt`, never per-frame constants).
 
 ## Related docs
 
 - [architecture/README.md](./README.md) — broader Phase A/B migration
-- [language-strategy.md](./language-strategy.md) — when to extract pure TS systems from mixins
+- [language-strategy.md](./language-strategy.md) — when to extract pure TS systems from slices

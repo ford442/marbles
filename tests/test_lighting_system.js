@@ -8,7 +8,7 @@
  * - Performance
  */
 
-import { LightingSystem } from '../src/lighting-system.js';
+import { LightingSystem } from '../src/lighting-system.ts';
 
 console.log('=== Dynamic Lighting System Tests ===\n');
 

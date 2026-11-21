@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Minimal GLB 2.0 parser for collision mesh extraction.
  * Used alongside Filament gltfio for rendering (same buffer, dual purpose).
@@ -10,6 +11,18 @@ const GLB_MAGIC = 0x46546c67;
  */
 
 /**
+ * The parts of the glTF JSON chunk this parser reads (untrusted file input:
+ * every field is optional and checked where it is dereferenced).
+ * @typedef {{ bufferView?: number, byteOffset?: number, componentType?: number, type?: string, count?: number }} GltfAccessor
+ * @typedef {{ byteOffset?: number, byteStride?: number }} GltfBufferView
+ * @typedef {{ mode?: number, indices?: number, attributes?: { POSITION?: number } }} GltfPrimitive
+ * @typedef {{ name?: string, primitives?: GltfPrimitive[] }} GltfMesh
+ * @typedef {{ meshes?: GltfMesh[], accessors?: GltfAccessor[], bufferViews?: GltfBufferView[] }} GltfJson
+ */
+
+/** @typedef {Float32ArrayConstructor | Uint32ArrayConstructor} AccessorArrayType */
+
+/**
  * @param {ArrayBuffer} buffer
  * @returns {ParsedMesh[]}
  */
@@ -19,7 +32,9 @@ export function parseGlbMeshes(buffer) {
     if (view.getUint32(0, true) !== GLB_MAGIC) throw new Error('Not a GLB file');
 
     let offset = 12;
+    /** @type {GltfJson | null} */
     let json = null;
+    /** @type {Uint8Array | null} */
     let bin = null;
 
     while (offset + 8 <= view.byteLength) {
@@ -30,7 +45,7 @@ export function parseGlbMeshes(buffer) {
         offset += chunkLength;
 
         if (chunkType === 0x4e4f534a) {
-            json = JSON.parse(new TextDecoder().decode(chunkData));
+            json = /** @type {GltfJson} */ (JSON.parse(new TextDecoder().decode(chunkData)));
         } else if (chunkType === 0x004e4942) {
             bin = chunkData;
         }
@@ -38,17 +53,24 @@ export function parseGlbMeshes(buffer) {
 
     if (!json || !bin) throw new Error('GLB missing JSON or BIN chunk');
 
+    /** @type {ParsedMesh[]} */
     const meshes = [];
     const gltfMeshes = json.meshes || [];
     for (let meshIndex = 0; meshIndex < gltfMeshes.length; meshIndex++) {
         const mesh = gltfMeshes[meshIndex];
+        if (!mesh) continue;
         for (const primitive of mesh.primitives || []) {
             if (primitive.mode !== undefined && primitive.mode !== 4) continue;
-            const positions = readAccessor(json, bin, primitive.attributes?.POSITION, Float32Array);
+            const positions = /** @type {Float32Array | null} */ (
+                readAccessor(json, bin, primitive.attributes?.POSITION, Float32Array)
+            );
+            // A primitive without POSITION is skipped (previously this threw on
+            // positions.length when it also had no indices).
+            if (!positions) continue;
             const indices = primitive.indices !== undefined
-                ? readAccessor(json, bin, primitive.indices, Uint32Array)
+                ? /** @type {Uint32Array | null} */ (readAccessor(json, bin, primitive.indices, Uint32Array))
                 : generateSequentialIndices(positions.length / 3);
-            if (!positions || positions.length < 9) continue;
+            if (!indices || positions.length < 9) continue;
             meshes.push({
                 name: mesh.name || `mesh_${meshIndex}`,
                 positions,
@@ -62,24 +84,25 @@ export function parseGlbMeshes(buffer) {
 }
 
 /**
- * @param {object} json
+ * @param {GltfJson} json
  * @param {Uint8Array} bin
  * @param {number | undefined} accessorIndex
- * @param {typeof Float32Array | typeof Uint32Array} ArrayType
+ * @param {AccessorArrayType} ArrayType
+ * @returns {Float32Array | Uint32Array | null}
  */
 function readAccessor(json, bin, accessorIndex, ArrayType) {
     if (accessorIndex === undefined) return null;
     const accessor = json.accessors?.[accessorIndex];
     if (!accessor) throw new Error(`Missing accessor ${accessorIndex}`);
 
-    const bufferView = json.bufferViews?.[accessor.bufferView];
+    const bufferView = accessor.bufferView !== undefined ? json.bufferViews?.[accessor.bufferView] : undefined;
     if (!bufferView) throw new Error(`Missing bufferView for accessor ${accessorIndex}`);
 
     const byteOffset = (accessor.byteOffset || 0) + (bufferView.byteOffset || 0);
     const componentSize = componentBytes(accessor.componentType);
     const numComponents = numComponentsForType(accessor.type);
     const stride = bufferView.byteStride || componentSize * numComponents;
-    const count = accessor.count;
+    const count = accessor.count ?? 0;
 
     if (stride === componentSize * numComponents) {
         const totalBytes = count * stride;
@@ -97,6 +120,12 @@ function readAccessor(json, bin, accessorIndex, ArrayType) {
     return out;
 }
 
+/**
+ * @param {AccessorArrayType} ArrayType
+ * @param {GltfAccessor} accessor
+ * @param {Uint8Array} slice
+ * @returns {Float32Array | Uint32Array}
+ */
 function normalizeAccessorArray(ArrayType, accessor, slice) {
     if (ArrayType === Float32Array && accessor.componentType === 5126) {
         return new Float32Array(slice.buffer, slice.byteOffset, slice.byteLength / 4);
@@ -107,18 +136,24 @@ function normalizeAccessorArray(ArrayType, accessor, slice) {
     if (ArrayType === Uint32Array && accessor.componentType === 5123) {
         const src = new Uint16Array(slice.buffer, slice.byteOffset, slice.byteLength / 2);
         const out = new Uint32Array(src.length);
-        for (let i = 0; i < src.length; i++) out[i] = src[i];
+        out.set(src);
         return out;
     }
     if (ArrayType === Float32Array && accessor.componentType === 5123) {
         const src = new Uint16Array(slice.buffer, slice.byteOffset, slice.byteLength / 2);
         const out = new Float32Array(src.length);
-        for (let i = 0; i < src.length; i++) out[i] = src[i];
+        out.set(src);
         return out;
     }
     throw new Error(`Unsupported accessor combo: ${accessor.componentType} -> ${ArrayType.name}`);
 }
 
+/**
+ * @param {Uint8Array} bin
+ * @param {number} offset
+ * @param {number | undefined} componentType
+ * @returns {number}
+ */
 function readComponent(bin, offset, componentType) {
     const view = new DataView(bin.buffer, bin.byteOffset, bin.byteLength);
     switch (componentType) {
@@ -130,6 +165,7 @@ function readComponent(bin, offset, componentType) {
     }
 }
 
+/** @param {number | undefined} componentType */
 function componentBytes(componentType) {
     switch (componentType) {
         case 5126: return 4;
@@ -140,6 +176,7 @@ function componentBytes(componentType) {
     }
 }
 
+/** @param {string | undefined} type */
 function numComponentsForType(type) {
     switch (type) {
         case 'SCALAR': return 1;
@@ -150,6 +187,7 @@ function numComponentsForType(type) {
     }
 }
 
+/** @param {number} vertexCount */
 function generateSequentialIndices(vertexCount) {
     const indices = new Uint32Array(vertexCount);
     for (let i = 0; i < vertexCount; i++) indices[i] = i;
@@ -177,9 +215,9 @@ export function mergeMeshes(meshes) {
     for (const mesh of meshes) {
         positions.set(mesh.positions, vOffset);
         vOffset += mesh.positions.length;
-        for (let i = 0; i < mesh.indices.length; i++) {
-            indices[iOffset + i] = mesh.indices[i] + vertexBase;
-        }
+        mesh.indices.forEach((index, i) => {
+            indices[iOffset + i] = index + vertexBase;
+        });
         iOffset += mesh.indices.length;
         vertexBase += mesh.positions.length / 3;
     }
@@ -199,9 +237,9 @@ export function transformPositions(positions, scale = 1, rotY = 0) {
     const cosY = Math.cos(rotY);
     const sinY = Math.sin(rotY);
     for (let i = 0; i < positions.length; i += 3) {
-        const x = positions[i] * scale;
-        const y = positions[i + 1] * scale;
-        const z = positions[i + 2] * scale;
+        const x = (positions[i] ?? 0) * scale;
+        const y = (positions[i + 1] ?? 0) * scale;
+        const z = (positions[i + 2] ?? 0) * scale;
         out[i] = x * cosY + z * sinY;
         out[i + 1] = y;
         out[i + 2] = -x * sinY + z * cosY;
@@ -209,16 +247,19 @@ export function transformPositions(positions, scale = 1, rotY = 0) {
     return out;
 }
 
+/** @typedef {{ center: [number, number, number], halfExtent: [number, number, number], radius: number }} MeshBounds */
+
 /**
  * @param {Float32Array} positions
+ * @returns {MeshBounds}
  */
 export function computeMeshBounds(positions) {
     let minX = Infinity; let minY = Infinity; let minZ = Infinity;
     let maxX = -Infinity; let maxY = -Infinity; let maxZ = -Infinity;
     for (let i = 0; i < positions.length; i += 3) {
-        const x = positions[i];
-        const y = positions[i + 1];
-        const z = positions[i + 2];
+        const x = positions[i] ?? 0;
+        const y = positions[i + 1] ?? 0;
+        const z = positions[i + 2] ?? 0;
         if (x < minX) minX = x;
         if (y < minY) minY = y;
         if (z < minZ) minZ = z;

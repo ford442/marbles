@@ -5,7 +5,7 @@
  */
 
 /**
- * Schema for marble game levels/maps. One rule set, compiled with ajv by scripts/validate-assets.cjs (CI), src/editor/map-validator.js (editor + workshop import) and backend/storage/services/map_validation.py (workshop publish). zone.type strings must be registered in src/zone-setup/registry.js (see assets/schemas/zone-handlers.json). schemaVersion 2 adds data-driven primitives (box, ramp, mover, spinner, trigger), [x,y,z] vectors, a goal volume, rivals and bounds.
+ * Schema for marble game levels/maps. One rule set, compiled with ajv by scripts/validate-assets.cjs (CI), src/editor/map-validator.ts (editor + workshop import) and backend/storage/services/map_validation.py (workshop publish). zone.type strings must be registered in src/zone-setup/registry.js (see assets/schemas/zone-handlers.json). schemaVersion 2 adds data-driven primitives (box, ramp, mover, spinner, trigger), [x,y,z] vectors, a goal volume, rivals and bounds.
  */
 export type MapSchema = {
     [k: string]: unknown | undefined;

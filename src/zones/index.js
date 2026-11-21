@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Barrel exports for zone factory functions.
  * Registration lives in zone-setup/registry.js — add new zones here and in the registry.

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { EffectBudget, EFFECT_BUDGETS } from '../src/effect-pool.js';
+import { EffectBudget, EFFECT_BUDGETS } from '../src/effect-pool.ts';
 import {
     shouldUpdateParticle,
     shouldSkipParticleColorUpdate,
-} from '../src/particle-sync-helpers.js';
+} from '../src/particle-sync-helpers.ts';
 
 function testEffectBudgetMedium() {
     const game = {

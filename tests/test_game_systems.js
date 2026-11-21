@@ -8,7 +8,7 @@ import {
     computeLandingTrickScore,
     applyComboMultiplier,
 } from '../src/game/systems/trick-scoring.ts';
-import { ZONE_METHOD_SLICES } from '../src/zones/methods/index.js';
+import { ZONE_METHOD_SLICES } from '../src/zones/methods/index.ts';
 import { composeSlices, forwardSliceMethods } from '../src/game/systems/slice-composition.ts';
 
 function testCooldownReady() {

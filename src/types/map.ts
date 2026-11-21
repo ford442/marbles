@@ -34,12 +34,16 @@ export type KnownKeys<T> = {
 /** Declared (non-extension) fields of an authored map. */
 type AuthoredMap = KnownKeys<MapSchema>;
 
-/** Object-form vector (what the runtime normalizes every map vector to). */
-export interface MapVec3 {
+/**
+ * Object-form vector (what the runtime normalizes every map vector to). A type
+ * alias, not an interface, so it stays assignable to the schema's open
+ * `{x, y, z, [k: string]: unknown}` vector branch.
+ */
+export type MapVec3 = {
     x: number;
     y: number;
     z: number;
-}
+};
 
 /** v2 vectors may be written as [x, y, z]. */
 export type MapVec3Input = Vec3;
@@ -71,6 +75,30 @@ export type PrimitiveZoneDefinition = BoxZone | RampZone | MoverZone | SpinnerZo
 
 /** An authored map file, exactly as the schema allows it. */
 export type MapDefinition = MapSchema;
+
+/**
+ * A stamp zone after `normalizeStampZone` (levels/map-normalize.js): its
+ * `[x, y, z]` `pos` / `size` lowered to objects. Still a `StampZone`.
+ */
+export type NormalizedStampZone = Omit<KnownKeys<StampZone>, 'pos' | 'size'> & {
+    pos: MapVec3;
+    size?: MapVec3;
+    [k: string]: unknown;
+};
+
+/** A zone after map-normalize: primitives untouched, stamp vectors as objects. */
+export type NormalizedZoneDefinition = PrimitiveZoneDefinition | NormalizedStampZone;
+
+/**
+ * An authored map after `parseMapJson` (editor/map-document.ts): object-form
+ * spawn and stamp vectors, everything else as authored. What the map editor
+ * edits; still a valid `MapDefinition`.
+ */
+export type EditableMapDefinition = Omit<AuthoredMap, 'zones' | 'spawn'> & {
+    zones: NormalizedZoneDefinition[];
+    spawn: MapVec3;
+    [k: string]: unknown;
+};
 
 /**
  * A map normalized for the runtime (`levels/map-normalize.js`): object-form

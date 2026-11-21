@@ -1,6 +1,14 @@
-import { createZoneLight } from './methods/visuals.js';
-import { decorateLavaTubes } from './methods/decorations.js';
+// @ts-check
+import { createZoneLight } from './methods/visuals.ts';
+import { decorateLavaTubes } from './methods/decorations.ts';
 
+/** @typedef {import('../types/zone-host.ts').ZoneBuildHost} ZoneBuildHost */
+/** @typedef {import('../types/geometry.ts').Vec3} Vec3 */
+
+/**
+ * @param {ZoneBuildHost} game
+ * @param {Vec3} offset
+ */
 export function createLavaTubesZone(game, offset) {
     const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 

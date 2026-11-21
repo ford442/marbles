@@ -3,7 +3,7 @@
 import { audio } from '../audio.js';
 import { quaternionToMat4 } from '../math.ts';
 import { tickLevelBehaviors } from '../game/level-behaviors/index.js';
-import { applyRepelPulse } from './repel-pulse.js';
+import { applyRepelPulse } from './repel-pulse.ts';
 import { applyAcceleration } from '../game/systems/body-impulse.ts';
 import { getMarblePhysics, FORCE_BATCH_THRESHOLD, PhysicsBatchBuffers } from '../wasm-bridge.js';
 

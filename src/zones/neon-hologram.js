@@ -1,7 +1,15 @@
+// @ts-check
 import { buildPrimitive } from '../zone-setup/primitives.ts';
 import { gamePrimitiveHost } from '../zone-setup/primitive-host.js';
 
+/** @typedef {import('../types/zone-host.ts').ZoneBuildHost} ZoneBuildHost */
+/** @typedef {import('../types/geometry.ts').Vec3} Vec3 */
+/** @typedef {import('../zone-setup/primitives.ts').PrimitiveZone} PrimitiveZone */
+/** @typedef {import('../zone-setup/primitives.ts').RGB} RGB */
+
+/** @type {RGB} */
 const PAD = [0.05, 0.05, 0.15];
+/** @type {RGB} */
 const BLOCKER = [1.0, 0.0, 1.0];
 
 /**
@@ -9,12 +17,12 @@ const BLOCKER = [1.0, 0.0, 1.0];
  * a landing pad whose energy updraft launches the marble onto the raised exit.
  * Built from v2 primitives (box/ramp/mover/trigger); offsets are relative to `offset`.
  * Timing window: a straight run clears the blockers when started ~0–0.1 s or ~1.4–2.1 s in.
- * @param {any} game
- * @param {{ x: number, y: number, z: number }} offset
+ * @param {ZoneBuildHost} game
+ * @param {Vec3} offset
  */
 export function createNeonHologramZone(game, offset) {
     const host = gamePrimitiveHost(game);
-    /** @type {any[]} */
+    /** @type {PrimitiveZone[]} */
     const specs = [
         { type: 'box', pos: [0, 0, -5], size: [12, 1, 14], material: 'metal', color: PAD },
         { type: 'ramp', from: [0, 0.5, 2], to: [0, -7.5, 42], width: 12, thickness: 1, material: 'neon_ice', color: [0.0, 1.0, 0.8] },

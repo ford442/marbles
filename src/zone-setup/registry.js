@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Single zone-type registry. Maps level `zone.type` strings to setup handlers.
  *
@@ -12,10 +13,66 @@ import { createModelZone } from '../assets/gltf-track-loader.js';
 import { buildPrimitive, isPrimitiveType, PRIMITIVE_TYPES, toVec3 } from './primitives.ts';
 import { gamePrimitiveHost } from './primitive-host.js';
 
-/** @param {unknown} v */
-const optionalVec3 = (v) => (v ? toVec3(/** @type {any} */ (v)) : undefined);
+/** @typedef {import('../types/geometry.ts').Vec3} Vec3 */
+/** @typedef {import('./primitives.ts').Vec3Input} Vec3Input */
+/** @typedef {import('../types/map.ts').MapZoneDefinition} MapZoneDefinition */
+/** @typedef {import('../types/map.ts').NormalizedZoneDefinition} NormalizedZoneDefinition */
+/** @typedef {import('../types/map.ts').PrimitiveZoneDefinition} PrimitiveZoneDefinition */
 
-/** @typedef {(game: object, zone: object, offset: {x:number,y:number,z:number}) => void | Promise<void>} ZoneHandler */
+/**
+ * A zone as `dispatchZone` receives it: authored (`[x, y, z]` vectors allowed)
+ * or normalized by map-normalize.
+ * @typedef {MapZoneDefinition | NormalizedZoneDefinition} DispatchZone
+ */
+/** @typedef {Exclude<DispatchZone, PrimitiveZoneDefinition>} StampZoneInput */
+
+/**
+ * What the zone handlers call on the game: the built-in stamp builders
+ * (`zones/methods/*`), the model loader, the v2 primitive adapter and the
+ * lazily loaded factory builders (`ZoneBuildHost`).
+ * @typedef {Pick<import('../zones/methods/track-creation.ts').ZoneTrackCreation,
+ *     | 'createFloorZone' | 'createTrackZone' | 'createLandingZone' | 'createJumpZone' | 'createSlalomZone'
+ *     | 'createStaircaseZone' | 'createSplitZone' | 'createSpiralZone' | 'createZigZagZone' | 'createLoopZone'
+ *     | 'createBlockZone' | 'createMovingZone'>
+ *   & Pick<import('../zones/methods/themed-creation.ts').ZoneThemedCreation,
+ *     | 'createForestZone' | 'createOrchardZone' | 'createNeonCityZone' | 'createBowlingZone' | 'createCastleZone'
+ *     | 'createDominoZone' | 'createPyramidZone'>
+ *   & Pick<import('../zones/methods/interactive-creation.ts').ZoneInteractiveCreation,
+ *     | 'createGoalZone' | 'createCheckpointZone' | 'createCollectiblePickup' | 'createGrappleAnchorZone'
+ *     | 'createPowerUpZone'>
+ *   & import('../assets/gltf-track-loader.js').ModelZoneHost
+ *   & import('./primitive-host.js').GamePrimitiveSource
+ *   & import('../types/zone-host.ts').ZoneBuildHost} ZoneDispatchHost
+ */
+
+/** @typedef {(game: ZoneDispatchHost, zone: StampZoneInput, offset: Vec3) => void | Promise<void>} ZoneHandler */
+/** @typedef {(game: ZoneDispatchHost, zone: PrimitiveZoneDefinition) => void} PrimitiveZoneHandler */
+/** @typedef {(game: import('../types/zone-host.ts').ZoneBuildHost, offset: Vec3) => void | Promise<void>} FactoryZoneBuilder */
+
+/**
+ * @param {Vec3Input | undefined} v
+ * @returns {Vec3 | undefined}
+ */
+const optionalVec3 = (v) => (v ? toVec3(v) : undefined);
+
+/**
+ * An open stamp field that must be a vector (`orchard.center`), as `{x, y, z}`
+ * or `[x, y, z]`.
+ * @param {unknown} v
+ * @param {string} label
+ * @returns {Vec3}
+ */
+function requireVec3(v, label) {
+    if (Array.isArray(v)) return { x: Number(v[0]), y: Number(v[1]), z: Number(v[2]) };
+    if (typeof v === 'object' && v !== null && 'x' in v && 'y' in v && 'z' in v
+        && typeof v.x === 'number' && typeof v.y === 'number' && typeof v.z === 'number') {
+        return { x: v.x, y: v.y, z: v.z };
+    }
+    throw new TypeError(`[ZONE] ${label} must be a vector`);
+}
+
+/** @param {unknown} v */
+const optionalNumber = (v) => (typeof v === 'number' ? v : undefined);
 
 /** @type {Record<string, ZoneHandler>} */
 const BUILTIN_ZONE_HANDLERS = {
@@ -29,7 +86,7 @@ const BUILTIN_ZONE_HANDLERS = {
     forest: (game, _zone, offset) => game.createForestZone(offset),
     goal: (game, zone, offset) => game.createGoalZone(offset, zone.color),
     model: (game, zone, offset) => createModelZone(game, zone, offset),
-    orchard: (game, zone, _offset) => game.createOrchardZone(zone.center, zone.radius),
+    orchard: (game, zone, _offset) => game.createOrchardZone(requireVec3(zone['center'], 'orchard.center'), optionalNumber(zone['radius'])),
     spiral: (game, _zone, offset) => game.createSpiralZone(offset),
     zigzag: (game, _zone, offset) => game.createZigZagZone(offset),
     neon_city: (game, _zone, offset) => game.createNeonCityZone(offset),
@@ -116,15 +173,22 @@ export const ZONE_LOADERS = Object.fromEntries(
     Object.entries(FACTORY_ZONES).map(([type, [file]]) => [type, () => import(`../zones/${file}.js`)]),
 );
 
-/** @param {string} type */
+/**
+ * @param {string} type
+ * @returns {Promise<FactoryZoneBuilder>}
+ */
 async function loadFactoryBuilder(type) {
-    const [, exportName] = FACTORY_ZONES[type];
-    const mod = await ZONE_LOADERS[type]();
+    const entry = FACTORY_ZONES[type];
+    const load = ZONE_LOADERS[type];
+    if (!entry || !load) throw new Error(`[ZONE] ${type} is not a factory zone`);
+    const [file, exportName] = entry;
+    const mod = await load();
     const builder = mod[exportName];
     if (typeof builder !== 'function') {
-        throw new Error(`[ZONE] ${type}: src/zones/${FACTORY_ZONES[type][0]}.js does not export ${exportName}`);
+        throw new Error(`[ZONE] ${type}: src/zones/${file}.js does not export ${exportName}`);
     }
-    return /** @type {(game: object, offset: {x:number,y:number,z:number}) => void | Promise<void>} */ (builder);
+    // Module boundary: the export was checked to be a function above.
+    return /** @type {FactoryZoneBuilder} */ (builder);
 }
 
 /** @type {Record<string, ZoneHandler>} */
@@ -135,18 +199,20 @@ const FACTORY_ZONE_HANDLERS = Object.fromEntries(
     ]),
 );
 
-/** @type {Record<string, ZoneHandler>} */
+/** @type {Record<string, PrimitiveZoneHandler>} */
 const PRIMITIVE_ZONE_HANDLERS = Object.fromEntries(
     PRIMITIVE_TYPES.map((type) => [
         type,
-        /** @type {ZoneHandler} */ ((game, zone) => { buildPrimitive(gamePrimitiveHost(game), /** @type {any} */ (zone)); }),
+        /** @type {PrimitiveZoneHandler} */ ((game, zone) => { buildPrimitive(gamePrimitiveHost(game), zone); }),
     ]),
 );
 
-/** @type {Record<string, ZoneHandler>} */
+/** Stamp handlers (built-in + lazy factory), keyed by `zone.type`. */
+const STAMP_ZONE_HANDLERS = { ...BUILTIN_ZONE_HANDLERS, ...FACTORY_ZONE_HANDLERS };
+
+/** @type {Record<string, ZoneHandler | PrimitiveZoneHandler>} */
 export const ZONE_HANDLERS = {
-    ...BUILTIN_ZONE_HANDLERS,
-    ...FACTORY_ZONE_HANDLERS,
+    ...STAMP_ZONE_HANDLERS,
     ...PRIMITIVE_ZONE_HANDLERS,
 };
 
@@ -156,19 +222,37 @@ export const ZONE_TYPES = Object.keys(ZONE_HANDLERS).sort();
 /**
  * Await the lazy modules for every factory stamp a level references, in
  * parallel, before zones are built in order.
- * @param {Array<{ type?: string }>} zones
+ * @param {Array<{ type?: string } | null | undefined>} zones
  */
 export async function preloadZoneModules(zones) {
-    const types = new Set(zones.map((z) => z?.type).filter((t) => t && t in ZONE_LOADERS));
-    await Promise.all([...types].map((t) => ZONE_LOADERS[/** @type {string} */ (t)]()));
+    /** @type {Set<string>} */
+    const types = new Set();
+    for (const z of zones) {
+        const t = z?.type;
+        if (t && t in ZONE_LOADERS) types.add(t);
+    }
+    await Promise.all([...types].map((t) => ZONE_LOADERS[t]?.()));
 }
 
 /**
- * @param {object} game
- * @param {{ type?: string, pos?: unknown, [key: string]: unknown }} zone
+ * @param {DispatchZone} zone
+ * @returns {zone is PrimitiveZoneDefinition}
+ */
+function isPrimitiveZone(zone) {
+    return isPrimitiveType(zone.type);
+}
+
+/**
+ * @param {ZoneDispatchHost} game
+ * @param {DispatchZone} zone
  */
 export async function dispatchZone(game, zone) {
-    const handler = ZONE_HANDLERS[zone.type ?? ''];
+    if (isPrimitiveZone(zone)) {
+        PRIMITIVE_ZONE_HANDLERS[zone.type]?.(game, zone);
+        return;
+    }
+
+    const handler = STAMP_ZONE_HANDLERS[zone.type ?? ''];
 
     if (!handler) {
         console.warn(`[ZONE] Unknown zone type: ${zone.type}`);
@@ -176,6 +260,5 @@ export async function dispatchZone(game, zone) {
     }
 
     // v2 maps may write positions as [x, y, z]; stamps always get {x, y, z}.
-    const offset = isPrimitiveType(zone.type) ? { x: 0, y: 0, z: 0 } : toVec3(/** @type {any} */ (zone.pos));
-    await handler(game, zone, offset);
+    await handler(game, zone, toVec3(zone.pos));
 }

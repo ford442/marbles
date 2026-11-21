@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Small localStorage-backed flags shared by the install prompt (gated on
  * "has the player finished a level") and the manifest's Quick Play shortcut
@@ -7,7 +8,11 @@
 export const HAS_PLAYED_LEVEL_KEY = 'marbles3d_has_played_level';
 export const LAST_LEVEL_KEY = 'marbles3d_last_level';
 
-/** Record that a level was completed, for install-prompt gating and Quick Play. */
+/**
+ * Record that a level was completed, for install-prompt gating and Quick Play.
+ * @param {string | null | undefined} levelId
+ * @returns {void}
+ */
 export function recordLevelPlayed(levelId) {
     try {
         localStorage.setItem(HAS_PLAYED_LEVEL_KEY, '1');
@@ -17,6 +22,7 @@ export function recordLevelPlayed(levelId) {
     }
 }
 
+/** @returns {boolean} */
 export function hasPlayedALevel() {
     try {
         return localStorage.getItem(HAS_PLAYED_LEVEL_KEY) === '1';
@@ -25,6 +31,7 @@ export function hasPlayedALevel() {
     }
 }
 
+/** @returns {string | null} */
 export function getLastPlayedLevel() {
     try {
         return localStorage.getItem(LAST_LEVEL_KEY);
