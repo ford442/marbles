@@ -168,7 +168,7 @@ volcanic_magma   ████████░░░░░░░░░░░░  0
 |------|--------|---------|
 | `marble_rendering_layer.ts` | ✅ | Shader definitions, material configs |
 | `marble_rendering_manager.ts` | ✅ | Runtime rendering system |
-| `marble_materials.filamat` | ✅ | Compiled Filament materials |
+| `public/marble_materials.mat` | ✅ | Filament material definitions (matc source) |
 | `MARBLE_RENDERING_GUIDE.md` | ✅ | Integration documentation |
 
 ### API Exports Verified

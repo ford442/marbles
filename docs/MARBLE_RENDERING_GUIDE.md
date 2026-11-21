@@ -10,7 +10,7 @@ This document describes the custom Filament shaders, particle effects, and post-
 
 ```
 marble_rendering_layer.ts      # Core shader code & material configs
-marble_materials.filamat       # Filament .mat file definitions
+public/marble_materials.mat    # Filament .mat source definitions
 marble_rendering_manager.ts    # Runtime rendering manager
 MARBLE_RENDERING_GUIDE.md      # This documentation
 ```

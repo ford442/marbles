@@ -36,8 +36,8 @@ Active repo layout: **[docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)**.
 - [docs/architecture/README.md](docs/architecture/README.md) — Phase A/B/C ADR and ownership map
 - [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) — assets, zones, validation
 - [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) — runtime entry graph
-- [LIGHTING_SYSTEM_GUIDE.md](LIGHTING_SYSTEM_GUIDE.md) — zone lighting API
-- [PARTICLE_INTEGRATION_GUIDE.md](PARTICLE_INTEGRATION_GUIDE.md) — CPU particle system
+- [docs/LIGHTING_SYSTEM_GUIDE.md](docs/LIGHTING_SYSTEM_GUIDE.md) — zone lighting API
+- [docs/PARTICLE_INTEGRATION_GUIDE.md](docs/PARTICLE_INTEGRATION_GUIDE.md) — CPU particle system
 - [docs/backups/](docs/backups/README.md) — archived code (intentional; not runtime)
 
 ## Setup

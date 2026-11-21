@@ -43,7 +43,7 @@ const { chromium } = require('playwright');
     process.exit(1);
   }
 
-  await page.screenshot({ path: 'prismatic_speedway_loaded.png' });
+  await page.screenshot({ path: 'verification/prismatic_speedway_loaded.png' });
   console.log('Successfully loaded Storm Peak and took a screenshot.');
 
   await browser.close();
