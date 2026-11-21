@@ -27,6 +27,7 @@
     "test:e2e:actions": "node tests/e2e/gameplay-actions.cjs",
     "lint": "eslint src tests scripts --ext .js,.cjs,.mjs,.ts --ignore-pattern tests/e2e --quiet",
     "typecheck": "tsc --noEmit",
+    "typecheck:coverage": "node scripts/ts-coverage.mjs",
     "level:lab": "node --experimental-strip-types --no-warnings scripts/level-lab.mjs"
   },
   "devDependencies": {
