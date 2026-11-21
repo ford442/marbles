@@ -11,12 +11,16 @@ export type HudControllerHost = HudHost & HudTickHost & {
 
 /** Consolidated owner for HUD DOM, cooldown bars, goal FX, and desync state. */
 export class HudController extends HUDManager<HudControllerHost> {
+    /** Legacy cooldown-bar tick (`game-loop/hud-tick.js`), composed against the same host. */
+    hudTick: GameLoopHudTick;
+
     constructor(game: HudControllerHost, options: { initialize?: boolean } = {}) {
         super(game, options);
+        this.hudTick = new GameLoopHudTick(game);
     }
 
     updateFrame(now: number, { shouldUpdateHUD = true }: { shouldUpdateHUD?: boolean } = {}): void {
-        GameLoopHudTick.prototype.tickHudCooldownBars.call(this.game, now, shouldUpdateHUD);
+        this.hudTick.tickHudCooldownBars(now, shouldUpdateHUD);
         this.updateAllAbilities();
 
         if (this.game.playerMarble) {

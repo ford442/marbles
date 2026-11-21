@@ -16,34 +16,38 @@ import {
 } from './helpers.ts';
 
 export class GameLoopFinalize {
+    /** @param {FrameHost} game */
+    constructor(game) {
+        this.game = game;
+    }
+
     /**
-     * @this {FrameHost}
      * @param {number} now
      * @param {number} culledPowerUps
      * @param {number} culledCollectibles
      * @param {boolean} [shouldUpdateHUD]
      */
     finalizeFrame(now, culledPowerUps, culledCollectibles, shouldUpdateHUD = true) {
-                this.hudController?.updateFrame(now, { shouldUpdateHUD })
+                this.game.hudController?.updateFrame(now, { shouldUpdateHUD })
         
-                this.perfMonitor?.recordCoreWork({
-                    movingPlatforms: this.movingPlatforms?.length || 0,
-                    rotatingPlatforms: this.rotatingPlatforms?.length || 0,
-                    powerUps: this.powerUps?.length || 0,
+                this.game.perfMonitor?.recordCoreWork({
+                    movingPlatforms: this.game.movingPlatforms?.length || 0,
+                    rotatingPlatforms: this.game.rotatingPlatforms?.length || 0,
+                    powerUps: this.game.powerUps?.length || 0,
                     culledPowerUps,
-                    collectibles: this.collectibles?.length || 0,
+                    collectibles: this.game.collectibles?.length || 0,
                     culledCollectibles,
-                    activeBlackHoles: this.activeBlackHoles?.length || 0,
-                    activeBombs: this.activeBombs?.length || 0,
-                    activeMissiles: this.activeMissiles?.length || 0,
+                    activeBlackHoles: this.game.activeBlackHoles?.length || 0,
+                    activeBombs: this.game.activeBombs?.length || 0,
+                    activeMissiles: this.game.activeMissiles?.length || 0,
                     estimatedTransformSets:
-                        (this.movingPlatforms?.length || 0) +
-                        (this.rotatingPlatforms?.length || 0) +
-                        Math.max(0, (this.powerUps?.length || 0) - culledPowerUps) +
-                        Math.max(0, (this.collectibles?.length || 0) - culledCollectibles) +
-                        (this.activeBlackHoles?.length || 0) +
-                        (this.activeBombs?.length || 0) +
-                        (this.activeMissiles?.length || 0)
+                        (this.game.movingPlatforms?.length || 0) +
+                        (this.game.rotatingPlatforms?.length || 0) +
+                        Math.max(0, (this.game.powerUps?.length || 0) - culledPowerUps) +
+                        Math.max(0, (this.game.collectibles?.length || 0) - culledCollectibles) +
+                        (this.game.activeBlackHoles?.length || 0) +
+                        (this.game.activeBombs?.length || 0) +
+                        (this.game.activeMissiles?.length || 0)
                 })
         
     }

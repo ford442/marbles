@@ -5,8 +5,12 @@ import { getMarblePhysics, FORCE_BATCH_THRESHOLD, PhysicsBatchBuffers } from '..
 /** @typedef {import('../types/mixin-host.ts').GameMixinHost} GameMixinHost */
 
 export class GameLoopFrameInput {
+    /** @param {GameMixinHost} game */
+    constructor(game) {
+        this.game = game;
+    }
+
     /**
-     * @this {GameMixinHost}
      * @param {number} now
      * @param {boolean} shouldUpdateHUD
      * @param {number} frameDeltaSec
@@ -18,201 +22,201 @@ export class GameLoopFrameInput {
                 // charge/energy meters by wall time, `step` scales continuous
                 // impulses by the simulated time this frame's physics covers.
                 const meter = frameDeltaSec * 60
-                const step = (this.simDt ?? 1 / 60) * 60
+                const step = (this.game.simDt ?? 1 / 60) * 60
 
-                if (this.keys['KeyR']) {
-                    this.respawnToLastCheckpoint()
-                    this.keys['KeyR'] = false // Debounce key press
+                if (this.game.keys['KeyR']) {
+                    this.game.respawnToLastCheckpoint()
+                    this.game.keys['KeyR'] = false // Debounce key press
                 }
-                if (this.keys['KeyM'] && this.currentLevel) {
-                    this.returnToMenu()
+                if (this.game.keys['KeyM'] && this.game.currentLevel) {
+                    this.game.returnToMenu()
                 }
         
-                if (this.keys['BracketLeft']) {
+                if (this.game.keys['BracketLeft']) {
                     const currentVol = audio.masterGain ? audio.masterGain.gain.value : 0.4
                     audio.setVolume(currentVol - 0.1)
-                    this.keys['BracketLeft'] = false
+                    this.game.keys['BracketLeft'] = false
                 }
-                if (this.keys['BracketRight']) {
+                if (this.game.keys['BracketRight']) {
                     const currentVol = audio.masterGain ? audio.masterGain.gain.value : 0.4
                     audio.setVolume(currentVol + 0.1)
-                    this.keys['BracketRight'] = false
+                    this.game.keys['BracketRight'] = false
                 }
-                if (this.keys['KeyN']) {
+                if (this.game.keys['KeyN']) {
                     audio.init()
                     const muted = audio.toggleMute()
-                    if (this.muteBtn) {
-                        this.muteBtn.textContent = muted ? '🔇' : '🔊'
-                        this.muteBtn.classList.toggle('muted', muted)
+                    if (this.game.muteBtn) {
+                        this.game.muteBtn.textContent = muted ? '🔇' : '🔊'
+                        this.game.muteBtn.classList.toggle('muted', muted)
                     }
-                    this.keys['KeyN'] = false
+                    this.game.keys['KeyN'] = false
                 }
         
-                if (this.cameraMode === 'orbit') {
-                    if (this.keys['ArrowLeft'] || this.keys['KeyA']) this.targetCamAngle -= rotSpeed
-                    if (this.keys['ArrowRight'] || this.keys['KeyD']) this.targetCamAngle += rotSpeed
-                    if (this.keys['ArrowUp'] || this.keys['KeyW']) this.targetCamRadius = Math.max(5, this.targetCamRadius - zoomSpeed)
-                    if (this.keys['ArrowDown'] || this.keys['KeyS']) this.targetCamRadius = Math.min(100, this.targetCamRadius + zoomSpeed)
+                if (this.game.cameraMode === 'orbit') {
+                    if (this.game.keys['ArrowLeft'] || this.game.keys['KeyA']) this.game.targetCamAngle -= rotSpeed
+                    if (this.game.keys['ArrowRight'] || this.game.keys['KeyD']) this.game.targetCamAngle += rotSpeed
+                    if (this.game.keys['ArrowUp'] || this.game.keys['KeyW']) this.game.targetCamRadius = Math.max(5, this.game.targetCamRadius - zoomSpeed)
+                    if (this.game.keys['ArrowDown'] || this.game.keys['KeyS']) this.game.targetCamRadius = Math.min(100, this.game.targetCamRadius + zoomSpeed)
         
                     // Lerp actual values to targets for smooth movement
-                    this.camAngle += (this.targetCamAngle - this.camAngle) * 0.1
-                    this.camRadius += (this.targetCamRadius - this.camRadius) * 0.1
-                    this.camHeight += (this.targetCamHeight - this.camHeight) * 0.1
-                } else if (this.cameraMode === 'follow' || this.cameraMode === 'action' || this.cameraMode === 'fpv' || this.cameraMode === 'topdown' || this.cameraMode === 'cinematic' || this.cameraMode === 'side-scroller' || this.cameraMode === 'drone') {
+                    this.game.camAngle += (this.game.targetCamAngle - this.game.camAngle) * 0.1
+                    this.game.camRadius += (this.game.targetCamRadius - this.game.camRadius) * 0.1
+                    this.game.camHeight += (this.game.targetCamHeight - this.game.camHeight) * 0.1
+                } else if (this.game.cameraMode === 'follow' || this.game.cameraMode === 'action' || this.game.cameraMode === 'fpv' || this.game.cameraMode === 'topdown' || this.game.cameraMode === 'cinematic' || this.game.cameraMode === 'side-scroller' || this.game.cameraMode === 'drone') {
                     let impulseStrength = 0.5 * step
-                    if (this.activeEffects.speed && Date.now() < this.activeEffects.speed) {
+                    if (this.game.activeEffects.speed && Date.now() < this.game.activeEffects.speed) {
                         impulseStrength *= 2.0
                     }
         
-                    if (this.playerMarble) {
-                        const rigidBody = this.playerMarble.rigidBody
+                    if (this.game.playerMarble) {
+                        const rigidBody = this.game.playerMarble.rigidBody
         
-                        let forwardX = Math.sin(this.aimYaw)
-                        let forwardZ = Math.cos(this.aimYaw)
-                        let rightX = Math.sin(this.aimYaw - Math.PI / 2)
-                        let rightZ = Math.cos(this.aimYaw - Math.PI / 2)
+                        let forwardX = Math.sin(this.game.aimYaw)
+                        let forwardZ = Math.cos(this.game.aimYaw)
+                        let rightX = Math.sin(this.game.aimYaw - Math.PI / 2)
+                        let rightZ = Math.cos(this.game.aimYaw - Math.PI / 2)
         
-                        if (this.cameraMode === 'side-scroller') {
+                        if (this.game.cameraMode === 'side-scroller') {
                             // Lock movement to the Z axis for left/right and X axis for up/down in side-scroller view
                             forwardX = -1; forwardZ = 0;
                             rightX = 0; rightZ = -1;
                         }
         
-                        if (this.keys['ArrowUp'] || this.keys['KeyW']) rigidBody.applyImpulse({ x: forwardX * impulseStrength, y: 0, z: forwardZ * impulseStrength }, true)
-                        if (this.keys['ArrowDown'] || this.keys['KeyS']) rigidBody.applyImpulse({ x: -forwardX * impulseStrength, y: 0, z: -forwardZ * impulseStrength }, true)
-                        if (this.keys['ArrowLeft'] || this.keys['KeyA']) rigidBody.applyImpulse({ x: rightX * impulseStrength, y: 0, z: rightZ * impulseStrength }, true)
-                        if (this.keys['ArrowRight'] || this.keys['KeyD']) rigidBody.applyImpulse({ x: -rightX * impulseStrength, y: 0, z: -rightZ * impulseStrength }, true)
+                        if (this.game.keys['ArrowUp'] || this.game.keys['KeyW']) rigidBody.applyImpulse({ x: forwardX * impulseStrength, y: 0, z: forwardZ * impulseStrength }, true)
+                        if (this.game.keys['ArrowDown'] || this.game.keys['KeyS']) rigidBody.applyImpulse({ x: -forwardX * impulseStrength, y: 0, z: -forwardZ * impulseStrength }, true)
+                        if (this.game.keys['ArrowLeft'] || this.game.keys['KeyA']) rigidBody.applyImpulse({ x: rightX * impulseStrength, y: 0, z: rightZ * impulseStrength }, true)
+                        if (this.game.keys['ArrowRight'] || this.game.keys['KeyD']) rigidBody.applyImpulse({ x: -rightX * impulseStrength, y: 0, z: -rightZ * impulseStrength }, true)
                     }
                 }
         
 
                 // Air dash edge detection via Ability System and Keys
                 const airDashCode = 'KeyQ';
-                const isAirDashKeyPressed = this.keys[airDashCode];
-                const wasAirDashKeyPressed = this._lastAirDashKeyPressed;
+                const isAirDashKeyPressed = this.game.keys[airDashCode];
+                const wasAirDashKeyPressed = this.game._lastAirDashKeyPressed;
                 // Charge abilities (air dash, dash, stomp): edge-detected from the
                 // held keys by their registry entries (src/abilities/registry.js).
-                this.abilitySystem?.tickChargeInputs(now)
+                this.game.abilitySystem?.tickChargeInputs(now)
 
                 // Shift is the dash now; the legacy boost bar shows its cooldown.
-                if (shouldUpdateHUD && this.boostBarEl) {
-                    const timeSince = now - (this.lastDashTime || 0)
-                    const progress = Math.min(1.0, timeSince / (this.dashCooldown || 1500))
-                    this.boostBarEl.style.width = `${progress * 100}%`
+                if (shouldUpdateHUD && this.game.boostBarEl) {
+                    const timeSince = now - (this.game.lastDashTime || 0)
+                    const progress = Math.min(1.0, timeSince / (this.game.dashCooldown || 1500))
+                    this.game.boostBarEl.style.width = `${progress * 100}%`
         
                     if (progress >= 1.0) {
-                       this.boostBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #f0f)'
+                       this.game.boostBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #f0f)'
                     } else {
-                       this.boostBarEl.style.filter = 'brightness(0.7)'
+                       this.game.boostBarEl.style.filter = 'brightness(0.7)'
                     }
                 }
         
-                if (this.isChargingDash) {
+                if (this.game.isChargingDash) {
                     // Increment charge - roughly 1.5 seconds to fully charge
-                    this.dashCharge = Math.min(this.maxDashCharge, this.dashCharge + (frameDeltaSec * 0.66))
+                    this.game.dashCharge = Math.min(this.game.maxDashCharge, this.game.dashCharge + (frameDeltaSec * 0.66))
                 }
 
-                if (shouldUpdateHUD && this.dashBarEl) {
-                    if (this.isChargingDash) {
-                        this.dashBarEl.style.width = `${this.dashCharge * 100}%`
-                        if (this.dashCharge >= this.maxDashCharge) {
-                            this.dashBarEl.style.filter = 'brightness(1.5) drop-shadow(0 0 10px #ff0000)'
-                            this.dashBarEl.style.backgroundColor = '#ff0000'
+                if (shouldUpdateHUD && this.game.dashBarEl) {
+                    if (this.game.isChargingDash) {
+                        this.game.dashBarEl.style.width = `${this.game.dashCharge * 100}%`
+                        if (this.game.dashCharge >= this.game.maxDashCharge) {
+                            this.game.dashBarEl.style.filter = 'brightness(1.5) drop-shadow(0 0 10px #ff0000)'
+                            this.game.dashBarEl.style.backgroundColor = '#ff0000'
                         } else {
-                            this.dashBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ff8c00)'
-                            this.dashBarEl.style.backgroundColor = '#ff8c00'
+                            this.game.dashBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ff8c00)'
+                            this.game.dashBarEl.style.backgroundColor = '#ff8c00'
                         }
                     } else {
-                        const timeSince = now - this.lastDashTime
-                        const progress = Math.min(1.0, timeSince / this.dashCooldown)
-                        this.dashBarEl.style.width = `${progress * 100}%`
-                        this.dashBarEl.style.backgroundColor = '#ff8c00'
+                        const timeSince = now - this.game.lastDashTime
+                        const progress = Math.min(1.0, timeSince / this.game.dashCooldown)
+                        this.game.dashBarEl.style.width = `${progress * 100}%`
+                        this.game.dashBarEl.style.backgroundColor = '#ff8c00'
                         if (progress >= 1.0) {
-                           this.dashBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ff8c00)'
+                           this.game.dashBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ff8c00)'
                         } else {
-                           this.dashBarEl.style.filter = 'brightness(0.7)'
+                           this.game.dashBarEl.style.filter = 'brightness(0.7)'
                         }
                     }
                 }
         
-                if (shouldUpdateHUD && this.airDashBarEl) {
-                    if (this.isChargingAirDash) {
-                        const chargeDuration = now - (this.airDashChargeTime || now)
+                if (shouldUpdateHUD && this.game.airDashBarEl) {
+                    if (this.game.isChargingAirDash) {
+                        const chargeDuration = now - (this.game.airDashChargeTime || now)
                         // Fully charged at ~700ms based on force scaling up to 55.0 at 0.08 per ms. 55 / 0.08 = 687.5ms
                         const maxChargeMs = 700.0
                         const chargeRatio = Math.min(1.0, chargeDuration / maxChargeMs)
-                        this.airDashBarEl.style.width = `${chargeRatio * 100}%`
+                        this.game.airDashBarEl.style.width = `${chargeRatio * 100}%`
 
                         if (chargeRatio >= 1.0) {
-                            this.airDashBarEl.style.filter = 'brightness(1.5) drop-shadow(0 0 10px #00ffff)'
-                            this.airDashBarEl.style.backgroundColor = '#ffffff'
+                            this.game.airDashBarEl.style.filter = 'brightness(1.5) drop-shadow(0 0 10px #00ffff)'
+                            this.game.airDashBarEl.style.backgroundColor = '#ffffff'
                         } else {
-                            this.airDashBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #00ffff)'
-                            this.airDashBarEl.style.backgroundColor = '#00ffff'
+                            this.game.airDashBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #00ffff)'
+                            this.game.airDashBarEl.style.backgroundColor = '#00ffff'
                         }
                     } else {
-                        const timeSince = now - (this.lastAirDashTime || 0)
-                        const progress = Math.min(1.0, timeSince / (this.airDashCooldown || 2000))
-                        this.airDashBarEl.style.width = `${progress * 100}%`
-                        this.airDashBarEl.style.backgroundColor = '#00ffff'
+                        const timeSince = now - (this.game.lastAirDashTime || 0)
+                        const progress = Math.min(1.0, timeSince / (this.game.airDashCooldown || 2000))
+                        this.game.airDashBarEl.style.width = `${progress * 100}%`
+                        this.game.airDashBarEl.style.backgroundColor = '#00ffff'
                         if (progress >= 1.0) {
-                            this.airDashBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #00ffff)'
+                            this.game.airDashBarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #00ffff)'
                         } else {
-                            this.airDashBarEl.style.filter = 'brightness(0.7)'
+                            this.game.airDashBarEl.style.filter = 'brightness(0.7)'
                         }
                     }
                 }
 
-                if (this.isChargingJump) {
-                    this.jumpCharge = Math.min(1.0, this.jumpCharge + 0.03 * meter)
-                    if (this.jumpBarEl) this.jumpBarEl.style.width = `${this.jumpCharge * 100}%`
+                if (this.game.isChargingJump) {
+                    this.game.jumpCharge = Math.min(1.0, this.game.jumpCharge + 0.03 * meter)
+                    if (this.game.jumpBarEl) this.game.jumpBarEl.style.width = `${this.game.jumpCharge * 100}%`
                 }
 
-                if (shouldUpdateHUD && this.groundslambarEl) {
-                    if (this.isChargingShockwave) {
-                        const chargeDuration = now - (this.shockwaveChargeTime || now)
+                if (shouldUpdateHUD && this.game.groundslambarEl) {
+                    if (this.game.isChargingShockwave) {
+                        const chargeDuration = now - (this.game.shockwaveChargeTime || now)
                         // Max charge at 1000ms
                         const chargeRatio = Math.min(1.0, chargeDuration / 1000.0)
-                        this.groundslambarEl.style.width = `${chargeRatio * 100}%`
+                        this.game.groundslambarEl.style.width = `${chargeRatio * 100}%`
 
                         if (chargeRatio >= 1.0) {
-                            this.groundslambarEl.style.filter = 'brightness(1.5) drop-shadow(0 0 10px #ff00ff)'
-                            this.groundslambarEl.style.backgroundColor = '#ffffff'
+                            this.game.groundslambarEl.style.filter = 'brightness(1.5) drop-shadow(0 0 10px #ff00ff)'
+                            this.game.groundslambarEl.style.backgroundColor = '#ffffff'
                         } else {
-                            this.groundslambarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ff00ff)'
-                            this.groundslambarEl.style.backgroundColor = '#ff00ff'
+                            this.game.groundslambarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ff00ff)'
+                            this.game.groundslambarEl.style.backgroundColor = '#ff00ff'
                         }
                     } else {
-                        const timeSince = now - (this.lastShockwaveTime || 0)
-                        const progress = Math.min(1.0, timeSince / (this.shockwaveCooldown || 3000))
-                        this.groundslambarEl.style.width = `${progress * 100}%`
-                        this.groundslambarEl.style.backgroundColor = '#ff00ff'
+                        const timeSince = now - (this.game.lastShockwaveTime || 0)
+                        const progress = Math.min(1.0, timeSince / (this.game.shockwaveCooldown || 3000))
+                        this.game.groundslambarEl.style.width = `${progress * 100}%`
+                        this.game.groundslambarEl.style.backgroundColor = '#ff00ff'
                         if (progress >= 1.0) {
-                            this.groundslambarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ff00ff)'
+                            this.game.groundslambarEl.style.filter = 'brightness(1.2) drop-shadow(0 0 5px #ff00ff)'
                         } else {
-                            this.groundslambarEl.style.filter = 'brightness(0.7)'
+                            this.game.groundslambarEl.style.filter = 'brightness(0.7)'
                         }
                     }
                 }
         
-                if (this.charging) {
-                    this.chargePower = Math.min(1.0, this.chargePower + 0.015 * meter)
+                if (this.game.charging) {
+                    this.game.chargePower = Math.min(1.0, this.game.chargePower + 0.015 * meter)
                 }
         
-                if (!this.levelComplete && this.levelStartTime && shouldUpdateHUD) {
-                    const time = ((now - this.levelStartTime) / 1000).toFixed(2)
-                    if (this.timerEl) this.timerEl.textContent = `Time: ${time}s`
+                if (!this.game.levelComplete && this.game.levelStartTime && shouldUpdateHUD) {
+                    const time = ((now - this.game.levelStartTime) / 1000).toFixed(2)
+                    if (this.game.timerEl) this.game.timerEl.textContent = `Time: ${time}s`
                 }
         
-                if (this.magnetActive && this.magnetPower > 0 && this.playerMarble) {
-                    this.magnetPower = Math.max(0, this.magnetPower - 0.005 * meter)
+                if (this.game.magnetActive && this.game.magnetPower > 0 && this.game.playerMarble) {
+                    this.game.magnetPower = Math.max(0, this.game.magnetPower - 0.005 * meter)
         
-                    const pt = this.playerMarble.rigidBody.translation()
+                    const pt = this.game.playerMarble.rigidBody.translation()
                     const range = 20.0
                     const rangeSq = range * range
                     const forceStrength = 150.0
                     const physics = getMarblePhysics()
-                    const repelSign = this.magnetMode === 'repel' ? -1 : 1
+                    const repelSign = this.game.magnetMode === 'repel' ? -1 : 1
         
                     /** @type {{ body: import('@dimforge/rapier3d-compat').RigidBody, pos: { x: number, y: number, z: number } }[]} */
                     const targets = []
@@ -228,16 +232,16 @@ export class GameLoopFrameInput {
                         }
                     }
         
-                    for (const m of this.marbles) {
-                        if (m !== this.playerMarble) considerBody(m.rigidBody)
+                    for (const m of this.game.marbles) {
+                        if (m !== this.game.playerMarble) considerBody(m.rigidBody)
                     }
-                    for (const obj of this.dynamicObjects) {
+                    for (const obj of this.game.dynamicObjects) {
                         considerBody(obj.rigidBody)
                     }
         
                     if (targets.length > FORCE_BATCH_THRESHOLD) {
-                        if (!this._forceBatchBuffers) this._forceBatchBuffers = new PhysicsBatchBuffers(128)
-                        const buf = this._forceBatchBuffers
+                        if (!this.game._forceBatchBuffers) this.game._forceBatchBuffers = new PhysicsBatchBuffers(128)
+                        const buf = this.game._forceBatchBuffers
                         buf.ensure(targets.length)
         
                         for (const [i, { pos: p }] of targets.entries()) {
@@ -263,8 +267,8 @@ export class GameLoopFrameInput {
                             }, true)
                         }
                     } else {
-                        if (!this._forceBatchBuffers) this._forceBatchBuffers = new PhysicsBatchBuffers(16)
-                        const scalarBuf = this._forceBatchBuffers.forces
+                        if (!this.game._forceBatchBuffers) this.game._forceBatchBuffers = new PhysicsBatchBuffers(16)
+                        const scalarBuf = this.game._forceBatchBuffers.forces
                         for (const { body, pos: bt } of targets) {
                             physics.computeForceFieldInto(
                                 scalarBuf,
@@ -280,27 +284,27 @@ export class GameLoopFrameInput {
                         }
                     }
         
-                } else if (!this.magnetActive && this.magnetPower < 1.0) {
-                    this.magnetPower = Math.min(1.0, this.magnetPower + 0.002 * meter)
+                } else if (!this.game.magnetActive && this.game.magnetPower < 1.0) {
+                    this.game.magnetPower = Math.min(1.0, this.game.magnetPower + 0.002 * meter)
                 }
         
-                if (shouldUpdateHUD && this.magnetBarEl) {
-                    this.magnetBarEl.style.width = `${this.magnetPower * 100}%`
-                    if (this.magnetActive) {
-                        const color = this.magnetMode === 'attract' ? '#00ffff' : '#ff00ff'
-                        this.magnetBarEl.style.background = color
-                        this.magnetBarEl.style.boxShadow = `0 0 10px ${color}`
+                if (shouldUpdateHUD && this.game.magnetBarEl) {
+                    this.game.magnetBarEl.style.width = `${this.game.magnetPower * 100}%`
+                    if (this.game.magnetActive) {
+                        const color = this.game.magnetMode === 'attract' ? '#00ffff' : '#ff00ff'
+                        this.game.magnetBarEl.style.background = color
+                        this.game.magnetBarEl.style.boxShadow = `0 0 10px ${color}`
                     } else {
-                        this.magnetBarEl.style.background = 'linear-gradient(90deg, #00ffff 0%, #ff00ff 100%)'
-                        this.magnetBarEl.style.boxShadow = 'none'
+                        this.game.magnetBarEl.style.background = 'linear-gradient(90deg, #00ffff 0%, #ff00ff 100%)'
+                        this.game.magnetBarEl.style.boxShadow = 'none'
                     }
                 }
         
                 if (shouldUpdateHUD) {
-                    const yawDeg = Math.round(this.aimYaw * 180 / Math.PI)
-                    const pitchDeg = Math.round(this.pitchAngle * 180 / Math.PI)
-                    this.aimEl.textContent = `Yaw: ${yawDeg}° Pitch: ${pitchDeg}°`
-                    this.powerbarEl.style.width = `${this.chargePower * 100}%`
+                    const yawDeg = Math.round(this.game.aimYaw * 180 / Math.PI)
+                    const pitchDeg = Math.round(this.game.pitchAngle * 180 / Math.PI)
+                    this.game.aimEl.textContent = `Yaw: ${yawDeg}° Pitch: ${pitchDeg}°`
+                    this.game.powerbarEl.style.width = `${this.game.chargePower * 100}%`
                 }
     }
 }

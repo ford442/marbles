@@ -1,26 +1,30 @@
 import { audio } from '../audio.js';
 
 export class GameLogicCheckpoints {
+    constructor(game) {
+        this.game = game;
+    }
+
     activateCheckpoint(checkpoint, marble) {
         if (checkpoint.activated) return
         
         checkpoint.activated = true
         
         if (checkpoint.matInstance) {
-            checkpoint.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 0.9, 0.0])
+            checkpoint.matInstance.setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, [1.0, 0.9, 0.0])
             checkpoint.matInstance.setFloatParameter('roughness', 0.2)
         }
         
         if (checkpoint.lightEntity) {
-            const lightManager = this.engine.getLightManager()
+            const lightManager = this.game.engine.getLightManager()
             const lightInst = lightManager.getInstance(checkpoint.lightEntity)
             lightManager.setIntensity(lightInst, 50000.0)
             lightManager.setColor(lightInst, [0.0, 1.0, 0.5])
         }
         
-        this.triggerCheckpointFlash()
-        this.createCheckpointParticles(checkpoint.pos)
-        this.createCheckpointRing(checkpoint.pos)
+        this.game.triggerCheckpointFlash()
+        this.game.createCheckpointParticles(checkpoint.pos)
+        this.game.createCheckpointRing(checkpoint.pos)
         
         if (audio.playAbility) {
             audio.playAbility('goal', checkpoint.pos)
@@ -30,10 +34,10 @@ export class GameLogicCheckpoints {
         
         marble.respawnPos = { x: checkpoint.pos.x, y: checkpoint.pos.y + 1.0, z: checkpoint.pos.z }
         
-        if (this.levelStartTime) {
-            const splitTimeMs = Date.now() - this.levelStartTime;
+        if (this.game.levelStartTime) {
+            const splitTimeMs = Date.now() - this.game.levelStartTime;
             const splitTimeSec = (splitTimeMs / 1000).toFixed(2);
-            this.showTrickMessage(`Checkpoint! Split: ${splitTimeSec}s`, '#00ff00');
+            this.game.showTrickMessage(`Checkpoint! Split: ${splitTimeSec}s`, '#00ff00');
         }
 
         console.log(`[GAME] Checkpoint activated by ${marble.name || 'marble'}! New respawn set.`)
@@ -52,7 +56,7 @@ export class GameLogicCheckpoints {
     
     createCheckpointParticles(pos) {
         const requested = 35 + Math.floor(Math.random() * 15)
-        const particleCount = this.effectPool?.budget.getVisualBurstCount(requested) ?? requested
+        const particleCount = this.game.effectPool?.budget.getVisualBurstCount(requested) ?? requested
         
         for (let i = 0; i < particleCount; i++) {
             const hue = Math.random()
@@ -64,7 +68,7 @@ export class GameLogicCheckpoints {
             const spread = Math.random() * 0.5
             const upwardSpeed = 3.0 + Math.random() * 4.0
 
-            this.effectPool?.spawnVisualParticle({
+            this.game.effectPool?.spawnVisualParticle({
                 color: [r, g, b],
                 roughness: 0.3,
                 spawnTime: Date.now(),
@@ -86,7 +90,7 @@ export class GameLogicCheckpoints {
     }
     
     createCheckpointRing(pos) {
-        this.effectPool?.spawnVisualParticle({
+        this.game.effectPool?.spawnVisualParticle({
             color: [0.0, 0.9, 1.0],
             roughness: 0.2,
             spawnTime: Date.now(),

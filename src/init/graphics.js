@@ -1,14 +1,18 @@
 export class InitGraphics {
+    constructor(game) {
+        this.game = game;
+    }
+
     createLight() {
-        const F = this.Filament;
+        const F = this.game.Filament;
         const em = F.EntityManager.get();
 
-        if (!this.sunLight) this.sunLight = em.create();
-        if (!this.fillLight) this.fillLight = em.create();
-        if (!this.backLight) this.backLight = em.create();
+        if (!this.game.sunLight) this.game.sunLight = em.create();
+        if (!this.game.fillLight) this.game.fillLight = em.create();
+        if (!this.game.backLight) this.game.backLight = em.create();
 
         // Primary sun light with shadows
-        const shadowsEnabled = this.settings?.graphics?.shadows !== false;
+        const shadowsEnabled = this.game.settings?.graphics?.shadows !== false;
         const builder = F.LightManager.Builder(F['LightManager$Type'].DIRECTIONAL)
             .color([1.0, 0.96, 0.88])
             .intensity(80000.0)
@@ -20,8 +24,8 @@ export class InitGraphics {
             builder.castShadows(false);
         }
 
-        builder.build(this.engine, this.sunLight);
-        this.scene.addEntity(this.sunLight);
+        builder.build(this.game.engine, this.game.sunLight);
+        this.game.scene.addEntity(this.game.sunLight);
 
         // Fill light (soft ambient fill)
         F.LightManager.Builder(F['LightManager$Type'].POINT)
@@ -30,8 +34,8 @@ export class InitGraphics {
             .intensity(1200.0)
             .falloff(25.0)
             .castShadows(false)
-            .build(this.engine, this.fillLight);
-        this.scene.addEntity(this.fillLight);
+            .build(this.game.engine, this.game.fillLight);
+        this.game.scene.addEntity(this.game.fillLight);
 
         // Back / rim light
         F.LightManager.Builder(F['LightManager$Type'].POINT)
@@ -40,15 +44,15 @@ export class InitGraphics {
             .intensity(600.0)
             .falloff(30.0)
             .castShadows(false)
-            .build(this.engine, this.backLight);
-        this.scene.addEntity(this.backLight);
+            .build(this.game.engine, this.game.backLight);
+        this.game.scene.addEntity(this.game.backLight);
 
-        this.lightsInitialized = true;
+        this.game.lightsInitialized = true;
     }
 
     enableShadowsOnEntity(entity) {
-        if (!this.engine || !entity) return
-        const rcm = this.engine.getRenderableManager()
+        if (!this.game.engine || !entity) return
+        const rcm = this.game.engine.getRenderableManager()
         const inst = rcm.getInstance(entity)
         if (inst) {
             rcm.setCastShadows(inst, true)
@@ -57,17 +61,17 @@ export class InitGraphics {
     }
 
     getMouseSensitivity() {
-        if (!this.settings) return 0.002
+        if (!this.game.settings) return 0.002
         // Convert 10-200 range to 0.001-0.01
-        return this.settings.controls.sensitivity * 0.00004
+        return this.game.settings.controls.sensitivity * 0.00004
     }
 
     isYAxisInverted() {
-        return this.settings?.controls?.invertY ?? false
+        return this.game.settings?.controls?.invertY ?? false
     }
 
     getScreenShakeIntensity() {
-        if (!this.settings) return 1.0
-        return this.settings.accessibility.screenShake / 100
+        if (!this.game.settings) return 1.0
+        return this.game.settings.accessibility.screenShake / 100
     }
 }

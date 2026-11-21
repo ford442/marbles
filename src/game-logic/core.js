@@ -3,75 +3,79 @@ import { getLevel } from '../levels/catalog.js';
 import { computeMarbleDopplerRate } from '../game/systems/marble-registry.js';
 
 export class GameLogicCore {
+    constructor(game) {
+        this.game = game;
+    }
+
     checkGameLogic() {
-        if (!this.currentLevel || this.levelComplete) return
+        if (!this.game.currentLevel || this.game.levelComplete) return
 
         let horizSpeed = 0
-        if (this.playerMarble) {
-            const linvel = this.playerMarble.rigidBody.linvel()
+        if (this.game.playerMarble) {
+            const linvel = this.game.playerMarble.rigidBody.linvel()
             horizSpeed = Math.hypot(linvel.x, linvel.z)
 
-            if (this.highSpeedTime === undefined) this.highSpeedTime = 0
-            if (this.lastSpeedAwardTime === undefined) this.lastSpeedAwardTime = 0
+            if (this.game.highSpeedTime === undefined) this.game.highSpeedTime = 0
+            if (this.game.lastSpeedAwardTime === undefined) this.game.lastSpeedAwardTime = 0
 
             if (horizSpeed > 15.0) {
-                this.highSpeedTime += 1
+                this.game.highSpeedTime += 1
             } else {
-                this.highSpeedTime = 0
+                this.game.highSpeedTime = 0
             }
 
-            if (this.highSpeedTime > 120) {
+            if (this.game.highSpeedTime > 120) {
                 const now = Date.now()
-                if (now - this.lastSpeedAwardTime > 2000) {
-                    this.awardTrickPoints('Speed Demon!', 30, '#ff4444')
-                    this.lastSpeedAwardTime = now
-                    this.highSpeedTime = 0
+                if (now - this.game.lastSpeedAwardTime > 2000) {
+                    this.game.awardTrickPoints('Speed Demon!', 30, '#ff4444')
+                    this.game.lastSpeedAwardTime = now
+                    this.game.highSpeedTime = 0
                 }
             }
         }
 
-        if (this.playerMarble && this.isGrounded(this.playerMarble)) {
-            const linvel = this.playerMarble.rigidBody.linvel()
-            const gravityDir = this.playerMarble.rigidBody.gravityScale() < 0 ? -1 : 1
+        if (this.game.playerMarble && this.game.isGrounded(this.game.playerMarble)) {
+            const linvel = this.game.playerMarble.rigidBody.linvel()
+            const gravityDir = this.game.playerMarble.rigidBody.gravityScale() < 0 ? -1 : 1
 
             if ((gravityDir > 0 && linvel.y <= 0.1) || (gravityDir < 0 && linvel.y >= -0.1)) {
-                this.jumpCount = 0
+                this.game.jumpCount = 0
             }
 
-            const radius = this.playerMarble.scale * 0.5 || 0.5
-            const angvel = this.playerMarble.rigidBody.angvel()
+            const radius = this.game.playerMarble.scale * 0.5 || 0.5
+            const angvel = this.game.playerMarble.rigidBody.angvel()
             const slideVx = linvel.x + angvel.z * radius
             const slideVz = linvel.z - angvel.x * radius
             const slideSpeed = Math.hypot(slideVx, slideVz)
 
-            if (this.trickState.driftTime === undefined) this.trickState.driftTime = 0
+            if (this.game.trickState.driftTime === undefined) this.game.trickState.driftTime = 0
 
             if (slideSpeed > 10.0 && horizSpeed > 10.0) {
-                this.trickState.driftTime += 1
-                if (this.trickState.driftTime % 3 === 0) {
-                    const pos = this.playerMarble.rigidBody.translation()
+                this.game.trickState.driftTime += 1
+                if (this.game.trickState.driftTime % 3 === 0) {
+                    const pos = this.game.playerMarble.rigidBody.translation()
                     const sparkPos = { x: pos.x, y: pos.y - radius, z: pos.z }
-                    this.spawnDriftSparks(sparkPos)
+                    this.game.spawnDriftSparks(sparkPos)
                 }
             } else {
-                if (this.trickState.driftTime > 30) {
-                    const points = Math.floor(this.trickState.driftTime * 2)
-                    this.awardTrickPoints('Drift King!', points, '#ffff00')
+                if (this.game.trickState.driftTime > 30) {
+                    const points = Math.floor(this.game.trickState.driftTime * 2)
+                    this.game.awardTrickPoints('Drift King!', points, '#ffff00')
                 }
-                this.trickState.driftTime = 0
+                this.game.trickState.driftTime = 0
             }
 
-            if (this.trickState.airTime > 30 || this.trickState.wallRides > 0 || this.trickState.wallBounces > 0) {
-                let points = Math.floor(this.trickState.airTime * 2)
+            if (this.game.trickState.airTime > 30 || this.game.trickState.wallRides > 0 || this.game.trickState.wallBounces > 0) {
+                let points = Math.floor(this.game.trickState.airTime * 2)
                 const messages = []
 
                 // 1 full rotation = approx 2*PI radians. We check accumulated radians rotated.
-                const totalFlips = Math.floor(Math.abs(this.trickState.flips) / (Math.PI * 2))
-                const totalRolls = Math.floor(Math.abs(this.trickState.rolls) / (Math.PI * 2))
+                const totalFlips = Math.floor(Math.abs(this.game.trickState.flips) / (Math.PI * 2))
+                const totalRolls = Math.floor(Math.abs(this.game.trickState.rolls) / (Math.PI * 2))
 
                 if (totalFlips > 0) {
                     points += totalFlips * 100
-                    messages.push(totalFlips > 1 ? `x${totalFlips} Flip` : (this.trickState.flips > 0 ? 'Front Flip' : 'Back Flip'))
+                    messages.push(totalFlips > 1 ? `x${totalFlips} Flip` : (this.game.trickState.flips > 0 ? 'Front Flip' : 'Back Flip'))
                 }
 
                 if (totalRolls > 0) {
@@ -80,127 +84,127 @@ export class GameLogicCore {
                 }
 
                 // Spin bonus logic: total accumulated rotation magnitude in radians
-                if (totalFlips === 0 && totalRolls === 0 && this.trickState.spin > (Math.PI * 2)) {
-                    const totalSpins = Math.floor(this.trickState.spin / (Math.PI * 2))
+                if (totalFlips === 0 && totalRolls === 0 && this.game.trickState.spin > (Math.PI * 2)) {
+                    const totalSpins = Math.floor(this.game.trickState.spin / (Math.PI * 2))
                     points += totalSpins * 50
                     messages.push(totalSpins > 1 ? `x${totalSpins} Spin` : 'Spin')
-                } else if (this.trickState.spin > Math.PI) { // At least half a rotation of combined spin
-                    points += Math.floor(this.trickState.spin * 10)
+                } else if (this.game.trickState.spin > Math.PI) { // At least half a rotation of combined spin
+                    points += Math.floor(this.game.trickState.spin * 10)
                 }
 
                 let verticalDistance = 0;
-                if (this.trickState.maxAltitude !== undefined && this.trickState.startAltitude !== undefined) {
-                     verticalDistance = this.trickState.maxAltitude - this.trickState.startAltitude;
+                if (this.game.trickState.maxAltitude !== undefined && this.game.trickState.startAltitude !== undefined) {
+                     verticalDistance = this.game.trickState.maxAltitude - this.game.trickState.startAltitude;
                 }
 
-                if (verticalDistance > 15.0 && this.trickState.airTime > 60) {
+                if (verticalDistance > 15.0 && this.game.trickState.airTime > 60) {
                     points += 100;
                     messages.push('Sky High!');
                 }
 
-                if (this.trickState.airTime > 150) {
+                if (this.game.trickState.airTime > 150) {
                     points += 150;
                     messages.push('Orbital Hang Time!');
-                } else if (this.trickState.airTime > 90) {
+                } else if (this.game.trickState.airTime > 90) {
                     points += 50
                     messages.push('Hang Time')
-                } else if (this.trickState.airTime > 60) {
+                } else if (this.game.trickState.airTime > 60) {
                     messages.push('Big Air')
                 } else if (messages.length === 0) {
                     messages.push('Air Time')
                 }
 
-                if (this.trickState.wallRides > 0) {
-                    points += this.trickState.wallRides * 150
-                    messages.push(this.trickState.wallRides > 1 ? `x${this.trickState.wallRides} Wall Runner` : 'Wall Runner')
+                if (this.game.trickState.wallRides > 0) {
+                    points += this.game.trickState.wallRides * 150
+                    messages.push(this.game.trickState.wallRides > 1 ? `x${this.game.trickState.wallRides} Wall Runner` : 'Wall Runner')
                 }
 
-                if (this.trickState.wallBounces > 0) {
-                    points += this.trickState.wallBounces * 30
-                    messages.push(this.trickState.wallBounces > 1 ? `x${this.trickState.wallBounces} Ricochet` : 'Ricochet')
+                if (this.game.trickState.wallBounces > 0) {
+                    points += this.game.trickState.wallBounces * 30
+                    messages.push(this.game.trickState.wallBounces > 1 ? `x${this.game.trickState.wallBounces} Ricochet` : 'Ricochet')
                 }
 
                 if (points > 0) {
                     const msg = messages.join(' + ')
-                    this.awardTrickPoints(msg, points, '#00ffcc')
+                    this.game.awardTrickPoints(msg, points, '#00ffcc')
 
                     // Perfect Landing logic: Low downward vertical velocity after a big trick or long airtime
-                    if (Math.abs(linvel.y) < 2.0 && !this.isStomping) {
+                    if (Math.abs(linvel.y) < 2.0 && !this.game.isStomping) {
                         setTimeout(() => {
-                            this.awardTrickPoints('Perfect Landing!', 50, '#00ff00')
+                            this.game.awardTrickPoints('Perfect Landing!', 50, '#00ff00')
                         }, 500)
                     }
                 }
             }
-            this.trickState.airTime = 0
-            this.trickState.spin = 0
-            this.trickState.wallRides = 0
-            this.trickState.flips = 0
-            this.trickState.rolls = 0
-            this.trickState.wallBounces = 0
-            this.trickState.driftTime = 0
-            this.trickState.maxAltitude = 0
-            this.trickState.startAltitude = 0
+            this.game.trickState.airTime = 0
+            this.game.trickState.spin = 0
+            this.game.trickState.wallRides = 0
+            this.game.trickState.flips = 0
+            this.game.trickState.rolls = 0
+            this.game.trickState.wallBounces = 0
+            this.game.trickState.driftTime = 0
+            this.game.trickState.maxAltitude = 0
+            this.game.trickState.startAltitude = 0
 
-            this.isWallRiding = false
-            this.wallRideTime = 0
+            this.game.isWallRiding = false
+            this.game.wallRideTime = 0
             if (audio.stopRolling) audio.stopRolling('wallride')
 
-            if (this.isStomping) {
+            if (this.game.isStomping) {
                 let multiplier = 1.0
-                const chargeDuration = (this.stompReleaseTime || Date.now()) - (this.stompChargeTime || Date.now())
+                const chargeDuration = (this.game.stompReleaseTime || Date.now()) - (this.game.stompChargeTime || Date.now())
 
                 // Add fall distance to the multiplier
-                const fallDistance = Math.max(0, (this.stompStartAltitude || this.playerMarble.rigidBody.translation().y) - this.playerMarble.rigidBody.translation().y)
+                const fallDistance = Math.max(0, (this.game.stompStartAltitude || this.game.playerMarble.rigidBody.translation().y) - this.game.playerMarble.rigidBody.translation().y)
 
                 multiplier += Math.min(3.0, chargeDuration / 1000.0) // Max +3.0 from charge
                 multiplier += Math.min(5.0, fallDistance / 10.0)     // Max +5.0 from drop height
 
                 if (multiplier > 5.0) {
-                    this.awardTrickPoints('Meteor Strike!', 100 * Math.floor(multiplier), '#00ffff')
+                    this.game.awardTrickPoints('Meteor Strike!', 100 * Math.floor(multiplier), '#00ffff')
                 } else {
-                    this.awardTrickPoints('Stomp!', 50 * Math.floor(multiplier), '#ff0000')
+                    this.game.awardTrickPoints('Stomp!', 50 * Math.floor(multiplier), '#ff0000')
                 }
 
-                this.performStompImpact(multiplier)
-                this.isStomping = false
+                this.game.performStompImpact(multiplier)
+                this.game.isStomping = false
             }
-        } else if (this.playerMarble) {
-            if (this.trickState.maxAltitude === undefined) {
-                this.trickState.maxAltitude = 0
-                this.trickState.startAltitude = 0
+        } else if (this.game.playerMarble) {
+            if (this.game.trickState.maxAltitude === undefined) {
+                this.game.trickState.maxAltitude = 0
+                this.game.trickState.startAltitude = 0
             }
-            if (this.trickState.airTime === 1) {
-                 this.trickState.startAltitude = this.playerMarble.rigidBody.translation().y
+            if (this.game.trickState.airTime === 1) {
+                 this.game.trickState.startAltitude = this.game.playerMarble.rigidBody.translation().y
             }
-            this.trickState.maxAltitude = Math.max(this.trickState.maxAltitude, this.playerMarble.rigidBody.translation().y)
+            this.game.trickState.maxAltitude = Math.max(this.game.trickState.maxAltitude, this.game.playerMarble.rigidBody.translation().y)
 
-            if (this.trickState.driftTime > 30) {
-                const points = Math.floor(this.trickState.driftTime * 2)
-                this.awardTrickPoints('Drift King!', points, '#ffff00')
+            if (this.game.trickState.driftTime > 30) {
+                const points = Math.floor(this.game.trickState.driftTime * 2)
+                this.game.awardTrickPoints('Drift King!', points, '#ffff00')
             }
-            this.trickState.driftTime = 0
+            this.game.trickState.driftTime = 0
 
-            this.trickState.airTime += 1
-            const angvel = this.playerMarble.rigidBody.angvel()
+            this.game.trickState.airTime += 1
+            const angvel = this.game.playerMarble.rigidBody.angvel()
 
             // Multiply angular velocity by approximate delta time (1/60th of a second)
             // to accumulate true radians rotated instead of radians per second.
             const dt = 1.0 / 60.0
-            this.trickState.spin += Math.hypot(angvel.x, angvel.y, angvel.z) * dt
-            this.trickState.flips += angvel.x * dt
-            this.trickState.rolls += angvel.z * dt
+            this.game.trickState.spin += Math.hypot(angvel.x, angvel.y, angvel.z) * dt
+            this.game.trickState.flips += angvel.x * dt
+            this.game.trickState.rolls += angvel.z * dt
 
-            const wallContact = this.getWallContact(this.playerMarble)
-            this.currentWallNormal = wallContact ? wallContact.normal : null
-            const rb = this.playerMarble.rigidBody
+            const wallContact = this.game.getWallContact(this.game.playerMarble)
+            this.game.currentWallNormal = wallContact ? wallContact.normal : null
+            const rb = this.game.playerMarble.rigidBody
             const linvel = rb.linvel()
             const horizSpeed = Math.hypot(linvel.x, linvel.z)
 
-            if (wallContact && horizSpeed > 15.0 && this.wallRideTime < 180 && (this.keys['ShiftLeft'] || this.keys['ShiftRight'])) {
-                if (!this.isWallRiding) {
-                    this.isWallRiding = true
-                    this.trickState.wallRides += 1
+            if (wallContact && horizSpeed > 15.0 && this.game.wallRideTime < 180 && (this.game.keys['ShiftLeft'] || this.game.keys['ShiftRight'])) {
+                if (!this.game.isWallRiding) {
+                    this.game.isWallRiding = true
+                    this.game.trickState.wallRides += 1
                 }
 
                 const mass = rb.mass()
@@ -208,30 +212,30 @@ export class GameLogicCore {
                 rb.applyImpulse({ x: 0, y: 9.81 * mass * (1.0/60.0) * gravityDir + (0.5 * gravityDir), z: 0 }, true)
                 rb.applyImpulse({ x: -wallContact.normal.x * 2.0, y: 0, z: -wallContact.normal.z * 2.0 }, true)
 
-                const forwardX = Math.sin(this.aimYaw)
-                const forwardZ = Math.cos(this.aimYaw)
+                const forwardX = Math.sin(this.game.aimYaw)
+                const forwardZ = Math.cos(this.game.aimYaw)
                 rb.applyImpulse({ x: forwardX * 2.0, y: 0, z: forwardZ * 2.0 }, true)
 
-                this.wallRideTime += 1
+                this.game.wallRideTime += 1
 
-                const radius = this.playerMarble.scale * 0.5 || 0.5
+                const radius = this.game.playerMarble.scale * 0.5 || 0.5
                 if (audio.startRolling && audio.updateRolling) {
                     audio.startRolling('wallride', radius, 'concrete')
-                    audio.updateRolling('wallride', horizSpeed, 0, computeMarbleDopplerRate(this, rb))
+                    audio.updateRolling('wallride', horizSpeed, 0, computeMarbleDopplerRate(this.game, rb))
                 }
             } else {
-                if (this.isWallRiding) {
-                    this.isWallRiding = false
+                if (this.game.isWallRiding) {
+                    this.game.isWallRiding = false
                     if (audio.stopRolling) audio.stopRolling('wallride')
                 }
             }
 
             // Ricochet check when not wallriding
-            if (wallContact && !this.isWallRiding && horizSpeed > 3.0) {
+            if (wallContact && !this.game.isWallRiding && horizSpeed > 3.0) {
                 const now = Date.now()
-                if (!this.lastWallBounceTime || now - this.lastWallBounceTime > 200) {
-                    this.trickState.wallBounces += 1
-                    this.lastWallBounceTime = now
+                if (!this.game.lastWallBounceTime || now - this.game.lastWallBounceTime > 200) {
+                    this.game.trickState.wallBounces += 1
+                    this.game.lastWallBounceTime = now
 
                     // Add slight bounce physics since we are not wall-riding
                     const mass = rb.mass()
@@ -239,16 +243,16 @@ export class GameLogicCore {
                     rb.applyImpulse({ x: wallContact.normal.x * bounciness * mass, y: 0, z: wallContact.normal.z * bounciness * mass }, true)
 
                     if (audio && audio.playClink) {
-                        const radius = this.playerMarble.scale * 0.5 || 0.5
-                        audio.playClink(horizSpeed, radius, `bounce-${this.currentMarbleIndex}`, computeMarbleDopplerRate(this, rb))
+                        const radius = this.game.playerMarble.scale * 0.5 || 0.5
+                        audio.playClink(horizSpeed, radius, `bounce-${this.game.currentMarbleIndex}`, computeMarbleDopplerRate(this.game, rb))
                     }
                 }
             }
         }
 
         // Near Miss Logic
-        if (this.playerMarble) {
-            const rb = this.playerMarble.rigidBody
+        if (this.game.playerMarble) {
+            const rb = this.game.playerMarble.rigidBody
             const linvel = rb.linvel()
             const speed = Math.hypot(linvel.x, linvel.y, linvel.z)
 
@@ -264,30 +268,30 @@ export class GameLogicCore {
                     const distSq = dx * dx + dy * dy + dz * dz
 
                     if (distSq > 1.0 && distSq < 16.0) {
-                        const lastMissTime = this.nearMisses.get(handleStr) || 0
+                        const lastMissTime = this.game.nearMisses.get(handleStr) || 0
                         if (now - lastMissTime > 2000) {
-                            this.awardTrickPoints("Near Miss!", 50, "#ff8800")
-                            this.nearMisses.set(handleStr, now)
+                            this.game.awardTrickPoints("Near Miss!", 50, "#ff8800")
+                            this.game.nearMisses.set(handleStr, now)
                         }
                     }
                 }
 
-                for (const obj of this.dynamicObjects) {
+                for (const obj of this.game.dynamicObjects) {
                     checkNearMiss(obj.rigidBody, `dyn_${obj.rigidBody.handle}`)
                 }
-                for (const obj of this.movingPlatforms) {
+                for (const obj of this.game.movingPlatforms) {
                     checkNearMiss(obj.rigidBody, `mov_${obj.rigidBody.handle}`)
                 }
-                for (const obj of this.rotatingPlatforms) {
+                for (const obj of this.game.rotatingPlatforms) {
                     checkNearMiss(obj.rigidBody, `rot_${obj.rigidBody.handle}`)
                 }
             }
         }
 
-        const level = getLevel(this.currentLevel)
+        const level = getLevel(this.game.currentLevel)
         let allGoalsScored = level.goals.length > 0
 
-        for (const m of this.marbles) {
+        for (const m of this.game.marbles) {
             const t = m.rigidBody.translation()
 
             if (t.y < -20) {
@@ -296,14 +300,14 @@ export class GameLogicCore {
                 m.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true)
                 m.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true)
                 m.scoredGoals.clear()
-                if (m === this.playerMarble) {
-                    this._rewindHead = 0; this._rewindCount = 0
-                    this.resetPlayerAbilityState()
+                if (m === this.game.playerMarble) {
+                    this.game._rewindHead = 0; this.game._rewindCount = 0
+                    this.game.resetPlayerAbilityState()
                 }
                 continue
             }
 
-            for (const cp of this.checkpoints) {
+            for (const cp of this.game.checkpoints) {
                 if (cp.activated) continue
 
                 const radius = m.scale * 0.5 || 0.5
@@ -317,11 +321,11 @@ export class GameLogicCore {
                 if (t.x + radius > minX && t.x - radius < maxX &&
                     t.z + radius > minZ && t.z - radius < maxZ &&
                     t.y + radius > minY && t.y - radius < maxY) {
-                    this.activateCheckpoint(cp, m)
+                    this.game.activateCheckpoint(cp, m)
                 }
             }
 
-            for (const goal of this.goalDefinitions) {
+            for (const goal of this.game.goalDefinitions) {
                 if (!m.scoredGoals.has(goal.id) &&
                     t.x > goal.range.x[0] && t.x < goal.range.x[1] &&
                     t.z > goal.range.z[0] && t.z < goal.range.z[1] &&
@@ -330,22 +334,22 @@ export class GameLogicCore {
                     m.scoredGoals.add(goal.id)
 
                     // Combo Logic
-                    if (m === this.playerMarble) {
-                        this.combo = Math.min(10, this.combo + 1)
-                        this.comboTimer = Date.now()
-                        if (this.comboEl) {
-                            this.comboEl.style.display = 'block'
-                            this.comboEl.textContent = `Combo: x${this.combo}`
-                            this.comboEl.style.transform = 'scale(1.2)'
-                            setTimeout(() => { if (this.comboEl) this.comboEl.style.transform = 'scale(1)' }, 100)
+                    if (m === this.game.playerMarble) {
+                        this.game.combo = Math.min(10, this.game.combo + 1)
+                        this.game.comboTimer = Date.now()
+                        if (this.game.comboEl) {
+                            this.game.comboEl.style.display = 'block'
+                            this.game.comboEl.textContent = `Combo: x${this.game.combo}`
+                            this.game.comboEl.style.transform = 'scale(1.2)'
+                            setTimeout(() => { if (this.game.comboEl) this.game.comboEl.style.transform = 'scale(1)' }, 100)
                         }
-                        if (this.combobarContainerEl) this.combobarContainerEl.style.display = 'block'
+                        if (this.game.combobarContainerEl) this.game.combobarContainerEl.style.display = 'block'
                     }
 
-                    this.score += 1 * this.combo
-                    this.scoreEl.textContent = 'Score: ' + this.score
+                    this.game.score += 1 * this.game.combo
+                    this.game.scoreEl.textContent = 'Score: ' + this.game.score
 
-                    if (this.score <= 5) {
+                    if (this.game.score <= 5) {
                         const goalPos = {
                             x: (goal.range.x[0] + goal.range.x[1]) * 0.5,
                             y: (goal.range.y[0] + goal.range.y[1]) * 0.5,
@@ -359,8 +363,8 @@ export class GameLogicCore {
                     }
                     
                     // Trigger goal completion visual effect
-                    if (this.goalEffects && this.goalEffects[goal.id]) {
-                        this.triggerGoalCompletionEffect(goal.id)
+                    if (this.game.goalEffects && this.game.goalEffects[goal.id]) {
+                        this.game.triggerGoalCompletionEffect(goal.id)
                     }
                 }
             }
@@ -368,7 +372,7 @@ export class GameLogicCore {
 
         for (const goal of level.goals) {
             let goalScored = false
-            for (const m of this.marbles) {
+            for (const m of this.game.marbles) {
                 if (m.scoredGoals.has(goal.id)) {
                     goalScored = true
                     break
@@ -380,11 +384,11 @@ export class GameLogicCore {
             }
         }
 
-        if (this.playerMarble) {
-            const pt = this.playerMarble.rigidBody.translation()
-            const pv = this.playerMarble.rigidBody.linvel()
-            for (const other of this.marbles) {
-                if (other === this.playerMarble) continue
+        if (this.game.playerMarble) {
+            const pt = this.game.playerMarble.rigidBody.translation()
+            const pv = this.game.playerMarble.rigidBody.linvel()
+            for (const other of this.game.marbles) {
+                if (other === this.game.playerMarble) continue
                 const ot = other.rigidBody.translation()
                 const ov = other.rigidBody.linvel()
                 const dx = pt.x - ot.x
@@ -395,23 +399,23 @@ export class GameLogicCore {
                     const relSpeed = Math.hypot(pv.x - ov.x, pv.y - ov.y, pv.z - ov.z)
                     if (relSpeed > 4) {
                         // Combo Logic
-                        this.combo = Math.min(10, this.combo + 1)
-                        this.comboTimer = Date.now()
-                        if (this.comboEl) {
-                            this.comboEl.style.display = 'block'
-                            this.comboEl.textContent = `Combo: x${this.combo}`
-                            this.comboEl.style.transform = 'scale(1.2)'
-                            setTimeout(() => { if (this.comboEl) this.comboEl.style.transform = 'scale(1)' }, 100)
+                        this.game.combo = Math.min(10, this.game.combo + 1)
+                        this.game.comboTimer = Date.now()
+                        if (this.game.comboEl) {
+                            this.game.comboEl.style.display = 'block'
+                            this.game.comboEl.textContent = `Combo: x${this.game.combo}`
+                            this.game.comboEl.style.transform = 'scale(1.2)'
+                            setTimeout(() => { if (this.game.comboEl) this.game.comboEl.style.transform = 'scale(1)' }, 100)
                         }
-                        if (this.combobarContainerEl) this.combobarContainerEl.style.display = 'block'
+                        if (this.game.combobarContainerEl) this.game.combobarContainerEl.style.display = 'block'
 
-                        this.score += Math.floor(relSpeed / 3) * this.combo
-                        this.scoreEl.innerText = `Score: ${this.score}`
+                        this.game.score += Math.floor(relSpeed / 3) * this.game.combo
+                        this.game.scoreEl.innerText = `Score: ${this.game.score}`
 
-                        const playerRadius = this.playerMarble.scale * 0.5 || 0.5
+                        const playerRadius = this.game.playerMarble.scale * 0.5 || 0.5
                         const otherRadius = other.scale * 0.5 || 0.5
-                        audio.playClink(relSpeed, playerRadius, `player-${this.currentMarbleIndex}`, computeMarbleDopplerRate(this, this.playerMarble.rigidBody))
-                        audio.playClink(relSpeed * 0.7, otherRadius, `other-${this.marbles.indexOf(other)}`, computeMarbleDopplerRate(this, other.rigidBody))
+                        audio.playClink(relSpeed, playerRadius, `player-${this.game.currentMarbleIndex}`, computeMarbleDopplerRate(this.game, this.game.playerMarble.rigidBody))
+                        audio.playClink(relSpeed * 0.7, otherRadius, `other-${this.game.marbles.indexOf(other)}`, computeMarbleDopplerRate(this.game, other.rigidBody))
 
                         const nx = dx / dist
                         const ny = dy / dist
@@ -422,55 +426,55 @@ export class GameLogicCore {
             }
         }
 
-        if (this.playerMarble) {
-            const pt = this.playerMarble.rigidBody.translation()
-            for (let i = this.powerUps.length - 1; i >= 0; i--) {
-                const p = this.powerUps[i]
+        if (this.game.playerMarble) {
+            const pt = this.game.playerMarble.rigidBody.translation()
+            for (let i = this.game.powerUps.length - 1; i >= 0; i--) {
+                const p = this.game.powerUps[i]
                 const dx = pt.x - p.pos.x
                 const dy = pt.y - p.pos.y
                 const dz = pt.z - p.pos.z
                 if (Math.hypot(dx, dy, dz) < 1.0) {
                     const now = Date.now()
                     const duration = 5000
-                    this.activeEffects[p.type] = now + duration
+                    this.game.activeEffects[p.type] = now + duration
 
                     if (audio.playCollect) audio.playCollect()
                     console.log(`[GAME] Collected ${p.type} powerup!`)
 
                     // Combo Logic
-                    this.combo = Math.min(10, this.combo + 1)
-                    this.comboTimer = Date.now()
-                    if (this.comboEl) {
-                        this.comboEl.style.display = 'block'
-                        this.comboEl.textContent = `Combo: x${this.combo}`
-                        this.comboEl.style.transform = 'scale(1.2)'
-                        setTimeout(() => { if (this.comboEl) this.comboEl.style.transform = 'scale(1)' }, 100)
+                    this.game.combo = Math.min(10, this.game.combo + 1)
+                    this.game.comboTimer = Date.now()
+                    if (this.game.comboEl) {
+                        this.game.comboEl.style.display = 'block'
+                        this.game.comboEl.textContent = `Combo: x${this.game.combo}`
+                        this.game.comboEl.style.transform = 'scale(1.2)'
+                        setTimeout(() => { if (this.game.comboEl) this.game.comboEl.style.transform = 'scale(1)' }, 100)
                     }
-                    if (this.combobarContainerEl) this.combobarContainerEl.style.display = 'block'
+                    if (this.game.combobarContainerEl) this.game.combobarContainerEl.style.display = 'block'
 
-                    this.world.removeRigidBody(p.rigidBody)
-                    this.scene.remove(p.entity)
-                    this.engine.destroyEntity(p.entity)
-                    this.powerUps.splice(i, 1)
+                    this.game.world.removeRigidBody(p.rigidBody)
+                    this.game.scene.remove(p.entity)
+                    this.game.engine.destroyEntity(p.entity)
+                    this.game.powerUps.splice(i, 1)
                 }
             }
         }
 
-        if (allGoalsScored && !this.levelComplete) {
-            this.levelComplete = true
-            const completionTime = (Date.now() - this.levelStartTime) / 1000
+        if (allGoalsScored && !this.game.levelComplete) {
+            this.game.levelComplete = true
+            const completionTime = (Date.now() - this.game.levelStartTime) / 1000
 
             let newRecord = false
-            if (this.ghostReplay?.saveBestRecording(this.currentLevel, completionTime)) {
+            if (this.game.ghostReplay?.saveBestRecording(this.game.currentLevel, completionTime)) {
                 newRecord = true
             }
 
-            const level = getLevel(this.currentLevel)
-            if (this.campaignProgress && level) {
-                const saved = this.campaignProgress.recordCompletion(this.currentLevel, {
+            const level = getLevel(this.game.currentLevel)
+            if (this.game.campaignProgress && level) {
+                const saved = this.game.campaignProgress.recordCompletion(this.game.currentLevel, {
                     time: completionTime,
                     level,
-                    collectibles: this.collectiblesCollected || 0,
+                    collectibles: this.game.collectiblesCollected || 0,
                     collectiblesTotal: level.collectiblesTotal || 0,
                 })
                 if (saved.bestTime === completionTime) {
@@ -479,7 +483,7 @@ export class GameLogicCore {
             }
 
             setTimeout(() => {
-                this.showLevelCompleteModal(completionTime, newRecord)
+                this.game.showLevelCompleteModal(completionTime, newRecord)
             }, 100)
         }
     }

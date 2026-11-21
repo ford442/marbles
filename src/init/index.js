@@ -1,5 +1,5 @@
 export { loadFilament, DEFAULT_SETTINGS } from './filament-loader.js';
-import { installKnownMethods } from '../game/systems/method-installer.js';
+import { defineSlice } from '../game/systems/slice-composition.ts';
 import { InitCore } from './core.js';
 import { InitPauseMenu } from './pause-menu.js';
 import { InitSettingsTabs } from './settings-tabs.js';
@@ -9,33 +9,33 @@ import { InitLevelMenu } from './level-menu.js';
 import { InitMultiplayerMenu } from './multiplayer-menu.js';
 import { InitTouchControls } from './touch-init.js';
 
-/** Closed compatibility list for init/menu methods not yet composed. */
-export function installInitMethods(targetClass) {
-    installKnownMethods(targetClass, InitCore, ['init', '_showInitError']);
-    installKnownMethods(targetClass, InitPauseMenu, [
-        'initPauseMenu', 'togglePause', 'pauseGame', 'unpauseGame',
-        'restartCurrentLevel', 'quitToMenu', 'openSettings', 'closeSettings',
-    ]);
-    installKnownMethods(targetClass, InitSettingsTabs, [
+/** Composed init/menu slices; the game forwards each `methods` list to the instance at `key`. */
+export const INIT_SLICES = [
+    defineSlice('initCoreSlice', InitCore, ['init', '_showInitError']),
+    defineSlice('initPauseMenuSlice', InitPauseMenu, [
+        'initPauseMenu', 'togglePause', 'pauseGame', 'unpauseGame', 'restartCurrentLevel',
+        'quitToMenu', 'openSettings', 'closeSettings',
+    ]),
+    defineSlice('initSettingsTabsSlice', InitSettingsTabs, [
         'initSettingsTabs', 'initSettingsInputs', 'populateSettingsValues',
-    ]);
-    installKnownMethods(targetClass, InitSettings, [
+    ]),
+    defineSlice('initSettingsSlice', InitSettings, [
         'loadSettings', 'saveSettings', 'resetSettingsToDefaults', 'mergeWithDefaults',
         'applySettings', 'applyUIScale', 'applyHighContrast', 'applyGraphicsSettings',
-    ]);
-    installKnownMethods(targetClass, InitGraphics, [
-        'createLight', 'enableShadowsOnEntity', 'getMouseSensitivity',
-        'isYAxisInverted', 'getScreenShakeIntensity',
-    ]);
-    installKnownMethods(targetClass, InitLevelMenu, [
+    ]),
+    defineSlice('initGraphicsSlice', InitGraphics, [
+        'createLight', 'enableShadowsOnEntity', 'getMouseSensitivity', 'isYAxisInverted',
+        'getScreenShakeIntensity',
+    ]),
+    defineSlice('initLevelMenuSlice', InitLevelMenu, [
         'showLevelSelection', '_renderFlatLevelList', '_renderCommunityLevels', 'hideLevelSelection',
         'returnToMenu', 'showLevelMenu', 'setMenuCamera', 'transitionCameraToGameplay',
-    ]);
-    installKnownMethods(targetClass, InitMultiplayerMenu, [
-        'initMultiplayerMenu', '_initHostAuthority', 'showMultiplayerLobby',
-        '_hideMultiplayerLobby', '_setLobbyStatus', '_createRoom', '_joinRoom',
-        '_startRace', '_leaveLobby', '_getPlayerName', '_updateHostControls',
-        '_renderLobbyPlayers', '_showMultiplayerDisconnectBanner', 'tickMultiplayer',
-    ]);
-    installKnownMethods(targetClass, InitTouchControls, ['initTouchControls', 'applyTouchSettings']);
-}
+    ]),
+    defineSlice('initMultiplayerMenuSlice', InitMultiplayerMenu, [
+        'initMultiplayerMenu', '_initHostAuthority', 'showMultiplayerLobby', '_hideMultiplayerLobby',
+        '_setLobbyStatus', '_createRoom', '_joinRoom', '_startRace', '_leaveLobby', '_getPlayerName',
+        '_updateHostControls', '_renderLobbyPlayers', '_showMultiplayerDisconnectBanner',
+        'tickMultiplayer',
+    ]),
+    defineSlice('initTouchControlsSlice', InitTouchControls, ['initTouchControls', 'applyTouchSettings']),
+];

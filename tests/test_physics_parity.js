@@ -180,7 +180,7 @@ function mixinGame(h, overrides = {}) {
         simDt: 1 / 60,
         spawnBlinkParticle() {},
         awardTrickPoints() {},
-        cancelGrapple() { ZoneSetupGrapple.prototype.cancelGrapple.call(this); },
+        cancelGrapple() { new ZoneSetupGrapple(this).cancelGrapple(); },
         ...overrides,
     };
 }
@@ -222,7 +222,7 @@ function testBlinkTargetFinite(h) {
     resetPlayer(h);
     h.stepTime(0.1);
     const g = mixinGame(h, { lastBlinkTime: 0, blinkCooldown: 0, aimYaw: 0 });
-    quietConsole(() => AbilityBlink.prototype.triggerBlink.call(g));
+    quietConsole(() => new AbilityBlink(g).triggerBlink());
     h.stepTime(1 / 60);
 
     const t = h.bodies.player.translation();
@@ -239,7 +239,7 @@ function testGrappleNeverTargetsCaster(h) {
 
     // Aim at the crate (+x).
     const g = mixinGame(h, { aimYaw: Math.PI / 2, grappleMaxDist: 50 });
-    quietConsole(() => ZoneSetupGrapple.prototype.startGrapple.call(g));
+    quietConsole(() => new ZoneSetupGrapple(g).startGrapple());
     assert.equal(g.isGrappling, true, `${h.name}: grapple attached`);
     assert.notEqual(g.grappleTargetBody, h.bodies.player, `${h.name}: grapple target is not the caster`);
     assert.equal(g.grappleTargetBody, crate, `${h.name}: grapple yanks the dynamic crate`);
@@ -249,18 +249,18 @@ function testGrappleNeverTargetsCaster(h) {
     // Reel in hard: the spring pulls player and crate toward each other.
     g.grappleRestLength = 1;
     for (let i = 0; i < 12; i++) {
-        ZoneSetupGrapple.prototype.updateGrapple.call(g);
+        new ZoneSetupGrapple(g).updateGrapple();
         h.stepTime(1 / 60);
     }
     assert.ok(h.bodies.player.linvel().x > 0.5, `${h.name}: player pulled toward crate (vx=${h.bodies.player.linvel().x})`);
     assert.ok(crate.linvel().x < -0.5, `${h.name}: crate yanked toward player (vx=${crate.linvel().x})`);
-    ZoneSetupGrapple.prototype.cancelGrapple.call(g);
+    new ZoneSetupGrapple(g).cancelGrapple();
 
     // Aim straight down: the floor is a fixed anchor, not a yank target.
     resetPlayer(h);
     h.stepTime(1 / 60);
     const down = mixinGame(h, { pitchAngle: -Math.PI / 2 + 1e-3, grappleMaxDist: 50 });
-    quietConsole(() => ZoneSetupGrapple.prototype.startGrapple.call(down));
+    quietConsole(() => new ZoneSetupGrapple(down).startGrapple());
     assert.equal(down.isGrappling, true, `${h.name}: floor grapple attached`);
     assert.equal(down.grappleTargetBody, null, `${h.name}: fixed body is an anchor`);
     assert.ok(Math.abs(down.grappleTarget.y - 0.5) < 0.05, `${h.name}: anchor on the floor surface`);
@@ -274,7 +274,7 @@ function testDoubleJump(h) {
     assert.ok(before < 0);
 
     const g = mixinGame(h, { hasDoubleJumped: false });
-    AbilityDoubleJump.prototype.executeDoubleJump.call(g);
+    new AbilityDoubleJump(g).executeDoubleJump();
     h.stepTime(1 / 60);
     const dv = rb.linvel().y - Math.max(0, before);
     assert.ok(dv >= 4, `${h.name}: double jump Δv ${dv.toFixed(2)} m/s on the default marble`);
@@ -282,7 +282,7 @@ function testDoubleJump(h) {
 
     // A second press in the same airtime does nothing.
     const vy = rb.linvel().y;
-    AbilityDoubleJump.prototype.executeDoubleJump.call(g);
+    new AbilityDoubleJump(g).executeDoubleJump();
     h.stepTime(1 / 60);
     assert.ok(rb.linvel().y < vy, `${h.name}: no second double jump`);
 
@@ -314,7 +314,7 @@ function testMissileDoesNotTunnel(h) {
             bindProjectileLight() {},
         },
     });
-    AbilityMissiles.prototype.spawnMissile.call(g);
+    new AbilityMissiles(g).spawnMissile();
     assert.equal(g.activeMissiles.length, 1);
     const missile = g.activeMissiles[0].rigidBody;
     h.stepTime(1 / 60);

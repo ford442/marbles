@@ -1,21 +1,25 @@
 import { audio } from '../audio.js';
 
 export class AbilityStomp {
+    constructor(game) {
+        this.game = game;
+    }
+
     beginStompCharge(now) {
-        if (!this.playerMarble || this.isGrounded(this.playerMarble)) return;
+        if (!this.game.playerMarble || this.game.isGrounded(this.game.playerMarble)) return;
 
-        this.isChargingStomp = true;
-        this.stompChargeTime = Date.now();
-        this.stompStartAltitude = this.playerMarble.rigidBody.translation().y;
+        this.game.isChargingStomp = true;
+        this.game.stompChargeTime = Date.now();
+        this.game.stompStartAltitude = this.game.playerMarble.rigidBody.translation().y;
 
-        this.stompOldGravity = this.playerMarble.rigidBody.gravityScale();
-        if (this.playerMarble.color) {
-            this.stompOldColor = [...this.playerMarble.color];
+        this.game.stompOldGravity = this.game.playerMarble.rigidBody.gravityScale();
+        if (this.game.playerMarble.color) {
+            this.game.stompOldColor = [...this.game.playerMarble.color];
         }
 
         // Suspend gravity and zero velocity for "hang time" wind-up
-        this.playerMarble.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
-        this.playerMarble.rigidBody.setGravityScale(0, true);
+        this.game.playerMarble.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        this.game.playerMarble.rigidBody.setGravityScale(0, true);
 
         if (typeof audio !== 'undefined' && audio.playBoost) {
             audio.playBoost();
@@ -23,31 +27,31 @@ export class AbilityStomp {
     }
 
     releaseStomp(now) {
-        if (!this.isChargingStomp || !this.playerMarble) return;
+        if (!this.game.isChargingStomp || !this.game.playerMarble) return;
 
-        this.isChargingStomp = false;
-        this.isStomping = true;
-        this.stompReleaseTime = Date.now();
+        this.game.isChargingStomp = false;
+        this.game.isStomping = true;
+        this.game.stompReleaseTime = Date.now();
         // Cooldown starts on release (read by the Z edge detection in frame-input.js).
-        this.lastStompTime = now ?? this.stompReleaseTime;
+        this.game.lastStompTime = now ?? this.game.stompReleaseTime;
 
         // Restore gravity
-        const grav = this.stompOldGravity !== undefined ? this.stompOldGravity : (this.playerMarble.baseGravityScale || 1.0);
-        this.playerMarble.rigidBody.setGravityScale(grav, true);
+        const grav = this.game.stompOldGravity !== undefined ? this.game.stompOldGravity : (this.game.playerMarble.baseGravityScale || 1.0);
+        this.game.playerMarble.rigidBody.setGravityScale(grav, true);
 
         // Apply massive downward force scaling with charge time
-        const chargeDuration = Date.now() - this.stompChargeTime;
+        const chargeDuration = Date.now() - this.game.stompChargeTime;
         const force = 50.0 + Math.min(150.0, chargeDuration * 0.1); // Max charge cap
         const gravityDir = grav < 0 ? 1 : -1;
 
-        this.playerMarble.rigidBody.setLinvel({ x: 0, y: force * gravityDir, z: 0 }, true);
+        this.game.playerMarble.rigidBody.setLinvel({ x: 0, y: force * gravityDir, z: 0 }, true);
 
         // Restore original color
-        if (this.stompOldColor) {
-            const rcm = this.engine.getRenderableManager();
-            const inst = rcm.getInstance(this.playerMarble.entity);
+        if (this.game.stompOldColor) {
+            const rcm = this.game.engine.getRenderableManager();
+            const inst = rcm.getInstance(this.game.playerMarble.entity);
             if (inst) {
-                rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, this.stompOldColor);
+                rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, this.game.stompOldColor);
             }
         }
     }

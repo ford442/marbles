@@ -1,46 +1,50 @@
 import { audio } from '../audio.js';
 
 export class AbilityDash {
+    constructor(game) {
+        this.game = game;
+    }
+
     beginDashCharge(now) {
-        if (!this.playerMarble) return;
-        this.isChargingDash = true;
-        this.dashCharge = 0;
+        if (!this.game.playerMarble) return;
+        this.game.isChargingDash = true;
+        this.game.dashCharge = 0;
     }
 
     releaseDash(now) {
-        if (!this.playerMarble || !this.isChargingDash) return;
+        if (!this.game.playerMarble || !this.game.isChargingDash) return;
 
-        const rb = this.playerMarble.rigidBody;
-        const cosP = Math.cos(this.pitchAngle);
-        const sinP = Math.sin(this.pitchAngle);
-        const dirX = Math.sin(this.aimYaw) * cosP;
+        const rb = this.game.playerMarble.rigidBody;
+        const cosP = Math.cos(this.game.pitchAngle);
+        const sinP = Math.sin(this.game.pitchAngle);
+        const dirX = Math.sin(this.game.aimYaw) * cosP;
         const dirY = sinP;
-        const dirZ = Math.cos(this.aimYaw) * cosP;
+        const dirZ = Math.cos(this.game.aimYaw) * cosP;
 
         // Apply a strong physics impulse based on charge
         const baseForce = 50.0;
-        const force = baseForce + ((this.dashCharge || 0) * 150.0);
+        const force = baseForce + ((this.game.dashCharge || 0) * 150.0);
         rb.applyImpulse({
             x: dirX * force,
             y: dirY * force,
             z: dirZ * force
         }, true);
 
-        this.lastDashTime = now;
+        this.game.lastDashTime = now;
 
         if (typeof audio !== 'undefined' && audio.playBoost) {
             audio.playBoost();
         }
 
-        if (this.hudManager) {
-            this.hudManager.markAbilityUsed('dash');
+        if (this.game.hudManager) {
+            this.game.hudManager.markAbilityUsed('dash');
         }
 
-        this.isChargingDash = false;
-        this.dashCharge = 0;
+        this.game.isChargingDash = false;
+        this.game.dashCharge = 0;
 
-        if (this.dashBarEl) {
-            this.dashBarEl.style.boxShadow = 'none';
+        if (this.game.dashBarEl) {
+            this.game.dashBarEl.style.boxShadow = 'none';
         }
     }
 }

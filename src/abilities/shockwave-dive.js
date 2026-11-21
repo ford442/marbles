@@ -1,14 +1,18 @@
 import { audio } from '../audio.js';
 
 export class AbilityShockwaveDive {
+    constructor(game) {
+        this.game = game;
+    }
+
     beginShockwaveCharge(now) {
-        if (!this.playerMarble) return;
-        this.isChargingShockwave = true;
-        this.shockwaveChargeTime = now;
+        if (!this.game.playerMarble) return;
+        this.game.isChargingShockwave = true;
+        this.game.shockwaveChargeTime = now;
 
         // Anti-gravity to float while charging in the air
-        const rb = this.playerMarble.rigidBody;
-        this.shockwaveOldGravity = rb.gravityScale();
+        const rb = this.game.playerMarble.rigidBody;
+        this.game.shockwaveOldGravity = rb.gravityScale();
         rb.setGravityScale(0.05, true);
 
         // Apply a tiny upward hover impulse
@@ -24,17 +28,17 @@ export class AbilityShockwaveDive {
     }
 
     releaseShockwave(now) {
-        if (!this.playerMarble || !this.isChargingShockwave) return;
+        if (!this.game.playerMarble || !this.game.isChargingShockwave) return;
 
-        this.isChargingShockwave = false;
+        this.game.isChargingShockwave = false;
 
-        const rb = this.playerMarble.rigidBody;
+        const rb = this.game.playerMarble.rigidBody;
 
         // Restore gravity
-        rb.setGravityScale(this.shockwaveOldGravity !== undefined ? this.shockwaveOldGravity : 1.0, true);
+        rb.setGravityScale(this.game.shockwaveOldGravity !== undefined ? this.game.shockwaveOldGravity : 1.0, true);
 
         // Compute force based on charge time
-        const chargeDuration = now - (this.shockwaveChargeTime || now);
+        const chargeDuration = now - (this.game.shockwaveChargeTime || now);
         // Max charge at 1 second
         const chargeRatio = Math.min(1.0, chargeDuration / 1000.0);
 
@@ -49,11 +53,11 @@ export class AbilityShockwaveDive {
         }, true);
 
         // Let the logic tick know we are awaiting the ground impact
-        this.awaitingShockwaveImpact = true;
-        this.lastShockwaveTime = now;
+        this.game.awaitingShockwaveImpact = true;
+        this.game.lastShockwaveTime = now;
 
-        if (this.hudManager) {
-            this.hudManager.markAbilityUsed('shockwave');
+        if (this.game.hudManager) {
+            this.game.hudManager.markAbilityUsed('shockwave');
         }
     }
 }

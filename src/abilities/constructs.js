@@ -8,8 +8,12 @@ import { scaledTransform } from '../game-loop/helpers.ts';
 /** @typedef {{ x: number, y: number, z: number }} Vec3Like */
 
 export class AbilityConstructs {
+    /** @param {GameMixinHost} game */
+    constructor(game) {
+        this.game = game;
+    }
+
     /**
-     * @this {GameMixinHost}
      * @param {Vec3Like} pos
      */
     spawnIceBlock(pos) {
@@ -18,26 +22,26 @@ export class AbilityConstructs {
         const halfExtents = { x: 0.6, y: 0.1, z: 0.6 }
 
         const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(spawnPos.x, spawnPos.y, spawnPos.z)
-        const body = this.world.createRigidBody(bodyDesc)
+        const body = this.game.world.createRigidBody(bodyDesc)
         const colliderDesc = RAPIER.ColliderDesc.cuboid(halfExtents.x, halfExtents.y, halfExtents.z)
             .setFriction(0.0)
             .setRestitution(0.1)
-        this.world.createCollider(colliderDesc, body)
+        this.game.world.createCollider(colliderDesc, body)
 
-        const entity = this.Filament.EntityManager.get().create()
-        const matInstance = this.material.createInstance()
-        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.5, 0.9, 1.0])
+        const entity = this.game.Filament.EntityManager.get().create()
+        const matInstance = this.game.material.createInstance()
+        matInstance.setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, [0.5, 0.9, 1.0])
         matInstance.setFloatParameter('roughness', 0.1)
 
-        this.Filament.RenderableManager.Builder(1)
+        this.game.Filament.RenderableManager.Builder(1)
             .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
             .material(0, matInstance)
-            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .geometry(0, this.game.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.game.vb, this.game.ib)
             .receiveShadows(true)
             .castShadows(true)
-            .build(this.engine, entity)
+            .build(this.game.engine, entity)
 
-        const tcm = this.engine.getTransformManager()
+        const tcm = this.game.engine.getTransformManager()
         const inst = tcm.getInstance(entity)
         const mat = scaledTransform(spawnPos, { x: 0, y: 0, z: 0, w: 1 }, {
             x: halfExtents.x * 2,
@@ -46,9 +50,9 @@ export class AbilityConstructs {
         })
 
         tcm.setTransform(inst, mat)
-        this.scene.addEntity(entity)
+        this.game.scene.addEntity(entity)
 
-        this.temporaryPlatforms.push({
+        this.game.temporaryPlatforms.push({
             entity: entity,
             rigidBody: body,
             matInstance: matInstance,
@@ -58,17 +62,16 @@ export class AbilityConstructs {
     }
 
     /**
-     * @this {GameMixinHost}
      * @param {string} type
      */
     spawnBuildPiece(type) {
-        if (!this.playerMarble || this.buildEnergy < 25) return
+        if (!this.game.playerMarble || this.game.buildEnergy < 25) return
 
-        this.buildEnergy -= 25
+        this.game.buildEnergy -= 25
 
-        const pos = this.playerMarble.rigidBody.translation()
-        const dirX = Math.sin(this.aimYaw)
-        const dirZ = Math.cos(this.aimYaw)
+        const pos = this.game.playerMarble.rigidBody.translation()
+        const dirX = Math.sin(this.game.aimYaw)
+        const dirZ = Math.cos(this.game.aimYaw)
 
         // Spawn 3 units in front
         const spawnPos = { x: pos.x + dirX * 3, y: pos.y, z: pos.z + dirZ * 3 }
@@ -77,17 +80,17 @@ export class AbilityConstructs {
 
         if (type === 'ramp') {
             halfExtents = { x: 2, y: 0.1, z: 3 }
-            rot = quatFromEuler(this.aimYaw, 0.5, 0)
+            rot = quatFromEuler(this.game.aimYaw, 0.5, 0)
             color = [0.0, 1.0, 0.0]
             restitution = 0.3
         } else if (type === 'floor') {
             halfExtents = { x: 2, y: 0.1, z: 2 }
-            rot = quatFromEuler(this.aimYaw, 0, 0)
+            rot = quatFromEuler(this.game.aimYaw, 0, 0)
             color = [0.0, 0.5, 1.0]
             restitution = 0.3
         } else if (type === 'bouncer') {
             halfExtents = { x: 2, y: 0.5, z: 2 }
-            rot = quatFromEuler(this.aimYaw, 0, 0)
+            rot = quatFromEuler(this.game.aimYaw, 0, 0)
             color = [0.8, 0.0, 1.0]
             restitution = 2.0
         } else {
@@ -95,26 +98,26 @@ export class AbilityConstructs {
         }
 
         const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(spawnPos.x, spawnPos.y, spawnPos.z).setRotation(rot)
-        const body = this.world.createRigidBody(bodyDesc)
+        const body = this.game.world.createRigidBody(bodyDesc)
         const colliderDesc = RAPIER.ColliderDesc.cuboid(halfExtents.x, halfExtents.y, halfExtents.z)
             .setFriction(0.5)
             .setRestitution(restitution)
-        this.world.createCollider(colliderDesc, body)
+        this.game.world.createCollider(colliderDesc, body)
 
-        const entity = this.Filament.EntityManager.get().create()
-        const matInstance = this.material.createInstance()
-        matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color)
+        const entity = this.game.Filament.EntityManager.get().create()
+        const matInstance = this.game.material.createInstance()
+        matInstance.setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, color)
         matInstance.setFloatParameter('roughness', 0.1)
 
-        this.Filament.RenderableManager.Builder(1)
+        this.game.Filament.RenderableManager.Builder(1)
             .boundingBox({ center: [0, 0, 0], halfExtent: [halfExtents.x, halfExtents.y, halfExtents.z] })
             .material(0, matInstance)
-            .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .geometry(0, this.game.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.game.vb, this.game.ib)
             .receiveShadows(true)
             .castShadows(true)
-            .build(this.engine, entity)
+            .build(this.game.engine, entity)
 
-        const tcm = this.engine.getTransformManager()
+        const tcm = this.game.engine.getTransformManager()
         const inst = tcm.getInstance(entity)
         const mat = scaledTransform(spawnPos, rot, {
             x: halfExtents.x * 2,
@@ -123,9 +126,9 @@ export class AbilityConstructs {
         })
 
         tcm.setTransform(inst, mat)
-        this.scene.addEntity(entity)
+        this.game.scene.addEntity(entity)
 
-        this.temporaryPlatforms.push({
+        this.game.temporaryPlatforms.push({
             entity: entity,
             rigidBody: body,
             matInstance: matInstance,
@@ -135,44 +138,42 @@ export class AbilityConstructs {
 
         if (audio && audio.playJump) audio.playJump()
         
-        if (this.hudManager) this.hudManager.markAbilityUsed('build')
+        if (this.game.hudManager) this.game.hudManager.markAbilityUsed('build')
     }
 
     /**
-     * @this {GameMixinHost}
      * @param {any} portal
      */
     destroyPortal(portal) {
         if (!portal) return
-        this.scene.remove(portal.entity)
-        if (portal.matInstance) this.engine.destroyMaterialInstance(portal.matInstance)
-        this.engine.destroyEntity(portal.entity)
-        this.Filament.EntityManager.get().destroy(portal.entity)
+        this.game.scene.remove(portal.entity)
+        if (portal.matInstance) this.game.engine.destroyMaterialInstance(portal.matInstance)
+        this.game.engine.destroyEntity(portal.entity)
+        this.game.Filament.EntityManager.get().destroy(portal.entity)
         if (portal.lightEntity) {
-            this.scene.remove(portal.lightEntity)
-            this.engine.destroyEntity(portal.lightEntity)
-            this.Filament.EntityManager.get().destroy(portal.lightEntity)
+            this.game.scene.remove(portal.lightEntity)
+            this.game.engine.destroyEntity(portal.lightEntity)
+            this.game.Filament.EntityManager.get().destroy(portal.lightEntity)
         }
     }
 
     /**
-     * @this {GameMixinHost}
      * @param {'A' | 'B'} type
      */
     firePortal(type) {
-        if (!this.playerMarble) return
-        const rb = this.playerMarble.rigidBody
+        if (!this.game.playerMarble) return
+        const rb = this.game.playerMarble.rigidBody
         const pos = rb.translation()
-        const cosP = Math.cos(this.pitchAngle)
-        const sinP = Math.sin(this.pitchAngle)
-        const dirX = Math.sin(this.aimYaw) * cosP
+        const cosP = Math.cos(this.game.pitchAngle)
+        const sinP = Math.sin(this.game.pitchAngle)
+        const dirX = Math.sin(this.game.aimYaw) * cosP
         const dirY = sinP
-        const dirZ = Math.cos(this.aimYaw) * cosP
+        const dirZ = Math.cos(this.game.aimYaw) * cosP
 
         const rayDir = { x: dirX, y: dirY, z: dirZ }
 
         // Ignore the marble itself
-        const hit = this.physicsQueries.castRay(pos, rayDir, 100.0, { excludeBody: rb })
+        const hit = this.game.physicsQueries.castRay(pos, rayDir, 100.0, { excludeBody: rb })
 
         if (hit) {
             const hitPos = hit.point
@@ -196,33 +197,33 @@ export class AbilityConstructs {
             const color = type === 'A' ? [0.0, 0.5, 1.0] : [1.0, 0.5, 0.0]
             const indicatorColor = type === 'A' ? '#0088ff' : '#ff8800'
 
-            const entity = this.Filament.EntityManager.get().create()
-            const matInstance = this.material.createInstance()
-            matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, color)
+            const entity = this.game.Filament.EntityManager.get().create()
+            const matInstance = this.game.material.createInstance()
+            matInstance.setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, color)
             matInstance.setFloatParameter('roughness', 0.1)
 
             const radius = 1.0
             const thickness = 0.1
 
-            this.Filament.RenderableManager.Builder(1)
+            this.game.Filament.RenderableManager.Builder(1)
                 .boundingBox({ center: [0, 0, 0], halfExtent: [radius, thickness, radius] })
                 .material(0, matInstance)
-                .geometry(0, this.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.sphereVb, this.sphereIb) // flattened sphere
+                .geometry(0, this.game.Filament.RenderableManager$PrimitiveType.TRIANGLES, this.game.sphereVb, this.game.sphereIb) // flattened sphere
                 .receiveShadows(true)
                 .castShadows(true)
-                .build(this.engine, entity)
+                .build(this.game.engine, entity)
 
-            const lightEntity = this.Filament.EntityManager.get().create()
-            this.Filament.LightManager.Builder(this.Filament.LightManager$Type.POINT)
+            const lightEntity = this.game.Filament.EntityManager.get().create()
+            this.game.Filament.LightManager.Builder(this.game.Filament.LightManager$Type.POINT)
                 .color(color)
                 .intensity(30000.0)
                 .falloff(10.0)
-                .build(this.engine, lightEntity)
+                .build(this.game.engine, lightEntity)
 
-            this.scene.addEntity(entity)
-            this.scene.addEntity(lightEntity)
+            this.game.scene.addEntity(entity)
+            this.game.scene.addEntity(lightEntity)
 
-            const tcm = this.engine.getTransformManager()
+            const tcm = this.game.engine.getTransformManager()
             const inst = tcm.getInstance(entity)
             const lightInst = tcm.getInstance(lightEntity)
 
@@ -247,11 +248,11 @@ export class AbilityConstructs {
 
             const statusEl = document.getElementById(type === 'A' ? 'portal-a-status' : 'portal-b-status')
             if (type === 'A') {
-                if (this.portalA) this.destroyPortal(this.portalA)
-                this.portalA = newPortal
+                if (this.game.portalA) this.game.destroyPortal(this.game.portalA)
+                this.game.portalA = newPortal
             } else {
-                if (this.portalB) this.destroyPortal(this.portalB)
-                this.portalB = newPortal
+                if (this.game.portalB) this.game.destroyPortal(this.game.portalB)
+                this.game.portalB = newPortal
             }
             if (statusEl) {
                 statusEl.style.color = indicatorColor
@@ -264,12 +265,11 @@ export class AbilityConstructs {
     }
 
     /**
-     * @this {GameMixinHost}
      * @param {Vec3Like} pos
      * @param {Vec3Like} linvel
      */
     spawnJetpackExhaust(pos, linvel) {
-        this.effectPool?.spawnVisualParticle({
+        this.game.effectPool?.spawnVisualParticle({
             color: [1.0, 0.6, 0.0],
             roughness: 0.8,
             spawnTime: Date.now(),
@@ -280,21 +280,20 @@ export class AbilityConstructs {
         })
     }
 
-    /** @this {GameMixinHost} */
     fireGravityPulse() {
-        if (!this.playerMarble) return
+        if (!this.game.playerMarble) return
         const now = Date.now()
-        if (now - this.lastGravityPulseTime < this.gravityPulseCooldown) return
-        this.lastGravityPulseTime = now
+        if (now - this.game.lastGravityPulseTime < this.game.gravityPulseCooldown) return
+        this.game.lastGravityPulseTime = now
 
-        const pos = this.playerMarble.rigidBody.translation()
+        const pos = this.game.playerMarble.rigidBody.translation()
         const pulseRadius = 20.0
         let hits = 0
 
-        const bodiesToCheck = [...(this.marbles || []), ...(this.dynamicObjects || [])]
+        const bodiesToCheck = [...(this.game.marbles || []), ...(this.game.dynamicObjects || [])]
 
         for (const obj of bodiesToCheck) {
-            if (obj === this.playerMarble) continue
+            if (obj === this.game.playerMarble) continue
             if (!obj.rigidBody) continue
 
             const objPos = obj.rigidBody.translation()
@@ -320,8 +319,8 @@ export class AbilityConstructs {
             }
         }
 
-        if (hits > 0 && typeof this.awardTrickPoints === 'function') {
-            this.awardTrickPoints('Gravity Pulse!', 20 * hits, '#ffff00')
+        if (hits > 0 && typeof this.game.awardTrickPoints === 'function') {
+            this.game.awardTrickPoints('Gravity Pulse!', 20 * hits, '#ffff00')
         }
 
         if (typeof audio !== 'undefined' && audio.playBoost) {
@@ -331,29 +330,28 @@ export class AbilityConstructs {
         console.log(`[GAME] Gravity Pulse fired! Hit ${hits} objects.`)
     }
 
-    /** @this {GameMixinHost} */
     spawnHoloPlatform() {
         const now = Date.now()
-        if (now - this.lastHoloTime < this.holoCooldown) return
+        if (now - this.game.lastHoloTime < this.game.holoCooldown) return
 
-        if (!this.playerMarble) return
-        this.lastHoloTime = now
-        const pos = this.playerMarble.rigidBody.translation()
+        if (!this.game.playerMarble) return
+        this.game.lastHoloTime = now
+        const pos = this.game.playerMarble.rigidBody.translation()
 
         const spawnPos = { x: pos.x, y: pos.y - 1.2, z: pos.z }
         const halfExtents = { x: 3, y: 0.2, z: 3 }
 
-        const slot = this.effectPool?.acquireHoloPlatform()
+        const slot = this.game.effectPool?.acquireHoloPlatform()
         if (!slot) return
 
         const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(spawnPos.x, spawnPos.y, spawnPos.z)
-        const body = this.world.createRigidBody(bodyDesc)
+        const body = this.game.world.createRigidBody(bodyDesc)
         const colliderDesc = RAPIER.ColliderDesc.cuboid(halfExtents.x, halfExtents.y, halfExtents.z)
             .setFriction(0.5)
             .setRestitution(0.3)
-        this.world.createCollider(colliderDesc, body)
+        this.game.world.createCollider(colliderDesc, body)
 
-        const tcm = this.engine.getTransformManager()
+        const tcm = this.game.engine.getTransformManager()
         const inst = tcm.getInstance(slot.entity)
         const mat = scaledTransform(spawnPos, { x: 0, y: 0, z: 0, w: 1 }, {
             x: halfExtents.x * 2,
@@ -363,7 +361,7 @@ export class AbilityConstructs {
 
         tcm.setTransform(inst, mat)
 
-        this.temporaryPlatforms.push({
+        this.game.temporaryPlatforms.push({
             entity: slot.entity,
             rigidBody: body,
             matInstance: slot.matInstance,

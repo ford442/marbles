@@ -165,11 +165,15 @@ export function createZoneGlow(game, pos, color, halfExtent = [0.6, 0.04, 0.6], 
     return entity;
 }
 
-export const visualMethods = {
+export class ZoneVisuals {
+    constructor(game) {
+        this.game = game;
+    }
+
     createGoalEffects(goalPos, baseColor) {
-        if (!this.goalEffects) this.goalEffects = [];
+        if (!this.game.goalEffects) this.game.goalEffects = [];
         
-        const F = this.Filament;
+        const F = this.game.Filament;
         const goldColor = [1.0, 0.84, 0.0];
         const amberColor = [1.0, 0.6, 0.0];
         
@@ -184,7 +188,7 @@ export const visualMethods = {
         for (let i = 0; i < ringConfigs.length; i++) {
             const config = ringConfigs[i];
             const ringEntity = F.EntityManager.get().create();
-            const ringMat = this.material.createInstance();
+            const ringMat = this.game.material.createInstance();
             
             // Golden emissive color with slight variation per ring
             const ringColor = i === 0 ? goldColor : (i === 1 ? [1.0, 0.75, 0.2] : [1.0, 0.9, 0.4]);
@@ -195,12 +199,12 @@ export const visualMethods = {
             F.RenderableManager.Builder(1)
                 .boundingBox({ center: [0, 0, 0], halfExtent: [config.radius, 0.02, config.radius] })
                 .material(0, ringMat)
-                .geometry(0, F.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+                .geometry(0, F.RenderableManager$PrimitiveType.TRIANGLES, this.game.vb, this.game.ib)
                 .receiveShadows(false)
                 .castShadows(false)
-                .build(this.engine, ringEntity);
+                .build(this.game.engine, ringEntity);
             
-            this.scene.addEntity(ringEntity);
+            this.game.scene.addEntity(ringEntity);
             
             rings.push({
                 entity: ringEntity,
@@ -223,8 +227,8 @@ export const visualMethods = {
             .position([goalPos.x, goalPos.y + 2, goalPos.z])
             .falloff(15.0)
             .castShadows(false)
-            .build(this.engine, lightEntity);
-        this.scene.addEntity(lightEntity);
+            .build(this.game.engine, lightEntity);
+        this.game.scene.addEntity(lightEntity);
         
         // Create particle fountain spawners
         const particleSpawner = {
@@ -243,12 +247,12 @@ export const visualMethods = {
             baseIntensity: 50000.0,
             nearIntensity: 150000.0,
             time: 0,
-            id: this.goalEffects.length
+            id: this.game.goalEffects.length
         };
         
-        this.goalEffects.push(goalEffect);
+        this.game.goalEffects.push(goalEffect);
 
-        this.lightingBudget?.register({
+        this.game.lightingBudget?.register({
             entity: lightEntity,
             owner: LIGHT_OWNER.goal,
             pos: { x: goalPos.x, y: goalPos.y + 2, z: goalPos.z },
@@ -259,16 +263,17 @@ export const visualMethods = {
         });
 
         return goalEffect;
-    },
+    }
+
 
     updateGoalEffects(deltaTime, playerPos) {
-        if (!this.goalEffects || this.goalEffects.length === 0) return;
+        if (!this.game.goalEffects || this.game.goalEffects.length === 0) return;
         
         const now = Date.now();
-        const F = this.Filament;
-        const tcm = this.engine.getTransformManager();
+        const F = this.game.Filament;
+        const tcm = this.game.engine.getTransformManager();
         
-        for (const effect of this.goalEffects) {
+        for (const effect of this.game.goalEffects) {
             effect.time += deltaTime;
             
             // Calculate distance to player for intensity changes
@@ -288,15 +293,15 @@ export const visualMethods = {
                 effect.state = 'idle';
             }
 
-            const effectVisible = this.cullingManager?.isVisible(
+            const effectVisible = this.game.cullingManager?.isVisible(
                 `goal-effect:${effect.id}`,
                 [effect.pos.x, effect.pos.y, effect.pos.z],
                 8,
                 'dynamic'
             ) ?? true
-            if (effect.light) this.cullingManager?.setEntityVisible(effect.light, effectVisible, `goal-effect-light:${effect.id}`)
+            if (effect.light) this.game.cullingManager?.setEntityVisible(effect.light, effectVisible, `goal-effect-light:${effect.id}`)
             for (const ring of effect.rings) {
-                this.cullingManager?.setEntityVisible(ring.entity, effectVisible, `goal-effect-ring:${ring.entity}`)
+                this.game.cullingManager?.setEntityVisible(ring.entity, effectVisible, `goal-effect-ring:${ring.entity}`)
             }
             if (!effectVisible) {
                 effect._forceGoalRingSync = true
@@ -318,7 +323,7 @@ export const visualMethods = {
                     .intensity(pulseIntensity)
                     .position([effect.pos.x, effect.pos.y + 2, effect.pos.z])
                     .falloff(effect.state === 'near' ? 20 : 15)
-                    .build(this.engine, effect.light);
+                    .build(this.game.engine, effect.light);
                 effect._lastLightState = effect.state
                 effect._lastLightIntensity = pulseIntensity
                 effect._lastLightUpdateAt = now
@@ -364,13 +369,14 @@ export const visualMethods = {
             // Spawn particle fountain particles
             if (now > effect.particleSpawner.nextSpawnTime) {
                 effect.particleSpawner.nextSpawnTime = now + effect.particleSpawner.spawnInterval;
-                this.spawnGoalParticle(effect);
+                this.game.spawnGoalParticle(effect);
             }
         }
-    },
+    }
+
 
     spawnGoalParticle(effect) {
-        if (!this.effectPool?.budget.canSpawnVisualParticle()) return
+        if (!this.game.effectPool?.budget.canSpawnVisualParticle()) return
 
         const angle = Math.random() * Math.PI * 2;
         const radius = Math.random() * 0.3;
@@ -380,7 +386,7 @@ export const visualMethods = {
         const spread = 0.5;
         const brightness = 0.8 + Math.random() * 0.2;
 
-        this.effectPool.spawnVisualParticle({
+        this.game.effectPool.spawnVisualParticle({
             color: [brightness, brightness * 0.9, brightness * 0.3],
             roughness: 0.0,
             pos: { x, y, z },
@@ -394,80 +400,83 @@ export const visualMethods = {
             scale: 1.0,
             isGoalParticle: true
         });
-    },
+    }
+
 
     triggerGoalCompletionEffect(goalId) {
-        if (!this.goalEffects) return;
+        if (!this.game.goalEffects) return;
         
-        const effect = this.goalEffects[goalId];
+        const effect = this.game.goalEffects[goalId];
         if (!effect) return;
         
         effect.state = 'completed';
         
         // Burst effect - spawn many particles
         for (let i = 0; i < 30; i++) {
-            setTimeout(() => this.spawnGoalParticle(effect), i * 20);
+            setTimeout(() => this.game.spawnGoalParticle(effect), i * 20);
         }
         
         // Flash all rings bright
         for (const ring of effect.rings) {
-            ring.matInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [1.0, 1.0, 0.8]);
+            ring.matInstance.setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, [1.0, 1.0, 0.8]);
         }
         
         // Temporarily boost light
         if (effect.light) {
-            this.Filament.LightManager.Builder(this.Filament['LightManager$Type'].POINT)
+            this.game.Filament.LightManager.Builder(this.game.Filament['LightManager$Type'].POINT)
                 .color([1.0, 1.0, 0.5])
                 .intensity(300000.0)
                 .position([effect.pos.x, effect.pos.y + 2, effect.pos.z])
                 .falloff(30.0)
-                .build(this.engine, effect.light);
+                .build(this.game.engine, effect.light);
         }
         
         // Return to normal after 1 second
         setTimeout(() => {
             effect.state = 'idle';
         }, 1000);
-    },
+    }
+
 
     setNightMode(enabled, bgColor) {
-        const F = this.Filament;
-        const lm = this.engine.getLightManager();
+        const F = this.game.Filament;
+        const lm = this.game.engine.getLightManager();
 
-        if (!this.lightsInitialized || !this.sunLight || !this.fillLight || !this.backLight) {
+        if (!this.game.lightsInitialized || !this.game.sunLight || !this.game.fillLight || !this.game.backLight) {
             console.warn('[LightManager] Lights not ready yet — deferring night mode');
             return;
         }
 
         if (enabled) {
-            this.currentClearColor = bgColor || [0.02, 0.02, 0.08, 1.0];
-            this.renderer.setClearOptions({ clearColor: this.currentClearColor, clear: true });
+            this.game.currentClearColor = bgColor || [0.02, 0.02, 0.08, 1.0];
+            this.game.renderer.setClearOptions({ clearColor: this.game.currentClearColor, clear: true });
 
             // Dark trench vibe
-            lm.setIntensity(lm.getInstance(this.sunLight), 15000.0);
-            lm.setColor(lm.getInstance(this.sunLight), [0.4, 0.5, 0.7]);
-            lm.setIntensity(lm.getInstance(this.fillLight), 2200.0);
-            lm.setColor(lm.getInstance(this.fillLight), [0.6, 0.9, 1.0]);
-            lm.setIntensity(lm.getInstance(this.backLight), 1100.0);
+            lm.setIntensity(lm.getInstance(this.game.sunLight), 15000.0);
+            lm.setColor(lm.getInstance(this.game.sunLight), [0.4, 0.5, 0.7]);
+            lm.setIntensity(lm.getInstance(this.game.fillLight), 2200.0);
+            lm.setColor(lm.getInstance(this.game.fillLight), [0.6, 0.9, 1.0]);
+            lm.setIntensity(lm.getInstance(this.game.backLight), 1100.0);
 
             // Apply the default night IBL.  If the level specifies an explicit
             // environment, loadLevel() calls setEnvironment() after this which
             // will override this choice.
-            this.applyEnvironment('space_nebula');
+            this.game.applyEnvironment('space_nebula');
         } else {
-            this.currentClearColor = [0.1, 0.1, 0.1, 1.0];
-            this.renderer.setClearOptions({ clearColor: this.currentClearColor, clear: true });
+            this.game.currentClearColor = [0.1, 0.1, 0.1, 1.0];
+            this.game.renderer.setClearOptions({ clearColor: this.game.currentClearColor, clear: true });
 
             // Day / normal mode
-            lm.setIntensity(lm.getInstance(this.sunLight), 80000.0);
-            lm.setColor(lm.getInstance(this.sunLight), [1.0, 0.96, 0.88]);
-            lm.setIntensity(lm.getInstance(this.fillLight), 1200.0);
-            lm.setColor(lm.getInstance(this.fillLight), [0.65, 0.78, 1.0]);
-            lm.setIntensity(lm.getInstance(this.backLight), 600.0);
+            lm.setIntensity(lm.getInstance(this.game.sunLight), 80000.0);
+            lm.setColor(lm.getInstance(this.game.sunLight), [1.0, 0.96, 0.88]);
+            lm.setIntensity(lm.getInstance(this.game.fillLight), 1200.0);
+            lm.setColor(lm.getInstance(this.game.fillLight), [0.65, 0.78, 1.0]);
+            lm.setIntensity(lm.getInstance(this.game.backLight), 600.0);
 
-            this.applyEnvironment('default');
+            this.game.applyEnvironment('default');
         }
-    },
+    }
+
 
     /**
      * Explicitly switch to a named IBL environment.
@@ -480,6 +489,6 @@ export const visualMethods = {
             console.warn(`[ENV] Unknown environment "${envName}", keeping current.`);
             return;
         }
-        this.applyEnvironment(envName);
-    },
-};
+        this.game.applyEnvironment(envName);
+    }
+}

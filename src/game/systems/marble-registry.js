@@ -478,13 +478,6 @@ export class MarbleRegistry {
         for (const obj of g.dynamicObjects) g.dynamicBodies.add(obj.rigidBody);
     }
 
-    returnToMenu() {
-        const g = this.game;
-        audio.stopAllRolling();
-        g.clearLevel();
-        g.showLevelSelection();
-    }
-
     processCollisionEvents() {
         const g = this.game;
         if (!g.world) return;

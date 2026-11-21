@@ -4,29 +4,33 @@ import { audio } from '../audio.js';
 /** @typedef {import('../types/mixin-host.ts').GameMixinHost} GameMixinHost */
 
 export class AbilityBlink {
-    /** @this {GameMixinHost} */
+    /** @param {GameMixinHost} game */
+    constructor(game) {
+        this.game = game;
+    }
+
     triggerBlink() {
-        if (!this.playerMarble) return
+        if (!this.game.playerMarble) return
         const now = Date.now()
-        if (now - this.lastBlinkTime < this.blinkCooldown) return
-        this.lastBlinkTime = now
+        if (now - this.game.lastBlinkTime < this.game.blinkCooldown) return
+        this.game.lastBlinkTime = now
 
-        const rb = this.playerMarble.rigidBody
+        const rb = this.game.playerMarble.rigidBody
         const pos = rb.translation()
-        const cosP = Math.cos(this.pitchAngle)
-        const sinP = Math.sin(this.pitchAngle)
+        const cosP = Math.cos(this.game.pitchAngle)
+        const sinP = Math.sin(this.game.pitchAngle)
 
-        const dirX = Math.sin(this.aimYaw) * cosP
+        const dirX = Math.sin(this.game.aimYaw) * cosP
         const dirY = sinP
-        const dirZ = Math.cos(this.aimYaw) * cosP
+        const dirZ = Math.cos(this.game.aimYaw) * cosP
 
         const maxDist = 10.0
         const rayDir = { x: dirX, y: dirY, z: dirZ }
 
         let blinkDist = maxDist
-        const hit = this.physicsQueries.castRay(pos, rayDir, maxDist, { excludeBody: rb })
+        const hit = this.game.physicsQueries.castRay(pos, rayDir, maxDist, { excludeBody: rb })
         if (hit) {
-            const radius = this.playerMarble.scale * 0.5 || 0.5
+            const radius = this.game.playerMarble.scale * 0.5 || 0.5
             blinkDist = Math.max(0, hit.toi - radius - 0.1)
         }
 
@@ -43,28 +47,27 @@ export class AbilityBlink {
         const color = [1.0, 0.8, 0.0] // Yellow/gold blink
 
         // Start particle
-        this.spawnBlinkParticle(pos, color)
+        this.game.spawnBlinkParticle(pos, color)
         // End particle
-        this.spawnBlinkParticle(newPos, color)
+        this.game.spawnBlinkParticle(newPos, color)
 
         if (audio.playAbility) audio.playAbility('blink')
 
-        if (typeof this.awardTrickPoints === 'function') {
-             this.awardTrickPoints('Blink!', 15, '#ffcc00')
+        if (typeof this.game.awardTrickPoints === 'function') {
+             this.game.awardTrickPoints('Blink!', 15, '#ffcc00')
         }
 
         console.log(`[GAME] Blinked ${blinkDist.toFixed(2)} units to ${newPos.x.toFixed(2)}, ${newPos.y.toFixed(2)}, ${newPos.z.toFixed(2)}`)
         
-        if (this.hudManager) this.hudManager.markAbilityUsed('blink')
+        if (this.game.hudManager) this.game.hudManager.markAbilityUsed('blink')
     }
 
     /**
-     * @this {GameMixinHost}
      * @param {{ x: number, y: number, z: number }} pos
      * @param {number[]} color
      */
     spawnBlinkParticle(pos, color) {
-        this.effectPool?.spawnVisualParticle({
+        this.game.effectPool?.spawnVisualParticle({
             color,
             roughness: 0.1,
             spawnTime: Date.now(),

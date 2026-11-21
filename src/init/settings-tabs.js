@@ -1,4 +1,8 @@
 export class InitSettingsTabs {
+    constructor(game) {
+        this.game = game;
+    }
+
     initSettingsTabs() {
         const tabs = document.querySelectorAll('.settings-tab')
         tabs.forEach(tab => {
@@ -26,9 +30,9 @@ export class InitSettingsTabs {
         const qualitySelect = document.getElementById('setting-quality')
         if (qualitySelect) {
             qualitySelect.addEventListener('change', (e) => {
-                if (this.settings) {
-                    this.settings.graphics.quality = e.target.value
-                    this.applyGraphicsSettings()
+                if (this.game.settings) {
+                    this.game.settings.graphics.quality = e.target.value
+                    this.game.applyGraphicsSettings()
                 }
             })
         }
@@ -36,7 +40,7 @@ export class InitSettingsTabs {
         const shadowToggle = document.getElementById('setting-shadows')
         if (shadowToggle) {
             shadowToggle.addEventListener('change', (e) => {
-                if (this.settings) this.settings.graphics.shadows = e.target.checked
+                if (this.game.settings) this.game.settings.graphics.shadows = e.target.checked
             })
         }
 
@@ -45,9 +49,9 @@ export class InitSettingsTabs {
         if (bloomSlider && bloomValue) {
             bloomSlider.addEventListener('input', (e) => {
                 bloomValue.textContent = `${e.target.value}%`
-                if (this.settings) {
-                    this.settings.graphics.bloom = parseInt(e.target.value)
-                    this.applyGraphicsSettings()
+                if (this.game.settings) {
+                    this.game.settings.graphics.bloom = parseInt(e.target.value)
+                    this.game.applyGraphicsSettings()
                 }
             })
         }
@@ -55,9 +59,9 @@ export class InitSettingsTabs {
         const ssaoToggle = document.getElementById('setting-ssao')
         if (ssaoToggle) {
             ssaoToggle.addEventListener('change', (e) => {
-                if (this.settings) {
-                    this.settings.graphics.ssao = e.target.checked
-                    this.applyGraphicsSettings()
+                if (this.game.settings) {
+                    this.game.settings.graphics.ssao = e.target.checked
+                    this.game.applyGraphicsSettings()
                 }
             })
         }
@@ -68,9 +72,9 @@ export class InitSettingsTabs {
             renderScaleSlider.addEventListener('change', (e) => {
                 const pct = parseInt(e.target.value)
                 if (renderScaleValue) renderScaleValue.textContent = `${pct}%`
-                if (this.settings) {
-                    this.settings.graphics.renderScale = pct / 100
-                    this.applyGraphicsSettings()
+                if (this.game.settings) {
+                    this.game.settings.graphics.renderScale = pct / 100
+                    this.game.applyGraphicsSettings()
                 }
             })
             renderScaleSlider.addEventListener('input', (e) => {
@@ -81,9 +85,9 @@ export class InitSettingsTabs {
         const dynResToggle = document.getElementById('setting-dynres')
         if (dynResToggle) {
             dynResToggle.addEventListener('change', (e) => {
-                if (this.settings) {
-                    this.settings.graphics.dynamicResolution = e.target.checked
-                    this.applyGraphicsSettings()
+                if (this.game.settings) {
+                    this.game.settings.graphics.dynamicResolution = e.target.checked
+                    this.game.applyGraphicsSettings()
                 }
             })
         }
@@ -91,9 +95,9 @@ export class InitSettingsTabs {
         const targetFpsSelect = document.getElementById('setting-target-fps')
         if (targetFpsSelect) {
             targetFpsSelect.addEventListener('change', (e) => {
-                if (this.settings) {
+                if (this.game.settings) {
                     const val = e.target.value
-                    this.settings.graphics.targetFps = val === 'unlimited' ? 'unlimited' : parseInt(val, 10)
+                    this.game.settings.graphics.targetFps = val === 'unlimited' ? 'unlimited' : parseInt(val, 10)
                 }
             })
         }
@@ -101,12 +105,12 @@ export class InitSettingsTabs {
         const perfModeSelect = document.getElementById('setting-performance-mode')
         if (perfModeSelect) {
             perfModeSelect.addEventListener('change', (e) => {
-                if (this.settings) {
-                    this.settings.graphics.performanceMode = e.target.value
+                if (this.game.settings) {
+                    this.game.settings.graphics.performanceMode = e.target.value
                     if (e.target.value === 'locked') {
-                        this.autoQualityGovernor?.reset()
+                        this.game.autoQualityGovernor?.reset()
                     }
-                    this.applySettings()
+                    this.game.applySettings()
                 }
             })
         }
@@ -117,7 +121,7 @@ export class InitSettingsTabs {
         if (masterSlider && masterValue) {
             masterSlider.addEventListener('input', (e) => {
                 masterValue.textContent = `${e.target.value}%`
-                if (this.settings) this.settings.audio.master = parseInt(e.target.value)
+                if (this.game.settings) this.game.settings.audio.master = parseInt(e.target.value)
             })
         }
 
@@ -126,7 +130,7 @@ export class InitSettingsTabs {
         if (sfxSlider && sfxValue) {
             sfxSlider.addEventListener('input', (e) => {
                 sfxValue.textContent = `${e.target.value}%`
-                if (this.settings) this.settings.audio.sfx = parseInt(e.target.value)
+                if (this.game.settings) this.game.settings.audio.sfx = parseInt(e.target.value)
             })
         }
 
@@ -135,7 +139,7 @@ export class InitSettingsTabs {
         if (musicSlider && musicValue) {
             musicSlider.addEventListener('input', (e) => {
                 musicValue.textContent = `${e.target.value}%`
-                if (this.settings) this.settings.audio.music = parseInt(e.target.value)
+                if (this.game.settings) this.game.settings.audio.music = parseInt(e.target.value)
             })
         }
 
@@ -145,23 +149,23 @@ export class InitSettingsTabs {
         if (sensitivitySlider && sensitivityValue) {
             sensitivitySlider.addEventListener('input', (e) => {
                 sensitivityValue.textContent = `${e.target.value}%`
-                if (this.settings) this.settings.controls.sensitivity = parseInt(e.target.value)
+                if (this.game.settings) this.game.settings.controls.sensitivity = parseInt(e.target.value)
             })
         }
 
         const invertYToggle = document.getElementById('setting-invert-y')
         if (invertYToggle) {
             invertYToggle.addEventListener('change', (e) => {
-                if (this.settings) this.settings.controls.invertY = e.target.checked
+                if (this.game.settings) this.game.settings.controls.invertY = e.target.checked
             })
         }
 
         const touchEnabled = document.getElementById('setting-touch-enabled')
         if (touchEnabled) {
             touchEnabled.addEventListener('change', (e) => {
-                if (!this.settings.controls.touch) this.settings.controls.touch = {}
-                this.settings.controls.touch.enabled = e.target.value
-                this.applyTouchSettings?.()
+                if (!this.game.settings.controls.touch) this.game.settings.controls.touch = {}
+                this.game.settings.controls.touch.enabled = e.target.value
+                this.game.applyTouchSettings?.()
             })
         }
 
@@ -170,36 +174,36 @@ export class InitSettingsTabs {
         if (touchCamSlider && touchCamValue) {
             touchCamSlider.addEventListener('input', (e) => {
                 touchCamValue.textContent = `${e.target.value}%`
-                if (!this.settings.controls.touch) this.settings.controls.touch = {}
-                this.settings.controls.touch.cameraSensitivity = parseInt(e.target.value, 10)
+                if (!this.game.settings.controls.touch) this.game.settings.controls.touch = {}
+                this.game.settings.controls.touch.cameraSensitivity = parseInt(e.target.value, 10)
             })
         }
 
         const touchInvert = document.getElementById('setting-touch-invert-y')
         if (touchInvert) {
             touchInvert.addEventListener('change', (e) => {
-                if (!this.settings.controls.touch) this.settings.controls.touch = {}
-                this.settings.controls.touch.invertCameraY = e.target.checked
+                if (!this.game.settings.controls.touch) this.game.settings.controls.touch = {}
+                this.game.settings.controls.touch.invertCameraY = e.target.checked
             })
         }
 
         const touchJoystickSide = document.getElementById('setting-touch-joystick-side')
         if (touchJoystickSide) {
             touchJoystickSide.addEventListener('change', (e) => {
-                if (!this.settings.controls.touch) this.settings.controls.touch = {}
-                this.settings.controls.touch.joystickSide = e.target.value
-                this.applyTouchSettings?.()
+                if (!this.game.settings.controls.touch) this.game.settings.controls.touch = {}
+                this.game.settings.controls.touch.joystickSide = e.target.value
+                this.game.applyTouchSettings?.()
             })
         }
 
         const touchSwapButtons = document.getElementById('setting-touch-swap-buttons')
         if (touchSwapButtons) {
             touchSwapButtons.addEventListener('change', (e) => {
-                if (!this.settings.controls.touch) this.settings.controls.touch = {}
+                if (!this.game.settings.controls.touch) this.game.settings.controls.touch = {}
                 const swapped = e.target.checked
-                this.settings.controls.touch.jumpSlot = swapped ? 'secondary' : 'primary'
-                this.settings.controls.touch.boostSlot = swapped ? 'primary' : 'secondary'
-                this.applyTouchSettings?.()
+                this.game.settings.controls.touch.jumpSlot = swapped ? 'secondary' : 'primary'
+                this.game.settings.controls.touch.boostSlot = swapped ? 'primary' : 'secondary'
+                this.game.applyTouchSettings?.()
             })
         }
 
@@ -209,16 +213,16 @@ export class InitSettingsTabs {
         if (uiScaleSlider && uiScaleValue) {
             uiScaleSlider.addEventListener('input', (e) => {
                 uiScaleValue.textContent = `${e.target.value}%`
-                if (this.settings) this.settings.accessibility.uiScale = parseInt(e.target.value)
-                this.applyUIScale(parseInt(e.target.value))
+                if (this.game.settings) this.game.settings.accessibility.uiScale = parseInt(e.target.value)
+                this.game.applyUIScale(parseInt(e.target.value))
             })
         }
 
         const highContrastToggle = document.getElementById('setting-high-contrast')
         if (highContrastToggle) {
             highContrastToggle.addEventListener('change', (e) => {
-                if (this.settings) this.settings.accessibility.highContrast = e.target.checked
-                this.applyHighContrast(e.target.checked)
+                if (this.game.settings) this.game.settings.accessibility.highContrast = e.target.checked
+                this.game.applyHighContrast(e.target.checked)
             })
         }
 
@@ -227,7 +231,7 @@ export class InitSettingsTabs {
         if (shakeSlider && shakeValue) {
             shakeSlider.addEventListener('input', (e) => {
                 shakeValue.textContent = `${e.target.value}%`
-                if (this.settings) this.settings.accessibility.screenShake = parseInt(e.target.value)
+                if (this.game.settings) this.game.settings.accessibility.screenShake = parseInt(e.target.value)
             })
         }
 
@@ -238,7 +242,7 @@ export class InitSettingsTabs {
                     m.setCloudOptIn(e.target.checked)
                     if (e.target.checked) {
                         m.scheduleQueueFlush()
-                        this.cloudClient?.pullAndMergeCampaign()
+                        this.game.cloudClient?.pullAndMergeCampaign()
                     }
                 })
             })
@@ -255,9 +259,9 @@ export class InitSettingsTabs {
     }
 
     populateSettingsValues() {
-        if (!this.settings) return
+        if (!this.game.settings) return
 
-        const s = this.settings
+        const s = this.game.settings
 
         // Graphics
         const qualitySelect = document.getElementById('setting-quality')

@@ -14,41 +14,45 @@ function hostAuthorityEnabledFromUrl() {
 }
 
 export class InitMultiplayerMenu {
-    initMultiplayerMenu() {
-        this.multiplayerMode = false;
-        this.hostAuthorityMode = false;
-        this.remotePlayers = new RemotePlayers(this);
-        this.network = new NetworkClient(this);
-        this.hostSim = new HostSim(this);
-        this.clientPrediction = new ClientPrediction(this);
+    constructor(game) {
+        this.game = game;
+    }
 
-        this.network.onRoomUpdate = (players) => this._renderLobbyPlayers(players);
-        this.network.onStarting = (levelId, hostId, startAtMs, seed) => {
-            this.multiplayerMode = true;
-            this.hostAuthorityMode = hostAuthorityEnabledFromUrl();
-            this._hideMultiplayerLobby(() => {
-                this.hideLevelSelection(() => {
-                    this.loadLevel(levelId, { startAtMs, seed }).then(() => {
-                        if (this.hostAuthorityMode) {
-                            this._initHostAuthority(hostId);
+    initMultiplayerMenu() {
+        this.game.multiplayerMode = false;
+        this.game.hostAuthorityMode = false;
+        this.game.remotePlayers = new RemotePlayers(this.game);
+        this.game.network = new NetworkClient(this.game);
+        this.game.hostSim = new HostSim(this.game);
+        this.game.clientPrediction = new ClientPrediction(this.game);
+
+        this.game.network.onRoomUpdate = (players) => this.game._renderLobbyPlayers(players);
+        this.game.network.onStarting = (levelId, hostId, startAtMs, seed) => {
+            this.game.multiplayerMode = true;
+            this.game.hostAuthorityMode = hostAuthorityEnabledFromUrl();
+            this.game._hideMultiplayerLobby(() => {
+                this.game.hideLevelSelection(() => {
+                    this.game.loadLevel(levelId, { startAtMs, seed }).then(() => {
+                        if (this.game.hostAuthorityMode) {
+                            this.game._initHostAuthority(hostId);
                         }
                     });
                 });
             });
         };
-        this.network.onDisconnected = () => {
-            this._setLobbyStatus('Disconnected from relay.', true);
-            if (this.multiplayerMode && this.currentLevel) {
-                this._showMultiplayerDisconnectBanner();
+        this.game.network.onDisconnected = () => {
+            this.game._setLobbyStatus('Disconnected from relay.', true);
+            if (this.game.multiplayerMode && this.game.currentLevel) {
+                this.game._showMultiplayerDisconnectBanner();
             }
         };
-        this.network.onError = (code, message) => {
-            this._setLobbyStatus(`${code}: ${message}`, true);
+        this.game.network.onError = (code, message) => {
+            this.game._setLobbyStatus(`${code}: ${message}`, true);
         };
 
         const btnParty = document.getElementById('btn-party-race');
         if (btnParty) {
-            btnParty.addEventListener('click', () => this.showMultiplayerLobby());
+            btnParty.addEventListener('click', () => this.game.showMultiplayerLobby());
         }
 
         const btnCreate = document.getElementById('btn-create-room');
@@ -57,21 +61,21 @@ export class InitMultiplayerMenu {
         const btnLeave = document.getElementById('btn-leave-lobby');
         const btnClose = document.getElementById('btn-close-lobby');
 
-        if (btnCreate) btnCreate.addEventListener('click', () => this._createRoom());
-        if (btnJoin) btnJoin.addEventListener('click', () => this._joinRoom());
-        if (btnStart) btnStart.addEventListener('click', () => this._startRace());
-        if (btnLeave) btnLeave.addEventListener('click', () => this._leaveLobby());
-        if (btnClose) btnClose.addEventListener('click', () => this._leaveLobby());
+        if (btnCreate) btnCreate.addEventListener('click', () => this.game._createRoom());
+        if (btnJoin) btnJoin.addEventListener('click', () => this.game._joinRoom());
+        if (btnStart) btnStart.addEventListener('click', () => this.game._startRace());
+        if (btnLeave) btnLeave.addEventListener('click', () => this.game._leaveLobby());
+        if (btnClose) btnClose.addEventListener('click', () => this.game._leaveLobby());
     }
 
     _initHostAuthority(hostId) {
-        if (this.network.isHost) {
-            const spawn = this.currentLevel
-                ? (LEVELS[this.currentLevel]?.spawn || { x: 0, y: 8, z: -12 })
+        if (this.game.network.isHost) {
+            const spawn = this.game.currentLevel
+                ? (LEVELS[this.game.currentLevel]?.spawn || { x: 0, y: 8, z: -12 })
                 : { x: 0, y: 8, z: -12 };
-            this.hostSim.init(this.network.players, spawn);
+            this.game.hostSim.init(this.game.network.players, spawn);
         } else {
-            this.clientPrediction.init(this.network.playerId);
+            this.game.clientPrediction.init(this.game.network.playerId);
         }
         void hostId;
     }
@@ -80,7 +84,7 @@ export class InitMultiplayerMenu {
         const overlay = document.getElementById('multiplayer-lobby');
         if (!overlay) return;
         overlay.classList.add('active');
-        this._setLobbyStatus('');
+        this.game._setLobbyStatus('');
 
         const roomInput = document.getElementById('mp-room-code');
         if (roomInput && !roomInput.value) {
@@ -99,7 +103,7 @@ export class InitMultiplayerMenu {
             }
         }
 
-        this._renderLobbyPlayers(this.network.players);
+        this.game._renderLobbyPlayers(this.game.network.players);
     }
 
     _hideMultiplayerLobby(callback) {
@@ -116,61 +120,61 @@ export class InitMultiplayerMenu {
     }
 
     async _createRoom() {
-        const name = this._getPlayerName();
+        const name = this.game._getPlayerName();
         const roomInput = document.getElementById('mp-room-code');
         const room = roomInput?.value?.trim().toUpperCase() || generateRoomCode();
         if (roomInput) roomInput.value = room;
-        this._setLobbyStatus('Connecting…');
+        this.game._setLobbyStatus('Connecting…');
 
         try {
-            await this.network.joinRoom(room, name);
-            this._setLobbyStatus(`Room ${room} created. Share the code with friends.`);
-            this._updateHostControls();
+            await this.game.network.joinRoom(room, name);
+            this.game._setLobbyStatus(`Room ${room} created. Share the code with friends.`);
+            this.game._updateHostControls();
         } catch (e) {
-            this._setLobbyStatus(e?.message || 'Could not connect to relay.', true);
+            this.game._setLobbyStatus(e?.message || 'Could not connect to relay.', true);
         }
     }
 
     async _joinRoom() {
-        const name = this._getPlayerName();
+        const name = this.game._getPlayerName();
         const roomInput = document.getElementById('mp-room-code');
         const room = roomInput?.value?.trim().toUpperCase();
         if (!room) {
-            this._setLobbyStatus('Enter a room code.', true);
+            this.game._setLobbyStatus('Enter a room code.', true);
             return;
         }
 
-        this._setLobbyStatus('Joining…');
+        this.game._setLobbyStatus('Joining…');
         try {
-            await this.network.joinRoom(room, name);
-            this._setLobbyStatus(`Joined room ${room}.`);
-            this._updateHostControls();
+            await this.game.network.joinRoom(room, name);
+            this.game._setLobbyStatus(`Joined room ${room}.`);
+            this.game._updateHostControls();
         } catch (e) {
-            this._setLobbyStatus(e?.message || 'Could not join room.', true);
+            this.game._setLobbyStatus(e?.message || 'Could not join room.', true);
         }
     }
 
     _startRace() {
-        if (!this.network.isHost) return;
+        if (!this.game.network.isHost) return;
         const levelSelect = document.getElementById('mp-level-select');
         const levelId = levelSelect?.value || 'tutorial';
-        if (this.network.players.length < 2) {
-            this._setLobbyStatus('Waiting for at least one more player…', true);
+        if (this.game.network.players.length < 2) {
+            this.game._setLobbyStatus('Waiting for at least one more player…', true);
             return;
         }
-        this.network.requestStart(levelId);
+        this.game.network.requestStart(levelId);
     }
 
     _leaveLobby() {
-        this.network.disconnect();
-        this.multiplayerMode = false;
-        this.hostAuthorityMode = false;
-        this.hostSim?.reset();
-        this.clientPrediction?.reset();
-        clearRemoteAbilityFx(this);
-        resetDesyncIndicator(this);
-        this._hideMultiplayerLobby();
-        this._setLobbyStatus('');
+        this.game.network.disconnect();
+        this.game.multiplayerMode = false;
+        this.game.hostAuthorityMode = false;
+        this.game.hostSim?.reset();
+        this.game.clientPrediction?.reset();
+        clearRemoteAbilityFx(this.game);
+        resetDesyncIndicator(this.game);
+        this.game._hideMultiplayerLobby();
+        this.game._setLobbyStatus('');
     }
 
     _getPlayerName() {
@@ -183,7 +187,7 @@ export class InitMultiplayerMenu {
         const startBtn = document.getElementById('btn-start-race');
         const levelSelect = document.getElementById('mp-level-select');
         const hostOnly = document.querySelectorAll('.mp-host-only');
-        const isHost = this.network.isHost;
+        const isHost = this.game.network.isHost;
 
         if (startBtn) startBtn.style.display = isHost ? 'inline-block' : 'none';
         if (levelSelect) levelSelect.disabled = !isHost;
@@ -203,7 +207,7 @@ export class InitMultiplayerMenu {
             list.appendChild(li);
         }
 
-        this._updateHostControls();
+        this.game._updateHostControls();
     }
 
     _showMultiplayerDisconnectBanner() {
@@ -212,33 +216,33 @@ export class InitMultiplayerMenu {
     }
 
     tickMultiplayer(now = Date.now()) {
-        if (!this.multiplayerMode || !this.network?.room) return;
+        if (!this.game.multiplayerMode || !this.game.network?.room) return;
 
-        if (this.hostAuthorityMode) {
-            if (this.network.isHost) {
-                this.hostSim?.tick(now);
+        if (this.game.hostAuthorityMode) {
+            if (this.game.network.isHost) {
+                this.game.hostSim?.tick(now);
             } else {
-                this.clientPrediction?.recordInput(now);
-                this.clientPrediction?.reconcileFromNetwork(now);
+                this.game.clientPrediction?.recordInput(now);
+                this.game.clientPrediction?.reconcileFromNetwork(now);
             }
-            this.network.tickSendInput(now);
+            this.game.network.tickSendInput(now);
         } else {
-            this.network.tickSendState(now);
-            this.network.tickSendInput(now);
+            this.game.network.tickSendState(now);
+            this.game.network.tickSendInput(now);
         }
 
-        if (!this.network.playerId) return;
-        this.remotePlayers.syncRoster(this.network.players, this.network.playerId);
+        if (!this.game.network.playerId) return;
+        this.game.remotePlayers.syncRoster(this.game.network.players, this.game.network.playerId);
 
-        for (const player of this.network.players) {
-            if (player.id === this.network.playerId) continue;
-            const frame = this.network.getRemoteFrame(player.id, now);
+        for (const player of this.game.network.players) {
+            if (player.id === this.game.network.playerId) continue;
+            const frame = this.game.network.getRemoteFrame(player.id, now);
             if (frame) {
-                this.remotePlayers.updatePlayer(player.id, frame);
+                this.game.remotePlayers.updatePlayer(player.id, frame);
             }
         }
 
-        tickRemoteAbilityFx(this, now);
-        updateDesyncIndicator(this, now);
+        tickRemoteAbilityFx(this.game, now);
+        updateDesyncIndicator(this.game, now);
     }
 }

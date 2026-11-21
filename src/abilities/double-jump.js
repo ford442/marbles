@@ -6,11 +6,15 @@ import { DOUBLE_JUMP_DV } from './movement-tuning.js';
 /** @typedef {import('../types/mixin-host.ts').GameMixinHost} GameMixinHost */
 
 export class AbilityDoubleJump {
-    /** @this {GameMixinHost} */
-    executeDoubleJump() {
-        if (!this.playerMarble || this.hasDoubleJumped) return;
+    /** @param {GameMixinHost} game */
+    constructor(game) {
+        this.game = game;
+    }
 
-        const rb = this.playerMarble.rigidBody;
+    executeDoubleJump() {
+        if (!this.game.playerMarble || this.game.hasDoubleJumped) return;
+
+        const rb = this.game.playerMarble.rigidBody;
         const linvel = rb.linvel();
         const gravityDir = rb.gravityScale() < 0 ? -1 : 1;
 
@@ -22,19 +26,19 @@ export class AbilityDoubleJump {
         rb.setLinvel({ x: linvel.x, y: newVelY, z: linvel.z }, true);
         applyVelocityChange(rb, { x: 0, y: DOUBLE_JUMP_DV * gravityDir, z: 0 });
 
-        this.hasDoubleJumped = true;
-        this.jumpCount = 2;
+        this.game.hasDoubleJumped = true;
+        this.game.jumpCount = 2;
 
         if (typeof audio !== 'undefined' && audio.playJump) {
             audio.playJump();
         }
 
-        if (typeof this.awardTrickPoints === 'function') {
-            this.awardTrickPoints('Double Jump!', 20, '#00bfff');
+        if (typeof this.game.awardTrickPoints === 'function') {
+            this.game.awardTrickPoints('Double Jump!', 20, '#00bfff');
         }
 
-        if (this.hudManager) {
-            this.hudManager.markAbilityUsed('doublejump');
+        if (this.game.hudManager) {
+            this.game.hudManager.markAbilityUsed('doublejump');
         }
     }
 }

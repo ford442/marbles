@@ -6,63 +6,67 @@ import { loadLevelBehaviors } from '../game/level-behaviors/index.js';
 import { activatePhysicsBackendForLevel } from '../game/systems/physics-backend.ts';
 
 export class InitLevelLoader {
+    constructor(game) {
+        this.game = game;
+    }
+
     async loadLevel(levelId, options = {}) {
-        if (!window.__FILAMENT_FULLY_READY__ || !this.engine || !this.vb || !this.ib) {
+        if (!window.__FILAMENT_FULLY_READY__ || !this.game.engine || !this.game.vb || !this.game.ib) {
             console.error('loadLevel called too early');
             return false;
         }
 
         console.log(`[LEVEL] Loading level: ${levelId}`)
-        const level = this.levelLoader.getLevel(levelId)
+        const level = this.game.levelLoader.getLevel(levelId)
         if (!level) {
             console.error(`[LEVEL] Level ${levelId} not found!`)
             return
         }
 
-        this.clearLevel()
+        this.game.clearLevel()
         console.log('[LEVEL] Cleared previous level')
-        const rapierMode = await activatePhysicsBackendForLevel(this, levelId)
+        const rapierMode = await activatePhysicsBackendForLevel(this.game, levelId)
         console.log(`[LEVEL] Physics backend: ${rapierMode}`)
-        this.perfMonitor?.resetLevel(levelId)
-        this.cullingManager?.reset()
-        this.trackLodManager?.reset()
-        this.marbleLodManager?.reset()
-        this.effectPool?.reset()
-        this.levelEffectBudget?.reset()
+        this.game.perfMonitor?.resetLevel(levelId)
+        this.game.cullingManager?.reset()
+        this.game.trackLodManager?.reset()
+        this.game.marbleLodManager?.reset()
+        this.game.effectPool?.reset()
+        this.game.levelEffectBudget?.reset()
 
-        this.ghostReplay?.beginRecording()
-        this.ghostReplay?.resetPlayback()
+        this.game.ghostReplay?.beginRecording()
+        this.game.ghostReplay?.resetPlayback()
 
-        this.currentLevel = levelId
-        this.levelNameEl.textContent = level.name
-        this.goalDefinitions = level.goals
-        this.checkpointDefinitions = level.checkpoints || []
-        this.abilitySystem?.applyLevelMask(level.abilities)
-        this.score = 0
-        this.scoreEl.textContent = 'Score: 0'
-        this.combo = 1
-        this.comboTimer = 0
-        if (this.comboEl) {
-            this.comboEl.style.display = 'none'
-            this.comboEl.textContent = 'Combo: x1'
+        this.game.currentLevel = levelId
+        this.game.levelNameEl.textContent = level.name
+        this.game.goalDefinitions = level.goals
+        this.game.checkpointDefinitions = level.checkpoints || []
+        this.game.abilitySystem?.applyLevelMask(level.abilities)
+        this.game.score = 0
+        this.game.scoreEl.textContent = 'Score: 0'
+        this.game.combo = 1
+        this.game.comboTimer = 0
+        if (this.game.comboEl) {
+            this.game.comboEl.style.display = 'none'
+            this.game.comboEl.textContent = 'Combo: x1'
         }
-        if (this.combobarContainerEl) this.combobarContainerEl.style.display = 'none'
-        if (this.combobarEl) this.combobarEl.style.width = '0%'
+        if (this.game.combobarContainerEl) this.game.combobarContainerEl.style.display = 'none'
+        if (this.game.combobarEl) this.game.combobarEl.style.width = '0%'
 
-        if (this.timerEl) this.timerEl.textContent = 'Time: 0.00s'
-        this.levelComplete = false
-        this.collectiblesCollected = 0
+        if (this.game.timerEl) this.game.timerEl.textContent = 'Time: 0.00s'
+        this.game.levelComplete = false
+        this.game.collectiblesCollected = 0
 
         if (level.nightMode) {
-            this.setNightMode(true, level.backgroundColor)
+            this.game.setNightMode(true, level.backgroundColor)
         } else {
-            this.setNightMode(false)
+            this.game.setNightMode(false)
         }
 
         // Apply per-level environment (overrides the nightMode default).
         // Must be called *after* setNightMode() so the explicit env wins.
         if (level.environment) {
-            this.setEnvironment(level.environment)
+            this.game.setEnvironment(level.environment)
         }
 
         audio?.setChapterMusic?.(level.chapter || level.environment)
@@ -70,61 +74,61 @@ export class InitLevelLoader {
         // Apply per-level color grade override when it differs from the IBL environment.
         // e.g. a level can use 'volcanic' IBL but request 'space_nebula' grading for a surreal twist.
         if (level.colorGrade && level.colorGrade !== level.environment) {
-            this.applyColorGradingForEnvironment(level.colorGrade)
+            this.game.applyColorGradingForEnvironment(level.colorGrade)
         }
 
         if (level.camera) {
-            this.cameraMode = level.camera.mode || 'orbit'
-            this.camAngle = level.camera.angle || 0
-            this.camHeight = level.camera.height || 10
-            this.camRadius = level.camera.radius || 25
+            this.game.cameraMode = level.camera.mode || 'orbit'
+            this.game.camAngle = level.camera.angle || 0
+            this.game.camHeight = level.camera.height || 10
+            this.game.camRadius = level.camera.radius || 25
         }
 
         console.log(`[LEVEL] Creating ${level.zones.length} zones...`)
         // Fetch the lazy zone chunks this level references in parallel, then build in order.
         await preloadZoneModules(level.zones)
         for (const zone of level.zones) {
-            await this.createZone(zone)
+            await this.game.createZone(zone)
         }
-        loadLevelBehaviors(this, level.behaviors || [], { level, levelId })
-        this.levelLoader.physicsWorld.flushStaticBatches?.()
-        console.log(`[LEVEL] Created ${this.staticEntities.length} static entities`)
+        loadLevelBehaviors(this.game, level.behaviors || [], { level, levelId })
+        this.game.levelLoader.physicsWorld.flushStaticBatches?.()
+        console.log(`[LEVEL] Created ${this.game.staticEntities.length} static entities`)
 
         console.log(`[LEVEL] Spawning marbles at ${JSON.stringify(level.spawn)}...`)
-        this.levelLoader.marbleRegistry.createMarbles(level.spawn)
-        if (this.physicsBackend?.isWorkerMode?.()) {
-            await this.physicsBackend.commitWorldBuild()
+        this.game.levelLoader.marbleRegistry.createMarbles(level.spawn)
+        if (this.game.physicsBackend?.isWorkerMode?.()) {
+            await this.game.physicsBackend.commitWorldBuild()
         }
-        this.effectPool?.recordLevelBaseline()
-        console.log(`[LEVEL] Created ${this.marbles.length} marbles`)
+        this.game.effectPool?.recordLevelBaseline()
+        console.log(`[LEVEL] Created ${this.game.marbles.length} marbles`)
 
-        if (this.ghostReplay?.loadPlayback(levelId)) {
-            this.createGhostMarble()
+        if (this.game.ghostReplay?.loadPlayback(levelId)) {
+            this.game.createGhostMarble()
         }
 
-        if (this._pendingLeaderboardGhostId && this.cloudClient) {
-            const ghostId = this._pendingLeaderboardGhostId
-            this._pendingLeaderboardGhostId = null
-            const loaded = await this.cloudClient.loadLeaderboardGhost(ghostId, levelId)
-            if (loaded && this.ghostReplay?.playbackFrames?.length) {
-                this.createGhostMarble()
+        if (this.game._pendingLeaderboardGhostId && this.game.cloudClient) {
+            const ghostId = this.game._pendingLeaderboardGhostId
+            this.game._pendingLeaderboardGhostId = null
+            const loaded = await this.game.cloudClient.loadLeaderboardGhost(ghostId, levelId)
+            if (loaded && this.game.ghostReplay?.playbackFrames?.length) {
+                this.game.createGhostMarble()
             }
         }
 
-        this.perfMonitor?.recordLevelLoad(levelId, level)
+        this.game.perfMonitor?.recordLevelLoad(levelId, level)
 
         console.log('[LEVEL] Level loading complete!')
 
-        runWebGPUStressBurst(this)
+        runWebGPUStressBurst(this.game)
 
         // Start the level entry sequence
-        await this.startLevelSequence(options)
+        await this.game.startLevelSequence(options)
     }
 
     async startLevelSequence(options = {}) {
         const { startAtMs, seed } = options;
-        if (seed !== undefined && this.network) {
-            this.network.raceSeed = seed;
+        if (seed !== undefined && this.game.network) {
+            this.game.network.raceSeed = seed;
         }
         const gameUI = document.getElementById('ui')
         const fadeOverlay = document.getElementById('fade-overlay')
@@ -139,7 +143,7 @@ export class InitLevelLoader {
         fadeOverlay.classList.remove('fade-out')
         
         // Wait a moment at black screen
-        await this.delay(200)
+        await this.game.delay(200)
 
         // Fade out from black
         fadeOverlay.classList.add('fade-out')
@@ -148,7 +152,7 @@ export class InitLevelLoader {
         countdownOverlay.classList.add('active')
 
         if (startAtMs) {
-            this.isPaused = true;
+            this.game.isPaused = true;
             const steps = [
                 { at: startAtMs - 2400, text: '3', className: 'countdown-number' },
                 { at: startAtMs - 1600, text: '2', className: 'countdown-number' },
@@ -157,15 +161,15 @@ export class InitLevelLoader {
             ];
 
             for (const step of steps) {
-                await this._waitUntil(step.at);
+                await this.game._waitUntil(step.at);
                 countdownDisplay.className = step.className;
                 countdownDisplay.textContent = step.text;
                 void countdownDisplay.offsetWidth;
                 countdownDisplay.className = step.className;
             }
 
-            this.levelStartTime = startAtMs;
-            this.isPaused = false;
+            this.game.levelStartTime = startAtMs;
+            this.game.isPaused = false;
         } else {
             const numbers = ['3', '2', '1'];
             for (const num of numbers) {
@@ -173,27 +177,27 @@ export class InitLevelLoader {
                 countdownDisplay.textContent = num;
                 void countdownDisplay.offsetWidth;
                 countdownDisplay.className = 'countdown-number';
-                await this.delay(800);
+                await this.game.delay(800);
             }
 
             countdownDisplay.className = 'countdown-go';
             countdownDisplay.textContent = 'GO!';
-            this.levelStartTime = Date.now();
-            this.isPaused = false;
+            this.game.levelStartTime = Date.now();
+            this.game.isPaused = false;
         }
 
-        this.touchControls?.setGameplayActive(true);
+        this.game.touchControls?.setGameplayActive(true);
 
         // Animate HUD elements in
         gameUI.style.opacity = '1'
-        this.animateHUDIn()
+        this.game.animateHUDIn()
 
         // Hide countdown after GO
-        await this.delay(600)
+        await this.game.delay(600)
         countdownOverlay.classList.remove('active')
 
         // Transition camera smoothly
-        await this.transitionCameraToGameplay(1000)
+        await this.game.transitionCameraToGameplay(1000)
     }
 
     animateHUDIn() {
@@ -231,35 +235,35 @@ export class InitLevelLoader {
     _waitUntil(targetMs) {
         const delayMs = targetMs - Date.now();
         if (delayMs <= 0) return Promise.resolve();
-        return this.delay(delayMs);
+        return this.game.delay(delayMs);
     }
 
     createGhostMarble() {
-        this.ghostEntity = this.Filament.EntityManager.get().create()
-        this.ghostMaterialInstance = this.material.createInstance()
-        this.ghostMaterialInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [0.0, 1.0, 1.0])
-        this.ghostMaterialInstance.setFloatParameter('roughness', 0.2)
+        this.game.ghostEntity = this.game.Filament.EntityManager.get().create()
+        this.game.ghostMaterialInstance = this.game.material.createInstance()
+        this.game.ghostMaterialInstance.setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, [0.0, 1.0, 1.0])
+        this.game.ghostMaterialInstance.setFloatParameter('roughness', 0.2)
 
         // Ghost is slightly larger/smaller or translucent, but we use existing material limits
         // We render it similarly to a regular marble
-        this.Filament.RenderableManager.Builder(1)
+        this.game.Filament.RenderableManager.Builder(1)
             .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
-            .material(0, this.ghostMaterialInstance)
-            .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.sphereVb, this.sphereIb)
+            .material(0, this.game.ghostMaterialInstance)
+            .geometry(0, this.game.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.game.sphereVb, this.game.sphereIb)
             .receiveShadows(true)
             .castShadows(true)
-            .build(this.engine, this.ghostEntity)
+            .build(this.game.engine, this.game.ghostEntity)
 
-        this.scene.addEntity(this.ghostEntity)
+        this.game.scene.addEntity(this.game.ghostEntity)
 
-        this.ghostLightEntity = this.Filament.EntityManager.get().create()
-        this.Filament.LightManager.Builder(this.Filament.LightManager$Type.POINT)
+        this.game.ghostLightEntity = this.game.Filament.EntityManager.get().create()
+        this.game.Filament.LightManager.Builder(this.game.Filament.LightManager$Type.POINT)
             .color([0.0, 1.0, 1.0])
             .intensity(15000.0)
             .falloff(15.0)
-            .build(this.engine, this.ghostLightEntity)
+            .build(this.game.engine, this.game.ghostLightEntity)
 
-        this.scene.addEntity(this.ghostLightEntity)
+        this.game.scene.addEntity(this.game.ghostLightEntity)
 
         console.log('[GAME] Spawned Speedrun Ghost')
     }

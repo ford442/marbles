@@ -4,8 +4,12 @@ import { audio } from '../audio.js';
 const DEFAULT_REVERB_RADIUS = 20;
 
 export class ZoneSetupCore {
+    constructor(game) {
+        this.game = game;
+    }
+
     async createZone(zone) {
-        await dispatchZone(this, zone);
+        await dispatchZone(this.game, zone);
 
         if (zone.reverb) {
             audio.registerReverbZone(zone.pos, zone.reverb.radius ?? DEFAULT_REVERB_RADIUS, zone.reverb);

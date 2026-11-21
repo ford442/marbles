@@ -15,105 +15,106 @@ const SLINGSHOT_DV = 15.0;
 const ZIP_REEL_SPEED = 30.0;
 
 export class ZoneSetupGrapple {
-    /** @this {GameMixinHost} */
+    /** @param {GameMixinHost} game */
+    constructor(game) {
+        this.game = game;
+    }
+
     createGrappleLine() {
-        this.grappleEntity = this.Filament.EntityManager.get().create()
+        this.game.grappleEntity = this.game.Filament.EntityManager.get().create()
         const grappleColor = [0.0, 1.0, 1.0]
-        const matInstance = this.material.createInstance()
-        this.grappleMatInstance = matInstance
-        matInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, grappleColor)
+        const matInstance = this.game.material.createInstance()
+        this.game.grappleMatInstance = matInstance
+        matInstance.setColor3Parameter('baseColor', this.game.Filament['RgbType'].sRGB, grappleColor)
         matInstance.setFloatParameter('roughness', 0.2)
-        if (this.hasProceduralMaterial) {
+        if (this.game.hasProceduralMaterial) {
             matInstance.setFloatParameter('metallic', 0.8)
             matInstance.setFloatParameter('reflectance', 1.0)
             matInstance.setFloatParameter('bumpScale', 0.0)
             matInstance.setFloatParameter('bumpFrequency', 0.0)
         }
 
-        this.Filament.RenderableManager.Builder(1)
+        this.game.Filament.RenderableManager.Builder(1)
             .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
             .material(0, matInstance)
-            .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.vb, this.ib)
+            .geometry(0, this.game.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.game.vb, this.game.ib)
             .receiveShadows(true)
             .castShadows(true)
-            .build(this.engine, this.grappleEntity)
+            .build(this.game.engine, this.game.grappleEntity)
 
-        this.scene.addEntity(this.grappleEntity)
+        this.game.scene.addEntity(this.game.grappleEntity)
 
-        const tcm = this.engine.getTransformManager()
-        this.grappleInst = tcm.getInstance(this.grappleEntity)
+        const tcm = this.game.engine.getTransformManager()
+        this.game.grappleInst = tcm.getInstance(this.game.grappleEntity)
 
         // Hide initially
         const zeroMat = new Float32Array(16)
         zeroMat[15] = 1
-        tcm.setTransform(this.grappleInst, zeroMat)
+        tcm.setTransform(this.game.grappleInst, zeroMat)
     }
 
-    /** @this {GameMixinHost} */
     createCueStick() {
-        this.cueEntity = this.Filament.EntityManager.get().create()
+        this.game.cueEntity = this.game.Filament.EntityManager.get().create()
         const cueColor = [1.0, 1.0, 0.0]
-        const matInstance = this.material.createInstance()
-        matInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, cueColor)
+        const matInstance = this.game.material.createInstance()
+        matInstance.setColor3Parameter('baseColor', this.game.Filament['RgbType'].sRGB, cueColor)
         matInstance.setFloatParameter('roughness', 0.2)
-        if (this.hasProceduralMaterial) {
+        if (this.game.hasProceduralMaterial) {
             matInstance.setFloatParameter('metallic', 0.0)
             matInstance.setFloatParameter('reflectance', 0.6)
             matInstance.setFloatParameter('bumpScale', 0.005)
             matInstance.setFloatParameter('bumpFrequency', 15.0)
         }
 
-        this.Filament.RenderableManager.Builder(1)
+        this.game.Filament.RenderableManager.Builder(1)
             .boundingBox({ center: [0, 0, 0], halfExtent: [0.5, 0.5, 0.5] })
             .material(0, matInstance)
-            .geometry(0, this.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.vb, this.ib)
+            .geometry(0, this.game.Filament['RenderableManager$PrimitiveType'].TRIANGLES, this.game.vb, this.game.ib)
             .receiveShadows(true)
             .castShadows(true)
-            .build(this.engine, this.cueEntity)
+            .build(this.game.engine, this.game.cueEntity)
 
-        this.scene.addEntity(this.cueEntity)
+        this.game.scene.addEntity(this.game.cueEntity)
 
-        const tcm = this.engine.getTransformManager()
-        this.cueInst = tcm.getInstance(this.cueEntity)
+        const tcm = this.game.engine.getTransformManager()
+        this.game.cueInst = tcm.getInstance(this.game.cueEntity)
 
         const zeroMat = new Float32Array(16)
         zeroMat[15] = 1
-        tcm.setTransform(this.cueInst, zeroMat)
+        tcm.setTransform(this.game.cueInst, zeroMat)
     }
 
-    /** @this {GameMixinHost} */
     startGrapple() {
-        if (!this.playerMarble || !this.physicsQueries) return
+        if (!this.game.playerMarble || !this.game.physicsQueries) return
 
-        const rb = this.playerMarble.rigidBody
+        const rb = this.game.playerMarble.rigidBody
         const pos = rb.translation()
 
-        const cosP = Math.cos(this.pitchAngle)
-        const sinP = Math.sin(this.pitchAngle)
-        const dirX = Math.sin(this.aimYaw) * cosP
+        const cosP = Math.cos(this.game.pitchAngle)
+        const sinP = Math.sin(this.game.pitchAngle)
+        const dirX = Math.sin(this.game.aimYaw) * cosP
         const dirY = sinP
-        const dirZ = Math.cos(this.aimYaw) * cosP
+        const dirZ = Math.cos(this.game.aimYaw) * cosP
 
         const rayDir = { x: dirX, y: dirY, z: dirZ }
-        const hit = this.physicsQueries.castRay(pos, rayDir, this.grappleMaxDist, { excludeBody: rb })
+        const hit = this.game.physicsQueries.castRay(pos, rayDir, this.game.grappleMaxDist, { excludeBody: rb })
         if (hit) {
-            this.grappleTarget = { ...hit.point }
+            this.game.grappleTarget = { ...hit.point }
 
             // Dynamic bodies get yanked toward the player; anything else is an anchor.
-            this.grappleTargetBody = hit.bodyType === 'dynamic' ? hit.body : null
+            this.game.grappleTargetBody = hit.bodyType === 'dynamic' ? hit.body : null
 
-            this.grappleRestLength = hit.toi * 0.8 // slightly pull them in initially
-            this.isGrappling = true
-            console.log("[GAME] Grapple attached at", this.grappleTarget)
+            this.game.grappleRestLength = hit.toi * 0.8 // slightly pull them in initially
+            this.game.isGrappling = true
+            console.log("[GAME] Grapple attached at", this.game.grappleTarget)
             if (audio && audio.playCollect) audio.playCollect()
         }
     }
 
-    /** @this {GameMixinHost} */
     stopGrapple() {
         // Slingshot Boost logic before releasing the grapple
-        if (this.isGrappling && this.playerMarble && this.grappleTarget) {
-            const rb = this.playerMarble.rigidBody
+        if (this.game.isGrappling && this.game.playerMarble && this.game.grappleTarget) {
+            const rb = this.game.playerMarble.rigidBody
             const vel = rb.linvel()
             const speed = Math.hypot(vel.x, vel.y, vel.z)
 
@@ -130,56 +131,54 @@ export class ZoneSetupGrapple {
                 })
 
                 // Call awardTrickPoints if available
-                if (typeof this.awardTrickPoints === 'function') {
-                    this.awardTrickPoints('Slingshot Boost!', 150, '#ff00ff')
+                if (typeof this.game.awardTrickPoints === 'function') {
+                    this.game.awardTrickPoints('Slingshot Boost!', 150, '#ff00ff')
                 }
             }
         }
 
-        this.cancelGrapple()
+        this.game.cancelGrapple()
     }
 
     /**
      * Drop the grapple with no release boost (respawn, level change, target
      * removed) and hide the line.
-     * @this {GameMixinHost}
      */
     cancelGrapple() {
-        this.isGrappling = false
-        this.grappleTarget = null
-        this.grappleTargetBody = null
-        this.isGrappleZipping = false
+        this.game.isGrappling = false
+        this.game.grappleTarget = null
+        this.game.grappleTargetBody = null
+        this.game.isGrappleZipping = false
 
-        if (this.grappleInst) {
-            const tcm = this.engine.getTransformManager()
+        if (this.game.grappleInst) {
+            const tcm = this.game.engine.getTransformManager()
             const zeroMat = new Float32Array(16)
             zeroMat[15] = 1
-            tcm.setTransform(this.grappleInst, zeroMat)
+            tcm.setTransform(this.game.grappleInst, zeroMat)
         }
     }
 
-    /** @this {GameMixinHost} */
     updateGrapple() {
-        if (!this.isGrappling || !this.playerMarble || !this.grappleTarget) {
-            if (this.isGrappling) this.cancelGrapple()
+        if (!this.game.isGrappling || !this.game.playerMarble || !this.game.grappleTarget) {
+            if (this.game.isGrappling) this.game.cancelGrapple()
             return
         }
 
         // The yanked body can be removed mid-grapple (missile hit, cleanup).
-        if (this.grappleTargetBody && !this.physicsQueries.isBodyAlive(this.grappleTargetBody)) {
-            this.cancelGrapple()
+        if (this.game.grappleTargetBody && !this.game.physicsQueries.isBodyAlive(this.game.grappleTargetBody)) {
+            this.game.cancelGrapple()
             return
         }
 
-        const rb = this.playerMarble.rigidBody
+        const rb = this.game.playerMarble.rigidBody
         const pos = rb.translation()
-        const simDt = this.simDt ?? 1 / 60
+        const simDt = this.game.simDt ?? 1 / 60
 
-        if (this.grappleTargetBody) {
-            const bodyPos = this.grappleTargetBody.translation()
-            this.grappleTarget = { x: bodyPos.x, y: bodyPos.y, z: bodyPos.z }
+        if (this.game.grappleTargetBody) {
+            const bodyPos = this.game.grappleTargetBody.translation()
+            this.game.grappleTarget = { x: bodyPos.x, y: bodyPos.y, z: bodyPos.z }
         }
-        const target = this.grappleTarget
+        const target = this.game.grappleTarget
 
         const dx = target.x - pos.x
         const dy = target.y - pos.y
@@ -192,18 +191,18 @@ export class ZoneSetupGrapple {
         const dirZ = dz / dist
 
         // Apply Spring/Pendulum force instead of constant pull
-        const restLength = this.grappleRestLength || 10.0
+        const restLength = this.game.grappleRestLength || 10.0
 
-        if (this.isGrappleZipping) {
+        if (this.game.isGrappleZipping) {
             // Quickly reel in by shrinking the rest length
-            this.grappleRestLength = Math.max(1.0, this.grappleRestLength - ZIP_REEL_SPEED * simDt)
+            this.game.grappleRestLength = Math.max(1.0, this.game.grappleRestLength - ZIP_REEL_SPEED * simDt)
         }
 
         if (dist > restLength) {
             // Stiffness/damping are per unit mass, so the spring output is an
             // acceleration and every marble swings the same way.
-            const stiffness = this.isGrappleZipping ? 50.0 : 15.0
-            const damping = this.isGrappleZipping ? 5.0 : 2.0
+            const stiffness = this.game.isGrappleZipping ? 50.0 : 15.0
+            const damping = this.game.isGrappleZipping ? 5.0 : 2.0
             const vel = rb.linvel()
             const physics = getMarblePhysics()
             physics.computeSpringForceInto(
@@ -221,8 +220,8 @@ export class ZoneSetupGrapple {
                 applyAcceleration(rb, { x: ax, y: ay, z: az }, simDt)
 
                 // Yank: the target accelerates toward the player just as hard.
-                if (this.grappleTargetBody) {
-                    applyAcceleration(this.grappleTargetBody, { x: -ax, y: -ay, z: -az }, simDt)
+                if (this.game.grappleTargetBody) {
+                    applyAcceleration(this.game.grappleTargetBody, { x: -ax, y: -ay, z: -az }, simDt)
                 }
             }
         }
@@ -233,12 +232,12 @@ export class ZoneSetupGrapple {
         }
 
         // Visuals
-        if (this.grappleInst) {
-            if (this.grappleMatInstance) {
-                if (this.isGrappleZipping) {
-                    this.grappleMatInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, [1.0, 0.5, 0.0])
+        if (this.game.grappleInst) {
+            if (this.game.grappleMatInstance) {
+                if (this.game.isGrappleZipping) {
+                    this.game.grappleMatInstance.setColor3Parameter('baseColor', this.game.Filament['RgbType'].sRGB, [1.0, 0.5, 0.0])
                 } else {
-                    this.grappleMatInstance.setColor3Parameter('baseColor', this.Filament['RgbType'].sRGB, [0.0, 1.0, 1.0])
+                    this.game.grappleMatInstance.setColor3Parameter('baseColor', this.game.Filament['RgbType'].sRGB, [0.0, 1.0, 1.0])
                 }
             }
 
@@ -270,31 +269,30 @@ export class ZoneSetupGrapple {
                 midX, midY, midZ, 1
             ])
 
-            const tcm = this.engine.getTransformManager()
-            tcm.setTransform(this.grappleInst, mat)
+            const tcm = this.game.engine.getTransformManager()
+            tcm.setTransform(this.game.grappleInst, mat)
         }
     }
 
-    /** @this {GameMixinHost} */
     shootMarble() {
-        if (!this.playerMarble) return
+        if (!this.game.playerMarble) return
 
-        const force = 50.0 + this.chargePower * 150.0
-        const cosP = Math.cos(this.pitchAngle)
-        const sinP = Math.sin(this.pitchAngle)
+        const force = 50.0 + this.game.chargePower * 150.0
+        const cosP = Math.cos(this.game.pitchAngle)
+        const sinP = Math.sin(this.game.pitchAngle)
 
-        const dirX = Math.sin(this.aimYaw) * cosP
+        const dirX = Math.sin(this.game.aimYaw) * cosP
         const dirY = sinP
-        const dirZ = Math.cos(this.aimYaw) * cosP
+        const dirZ = Math.cos(this.game.aimYaw) * cosP
 
-        this.playerMarble.rigidBody.applyImpulse({
+        this.game.playerMarble.rigidBody.applyImpulse({
             x: dirX * force,
             y: dirY * force,
             z: dirZ * force
         }, true)
 
-        this.chargePower = 0
-        this.powerbarEl.style.width = '0%'
+        this.game.chargePower = 0
+        this.game.powerbarEl.style.width = '0%'
     }
 
 }

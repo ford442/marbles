@@ -1,7 +1,7 @@
 import { AbilityAirDash } from './air-dash.js';
 import { AbilityDash } from './dash.js';
 import { AbilityStomp } from './stomp.js';
-import { installKnownMethods } from '../game/systems/method-installer.js';
+import { defineSlice } from '../game/systems/slice-composition.ts';
 import { AbilityBlink } from './blink.js';
 import { AbilityEmpTremor } from './emp-tremor.js';
 import { AbilityTeleport } from './teleport.js';
@@ -21,23 +21,23 @@ export {
     resolveAbilityMask,
 } from './registry.js';
 
-/** Closed compatibility list for ability actions not yet registry-owned. */
-export function installAbilityMethods(targetClass) {
-    installKnownMethods(targetClass, AbilityDoubleJump, ['executeDoubleJump']);
-    installKnownMethods(targetClass, AbilityAirDash, ['beginAirDashCharge', 'releaseAirDash']);
-    installKnownMethods(targetClass, AbilityDash, ['beginDashCharge', 'releaseDash']);
-    installKnownMethods(targetClass, AbilityStomp, ['beginStompCharge', 'releaseStomp']);
-    installKnownMethods(targetClass, AbilityShockwaveDive, ['beginShockwaveCharge', 'releaseShockwave']);
-    installKnownMethods(targetClass, AbilityBlink, ['triggerBlink', 'spawnBlinkParticle']);
-    installKnownMethods(targetClass, AbilityEmpTremor, [
+/** Composed ability action slices; the game forwards each `methods` list to the instance at `key`. */
+export const ABILITY_SLICES = [
+    defineSlice('abilityDoubleJumpSlice', AbilityDoubleJump, ['executeDoubleJump']),
+    defineSlice('abilityAirDashSlice', AbilityAirDash, ['beginAirDashCharge', 'releaseAirDash']),
+    defineSlice('abilityDashSlice', AbilityDash, ['beginDashCharge', 'releaseDash']),
+    defineSlice('abilityStompSlice', AbilityStomp, ['beginStompCharge', 'releaseStomp']),
+    defineSlice('abilityShockwaveDiveSlice', AbilityShockwaveDive, ['beginShockwaveCharge', 'releaseShockwave']),
+    defineSlice('abilityBlinkSlice', AbilityBlink, ['triggerBlink', 'spawnBlinkParticle']),
+    defineSlice('abilityEmpTremorSlice', AbilityEmpTremor, [
         'fireEMP', 'fireTremor', 'spawnEMPEffect', 'spawnEMPSpark', 'triggerEMPFlash',
-    ]);
-    installKnownMethods(targetClass, AbilityTeleport, ['triggerTeleport']);
-    installKnownMethods(targetClass, AbilityMissiles, ['spawnMissile', 'explodeMissile']);
-    installKnownMethods(targetClass, AbilityBlackHole, ['spawnBlackHole']);
-    installKnownMethods(targetClass, AbilityBomb, ['spawnBomb', 'explodeBomb']);
-    installKnownMethods(targetClass, AbilityConstructs, [
-        'spawnIceBlock', 'spawnBuildPiece', 'destroyPortal', 'firePortal',
-        'spawnJetpackExhaust', 'fireGravityPulse', 'spawnHoloPlatform',
-    ]);
-}
+    ]),
+    defineSlice('abilityTeleportSlice', AbilityTeleport, ['triggerTeleport']),
+    defineSlice('abilityMissilesSlice', AbilityMissiles, ['spawnMissile', 'explodeMissile']),
+    defineSlice('abilityBlackHoleSlice', AbilityBlackHole, ['spawnBlackHole']),
+    defineSlice('abilityBombSlice', AbilityBomb, ['spawnBomb', 'explodeBomb']),
+    defineSlice('abilityConstructsSlice', AbilityConstructs, [
+        'spawnIceBlock', 'spawnBuildPiece', 'destroyPortal', 'firePortal', 'spawnJetpackExhaust',
+        'fireGravityPulse', 'spawnHoloPlatform',
+    ]),
+];

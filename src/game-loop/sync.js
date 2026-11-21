@@ -105,19 +105,23 @@ function setScaledTransformIfChanged(tcm, owner, entity, pos, quat, scale, perfC
 }
 
 export class GameLoopSyncMethods {
+    constructor(game) {
+        this.game = game;
+    }
+
     syncTransformsAndRender(now) {
-        this._syncNow = now
-        this._effectFrameIndex = (this._effectFrameIndex || 0) + 1
-        this.effectPool?.beginFrame()
+        this.game._syncNow = now
+        this.game._effectFrameIndex = (this.game._effectFrameIndex || 0) + 1
+        this.game.effectPool?.beginFrame()
         const perfSyncStart = performance.now()
         const perfCounts = {
-            visualParticlesStart: this.visualParticles?.length || 0,
+            visualParticlesStart: this.game.visualParticles?.length || 0,
             visualParticlesCulled: 0,
-            temporaryPlatforms: this.temporaryPlatforms?.length || 0,
-            marbles: this.marbles?.length || 0,
-            dynamicObjects: this.dynamicObjects?.length || 0,
-            cueVisible: this.cueInst ? 1 : 0,
-            activeMarbleLight: this.activeMarbleLightEntity ? 1 : 0,
+            temporaryPlatforms: this.game.temporaryPlatforms?.length || 0,
+            marbles: this.game.marbles?.length || 0,
+            dynamicObjects: this.game.dynamicObjects?.length || 0,
+            cueVisible: this.game.cueInst ? 1 : 0,
+            activeMarbleLight: this.game.activeMarbleLightEntity ? 1 : 0,
             physicsStepMs: 0,
             mainThreadPhysicsWaitMs: 0,
             physicsBackend: 'main',
@@ -131,44 +135,44 @@ export class GameLoopSyncMethods {
             marbleDynamicFxSkipped: 0,
         }
         // Cache transform manager once per frame to avoid repeated WASM boundary crossings
-        const tcm = this.engine.getTransformManager()
-        this.cullingManager?.updateStaticBatches()
-        this.trackLodManager?.update()
-        if (this._cameraState?.eye) {
+        const tcm = this.game.engine.getTransformManager()
+        this.game.cullingManager?.updateStaticBatches()
+        this.game.trackLodManager?.update()
+        if (this.game._cameraState?.eye) {
             audio?.setListenerPosition?.(
-                this._cameraState.eye[0],
-                this._cameraState.eye[1],
-                this._cameraState.eye[2]
+                this.game._cameraState.eye[0],
+                this.game._cameraState.eye[1],
+                this.game._cameraState.eye[2]
             )
             audio?.updateReverbZone?.(
-                this._cameraState.eye[0],
-                this._cameraState.eye[1],
-                this._cameraState.eye[2]
+                this.game._cameraState.eye[0],
+                this.game._cameraState.eye[1],
+                this.game._cameraState.eye[2]
             )
         }
-        this.marbleLodManager?.updateMarbles(now)
-        updateMarbleMaterialTiers(this, now)
+        this.game.marbleLodManager?.updateMarbles(now)
+        updateMarbleMaterialTiers(this.game, now)
 
         // Handle visual particles lifecycle
-        for (let i = this.visualParticles.length - 1; i >= 0; i--) {
-            const p = this.visualParticles[i]
+        for (let i = this.game.visualParticles.length - 1; i >= 0; i--) {
+            const p = this.game.visualParticles[i]
             const timeAlive = now - p.spawnTime
 
             if (timeAlive > p.duration) {
-                this.effectPool?.releaseVisualParticle(p)
-                this.visualParticles.splice(i, 1)
+                this.game.effectPool?.releaseVisualParticle(p)
+                this.game.visualParticles.splice(i, 1)
             } else {
                 const particleCenter = p.pos ? [p.pos.x, p.pos.y, p.pos.z] : null
                 const particleRadius = p.maxRadius || p.scale || 1
-                const particleVisible = this.cullingManager?.isVisible(`particle:${p.entity}`, particleCenter, particleRadius, 'particle') ?? true
-                this.cullingManager?.setEntityVisible(p.entity, particleVisible, `particle:${p.entity}`)
+                const particleVisible = this.game.cullingManager?.isVisible(`particle:${p.entity}`, particleCenter, particleRadius, 'particle') ?? true
+                this.game.cullingManager?.setEntityVisible(p.entity, particleVisible, `particle:${p.entity}`)
                 if (!particleVisible) {
                     perfCounts.visualParticlesCulled += 1
                     continue
                 }
 
-                const distSq = particleDistanceSq(p, this._cameraState?.eye)
-                if (!shouldUpdateParticle(p, timeAlive, distSq, this._effectFrameIndex)) {
+                const distSq = particleDistanceSq(p, this.game._cameraState?.eye)
+                if (!shouldUpdateParticle(p, timeAlive, distSq, this.game._effectFrameIndex)) {
                     perfCounts.transformsSkipped += 1
                     continue
                 }
@@ -187,7 +191,7 @@ export class GameLoopSyncMethods {
                     const g = 0.8 + progress * 0.2  // Slight color shift as it fades
                     const b = 1.0
                     
-                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this.game, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
 
                     const mat = quaternionToMat4(p.pos, IDENTITY_QUAT)
 
@@ -213,7 +217,7 @@ export class GameLoopSyncMethods {
                     const r = 0.2 * (1.0 - progress)
                     const g = 0.9 * (1.0 - progress * 0.5)
                     const b = 1.0
-                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this.game, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
 
                     const mat = quaternionToMat4(p.pos, IDENTITY_QUAT)
 
@@ -231,7 +235,7 @@ export class GameLoopSyncMethods {
                     const r = 1.0 - progress
                     const g = 0.2 - progress * 0.2
                     const b = 0.0
-                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this.game, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
 
                     const mat = quaternionToMat4(p.pos, IDENTITY_QUAT)
 
@@ -260,7 +264,7 @@ export class GameLoopSyncMethods {
                     const r = 1.0
                     const g = 0.9 - progress * 0.5
                     const b = 0.3 - progress * 0.3
-                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this.game, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
 
                     const mat = quaternionToMat4(p.pos, IDENTITY_QUAT)
 
@@ -291,7 +295,7 @@ export class GameLoopSyncMethods {
                     const r = progress * 0.5
                     const g = 0.6 + progress * 0.4 * fade
                     const b = 0.8 + progress * 0.2 * fade
-                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this.game, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
 
                     const mat = quaternionToMat4(p.pos, IDENTITY_QUAT)
 
@@ -316,7 +320,7 @@ export class GameLoopSyncMethods {
                     const g = 0.9 * fade
                     const b = 1.0 * fade
                     
-                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this.game, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
 
                     const mat = quaternionToMat4(p.pos, IDENTITY_QUAT)
 
@@ -344,7 +348,7 @@ export class GameLoopSyncMethods {
                     
                     // Color brightens then fades
                     const brightness = 1.0 - progress * 0.5
-                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [brightness, brightness * 0.9, brightness * 0.5])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this.game, p, p.matInstance, [brightness, brightness * 0.9, brightness * 0.5])) perfCounts.materialUpdatesSkipped += 1
                     
                     // Add rotation
                     const rotY = (p.rotationSpeed || 0) * timeAlive * 0.01
@@ -369,7 +373,7 @@ export class GameLoopSyncMethods {
                     const r = p.color.r * opacity + 1.0 * (1.0 - opacity)
                     const g = p.color.g * opacity + 1.0 * (1.0 - opacity)
                     const b = p.color.b * opacity + 1.0 * (1.0 - opacity)
-                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this.game, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
                     
                     const mat = quaternionToMat4(p.pos, IDENTITY_QUAT)
                     
@@ -394,7 +398,7 @@ export class GameLoopSyncMethods {
                     p.scale = 1.0 - progress
                     
                     const brightness = 1.0 - progress * 0.5
-                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [1.0, 1.0, brightness])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this.game, p, p.matInstance, [1.0, 1.0, brightness])) perfCounts.materialUpdatesSkipped += 1
                     
                     // Orient ray along velocity direction
                     const yaw = p.angle
@@ -418,7 +422,7 @@ export class GameLoopSyncMethods {
                     
                     // Quick fade
                     const brightness = 1.0 - progress
-                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [brightness, brightness * 0.9, brightness * 0.5])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this.game, p, p.matInstance, [brightness, brightness * 0.9, brightness * 0.5])) perfCounts.materialUpdatesSkipped += 1
                     
                     const mat = quaternionToMat4(p.pos, IDENTITY_QUAT)
                     
@@ -439,7 +443,7 @@ export class GameLoopSyncMethods {
                     const r = 1.0 - progress * 0.8
                     const g = 0.6 - progress * 0.6
                     const b = 0.0
-                    if (skipColor || !setColor3IfChanged(this, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
+                    if (skipColor || !setColor3IfChanged(this.game, p, p.matInstance, [r, g, b])) perfCounts.materialUpdatesSkipped += 1
 
                     const mat = quaternionToMat4(p.pos, IDENTITY_QUAT)
 
@@ -455,53 +459,53 @@ export class GameLoopSyncMethods {
         }
 
         // Handle temporary platforms lifecycle
-        for (let i = this.temporaryPlatforms.length - 1; i >= 0; i--) {
-            const p = this.temporaryPlatforms[i]
+        for (let i = this.game.temporaryPlatforms.length - 1; i >= 0; i--) {
+            const p = this.game.temporaryPlatforms[i]
             const timeAlive = now - p.spawnTime
-            const maxDuration = p.duration || this.holoDuration
+            const maxDuration = p.duration || this.game.holoDuration
 
             if (timeAlive > maxDuration) {
-                this.world.removeRigidBody(p.rigidBody)
-                this.effectPool?.releaseHoloPlatform(p)
-                this.temporaryPlatforms.splice(i, 1)
+                this.game.world.removeRigidBody(p.rigidBody)
+                this.game.effectPool?.releaseHoloPlatform(p)
+                this.game.temporaryPlatforms.splice(i, 1)
             } else {
                 const timeLeft = maxDuration - timeAlive
                 if (timeLeft < 1000) {
                     const blink = Math.floor(now / 100) % 2 === 0
                     if (p.matInstance && !p.duration) {
                         const color = blink ? [1.0, 0.0, 0.0] : [0.0, 1.0, 1.0]
-                        if (!setColor3IfChanged(this, p, p.matInstance, color, 80, '_lastBlinkColor')) perfCounts.materialUpdatesSkipped += 1
+                        if (!setColor3IfChanged(this.game, p, p.matInstance, color, 80, '_lastBlinkColor')) perfCounts.materialUpdatesSkipped += 1
                     } else if (p.matInstance && p.duration) {
                         const color = blink ? [1.0, 1.0, 1.0] : [0.5, 0.9, 1.0]
-                        if (!setColor3IfChanged(this, p, p.matInstance, color, 80, '_lastBlinkColor')) perfCounts.materialUpdatesSkipped += 1
+                        if (!setColor3IfChanged(this.game, p, p.matInstance, color, 80, '_lastBlinkColor')) perfCounts.materialUpdatesSkipped += 1
                     }
                 }
             }
         }
 
-        const backend = this.physicsBackend
+        const backend = this.game.physicsBackend
         const workerMode = backend?.isWorkerMode?.() === true
 
         // Skip physics and game logic when paused
-        if (!this.isPaused) {
+        if (!this.game.isPaused) {
             const physicsStart = performance.now()
-            const steps = this.physicsSubsteps ?? 1
-            const stepSec = this.physicsClock?.step ?? 1 / 60
+            const steps = this.game.physicsSubsteps ?? 1
+            const stepSec = this.game.physicsClock?.step ?? 1 / 60
             if (workerMode) {
                 // The worker runs its own fixed-step clock and applies queued
                 // commands on its steps. Queue one registry tick (hover, …) per
                 // step this frame's clock decided on, so the simulated time they
                 // cover matches; physicsWorld.step() then just drains commands.
-                for (let i = 0; i < steps; i++) this.abilitySystem?.tickFixedStep(stepSec)
-                this.physicsWorld.step()
+                for (let i = 0; i < steps; i++) this.game.abilitySystem?.tickFixedStep(stepSec)
+                this.game.physicsWorld.step()
             } else {
                 // Fixed-step contract: run the steps the loop's clock decided on,
                 // snapshotting poses before the last one for render interpolation.
                 // Registry `tick` hooks run first in each step.
                 for (let i = 0; i < steps; i++) {
-                    this.abilitySystem?.tickFixedStep(stepSec)
-                    if (i === steps - 1) capturePrevPoses(backend, this.marbles, this.dynamicObjects)
-                    this.physicsWorld.step()
+                    this.game.abilitySystem?.tickFixedStep(stepSec)
+                    if (i === steps - 1) capturePrevPoses(backend, this.game.marbles, this.game.dynamicObjects)
+                    this.game.physicsWorld.step()
                 }
             }
             if (workerMode) {
@@ -513,11 +517,11 @@ export class GameLoopSyncMethods {
                 perfCounts.mainThreadPhysicsWaitMs = 0
                 perfCounts.physicsBackend = 'main'
             }
-            this.processCollisionEvents()
-            this.checkGameLogic()
+            this.game.processCollisionEvents()
+            this.game.checkGameLogic()
         }
 
-        for (const m of this.marbles) {
+        for (const m of this.game.marbles) {
             const { translation: t, rotation: r } = renderTransform(backend, m.rigidBody)
             const mat = quaternionToMat4(t, r)
 
@@ -540,27 +544,27 @@ export class GameLoopSyncMethods {
                 const g = Math.sin(time + 2.094) * 0.5 + 0.5
                 const b = Math.sin(time + 4.188) * 0.5 + 0.5
                 if (colorChanged(m, [r, g, b], now, RAINBOW_COLOR_INTERVAL_MS, '_lastRainbowColor')) {
-                    const rcm = this._renderableManager || (this._renderableManager = this.engine.getRenderableManager())
+                    const rcm = this.game._renderableManager || (this.game._renderableManager = this.game.engine.getRenderableManager())
                     if (m._renderEntity !== m.entity || m._renderInst === undefined) {
                         m._renderEntity = m.entity
                         m._renderInst = rcm.getInstance(m.entity)
                         m._renderMatInstance = rcm.getMaterialInstanceAt(m._renderInst, 0)
                     }
-                    m._renderMatInstance.setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, [r, g, b])
+                    m._renderMatInstance.setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, [r, g, b])
                 } else {
                     perfCounts.materialUpdatesSkipped += 1
                 }
             }
 
-            if (m === this.playerMarble && this.activeMarbleLightEntity) {
-                const lightOwner = this._activeMarbleLightSync || (this._activeMarbleLightSync = {})
-                setScaledTransformIfChanged(tcm, lightOwner, this.activeMarbleLightEntity, t, IDENTITY_QUAT, 1, perfCounts)
+            if (m === this.game.playerMarble && this.game.activeMarbleLightEntity) {
+                const lightOwner = this.game._activeMarbleLightSync || (this.game._activeMarbleLightSync = {})
+                setScaledTransformIfChanged(tcm, lightOwner, this.game.activeMarbleLightEntity, t, IDENTITY_QUAT, 1, perfCounts)
             }
         }
 
-        updateMarbleDynamicMaterialEffects(this, now, perfCounts)
+        updateMarbleDynamicMaterialEffects(this.game, now, perfCounts)
 
-        for (const obj of this.dynamicObjects) {
+        for (const obj of this.game.dynamicObjects) {
             const { translation: t, rotation: r } = renderTransform(backend, obj.rigidBody)
             const mat = quaternionToMat4(t, r)
 
@@ -584,37 +588,37 @@ export class GameLoopSyncMethods {
             }
         }
 
-        if (this.cameraMode === 'follow' && this.playerMarble && this.charging && this.cueInst) {
-            const cosP = Math.cos(this.pitchAngle)
-            const sinP = Math.sin(this.pitchAngle)
-            const dirX = Math.sin(this.aimYaw) * cosP
+        if (this.game.cameraMode === 'follow' && this.game.playerMarble && this.game.charging && this.game.cueInst) {
+            const cosP = Math.cos(this.game.pitchAngle)
+            const sinP = Math.sin(this.game.pitchAngle)
+            const dirX = Math.sin(this.game.aimYaw) * cosP
             const dirY = sinP
-            const dirZ = Math.cos(this.aimYaw) * cosP
-            const length = 0.5 + this.chargePower * 2.5
-            const r = this.playerMarble.scale * 0.5 || 0.5
-            const marbleT = this.playerMarble.rigidBody.translation()
+            const dirZ = Math.cos(this.game.aimYaw) * cosP
+            const length = 0.5 + this.game.chargePower * 2.5
+            const r = this.game.playerMarble.scale * 0.5 || 0.5
+            const marbleT = this.game.playerMarble.rigidBody.translation()
             const cuePos = {
                 x: marbleT.x - dirX * (r + 0.2),
                 y: marbleT.y - dirY * (r + 0.2),
                 z: marbleT.z - dirZ * (r + 0.2)
             }
-            const quat = quatFromEuler(this.aimYaw, this.pitchAngle, 0)
+            const quat = quatFromEuler(this.game.aimYaw, this.game.pitchAngle, 0)
             const mat = quaternionToMat4(cuePos, quat)
             const thin = 0.04
             mat[0] *= thin; mat[1] *= thin; mat[2] *= thin
             mat[4] *= thin; mat[5] *= thin; mat[6] *= thin
             mat[8] *= length; mat[9] *= length; mat[10] *= length
-            tcm.setTransform(this.cueInst, mat)
-            this._cueHidden = false
+            tcm.setTransform(this.game.cueInst, mat)
+            this.game._cueHidden = false
             perfCounts.transformsSet += 1
-        } else if (this.cueInst) {
-            if (!this._cueZeroMat) {
-                this._cueZeroMat = new Float32Array(16)
-                this._cueZeroMat[15] = 1
+        } else if (this.game.cueInst) {
+            if (!this.game._cueZeroMat) {
+                this.game._cueZeroMat = new Float32Array(16)
+                this.game._cueZeroMat[15] = 1
             }
-            if (!this._cueHidden) {
-                tcm.setTransform(this.cueInst, this._cueZeroMat)
-                this._cueHidden = true
+            if (!this.game._cueHidden) {
+                tcm.setTransform(this.game.cueInst, this.game._cueZeroMat)
+                this.game._cueHidden = true
                 perfCounts.transformsSet += 1
             } else {
                 perfCounts.transformsSkipped += 1
@@ -622,44 +626,44 @@ export class GameLoopSyncMethods {
         }
 
         // Update particle system
-        if (this.particleSystem) {
-            const frameDeltaSec = this._lastSyncTime ? (now - this._lastSyncTime) / 1000 : 1 / 60
-            this.particleSystem.update(frameDeltaSec)
+        if (this.game.particleSystem) {
+            const frameDeltaSec = this.game._lastSyncTime ? (now - this.game._lastSyncTime) / 1000 : 1 / 60
+            this.game.particleSystem.update(frameDeltaSec)
         }
         
         // Update animated lighting
-        this.lightingBudget?.update()
-        if (this.lightingSystem) {
-            const frameDeltaSec = this._lastSyncTime ? (now - this._lastSyncTime) / 1000 : 1 / 60
-            this.lightingSystem.update(frameDeltaSec)
+        this.game.lightingBudget?.update()
+        if (this.game.lightingSystem) {
+            const frameDeltaSec = this.game._lastSyncTime ? (now - this.game._lastSyncTime) / 1000 : 1 / 60
+            this.game.lightingSystem.update(frameDeltaSec)
         }
 
         // Update volumetric light shafts and caustics
-        if (this.volumetricLights && this._cameraState) {
-            const frameDeltaSec = this._lastSyncTime ? (now - this._lastSyncTime) / 1000 : 1 / 60
-            const aspect = (this.canvas?.width || window.innerWidth) / (this.canvas?.height || window.innerHeight)
-            this.volumetricLights.update(frameDeltaSec, this._cameraState, this.activeFov || this.currentFov || 45, aspect)
+        if (this.game.volumetricLights && this.game._cameraState) {
+            const frameDeltaSec = this.game._lastSyncTime ? (now - this.game._lastSyncTime) / 1000 : 1 / 60
+            const aspect = (this.game.canvas?.width || window.innerWidth) / (this.game.canvas?.height || window.innerHeight)
+            this.game.volumetricLights.update(frameDeltaSec, this.game._cameraState, this.game.activeFov || this.game.currentFov || 45, aspect)
         }
 
-        this._lastSyncTime = now
+        this.game._lastSyncTime = now
 
         // Render speed lines overlay
-if (this.renderSpeedLines) {
-            this.renderSpeedLines();
+if (this.game.renderSpeedLines) {
+            this.game.renderSpeedLines();
         }
 
-        if (this.renderer && this.swapChain && this.view) {
+        if (this.game.renderer && this.game.swapChain && this.game.view) {
             const renderStart = performance.now()
             try {
                 // === MODERN / RECOMMENDED FILAMENT PATTERN ===
-                if (this.renderer.beginFrame(this.swapChain)) {
-                    this.renderer.render(this.swapChain, this.view);
-                    this.renderer.endFrame();
+                if (this.game.renderer.beginFrame(this.game.swapChain)) {
+                    this.game.renderer.render(this.game.swapChain, this.game.view);
+                    this.game.renderer.endFrame();
                     perfCounts.renderedFrame = true
 
                     // First-frame handling (loading screen)
-                    if (!this._firstFrameRendered) {
-                        this._firstFrameRendered = true;
+                    if (!this.game._firstFrameRendered) {
+                        this.game._firstFrameRendered = true;
                         console.log('[RENDER] First frame rendered successfully');
 
                         if (typeof window.hideLoadingScreen === 'function') {
@@ -674,25 +678,25 @@ if (this.renderSpeedLines) {
                     }
                 }
             } catch (renderErr) {
-                if (!this._renderFailLogged) {
-                    this._renderFailLogged = true;
+                if (!this.game._renderFailLogged) {
+                    this.game._renderFailLogged = true;
                     console.error('[RENDER] renderer.render() failed:', renderErr);
                 }
             }
             perfCounts.renderMs = performance.now() - renderStart
-            this.perfMonitor?.recordRenderTiming(perfCounts.renderMs, perfCounts.renderedFrame)
+            this.game.perfMonitor?.recordRenderTiming(perfCounts.renderMs, perfCounts.renderedFrame)
 
-            if (this.webgpuParticles?.ready && this._cameraState) {
-                const aspect = (this.canvas?.width || window.innerWidth) / (this.canvas?.height || window.innerHeight || 1)
-                this.webgpuParticles.render(this._cameraState, this.activeFov || this.currentFov || 45, aspect)
+            if (this.game.webgpuParticles?.ready && this.game._cameraState) {
+                const aspect = (this.game.canvas?.width || window.innerWidth) / (this.game.canvas?.height || window.innerHeight || 1)
+                this.game.webgpuParticles.render(this.game._cameraState, this.game.activeFov || this.game.currentFov || 45, aspect)
             }
 
-            this.engine.execute();
+            this.game.engine.execute();
         } 
-        else if (!this._renderGuardLogged) {
-            this._renderGuardLogged = true;
-            console.error('[RENDER] Render guard failed — renderer:', !!this.renderer, 
-                         'swapChain:', !!this.swapChain, 'view:', !!this.view);
+        else if (!this.game._renderGuardLogged) {
+            this.game._renderGuardLogged = true;
+            console.error('[RENDER] Render guard failed — renderer:', !!this.game.renderer, 
+                         'swapChain:', !!this.game.swapChain, 'view:', !!this.game.view);
         }
         perfCounts.syncMs = performance.now() - perfSyncStart
         perfCounts.estimatedTransformSets =
@@ -705,7 +709,7 @@ if (this.renderSpeedLines) {
         perfCounts.estimatedGetInstanceCalls = perfCounts.transformInstanceCacheMisses
         perfCounts.cachedTransformInstanceUses =
             Math.max(0, perfCounts.transformsSet + perfCounts.transformsSkipped - perfCounts.transformInstanceCacheMisses)
-        this.perfMonitor?.recordSyncWork(perfCounts)
-        this._syncNow = 0
+        this.game.perfMonitor?.recordSyncWork(perfCounts)
+        this.game._syncNow = 0
     }
 }

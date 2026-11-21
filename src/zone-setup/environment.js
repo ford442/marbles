@@ -4,34 +4,38 @@ import { buildEnvironmentLighting, destroyEnvironmentLighting, destroyEnvironmen
 import { CUBEMAP_QUALITY_LEVELS} from '../rendering/environment.js';
 
 export class ZoneSetupEnvironment {
+    constructor(game) {
+        this.game = game;
+    }
+
     setupPostProcessing() {
-        const quality = this.settings?.graphics?.quality || 'medium';
+        const quality = this.game.settings?.graphics?.quality || 'medium';
         const { taaEnabled, motionBlurEnabled, ssrEnabled } = getPostFxQualityFlags(quality)
 
         // Bloom — resolution, strength, and quality scale with the quality tier
         try {
-            this.view.setBloomOptions(getBloomQualityConfig(quality, this.Filament))
+            this.game.view.setBloomOptions(getBloomQualityConfig(quality, this.game.Filament))
         } catch (e) {
             console.warn('[POST] Bloom setup failed:', e)
         }
 
         // SSAO — radius, resolution, and quality scale with the quality tier
         try {
-            this.view.setAmbientOcclusionOptions(getSsaoQualityConfig(quality, this.Filament))
+            this.game.view.setAmbientOcclusionOptions(getSsaoQualityConfig(quality, this.game.Filament))
         } catch (e) {
             console.warn('[POST] SSAO setup failed:', e)
         }
 
         // MSAA is disabled when TAA is active to avoid stacking both techniques.
         try {
-            this.view.setMultiSampleAntiAliasingOptions({ enabled: !taaEnabled, sampleCount: DEFAULT_MSAA_SAMPLE_COUNT })
+            this.game.view.setMultiSampleAntiAliasingOptions({ enabled: !taaEnabled, sampleCount: DEFAULT_MSAA_SAMPLE_COUNT })
         } catch (e) {
             console.warn('[POST] MSAA setup failed:', e)
         }
 
         // TAA - temporal anti-aliasing reduces edge shimmering during motion
         try {
-            this.view.setTemporalAntiAliasingOptions({
+            this.game.view.setTemporalAntiAliasingOptions({
                 enabled: taaEnabled,
                 // filterWidth: width of the temporal filter kernel; higher = softer but more stable
                 filterWidth: 2.0,
@@ -44,9 +48,9 @@ export class ZoneSetupEnvironment {
 
         // Motion Blur - cinematic blur for fast-moving marbles and camera.
         // Some Filament JS builds do not expose this wrapper; skip cleanly.
-        if (typeof this.view.setMotionBlurOptions === 'function') {
+        if (typeof this.game.view.setMotionBlurOptions === 'function') {
             try {
-                this.view.setMotionBlurOptions({
+                this.game.view.setMotionBlurOptions({
                     enabled: motionBlurEnabled,
                     intensity: 0.32,
                     maxDisplacement: 0.18,
@@ -58,7 +62,7 @@ export class ZoneSetupEnvironment {
 
         // SSR - screen-space reflections for shiny floor and ice surfaces
         try {
-            this.view.setScreenSpaceReflectionsOptions({
+            this.game.view.setScreenSpaceReflectionsOptions({
                 enabled: ssrEnabled,
                 thickness: 0.1,
                 bias: 0.01,
@@ -72,19 +76,19 @@ export class ZoneSetupEnvironment {
         // ACES tone mapping with per-tier contrast/saturation for a richer look on high-end hardware
         try {
             const cgConfig = getColorGradingConfig(quality)
-            const colorGrading = this.Filament.ColorGrading.Builder()
-                .toneMapping(this.Filament['ColorGrading$ToneMapping'].ACES)
+            const colorGrading = this.game.Filament.ColorGrading.Builder()
+                .toneMapping(this.game.Filament['ColorGrading$ToneMapping'].ACES)
                 .contrast(cgConfig.contrast)
                 .saturation(cgConfig.saturation)
-                .build(this.engine)
-            this.view.setColorGrading(colorGrading)
+                .build(this.game.engine)
+            this.game.view.setColorGrading(colorGrading)
         } catch (e) {
             console.warn('[POST] Color grading setup failed:', e)
         }
 
         // Vignette — subtle filmic darkening on high/ultra; disabled on medium and low
         try {
-            this.view.setVignetteOptions(getVignetteConfig(quality))
+            this.game.view.setVignetteOptions(getVignetteConfig(quality))
         } catch (e) {
             // setVignetteOptions may not be present in all Filament builds; silently skip
         }
@@ -92,10 +96,10 @@ export class ZoneSetupEnvironment {
         // Production shadow quality — gated behind high/ultra presets.
         // medium and below use basic PCF shadows (cheaper, still decent).
         const { shadowOptions, vsmOptions, softOptions } = getShadowQualityConfig(quality);
-        if (this.view) {
-            if (typeof this.view.setShadowOptions === 'function') {
+        if (this.game.view) {
+            if (typeof this.game.view.setShadowOptions === 'function') {
                 try {
-                    this.view.setShadowOptions(shadowOptions);
+                    this.game.view.setShadowOptions(shadowOptions);
                 } catch (e) {
                     console.warn('[POST] setShadowOptions failed:', e);
                 }
@@ -103,7 +107,7 @@ export class ZoneSetupEnvironment {
 
             if (vsmOptions) {
                 try {
-                    this.view.setVsmShadowOptions(vsmOptions);
+                    this.game.view.setVsmShadowOptions(vsmOptions);
                 } catch (e) {
                     console.warn('[POST] setVsmShadowOptions failed:', e);
                 }
@@ -111,7 +115,7 @@ export class ZoneSetupEnvironment {
 
             if (softOptions) {
                 try {
-                    this.view.setSoftShadowOptions(softOptions);
+                    this.game.view.setSoftShadowOptions(softOptions);
                 } catch (e) {
                     console.warn('[POST] setSoftShadowOptions failed:', e);
                 }
@@ -128,7 +132,7 @@ export class ZoneSetupEnvironment {
 
                 // Merge environment-specific overrides (color, density, height falloff, etc)
                 // Default environment is 'default'; will be overridden per-level in applyEnvironment()
-                const envFogPreset = getEnvironmentFogPreset(this.currentEnvironment || 'default');
+                const envFogPreset = getEnvironmentFogPreset(this.game.currentEnvironment || 'default');
                 Object.assign(fogOptions, envFogPreset);
 
                 // Prevent negative heights or invalid configs
@@ -136,10 +140,10 @@ export class ZoneSetupEnvironment {
                 if (fogOptions.heightFalloff > 1) fogOptions.heightFalloff = 1;
 
                 fogOptions.color = fogOptions.color?.slice(0, 3) || [1.0, 1.0, 1.0];
-                this.view.setFogOptions(fogOptions);
-                console.log(`[POST] Fog enabled: quality=${quality}, env=${this.currentEnvironment || 'default'}`);
+                this.game.view.setFogOptions(fogOptions);
+                console.log(`[POST] Fog enabled: quality=${quality}, env=${this.game.currentEnvironment || 'default'}`);
             } else {
-                this.view.setFogOptions({ enabled: false });
+                this.game.view.setFogOptions({ enabled: false });
             }
         } catch (e) {
             console.warn('[POST] Fog setup failed:', e);
@@ -149,7 +153,7 @@ export class ZoneSetupEnvironment {
         // Calls setupEnvironmentLighting() which builds from the named preset.
         // The initial environment is 'default'; levels override it via
         // applyEnvironment() called from loadLevel().
-        this.setupEnvironmentLighting('default');
+        this.game.setupEnvironmentLighting('default');
     }
 
     /**
@@ -163,46 +167,46 @@ export class ZoneSetupEnvironment {
      * @param {string} envName - Key from ENVIRONMENT_PRESETS (e.g. 'ice', 'volcanic')
      */
     setupEnvironmentLighting(envName = 'default') {
-        const runtime = this._runtimeGraphicsOverrides || {};
+        const runtime = this.game._runtimeGraphicsOverrides || {};
         const quality = runtime.forceShOnlyIbl
             ? 'medium'
-            : (this.settings?.graphics?.quality || 'medium');
+            : (this.game.settings?.graphics?.quality || 'medium');
 
         // Tear down existing IBL / skybox (including any previously loaded cubemap textures)
-        if (this._iblObject || this._skyboxObject) {
+        if (this.game._iblObject || this.game._skyboxObject) {
             destroyEnvironmentWithCubemaps(
-                this.engine, this.scene,
-                this._iblObject, this._skyboxObject,
-                this._iblTexture || null, this._skyboxTexture || null,
+                this.game.engine, this.game.scene,
+                this.game._iblObject, this.game._skyboxObject,
+                this.game._iblTexture || null, this.game._skyboxTexture || null,
             );
-            this._iblObject = null;
-            this._skyboxObject = null;
-            this._iblTexture = null;
-            this._skyboxTexture = null;
+            this.game._iblObject = null;
+            this.game._skyboxObject = null;
+            this.game._iblTexture = null;
+            this.game._skyboxTexture = null;
         }
 
         const { ibl, skybox } = buildEnvironmentLighting(
-            this.engine,
-            this.scene,
-            this.Filament,
+            this.game.engine,
+            this.game.scene,
+            this.game.Filament,
             envName,
             quality,
         );
 
         // Keep references so we can destroy them on the next switch or cleanup
-        this._iblObject = ibl;
-        this._skyboxObject = skybox;
-        this._iblTexture = null;
-        this._skyboxTexture = null;
-        this.currentEnvironment = envName;
+        this.game._iblObject = ibl;
+        this.game._skyboxObject = skybox;
+        this.game._iblTexture = null;
+        this.game._skyboxTexture = null;
+        this.game.currentEnvironment = envName;
 
         // Back-compat: keep this.ibl pointing at the active IBL object
-        this.ibl = ibl;
-        this.skyboxEntity = skybox;
+        this.game.ibl = ibl;
+        this.game.skyboxEntity = skybox;
 
         // For high/ultra quality, asynchronously upgrade to full specular IBL
         if (!runtime.forceShOnlyIbl && CUBEMAP_QUALITY_LEVELS.has(quality)) {
-            this._upgradeEnvironmentWithCubemap(envName);
+            this.game._upgradeEnvironmentWithCubemap(envName);
         }
     }
 
@@ -214,9 +218,9 @@ export class ZoneSetupEnvironment {
      * @param {string} envName - Environment preset name (e.g. 'default', 'space_nebula', 'underwater')
      */
     applyEnvironmentFog(envName = 'default') {
-        if (!this.view) return;
+        if (!this.game.view) return;
 
-        const quality = this.settings?.graphics?.quality || 'medium';
+        const quality = this.game.settings?.graphics?.quality || 'medium';
 
         try {
             const fogConfig = getFogQualityConfig(quality);
@@ -233,10 +237,10 @@ export class ZoneSetupEnvironment {
                 if (fogOptions.heightFalloff > 1) fogOptions.heightFalloff = 1;
 
                 fogOptions.color = fogOptions.color?.slice(0, 3) || [1.0, 1.0, 1.0];
-                this.view.setFogOptions(fogOptions);
+                this.game.view.setFogOptions(fogOptions);
                 console.log(`[FOG] Applied: quality=${quality}, env=${envName}`);
             } else {
-                this.view.setFogOptions({ enabled: false });
+                this.game.view.setFogOptions({ enabled: false });
             }
         } catch (e) {
             console.warn('[FOG] Failed to apply environment fog:', e);
@@ -255,18 +259,18 @@ export class ZoneSetupEnvironment {
      * @param {string} envName - Environment/color-grade preset key
      */
     applyColorGradingForEnvironment(envName = 'default') {
-        if (!this.view || !this.Filament || !this.engine) return;
+        if (!this.game.view || !this.game.Filament || !this.game.engine) return;
 
         try {
-            const quality = this.settings?.graphics?.quality || this.graphicsQuality || 'medium';
+            const quality = this.game.settings?.graphics?.quality || this.game.graphicsQuality || 'medium';
             const baseConfig = getColorGradingConfig(quality);
             const envConfig = getEnvironmentColorGradingPreset(envName);
 
             // Env-specific values fully replace their quality-tier counterparts
             const merged = { ...baseConfig, ...envConfig };
 
-            const builder = this.Filament.ColorGrading.Builder()
-                .toneMapping(this.Filament['ColorGrading$ToneMapping'].ACES)
+            const builder = this.game.Filament.ColorGrading.Builder()
+                .toneMapping(this.game.Filament['ColorGrading$ToneMapping'].ACES)
                 .contrast(merged.contrast)
                 .saturation(merged.saturation);
 
@@ -276,8 +280,8 @@ export class ZoneSetupEnvironment {
                 try { builder.vibrance(merged.vibrance); } catch (_) { /* unsupported */ }
             }
 
-            const colorGrading = builder.build(this.engine);
-            this.view.setColorGrading(colorGrading);
+            const colorGrading = builder.build(this.game.engine);
+            this.game.view.setColorGrading(colorGrading);
 
             console.log(`[GRADE] Applied: env=${envName}, contrast=${merged.contrast.toFixed(2)}, sat=${merged.saturation.toFixed(2)}`);
         } catch (e) {
@@ -294,27 +298,27 @@ export class ZoneSetupEnvironment {
      */
     async _upgradeEnvironmentWithCubemap(envName) {
         const result = await upgradeEnvironmentWithCubemap(
-            this.engine,
-            this.scene,
-            this.Filament,
+            this.game.engine,
+            this.game.scene,
+            this.game.Filament,
             envName,
-            this._iblObject,
-            this._skyboxObject,
+            this.game._iblObject,
+            this.game._skyboxObject,
         );
 
         // Guard: environment may have changed while we were awaiting
-        if (!result || this.currentEnvironment !== envName) {
+        if (!result || this.game.currentEnvironment !== envName) {
             return;
         }
 
-        this._iblObject = result.ibl;
-        this._skyboxObject = result.skybox;
-        this._iblTexture = result.iblTexture;
-        this._skyboxTexture = result.skyboxTexture;
+        this.game._iblObject = result.ibl;
+        this.game._skyboxObject = result.skybox;
+        this.game._iblTexture = result.iblTexture;
+        this.game._skyboxTexture = result.skyboxTexture;
 
         // Keep back-compat references current
-        this.ibl = result.ibl;
-        this.skyboxEntity = result.skybox;
+        this.game.ibl = result.ibl;
+        this.game.skyboxEntity = result.skybox;
     }
 
     /**
@@ -324,29 +328,29 @@ export class ZoneSetupEnvironment {
      * @param {string} envName - Key from ENVIRONMENT_PRESETS
      */
     applyEnvironment(envName = 'default') {
-        if (!this.engine || !this.scene || !this.Filament) {
+        if (!this.game.engine || !this.game.scene || !this.game.Filament) {
             return;
         }
-        if (envName === this.currentEnvironment) {
+        if (envName === this.game.currentEnvironment) {
             return;
         }
-        this.setupEnvironmentLighting(envName);
+        this.game.setupEnvironmentLighting(envName);
 
         // Apply environment-specific directional and fill lights
-        if (this.lightingSystem) {
+        if (this.game.lightingSystem) {
             try {
                 const envPreset = ENVIRONMENT_PRESETS[envName] || ENVIRONMENT_PRESETS['default'];
-                this.lightingSystem.applyEnvironmentLighting(envName, envPreset);
+                this.game.lightingSystem.applyEnvironmentLighting(envName, envPreset);
             } catch (e) {
                 console.warn('[LightingSystem] Failed to apply environment lighting:', e);
             }
         }
 
         // Apply environment-specific fog after switching environment
-        this.applyEnvironmentFog(envName);
+        this.game.applyEnvironmentFog(envName);
 
         // Apply environment-specific color grading (contrast, saturation, vibrance)
-        this.applyColorGradingForEnvironment(envName);
+        this.game.applyColorGradingForEnvironment(envName);
     }
 
     /**

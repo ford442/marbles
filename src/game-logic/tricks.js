@@ -1,12 +1,16 @@
 import { audio } from '../audio.js';
 
 export class GameLogicTricks {
+    constructor(game) {
+        this.game = game;
+    }
+
     performStompImpact(multiplier = 1.0) {
-        if (!this.playerMarble) return
+        if (!this.game.playerMarble) return
 
         if (audio.playStomp) audio.playStomp()
 
-        const center = this.playerMarble.rigidBody.translation()
+        const center = this.game.playerMarble.rigidBody.translation()
         const radius = 15.0 * multiplier
         const force = 100.0 * multiplier
 
@@ -31,23 +35,23 @@ export class GameLogicTricks {
             }
         }
 
-        for (const m of this.marbles) {
-            if (m !== this.playerMarble) {
+        for (const m of this.game.marbles) {
+            if (m !== this.game.playerMarble) {
                 applyForce(m.rigidBody)
             }
         }
-        for (const obj of this.dynamicObjects) {
+        for (const obj of this.game.dynamicObjects) {
             applyForce(obj.rigidBody)
         }
 
-        if (this.playerMarble.color) {
-            const rcm = this.engine.getRenderableManager()
-            const inst = rcm.getInstance(this.playerMarble.entity)
-            rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.Filament.RgbType.sRGB, this.playerMarble.color)
+        if (this.game.playerMarble.color) {
+            const rcm = this.game.engine.getRenderableManager()
+            const inst = rcm.getInstance(this.game.playerMarble.entity)
+            rcm.getMaterialInstanceAt(inst, 0).setColor3Parameter('baseColor', this.game.Filament.RgbType.sRGB, this.game.playerMarble.color)
         }
 
         // Add a visual particle ring at the impact point
-        this.effectPool?.spawnVisualParticle({
+        this.game.effectPool?.spawnVisualParticle({
             color: [1.0, 0.2, 0.0],
             roughness: 0.8,
             spawnTime: Date.now(),
@@ -61,29 +65,29 @@ export class GameLogicTricks {
         })
 
         // Trigger camera shake proportional to impact
-        if (!this.cameraShake) this.cameraShake = { x: 0, y: 0, z: 0 }
+        if (!this.game.cameraShake) this.game.cameraShake = { x: 0, y: 0, z: 0 }
         const shakeIntensity = multiplier * 2.0
-        this.cameraShake.x += (Math.random() - 0.5) * shakeIntensity
-        this.cameraShake.y += (Math.random() - 0.5) * shakeIntensity
-        this.cameraShake.z += (Math.random() - 0.5) * shakeIntensity
+        this.game.cameraShake.x += (Math.random() - 0.5) * shakeIntensity
+        this.game.cameraShake.y += (Math.random() - 0.5) * shakeIntensity
+        this.game.cameraShake.z += (Math.random() - 0.5) * shakeIntensity
     }
 
     awardTrickPoints(message, points, color) {
         if (audio && audio.playCollect) audio.playCollect()
 
-        this.combo = Math.min(10, this.combo + 1)
-        this.comboTimer = Date.now()
-        if (this.comboEl) {
-            this.comboEl.style.display = 'block'
-            this.comboEl.textContent = `Combo: x${this.combo}`
-            this.comboEl.style.transform = 'scale(1.2)'
-            setTimeout(() => { if (this.comboEl) this.comboEl.style.transform = 'scale(1)' }, 100)
+        this.game.combo = Math.min(10, this.game.combo + 1)
+        this.game.comboTimer = Date.now()
+        if (this.game.comboEl) {
+            this.game.comboEl.style.display = 'block'
+            this.game.comboEl.textContent = `Combo: x${this.game.combo}`
+            this.game.comboEl.style.transform = 'scale(1.2)'
+            setTimeout(() => { if (this.game.comboEl) this.game.comboEl.style.transform = 'scale(1)' }, 100)
         }
-        if (this.combobarContainerEl) this.combobarContainerEl.style.display = 'block'
+        if (this.game.combobarContainerEl) this.game.combobarContainerEl.style.display = 'block'
 
-        this.bankedTrickScore = (this.bankedTrickScore || 0) + points
+        this.game.bankedTrickScore = (this.game.bankedTrickScore || 0) + points
 
-        this.showTrickMessage(message + ` +${points}`, color)
+        this.game.showTrickMessage(message + ` +${points}`, color)
     }
 
     showTrickMessage(text, color) {
@@ -121,16 +125,16 @@ export class GameLogicTricks {
     }
 
     spawnDriftSparks(pos) {
-        if (!this.visualParticles) return
+        if (!this.game.visualParticles) return
 
-        const count = this.effectPool?.budget.getVisualBurstCount(3) ?? 3
+        const count = this.game.effectPool?.budget.getVisualBurstCount(3) ?? 3
         for (let i = 0; i < count; i++) {
             const isYellow = Math.random() > 0.5
             const color = isYellow ? [1.0, 1.0, 0.0] : [1.0, 0.5, 0.0]
             const angle = Math.random() * Math.PI * 2
             const speed = 2.0 + Math.random() * 3.0
 
-            this.effectPool?.spawnVisualParticle({
+            this.game.effectPool?.spawnVisualParticle({
                 color,
                 roughness: 0.2,
                 spawnTime: Date.now(),

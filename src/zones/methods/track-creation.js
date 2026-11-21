@@ -4,11 +4,15 @@ import { decorateSpiralTrack } from './decorations.js';
 /**
  * Creation methods for tracks, ramps, loops, platforms, and obstacle courses.
  */
-export const trackCreationMethods = {
+export class ZoneTrackCreation {
+    constructor(game) {
+        this.game = game;
+    }
+
     createMovingZone(offset) {
         const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y, z: offset.z },
             floorQ,
             { x: 4, y: 0.5, z: 4 },
@@ -16,7 +20,7 @@ export const trackCreationMethods = {
             'concrete'
         );
 
-        this.createKinematicBox(
+        this.game.createKinematicBox(
             { x: offset.x, y: offset.y, z: offset.z + 10 },
             { x: 2, y: 0.5, z: 2 },
             [0.2, 0.6, 0.8],
@@ -25,7 +29,7 @@ export const trackCreationMethods = {
             5.0
         );
 
-        this.createKinematicBox(
+        this.game.createKinematicBox(
             { x: offset.x, y: offset.y + 1, z: offset.z + 18 },
             { x: 2, y: 0.5, z: 2 },
             [0.8, 0.6, 0.2],
@@ -34,7 +38,7 @@ export const trackCreationMethods = {
             3.0
         );
 
-        this.createKinematicBox(
+        this.game.createKinematicBox(
             { x: offset.x, y: offset.y + 2, z: offset.z + 28 },
             { x: 2, y: 0.5, z: 2 },
             [0.8, 0.2, 0.6],
@@ -43,27 +47,29 @@ export const trackCreationMethods = {
             4.0
         );
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y + 2, z: offset.z + 40 },
             floorQ,
             { x: 4, y: 0.5, z: 4 },
             [0.3, 0.3, 0.35],
             'concrete'
         );
-    },
+    }
+
 
     createFloorZone(offset, size, rotY, color) {
         const sz = size || { x: 50, y: 0.5, z: 50 };
         // rotY is a heading about +Y (map-schema "Y-axis rotation"); it used to bank about Z.
         const q = rotY ? quatFromYawPitchRoll({ yaw: rotY }) : { x: 0, y: 0, z: 0, w: 1 };
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y, z: offset.z },
             q,
             { x: sz.x / 2, y: sz.y / 2, z: sz.z / 2 },
             color || [0.3, 0.3, 0.3],
             'concrete'
         );
-    },
+    }
+
 
     createTrackZone(offset) {
         const angle = 0.2;
@@ -71,7 +77,7 @@ export const trackCreationMethods = {
         const cosA = Math.cos(angle / 2);
         const q = { x: sinA, y: 0, z: 0, w: cosA };
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y, z: offset.z },
             q,
             { x: 4, y: 0.2, z: 15 },
@@ -79,26 +85,27 @@ export const trackCreationMethods = {
             'wood'
         );
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x - 3.5, y: offset.y + 1, z: offset.z },
             q,
             { x: 0.5, y: 1.5, z: 15 },
             [0.5, 0.3, 0.3],
             'wood'
         );
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x + 3.5, y: offset.y + 1, z: offset.z },
             q,
             { x: 0.5, y: 1.5, z: 15 },
             [0.5, 0.3, 0.3],
             'wood'
         );
-    },
+    }
+
 
     createSpiralZone(offset) {
         const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y, z: offset.z },
             floorQ,
             { x: 4, y: 0.5, z: 4 },
@@ -122,7 +129,7 @@ export const trackCreationMethods = {
 
             const q = quatMultiply(quatFromYawPitchRoll({ roll: rotY }), quatFromYawPitchRoll({ yaw: pitch }));
 
-            this.createStaticBox(
+            this.game.createStaticBox(
                 { x: x, y: y, z: z },
                 q,
                 { x: 1.5, y: 0.2, z: 1 },
@@ -136,7 +143,7 @@ export const trackCreationMethods = {
         const lastZ = offset.z + 10 + Math.sin(lastAngle) * radius;
         const lastY = offset.y + (numSteps - 1) * heightGain;
 
-        this.createStaticBox(
+        this.game.createStaticBox(
              { x: lastX, y: lastY, z: lastZ },
              floorQ,
              { x: 3, y: 0.5, z: 3 },
@@ -144,13 +151,14 @@ export const trackCreationMethods = {
              'metal'
         );
 
-        decorateSpiralTrack(this, offset);
-    },
+        decorateSpiralTrack(this.game, offset);
+    }
+
 
     createBlockZone(offset) {
         const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y, z: offset.z },
             floorQ,
             { x: 10, y: 0.5, z: 20 },
@@ -163,7 +171,7 @@ export const trackCreationMethods = {
             const z = offset.z + (Math.cos(i * 78.233) * 18);
             const h = 1.0 + (i % 3) * 0.5;
 
-            this.createStaticBox(
+            this.game.createStaticBox(
                 { x: x, y: offset.y + h/2, z: z },
                 floorQ,
                 { x: 0.5, y: h/2, z: 0.5 },
@@ -171,12 +179,13 @@ export const trackCreationMethods = {
                 'concrete'
             );
         }
-    },
+    }
+
 
     createLoopZone(offset) {
         const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y, z: offset.z },
             floorQ,
             { x: 3, y: 0.5, z: 5 },
@@ -207,7 +216,7 @@ export const trackCreationMethods = {
 
             const segmentLength = (2 * Math.PI * radius / segments);
 
-            this.createStaticBox(
+            this.game.createStaticBox(
                 { x: x, y: y, z: z },
                 q,
                 { x: 2, y: 0.2, z: segmentLength / 2 + 0.1 },
@@ -215,14 +224,14 @@ export const trackCreationMethods = {
                 'metal'
             );
 
-             this.createStaticBox(
+             this.game.createStaticBox(
                 { x: x - 2.2, y: y, z: z },
                 q,
                 { x: 0.2, y: 1.0, z: segmentLength / 2 + 0.1 },
                 [0.6, 0.6, 0.6],
                 'metal'
              );
-             this.createStaticBox(
+             this.game.createStaticBox(
                 { x: x + 2.2, y: y, z: z },
                 q,
                 { x: 0.2, y: 1.0, z: segmentLength / 2 + 0.1 },
@@ -231,19 +240,20 @@ export const trackCreationMethods = {
              );
         }
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x + 4, y: offset.y, z: offset.z + 5 + radius * 2 + 5 },
             floorQ,
             { x: 3, y: 0.5, z: 5 },
             [0.4, 0.4, 0.4],
             'concrete'
         );
-    },
+    }
+
 
     createZigZagZone(offset) {
         const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y, z: offset.z },
             floorQ,
             { x: 3, y: 0.5, z: 3 },
@@ -251,7 +261,7 @@ export const trackCreationMethods = {
             'concrete'
         );
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y, z: offset.z + 8 },
             floorQ,
             { x: 1, y: 0.5, z: 5 },
@@ -259,7 +269,7 @@ export const trackCreationMethods = {
             'wood'
         );
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x + 4, y: offset.y, z: offset.z + 13 },
             { x: 0, y: 0.3826834, z: 0, w: 0.9238795 },
             { x: 1, y: 0.5, z: 5 },
@@ -267,7 +277,7 @@ export const trackCreationMethods = {
             'wood'
         );
 
-         this.createStaticBox(
+         this.game.createStaticBox(
             { x: offset.x + 4, y: offset.y, z: offset.z + 21 },
              { x: 0, y: -0.3826834, z: 0, w: 0.9238795 },
             { x: 1, y: 0.5, z: 5 },
@@ -275,7 +285,7 @@ export const trackCreationMethods = {
             'wood'
         );
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y, z: offset.z + 30 },
             floorQ,
             { x: 1, y: 0.5, z: 5 },
@@ -283,19 +293,20 @@ export const trackCreationMethods = {
             'wood'
         );
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y, z: offset.z + 38 },
             floorQ,
             { x: 3, y: 0.5, z: 3 },
             [0.4, 0.4, 0.4],
             'concrete'
         );
-    },
+    }
+
 
     createLandingZone(offset) {
         const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y, z: offset.z },
             floorQ,
             { x: 5, y: 0.25, z: 10 },
@@ -303,33 +314,34 @@ export const trackCreationMethods = {
             'concrete'
         );
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x - 3, y: offset.y + 1.5, z: offset.z - 5 },
             floorQ,
             { x: 0.5, y: 1.5, z: 0.5 },
             [0.8, 0.2, 0.2],
             'metal'
         );
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x + 3, y: offset.y + 1.5, z: offset.z },
             floorQ,
             { x: 0.5, y: 1.5, z: 0.5 },
             [0.2, 0.2, 0.8],
             'metal'
         );
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y + 0.75, z: offset.z + 5 },
             floorQ,
             { x: 2, y: 0.5, z: 0.5 },
             [0.2, 0.8, 0.2],
             'metal'
         );
-    },
+    }
+
 
     createJumpZone(offset) {
         const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y, z: offset.z },
             floorQ,
             { x: 5, y: 0.25, z: 2.5 },
@@ -341,7 +353,7 @@ export const trackCreationMethods = {
         const sinA = Math.sin(angle / 2);
         const cosA = Math.cos(angle / 2);
         const rampQ = { x: sinA, y: 0, z: 0, w: cosA };
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y + 1.0, z: offset.z + 5 },
             rampQ,
             { x: 5, y: 0.25, z: 3 },
@@ -349,7 +361,7 @@ export const trackCreationMethods = {
             'wood'
         );
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y - 2, z: offset.z + 22.5 },
             floorQ,
             { x: 8, y: 0.5, z: 5 },
@@ -357,19 +369,20 @@ export const trackCreationMethods = {
             'wood'
         );
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y - 1, z: offset.z + 25.5 },
             floorQ,
             { x: 1, y: 0.5, z: 1 },
             [0.8, 0.8, 0.2],
             'metal'
         );
-    },
+    }
+
 
     createSlalomZone(offset) {
         const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y, z: offset.z },
             floorQ,
             { x: 6, y: 0.5, z: 20 },
@@ -380,7 +393,7 @@ export const trackCreationMethods = {
         for (let z = -15; z <= 15; z += 5) {
             if (z === 15) continue;
             const pillarX = ((z + 15) / 5) % 2 === 0 ? 3 : -3;
-            this.createStaticBox(
+            this.game.createStaticBox(
                 { x: offset.x + pillarX, y: offset.y + 2, z: offset.z + z },
                 floorQ,
                 { x: 0.5, y: 1.5, z: 0.5 },
@@ -388,12 +401,13 @@ export const trackCreationMethods = {
                 'metal'
             );
         }
-    },
+    }
+
 
     createStaircaseZone(offset) {
         const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y, z: offset.z },
             floorQ,
             { x: 4, y: 0.5, z: 4 },
@@ -406,7 +420,7 @@ export const trackCreationMethods = {
         for (let i = 0; i < 10; i++) {
             currentY += 1.0;
             currentZ += 4.0;
-            this.createStaticBox(
+            this.game.createStaticBox(
                 { x: offset.x, y: currentY, z: currentZ },
                 floorQ,
                 { x: 2, y: 0.5, z: 1.5 },
@@ -414,12 +428,13 @@ export const trackCreationMethods = {
                 'concrete'
             );
         }
-    },
+    }
+
 
     createSplitZone(offset) {
         const floorQ = { x: 0, y: 0, z: 0, w: 1 };
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y, z: offset.z },
             floorQ,
             { x: 4, y: 0.5, z: 4 },
@@ -427,7 +442,7 @@ export const trackCreationMethods = {
             'concrete'
         );
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x - 2, y: offset.y, z: offset.z + 14 },
             floorQ,
             { x: 1, y: 0.5, z: 10 },
@@ -440,7 +455,7 @@ export const trackCreationMethods = {
         const cosA = Math.cos(angle / 2);
         const rampQ = { x: sinA, y: 0, z: 0, w: cosA };
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x + 2, y: offset.y + 1, z: offset.z + 8 },
             rampQ,
             { x: 1, y: 0.5, z: 4 },
@@ -448,7 +463,7 @@ export const trackCreationMethods = {
             'metal'
         );
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x + 2, y: offset.y, z: offset.z + 20 },
             floorQ,
             { x: 1.5, y: 0.5, z: 4 },
@@ -456,12 +471,12 @@ export const trackCreationMethods = {
             'metal'
         );
 
-        this.createStaticBox(
+        this.game.createStaticBox(
             { x: offset.x, y: offset.y - 1, z: offset.z + 30 },
             floorQ,
             { x: 4, y: 0.5, z: 4 },
             [0.4, 0.4, 0.4],
             'concrete'
         );
-    },
-};
+    }
+}

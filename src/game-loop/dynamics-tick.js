@@ -17,36 +17,40 @@ import {
 } from './helpers.ts';
 
 export class GameLoopDynamics {
+    /** @param {FrameHost} game */
+    constructor(game) {
+        this.game = game;
+    }
+
     /**
-     * @this {FrameHost}
      * @param {number} now - wall-clock ms
      */
     tickSceneDynamics(now) {
                 let culledPowerUps = 0
                 let culledCollectibles = 0
-                this.cullingManager?.beginFrame()
+                this.game.cullingManager?.beginFrame()
         
                 // Update Moving Platforms
                 // If time stop is active, we don't advance the timeSec for moving platforms
-                if (this.timeStopActive) {
-                    if (!this.lastTimeStopSavedTime) {
-                        this.lastTimeStopSavedTime = now
+                if (this.game.timeStopActive) {
+                    if (!this.game.lastTimeStopSavedTime) {
+                        this.game.lastTimeStopSavedTime = now
                     }
                 } else {
-                    if (this.lastTimeStopSavedTime) {
+                    if (this.game.lastTimeStopSavedTime) {
                         // Adjust a global offset to keep platforms smooth after unpausing
-                        if (!this.timeStopOffset) this.timeStopOffset = 0
-                        this.timeStopOffset += (now - this.lastTimeStopSavedTime)
-                        this.lastTimeStopSavedTime = null
+                        if (!this.game.timeStopOffset) this.game.timeStopOffset = 0
+                        this.game.timeStopOffset += (now - this.game.lastTimeStopSavedTime)
+                        this.game.lastTimeStopSavedTime = null
                     }
                 }
         
-                const timeSec = (now - (this.timeStopOffset || 0)) / 1000
+                const timeSec = (now - (this.game.timeStopOffset || 0)) / 1000
         
                 // Cache transform manager once for platform/object/collectible updates
-                const tcm = this.engine.getTransformManager()
+                const tcm = this.game.engine.getTransformManager()
         
-                for (const p of this.movingPlatforms) {
+                for (const p of this.game.movingPlatforms) {
                     let x = p.initialPos.x
                     let y = p.initialPos.y
                     let z = p.initialPos.z
@@ -64,8 +68,8 @@ export class GameLoopDynamics {
                     const sy = p.halfExtents.y * 2
                     const sz = p.halfExtents.z * 2
                     const radius = Math.hypot(p.halfExtents.x, p.halfExtents.y, p.halfExtents.z)
-                    const visible = this.cullingManager?.isVisible(`moving-platform:${p.entity}`, [x, y, z], radius, 'dynamic') ?? true
-                    this.cullingManager?.setEntityVisible(p.entity, visible, `moving-platform:${p.entity}`)
+                    const visible = this.game.cullingManager?.isVisible(`moving-platform:${p.entity}`, [x, y, z], radius, 'dynamic') ?? true
+                    this.game.cullingManager?.setEntityVisible(p.entity, visible, `moving-platform:${p.entity}`)
                     if (!visible) {
                         p._forceTransformSync = true
                         continue
@@ -79,8 +83,8 @@ export class GameLoopDynamics {
                     }
                 }
         
-                for (const p of this.rotatingPlatforms) {
-                    if (!this.timeStopActive) {
+                for (const p of this.game.rotatingPlatforms) {
+                    if (!this.game.timeStopActive) {
                         p.angle += p.speed
                     }
                     // Assuming Y axis rotation for now as per createRotatingBox
@@ -93,8 +97,8 @@ export class GameLoopDynamics {
                     const sz = p.halfExtents.z * 2
                     const t = p.rigidBody.translation()
                     const radius = Math.hypot(p.halfExtents.x, p.halfExtents.y, p.halfExtents.z)
-                    const visible = this.cullingManager?.isVisible(`rotating-platform:${p.entity}`, [t.x, t.y, t.z], radius, 'dynamic') ?? true
-                    this.cullingManager?.setEntityVisible(p.entity, visible, `rotating-platform:${p.entity}`)
+                    const visible = this.game.cullingManager?.isVisible(`rotating-platform:${p.entity}`, [t.x, t.y, t.z], radius, 'dynamic') ?? true
+                    this.game.cullingManager?.setEntityVisible(p.entity, visible, `rotating-platform:${p.entity}`)
                     if (!visible) {
                         p._forceTransformSync = true
                         continue
@@ -108,31 +112,31 @@ export class GameLoopDynamics {
                 }
         
                 // Level Format v2 movers/spinners/triggers (sim-time driven).
-                this.zoneScope?.tick(
-                    this,
-                    this.simDt ?? 0,
-                    (entry, pose) => setPrimitiveTransform(this, entry.entity, pose, entry.halfExtents),
-                    Boolean(this.timeStopActive),
+                this.game.zoneScope?.tick(
+                    this.game,
+                    this.game.simDt ?? 0,
+                    (entry, pose) => setPrimitiveTransform(this.game, entry.entity, pose, entry.halfExtents),
+                    Boolean(this.game.timeStopActive),
                 )
 
-                this.updateGrapple()
+                this.game.updateGrapple()
         
                 // Update PowerUps
-                for (const p of this.powerUps) {
-                    const powerVisible = this.cullingManager?.isVisible(`powerup:${p.entity}`, [p.pos.x, p.baseY, p.pos.z], 1, 'dynamic') ?? true
-                    this.cullingManager?.setEntityVisible(p.entity, powerVisible, `powerup:${p.entity}`)
+                for (const p of this.game.powerUps) {
+                    const powerVisible = this.game.cullingManager?.isVisible(`powerup:${p.entity}`, [p.pos.x, p.baseY, p.pos.z], 1, 'dynamic') ?? true
+                    this.game.cullingManager?.setEntityVisible(p.entity, powerVisible, `powerup:${p.entity}`)
                     if (!powerVisible) {
                         culledPowerUps += 1
                         p._forceTransformSync = true
-                        if (!this.timeStopActive) p.rotation += 0.05
+                        if (!this.game.timeStopActive) p.rotation += 0.05
                         continue
                     }
         
-                    if (!this.timeStopActive) {
+                    if (!this.game.timeStopActive) {
                         p.rotation += 0.05
                     }
                     const q = quatFromEuler(p.rotation, Math.PI / 4, 0)
-                    const bob = this.timeStopActive ? 0 : Math.sin(timeSec * 3) * 0.2
+                    const bob = this.game.timeStopActive ? 0 : Math.sin(timeSec * 3) * 0.2
                     const t = { x: p.pos.x, y: p.baseY + bob, z: p.pos.z }
         
                     if (transformChanged(p, t, q, 0.5)) {
@@ -142,18 +146,18 @@ export class GameLoopDynamics {
                 }
         
                 // Update Collectibles
-                if (!this.timeStopActive) {
-                    this.collectibleRotation += 0.05
+                if (!this.game.timeStopActive) {
+                    this.game.collectibleRotation += 0.05
                 }
-                if (this.collectibles && this.collectibles.length > 0) {
-                    for (let i = this.collectibles.length - 1; i >= 0; i--) {
-                        const c = this.collectibles[i]
+                if (this.game.collectibles && this.game.collectibles.length > 0) {
+                    for (let i = this.game.collectibles.length - 1; i >= 0; i--) {
+                        const c = this.game.collectibles[i]
                         if (!c) continue
-                        const bobOffset = this.timeStopActive ? 0 : Math.sin(this.collectibleRotation * 2) * 0.2
+                        const bobOffset = this.game.timeStopActive ? 0 : Math.sin(this.game.collectibleRotation * 2) * 0.2
                         const newY = c.baseY + bobOffset
         
-                        if (this.playerMarble) {
-                            const pt = this.playerMarble.rigidBody.translation()
+                        if (this.game.playerMarble) {
+                            const pt = this.game.playerMarble.rigidBody.translation()
                             const dx = pt.x - c.pos.x
                             const dy = pt.y - newY
                             const dz = pt.z - c.pos.z
@@ -162,42 +166,42 @@ export class GameLoopDynamics {
                                 if (audio.playCollect) audio.playCollect()
         
                                 // Combo Logic
-                                this.combo = Math.min(10, this.combo + 1)
-                                this.comboTimer = now
-                                if (this.comboEl) {
-                                    this.comboEl.style.display = 'block'
-                                    this.comboEl.textContent = `Combo: x${this.combo}`
-                                    this.comboEl.style.transform = 'scale(1.2)'
-                                    setTimeout(() => { if (this.comboEl) this.comboEl.style.transform = 'scale(1)' }, 100)
+                                this.game.combo = Math.min(10, this.game.combo + 1)
+                                this.game.comboTimer = now
+                                if (this.game.comboEl) {
+                                    this.game.comboEl.style.display = 'block'
+                                    this.game.comboEl.textContent = `Combo: x${this.game.combo}`
+                                    this.game.comboEl.style.transform = 'scale(1.2)'
+                                    setTimeout(() => { if (this.game.comboEl) this.game.comboEl.style.transform = 'scale(1)' }, 100)
                                 }
-                                if (this.combobarContainerEl) this.combobarContainerEl.style.display = 'block'
+                                if (this.game.combobarContainerEl) this.game.combobarContainerEl.style.display = 'block'
         
                                 // Trigger collection burst effect
                                 const collectionPos = { x: c.pos.x, y: newY, z: c.pos.z }
                                 const scoreValue = c.value ?? 10;
                                 const collectibleType = c.type || 'coin';
-                                if (typeof this.triggerCollectionEffect === 'function') {
-                                    this.triggerCollectionEffect(collectionPos, scoreValue, collectibleType)
+                                if (typeof this.game.triggerCollectionEffect === 'function') {
+                                    this.game.triggerCollectionEffect(collectionPos, scoreValue, collectibleType)
                                 }
         
-                                this.bankedTrickScore = (this.bankedTrickScore || 0) + 10
-                                this.collectiblesCollected = (this.collectiblesCollected || 0) + 1
-                                this.scene.remove(c.entity)
-                                this.engine.destroyEntity(c.entity)
-                                this.collectibles.splice(i, 1)
+                                this.game.bankedTrickScore = (this.game.bankedTrickScore || 0) + 10
+                                this.game.collectiblesCollected = (this.game.collectiblesCollected || 0) + 1
+                                this.game.scene.remove(c.entity)
+                                this.game.engine.destroyEntity(c.entity)
+                                this.game.collectibles.splice(i, 1)
                                 continue
                             }
                         }
         
-                        const collectibleVisible = this.cullingManager?.isVisible(`collectible:${c.entity}`, [c.pos.x, newY, c.pos.z], 1, 'dynamic') ?? true
-                        this.cullingManager?.setEntityVisible(c.entity, collectibleVisible, `collectible:${c.entity}`)
+                        const collectibleVisible = this.game.cullingManager?.isVisible(`collectible:${c.entity}`, [c.pos.x, newY, c.pos.z], 1, 'dynamic') ?? true
+                        this.game.cullingManager?.setEntityVisible(c.entity, collectibleVisible, `collectible:${c.entity}`)
                         if (!collectibleVisible) {
                             culledCollectibles += 1
                             c._forceTransformSync = true
                             continue
                         }
         
-                        const q = quatFromEuler(this.collectibleRotation, 0, Math.PI / 4)
+                        const q = quatFromEuler(this.game.collectibleRotation, 0, Math.PI / 4)
                         const t = { x: c.pos.x, y: newY, z: c.pos.z }
         
                         if (transformChanged(c, t, q, 0.5)) {
@@ -208,37 +212,37 @@ export class GameLoopDynamics {
                 }
         
                 // Combo Timer Logic
-                let comboTimeElapsed = now - this.comboTimer
+                let comboTimeElapsed = now - this.game.comboTimer
         
                 // Adrenaline pauses combo decay if high
-                if (this.adrenaline && this.adrenaline > 80) {
-                    this.comboTimer = now // Keep resetting it so it never expires
+                if (this.game.adrenaline && this.game.adrenaline > 80) {
+                    this.game.comboTimer = now // Keep resetting it so it never expires
                     comboTimeElapsed = 0
                 }
-                if (comboTimeElapsed > this.maxComboTime && this.combo > 1) {
-                    const bankedTrickScore = this.bankedTrickScore ?? 0
+                if (comboTimeElapsed > this.game.maxComboTime && this.game.combo > 1) {
+                    const bankedTrickScore = this.game.bankedTrickScore ?? 0
                     if (bankedTrickScore > 0) {
-                        const finalComboScore = bankedTrickScore * this.combo
-                        this.score += finalComboScore
-                        if (this.scoreEl) this.scoreEl.textContent = 'Score: ' + this.score
+                        const finalComboScore = bankedTrickScore * this.game.combo
+                        this.game.score += finalComboScore
+                        if (this.game.scoreEl) this.game.scoreEl.textContent = 'Score: ' + this.game.score
 
-                        if (typeof this.showTrickMessage === 'function') {
-                            this.showTrickMessage(`Combo Landed! +${finalComboScore}`, '#00ff00')
+                        if (typeof this.game.showTrickMessage === 'function') {
+                            this.game.showTrickMessage(`Combo Landed! +${finalComboScore}`, '#00ff00')
                         }
                     }
 
-                    this.combo = 1
-                    this.bankedTrickScore = 0
-                    if (this.comboEl) {
-                        this.comboEl.style.display = 'none'
-                        this.comboEl.textContent = `Combo: x${this.combo}`
+                    this.game.combo = 1
+                    this.game.bankedTrickScore = 0
+                    if (this.game.comboEl) {
+                        this.game.comboEl.style.display = 'none'
+                        this.game.comboEl.textContent = `Combo: x${this.game.combo}`
                     }
-                    if (this.combobarContainerEl) this.combobarContainerEl.style.display = 'none'
-                    if (this.combobarEl) this.combobarEl.style.width = '0%'
-                } else if (this.combo > 1 && this.combobarEl) {
-                    const timeRemaining = Math.max(0, this.maxComboTime - comboTimeElapsed)
-                    const pct = (timeRemaining / this.maxComboTime) * 100
-                    this.combobarEl.style.width = `${pct}%`
+                    if (this.game.combobarContainerEl) this.game.combobarContainerEl.style.display = 'none'
+                    if (this.game.combobarEl) this.game.combobarEl.style.width = '0%'
+                } else if (this.game.combo > 1 && this.game.combobarEl) {
+                    const timeRemaining = Math.max(0, this.game.maxComboTime - comboTimeElapsed)
+                    const pct = (timeRemaining / this.game.maxComboTime) * 100
+                    this.game.combobarEl.style.width = `${pct}%`
                 }
         return { culledPowerUps, culledCollectibles }
     }

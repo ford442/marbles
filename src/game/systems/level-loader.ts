@@ -3,8 +3,8 @@ import type { PhysicsWorld } from './physics-world.ts';
 import type { MarbleRegistry } from './marble-registry.js';
 
 /**
- * Level lifecycle methods still implemented against the game object
- * (`InitLevelLoader.prototype`); `LevelLoader` invokes them with the game as `this`.
+ * Level lifecycle methods implemented by the composed `InitLevelLoader` slice
+ * (`init/level-loader.js`), constructed against the same game.
  */
 export interface LevelRuntime {
     loadLevel(levelId: string, options?: Record<string, unknown>): Promise<unknown>;
@@ -15,7 +15,7 @@ export interface LevelRuntime {
     createGhostMarble(): unknown;
 }
 
-/** Teardown methods still implemented against the game object (`InitCleanup.prototype`). */
+/** Teardown implemented by the composed `InitCleanup` slice (`init/cleanup.js`). */
 export interface LevelCleanupRuntime {
     clearLevel(...args: unknown[]): unknown;
 }
@@ -61,31 +61,31 @@ export class LevelLoader {
     }
 
     loadLevel(...args: Parameters<LevelRuntime['loadLevel']>) {
-        return this.runtime.loadLevel.call(this.game, ...args);
+        return this.runtime.loadLevel(...args);
     }
 
     clearLevel(...args: unknown[]) {
-        return this.cleanupRuntime.clearLevel.call(this.game, ...args);
+        return this.cleanupRuntime.clearLevel(...args);
     }
 
     startLevelSequence(...args: Parameters<LevelRuntime['startLevelSequence']>) {
-        return this.runtime.startLevelSequence.call(this.game, ...args);
+        return this.runtime.startLevelSequence(...args);
     }
 
     animateHUDIn() {
-        return this.runtime.animateHUDIn.call(this.game);
+        return this.runtime.animateHUDIn();
     }
 
     delay(ms: number) {
-        return this.runtime.delay.call(this.game, ms);
+        return this.runtime.delay(ms);
     }
 
     _waitUntil(targetMs: number) {
-        return this.runtime._waitUntil.call(this.game, targetMs);
+        return this.runtime._waitUntil(targetMs);
     }
 
     createGhostMarble() {
-        return this.runtime.createGhostMarble.call(this.game);
+        return this.runtime.createGhostMarble();
     }
 }
 

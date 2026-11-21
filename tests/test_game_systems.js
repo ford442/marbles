@@ -8,8 +8,8 @@ import {
     computeLandingTrickScore,
     applyComboMultiplier,
 } from '../src/game/systems/trick-scoring.ts';
-import { creationMethods } from '../src/zones/methods/creation.js';
-import { installZoneMethods } from '../src/zones/methods/index.js';
+import { ZONE_METHOD_SLICES } from '../src/zones/methods/index.js';
+import { composeSlices, forwardSliceMethods } from '../src/game/systems/slice-composition.ts';
 
 function testCooldownReady() {
     assert.equal(isCooldownReady(1000, 500, 1600), true);
@@ -69,14 +69,21 @@ function testZoneCreationMethods() {
         'createGrappleAnchorZone',
     ];
 
+    const forwarded = new Set(ZONE_METHOD_SLICES.flatMap((spec) => spec.methods));
     for (const methodName of expectedMethods) {
-        assert.equal(typeof creationMethods[methodName], 'function', `Missing method: ${methodName}`);
+        assert.ok(forwarded.has(methodName), `Missing zone method: ${methodName}`);
     }
 
-    class DummyGame {}
-    installZoneMethods(DummyGame);
+    class DummyGame {
+        constructor() { composeSlices(this, ZONE_METHOD_SLICES); }
+    }
+    forwardSliceMethods(DummyGame, ZONE_METHOD_SLICES);
+    const game = new DummyGame();
     for (const methodName of expectedMethods) {
-        assert.equal(typeof DummyGame.prototype[methodName], 'function', `Method not installed: ${methodName}`);
+        assert.equal(typeof DummyGame.prototype[methodName], 'function', `Method not forwarded: ${methodName}`);
+    }
+    for (const spec of ZONE_METHOD_SLICES) {
+        assert.equal(game[spec.key].game, game, `${spec.key} is composed against the game`);
     }
 }
 

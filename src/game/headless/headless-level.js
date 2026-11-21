@@ -10,9 +10,11 @@
  */
 import RAPIER from '@dimforge/rapier3d-compat';
 import { createGameState, bindGameState } from '../state/index.js';
-import { installZoneMethods } from '../../zones/methods/index.js';
-import { installKnownMethods } from '../systems/method-installer.js';
+import { ZONE_METHOD_SLICES } from '../../zones/methods/index.js';
 import { ZoneSetupCore } from '../../zone-setup/core.js';
+import {
+    composeSlices, defineSlice, forwardMethods, forwardSliceMethods,
+} from '../systems/slice-composition.ts';
 import { PhysicsWorld } from '../systems/physics-world.ts';
 import { GamePhysicsQueries } from '../systems/physics-queries.ts';
 import { DEFAULT_FIXED_STEP } from '../systems/fixed-step-clock.ts';
@@ -66,10 +68,17 @@ const PHYSICS_WORLD_METHODS = [
     'createPhaseBox', 'createStaticBox', 'createDynamicBox', 'createRotatingBox',
 ];
 
+/** The zone-building slices a level build needs: zone methods plus `createZone`. */
+const HEADLESS_SLICES = [
+    ...ZONE_METHOD_SLICES,
+    defineSlice('zoneSetupCoreSlice', ZoneSetupCore, ['createZone']),
+];
+
 export class HeadlessGame {
     /** @param {{ gravity?: { x: number, y: number, z: number } }} [options] */
     constructor({ gravity = { x: 0, y: -9.81, z: 0 } } = {}) {
         bindGameState(/** @type {any} */ (this), createGameState({ doc: null }));
+        composeSlices(/** @type {any} */ (this), HEADLESS_SLICES);
         const stub = createRenderStub();
         const world = new RAPIER.World(gravity);
         world.timestep = DEFAULT_FIXED_STEP;
@@ -88,13 +97,8 @@ export class HeadlessGame {
     }
 }
 
-installZoneMethods(HeadlessGame);
-installKnownMethods(HeadlessGame, ZoneSetupCore, ['createZone']);
-for (const name of PHYSICS_WORLD_METHODS) {
-    /** @type {any} */ (HeadlessGame.prototype)[name] = function delegated(/** @type {unknown[]} */ ...args) {
-        return this.physicsWorld[name](...args);
-    };
-}
+forwardSliceMethods(HeadlessGame, HEADLESS_SLICES);
+forwardMethods(HeadlessGame, 'physicsWorld', PHYSICS_WORLD_METHODS);
 
 /** Seed for the deterministic `Math.random` used while zones build. */
 export const HEADLESS_RANDOM_SEED = 0x5eed;

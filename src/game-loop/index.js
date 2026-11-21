@@ -1,4 +1,4 @@
-import { installKnownMethods } from '../game/systems/method-installer.js';
+import { defineSlice } from '../game/systems/slice-composition.ts';
 import { GameLoopLoop } from './loop.ts';
 import { GameLoopLogic } from './logic.js';
 import { GameLoopSpeedLines } from './speed-lines.js';
@@ -8,20 +8,17 @@ import { GameLoopDynamics } from './dynamics-tick.js';
 import { GameLoopEffectsTick } from './effects-tick.js';
 import { GameLoopFinalize } from './finalize-frame.js';
 
-/**
- * Closed compatibility list for frame behaviors not yet composed.
- * Render/sync and HUD methods are owned by RenderPipeline and HudController.
- */
-export function installGameLoopMethods(targetClass) {
-    installKnownMethods(targetClass, GameLoopLoop, ['loop']);
-    installKnownMethods(targetClass, GameLoopLogic, ['updateGameState']);
-    installKnownMethods(targetClass, GameLoopSpeedLines, [
-        'initSpeedLines', 'resizeSpeedLinesCanvas', 'createSpeedLine',
-        'updateSpeedLines', 'renderSpeedLines',
-    ]);
-    installKnownMethods(targetClass, GameLoopFrameInput, ['tickFrameInput']);
-    installKnownMethods(targetClass, GameLoopCamera, ['updateCamera']);
-    installKnownMethods(targetClass, GameLoopDynamics, ['tickSceneDynamics']);
-    installKnownMethods(targetClass, GameLoopEffectsTick, ['tickActiveProjectiles']);
-    installKnownMethods(targetClass, GameLoopFinalize, ['finalizeFrame']);
-}
+/** Composed per-frame slices (render/sync and HUD ticks are owned by RenderPipeline and HudController); the game forwards each `methods` list to the instance at `key`. */
+export const GAME_LOOP_SLICES = [
+    defineSlice('gameLoopLoopSlice', GameLoopLoop, ['loop']),
+    defineSlice('gameLoopLogicSlice', GameLoopLogic, ['updateGameState']),
+    defineSlice('gameLoopSpeedLinesSlice', GameLoopSpeedLines, [
+        'initSpeedLines', 'resizeSpeedLinesCanvas', 'createSpeedLine', 'updateSpeedLines',
+        'renderSpeedLines',
+    ]),
+    defineSlice('gameLoopFrameInputSlice', GameLoopFrameInput, ['tickFrameInput']),
+    defineSlice('gameLoopCameraSlice', GameLoopCamera, ['updateCamera']),
+    defineSlice('gameLoopDynamicsSlice', GameLoopDynamics, ['tickSceneDynamics']),
+    defineSlice('gameLoopEffectsTickSlice', GameLoopEffectsTick, ['tickActiveProjectiles']),
+    defineSlice('gameLoopFinalizeSlice', GameLoopFinalize, ['finalizeFrame']),
+];

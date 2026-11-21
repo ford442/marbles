@@ -1,6 +1,10 @@
 import { audio } from '../audio.js';
 
 export class GameLogicCollectibles {
+    constructor(game) {
+        this.game = game;
+    }
+
     triggerCollectionEffect(pos, value, type = 'coin') {
         const now = Date.now()
 
@@ -11,12 +15,12 @@ export class GameLogicCollectibles {
         }
         const color = colors[type] || colors.coin
 
-        const particleCount = this.effectPool?.budget.getVisualBurstCount(25) ?? 25
+        const particleCount = this.game.effectPool?.budget.getVisualBurstCount(25) ?? 25
         for (let i = 0; i < particleCount; i++) {
-            this.createCollectionParticle(pos, color, i, particleCount)
+            this.game.createCollectionParticle(pos, color, i, particleCount)
         }
 
-        this.effectPool?.spawnVisualParticle({
+        this.game.effectPool?.spawnVisualParticle({
             spawnTime: now,
             pos: { x: pos.x, y: pos.y, z: pos.z },
             duration: 600,
@@ -27,11 +31,11 @@ export class GameLogicCollectibles {
             roughness: 0.3,
         })
 
-        const rayCount = this.effectPool?.budget.getVisualBurstCount(8) ?? 8
+        const rayCount = this.game.effectPool?.budget.getVisualBurstCount(8) ?? 8
         for (let i = 0; i < rayCount; i++) {
             const angle = (i / 8) * Math.PI * 2
             const speed = 3.0 + Math.random() * 2.0
-            this.effectPool?.spawnVisualParticle({
+            this.game.effectPool?.spawnVisualParticle({
                 spawnTime: now,
                 pos: { x: pos.x, y: pos.y, z: pos.z },
                 vel: {
@@ -47,8 +51,8 @@ export class GameLogicCollectibles {
             })
         }
 
-        this.showCollectionScorePopup(pos, value)
-        this.triggerCollectionFlash(pos, color)
+        this.game.showCollectionScorePopup(pos, value)
+        this.game.triggerCollectionFlash(pos, color)
     }
 
     createCollectionParticle(pos, color, index, total) {
@@ -61,7 +65,7 @@ export class GameLogicCollectibles {
         const spread = 0.5 + Math.random() * 0.5
         const upwardBias = 2.0 + Math.random() * 2.0
 
-        return this.effectPool?.spawnVisualParticle({
+        return this.game.effectPool?.spawnVisualParticle({
             color: [r, g, b],
             roughness: 0.2,
             spawnTime: Date.now(),
@@ -86,7 +90,7 @@ export class GameLogicCollectibles {
         if (!uiContainer) return
 
         const popup = document.createElement('div')
-        const scoreText = value * this.combo
+        const scoreText = value * this.game.combo
         popup.textContent = `+${scoreText}`
         popup.className = 'collection-score-popup'
         popup.style.cssText = `
@@ -102,7 +106,7 @@ export class GameLogicCollectibles {
             opacity: 0;
         `
 
-        const screenPos = this.worldToScreen(pos)
+        const screenPos = this.game.worldToScreen(pos)
         if (screenPos) {
             popup.style.left = screenPos.x + 'px'
             popup.style.top = screenPos.y + 'px'
@@ -131,11 +135,11 @@ export class GameLogicCollectibles {
     }
 
     worldToScreen(worldPos) {
-        if (!this.camera || !this.view) return null
+        if (!this.game.camera || !this.game.view) return null
 
         try {
-            const viewMatrix = this.camera.getViewMatrix()
-            const projectionMatrix = this.camera.getProjectionMatrix()
+            const viewMatrix = this.game.camera.getViewMatrix()
+            const projectionMatrix = this.game.camera.getProjectionMatrix()
 
             const viewX = viewMatrix[0] * worldPos.x + viewMatrix[4] * worldPos.y + viewMatrix[8] * worldPos.z + viewMatrix[12]
             const viewY = viewMatrix[1] * worldPos.x + viewMatrix[5] * worldPos.y + viewMatrix[9] * worldPos.z + viewMatrix[13]
@@ -150,7 +154,7 @@ export class GameLogicCollectibles {
             const ndcX = clipX / clipW
             const ndcY = clipY / clipW
 
-            const viewport = this.view.getViewport()
+            const viewport = this.game.view.getViewport()
             const screenX = (ndcX * 0.5 + 0.5) * viewport[2]
             const screenY = (1.0 - (ndcY * 0.5 + 0.5)) * viewport[3]
 
@@ -161,7 +165,7 @@ export class GameLogicCollectibles {
     }
 
     triggerCollectionFlash(pos, color) {
-        this.effectPool?.spawnVisualParticle({
+        this.game.effectPool?.spawnVisualParticle({
             spawnTime: Date.now(),
             pos: { x: pos.x, y: pos.y, z: pos.z },
             duration: 150,

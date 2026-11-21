@@ -3,6 +3,10 @@ import { CampaignMenu } from '../levels/campaign-menu.js';
 import { listWorkshopLevels, deleteWorkshopLevel } from '../levels/workshop-store.js';
 
 export class InitLevelMenu {
+    constructor(game) {
+        this.game = game;
+    }
+
     showLevelSelection() {
         const menu = document.getElementById('level-menu')
         const levelGrid = document.getElementById('level-grid')
@@ -46,20 +50,20 @@ export class InitLevelMenu {
             toolbar.appendChild(editorLink)
         }
 
-        if (this.campaignProgress) {
-            if (!this.campaignMenu) {
-                this.campaignMenu = new CampaignMenu(this.campaignProgress)
+        if (this.game.campaignProgress) {
+            if (!this.game.campaignMenu) {
+                this.game.campaignMenu = new CampaignMenu(this.game.campaignProgress)
             }
-            this.campaignProgress.setCatalog(LEVELS)
-            this.campaignMenu.render(levelGrid, (id) => this.hideLevelSelection(() => this.loadLevel(id)))
+            this.game.campaignProgress.setCatalog(LEVELS)
+            this.game.campaignMenu.render(levelGrid, (id) => this.game.hideLevelSelection(() => this.game.loadLevel(id)))
         } else {
-            this._renderFlatLevelList(levelGrid)
+            this.game._renderFlatLevelList(levelGrid)
         }
 
-        this._renderCommunityLevels(levelGrid)
+        this.game._renderCommunityLevels(levelGrid)
 
         // Set up menu camera position (distant overview)
-        this.setMenuCamera()
+        this.game.setMenuCamera()
     }
 
     _renderCommunityLevels(levelGrid) {
@@ -90,11 +94,11 @@ export class InitLevelMenu {
             card.querySelector('.community-level-delete').addEventListener('click', (ev) => {
                 ev.stopPropagation()
                 deleteWorkshopLevel(entry.id)
-                this.showLevelSelection()
+                this.game.showLevelSelection()
             })
             card.addEventListener('click', () => {
                 registerCustomLevel(mapDef)
-                this.hideLevelSelection(() => this.loadLevel(mapDef.id))
+                this.game.hideLevelSelection(() => this.game.loadLevel(mapDef.id))
             })
             levelGrid.appendChild(card)
             setTimeout(() => card.classList.add('animate'), 50 + index * 50)
@@ -114,7 +118,7 @@ export class InitLevelMenu {
                 <p>${level.description || ''}</p>
                 <span class="goals">${level.goals.length} Goal${level.goals.length !== 1 ? 's' : ''} ${difficulty}</span>
             `
-            card.addEventListener('click', () => this.hideLevelSelection(() => this.loadLevel(id)))
+            card.addEventListener('click', () => this.game.hideLevelSelection(() => this.game.loadLevel(id)))
             levelGrid.appendChild(card)
             setTimeout(() => card.classList.add('animate'), 50 + index * 50)
         })
@@ -146,43 +150,43 @@ export class InitLevelMenu {
     }
 
     returnToMenu() {
-        if (this.mapEditor?.isPlaytesting) {
-            this.mapEditor.exitPlaytest()
+        if (this.game.mapEditor?.isPlaytesting) {
+            this.game.mapEditor.exitPlaytest()
             return
         }
 
         const gameUI = document.getElementById('ui')
         
         // Clear current level
-        this.clearLevel()
-        this.network?.disconnect()
-        this.multiplayerMode = false
-        this.touchControls?.setGameplayActive(false)
-        this.currentLevel = null
-        this.levelComplete = false
-        this.isPaused = false
+        this.game.clearLevel()
+        this.game.network?.disconnect()
+        this.game.multiplayerMode = false
+        this.game.touchControls?.setGameplayActive(false)
+        this.game.currentLevel = null
+        this.game.levelComplete = false
+        this.game.isPaused = false
 
         // Reset camera mode
-        this.cameraMode = 'orbit'
+        this.game.cameraMode = 'orbit'
 
         // Show level selection with animation
-        this.showLevelSelection()
+        this.game.showLevelSelection()
     }
 
     showLevelMenu() {
         // Alias for showLevelSelection for consistency
-        this.showLevelSelection()
+        this.game.showLevelSelection()
     }
 
     setMenuCamera() {
         // Position camera for menu overview
-        if (this.camera) {
-            this.camera.lookAt([0, 15, 40], [0, 0, 0], [0, 1, 0])
+        if (this.game.camera) {
+            this.game.camera.lookAt([0, 15, 40], [0, 0, 0], [0, 1, 0])
         }
     }
 
     transitionCameraToGameplay(duration = 1000) {
-        if (!this.camera || !this.playerMarble) return Promise.resolve()
+        if (!this.game.camera || !this.game.playerMarble) return Promise.resolve()
 
         const startPos = [0, 15, 40] // Menu camera position
         const startTarget = [0, 0, 0]

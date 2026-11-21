@@ -5,175 +5,179 @@ import { clearRemoteAbilityFx } from '../game/network/ability-sync.js';
 import { resetDesyncIndicator } from '../game/network/desync-indicator.js';
 
 export class InitCleanup {
-    clearLevel() {
-        unloadLevelBehaviors(this);
-        // Before marbles are removed: drops grapple/double-jump/charge state.
-        this.resetPlayerAbilityState()
-        const workerActive = this.physicsBackend?.isWorkerMode?.();
+    constructor(game) {
+        this.game = game;
+    }
 
-        for (const m of this.marbles) {
-            if (!workerActive) this.world.removeRigidBody(m.rigidBody)
-            this.scene.remove(m.entity)
-            if (m.matInstance) this.engine.destroyMaterialInstance(m.matInstance)
-            this.engine.destroyEntity(m.entity)
+    clearLevel() {
+        unloadLevelBehaviors(this.game);
+        // Before marbles are removed: drops grapple/double-jump/charge state.
+        this.game.resetPlayerAbilityState()
+        const workerActive = this.game.physicsBackend?.isWorkerMode?.();
+
+        for (const m of this.game.marbles) {
+            if (!workerActive) this.game.world.removeRigidBody(m.rigidBody)
+            this.game.scene.remove(m.entity)
+            if (m.matInstance) this.game.engine.destroyMaterialInstance(m.matInstance)
+            this.game.engine.destroyEntity(m.entity)
         }
-        if (this.activeMarbleLightEntity) {
-            this.lightingBudget?.unregister(this.activeMarbleLightEntity)
-            this.scene.remove(this.activeMarbleLightEntity)
-            this.engine.destroyEntity(this.activeMarbleLightEntity)
-            this.Filament.EntityManager.get().destroy(this.activeMarbleLightEntity)
-            this.activeMarbleLightEntity = null
+        if (this.game.activeMarbleLightEntity) {
+            this.game.lightingBudget?.unregister(this.game.activeMarbleLightEntity)
+            this.game.scene.remove(this.game.activeMarbleLightEntity)
+            this.game.engine.destroyEntity(this.game.activeMarbleLightEntity)
+            this.game.Filament.EntityManager.get().destroy(this.game.activeMarbleLightEntity)
+            this.game.activeMarbleLightEntity = null
         }
-        this.marbles = []
-        this.playerMarble = null
+        this.game.marbles = []
+        this.game.playerMarble = null
 
         // Everything the v2 primitive builder made (bodies, entities, material instances).
-        this.zoneScope?.dispose(this)
+        this.game.zoneScope?.dispose(this.game)
 
-        for (const body of this.staticBodies) {
-            if (!workerActive) this.world.removeRigidBody(body)
+        for (const body of this.game.staticBodies) {
+            if (!workerActive) this.game.world.removeRigidBody(body)
         }
-        this.staticBodies = []
+        this.game.staticBodies = []
 
-        destroyLoadedTrackModels(this)
-        this.trackLodManager?.reset()
+        destroyLoadedTrackModels(this.game)
+        this.game.trackLodManager?.reset()
         audio?.stopMusic?.()
         audio?.stopAllRolling?.()
         audio?.clearReverbZones?.()
 
-        for (const entity of this.staticEntities) {
-            this.scene.remove(entity)
-            this.engine.destroyEntity(entity)
+        for (const entity of this.game.staticEntities) {
+            this.game.scene.remove(entity)
+            this.game.engine.destroyEntity(entity)
         }
-        this.staticEntities = []
-        if (this.staticBatchResources) {
-            for (const batch of this.staticBatchResources) {
-                if (batch.matInstance) this.engine.destroyMaterialInstance(batch.matInstance)
+        this.game.staticEntities = []
+        if (this.game.staticBatchResources) {
+            for (const batch of this.game.staticBatchResources) {
+                if (batch.matInstance) this.game.engine.destroyMaterialInstance(batch.matInstance)
             }
-            this.staticBatchResources = []
+            this.game.staticBatchResources = []
         }
-        if (this._staticBoxBatchGroups) this._staticBoxBatchGroups.clear()
-        if (this._decorativeBatchGroups) this._decorativeBatchGroups.clear()
-        this.staticBatchStats = { groups: 0, boxes: 0, collapsedEntities: 0 }
-        this.cullingManager?.reset()
-        this.marbleLodManager?.reset()
-        this.effectPool?.reset()
-        this.levelEffectBudget?.reset()
-        this.lightingBudget?.reset()
-        if (this.lightingSystem) {
-            this.lightingSystem.clearAnimatedLights()
+        if (this.game._staticBoxBatchGroups) this.game._staticBoxBatchGroups.clear()
+        if (this.game._decorativeBatchGroups) this.game._decorativeBatchGroups.clear()
+        this.game.staticBatchStats = { groups: 0, boxes: 0, collapsedEntities: 0 }
+        this.game.cullingManager?.reset()
+        this.game.marbleLodManager?.reset()
+        this.game.effectPool?.reset()
+        this.game.levelEffectBudget?.reset()
+        this.game.lightingBudget?.reset()
+        if (this.game.lightingSystem) {
+            this.game.lightingSystem.clearAnimatedLights()
         }
 
         // Clear volumetric shaft and caustic sources
-        if (this.volumetricLights) {
-            this.volumetricLights.clearSources()
+        if (this.game.volumetricLights) {
+            this.game.volumetricLights.clearSources()
         }
 
         // Clear ambient zone particle emitters
-        if (this.particleSystem) {
-            this.particleSystem.clearAmbientEmitters()
-            this.particleSystem.dispose()
+        if (this.game.particleSystem) {
+            this.game.particleSystem.clearAmbientEmitters()
+            this.game.particleSystem.dispose()
         }
-        if (this.webgpuParticles) {
-            this.webgpuParticles.dispose()
-            this.webgpuParticles = null
+        if (this.game.webgpuParticles) {
+            this.game.webgpuParticles.dispose()
+            this.game.webgpuParticles = null
         }
 
-        for (const obj of this.dynamicObjects) {
-            if (!workerActive) this.world.removeRigidBody(obj.rigidBody)
-            this.scene.remove(obj.entity)
-            if (obj.matInstance) this.engine.destroyMaterialInstance(obj.matInstance)
-            this.engine.destroyEntity(obj.entity)
+        for (const obj of this.game.dynamicObjects) {
+            if (!workerActive) this.game.world.removeRigidBody(obj.rigidBody)
+            this.game.scene.remove(obj.entity)
+            if (obj.matInstance) this.game.engine.destroyMaterialInstance(obj.matInstance)
+            this.game.engine.destroyEntity(obj.entity)
         }
-        this.dynamicObjects = []
+        this.game.dynamicObjects = []
 
-        for (const cp of this.checkpoints) {
-            this.scene.remove(cp.entity)
-            this.engine.destroyEntity(cp.entity)
+        for (const cp of this.game.checkpoints) {
+            this.game.scene.remove(cp.entity)
+            this.game.engine.destroyEntity(cp.entity)
         }
-        this.checkpoints = []
+        this.game.checkpoints = []
 
-        for (const c of this.collectibles) {
-            this.scene.remove(c.entity)
-            this.engine.destroyEntity(c.entity)
+        for (const c of this.game.collectibles) {
+            this.game.scene.remove(c.entity)
+            this.game.engine.destroyEntity(c.entity)
         }
-        this.collectibles = []
+        this.game.collectibles = []
 
-        if (this.grappleAnchors) {
-            for (const a of this.grappleAnchors) {
-                this.scene.remove(a.entity)
-                this.engine.destroyEntity(a.entity)
+        if (this.game.grappleAnchors) {
+            for (const a of this.game.grappleAnchors) {
+                this.game.scene.remove(a.entity)
+                this.game.engine.destroyEntity(a.entity)
             }
         }
-        this.grappleAnchors = []
+        this.game.grappleAnchors = []
 
-        for (const p of this.powerUps) {
-            if (!workerActive) this.world.removeRigidBody(p.rigidBody)
-            this.scene.remove(p.entity)
-            if (p.matInstance) this.engine.destroyMaterialInstance(p.matInstance)
-            this.engine.destroyEntity(p.entity)
+        for (const p of this.game.powerUps) {
+            if (!workerActive) this.game.world.removeRigidBody(p.rigidBody)
+            this.game.scene.remove(p.entity)
+            if (p.matInstance) this.game.engine.destroyMaterialInstance(p.matInstance)
+            this.game.engine.destroyEntity(p.entity)
         }
-        this.powerUps = []
-        this.activeEffects = {}
+        this.game.powerUps = []
+        this.game.activeEffects = {}
 
-        for (const platform of this.movingPlatforms) {
-            if (!workerActive) this.world.removeRigidBody(platform.rigidBody)
-            this.scene.remove(platform.entity)
-            if (platform.matInstance) this.engine.destroyMaterialInstance(platform.matInstance)
-            this.engine.destroyEntity(platform.entity)
+        for (const platform of this.game.movingPlatforms) {
+            if (!workerActive) this.game.world.removeRigidBody(platform.rigidBody)
+            this.game.scene.remove(platform.entity)
+            if (platform.matInstance) this.game.engine.destroyMaterialInstance(platform.matInstance)
+            this.game.engine.destroyEntity(platform.entity)
         }
-        this.movingPlatforms = []
+        this.game.movingPlatforms = []
 
-        for (const platform of this.rotatingPlatforms) {
-            if (!workerActive) this.world.removeRigidBody(platform.rigidBody)
-            this.scene.remove(platform.entity)
-            if (platform.matInstance) this.engine.destroyMaterialInstance(platform.matInstance)
-            this.engine.destroyEntity(platform.entity)
+        for (const platform of this.game.rotatingPlatforms) {
+            if (!workerActive) this.game.world.removeRigidBody(platform.rigidBody)
+            this.game.scene.remove(platform.entity)
+            if (platform.matInstance) this.game.engine.destroyMaterialInstance(platform.matInstance)
+            this.game.engine.destroyEntity(platform.entity)
         }
-        this.rotatingPlatforms = []
+        this.game.rotatingPlatforms = []
 
-        if (this.ghostEntity) {
-            this.scene.remove(this.ghostEntity)
-            if (this.ghostMaterialInstance) this.engine.destroyMaterialInstance(this.ghostMaterialInstance)
-            this.engine.destroyEntity(this.ghostEntity)
-            this.Filament.EntityManager.get().destroy(this.ghostEntity)
-            this.ghostEntity = null
-            this.ghostMaterialInstance = null
-        }
-
-        if (this.ghostLightEntity) {
-            this.scene.remove(this.ghostLightEntity)
-            this.engine.destroyEntity(this.ghostLightEntity)
-            this.Filament.EntityManager.get().destroy(this.ghostLightEntity)
-            this.ghostLightEntity = null
+        if (this.game.ghostEntity) {
+            this.game.scene.remove(this.game.ghostEntity)
+            if (this.game.ghostMaterialInstance) this.game.engine.destroyMaterialInstance(this.game.ghostMaterialInstance)
+            this.game.engine.destroyEntity(this.game.ghostEntity)
+            this.game.Filament.EntityManager.get().destroy(this.game.ghostEntity)
+            this.game.ghostEntity = null
+            this.game.ghostMaterialInstance = null
         }
 
-        this.remotePlayers?.clear()
-        this.multiplayerMode = false
-        this.hostAuthorityMode = false
-        this.hostSim?.reset?.()
-        this.clientPrediction?.reset?.()
-        clearRemoteAbilityFx?.(this)
-        resetDesyncIndicator?.(this)
-        this.touchControls?.setGameplayActive(false)
+        if (this.game.ghostLightEntity) {
+            this.game.scene.remove(this.game.ghostLightEntity)
+            this.game.engine.destroyEntity(this.game.ghostLightEntity)
+            this.game.Filament.EntityManager.get().destroy(this.game.ghostLightEntity)
+            this.game.ghostLightEntity = null
+        }
 
-        if (this.portalA) this.destroyPortal(this.portalA)
-        if (this.portalB) this.destroyPortal(this.portalB)
-        this.portalA = null
-        this.portalB = null
+        this.game.remotePlayers?.clear()
+        this.game.multiplayerMode = false
+        this.game.hostAuthorityMode = false
+        this.game.hostSim?.reset?.()
+        this.game.clientPrediction?.reset?.()
+        clearRemoteAbilityFx?.(this.game)
+        resetDesyncIndicator?.(this.game)
+        this.game.touchControls?.setGameplayActive(false)
+
+        if (this.game.portalA) this.game.destroyPortal(this.game.portalA)
+        if (this.game.portalB) this.game.destroyPortal(this.game.portalB)
+        this.game.portalA = null
+        this.game.portalB = null
         document.getElementById('portal-a-status').style.color = '#444'
         document.getElementById('portal-b-status').style.color = '#444'
 
-        this.effectPool?.drainAllActiveVisuals()
+        this.game.effectPool?.drainAllActiveVisuals()
 
-        this.adrenaline = 0
-        if (this.nearMisses) this.nearMisses.clear()
+        this.game.adrenaline = 0
+        if (this.game.nearMisses) this.game.nearMisses.clear()
 
-        this.dynamicBodies = new Set()
-        this.setNightMode(false)
+        this.game.dynamicBodies = new Set()
+        this.game.setNightMode(false)
 
         if (workerActive) {
-            this.physicsBackend?.resetWorld?.();
+            this.game.physicsBackend?.resetWorld?.();
         }
     }
 }

@@ -11,27 +11,31 @@ import {
 /** @typedef {import('../types/mixin-host.ts').GameMixinHost} GameMixinHost */
 
 export class GameLoopEffectsTick {
+    /** @param {GameMixinHost} game */
+    constructor(game) {
+        this.game = game;
+    }
+
     /**
-     * @this {GameMixinHost}
      * @param {number} now
      */
     tickActiveProjectiles(now) {
-        const tcm = this.engine.getTransformManager()
+        const tcm = this.game.engine.getTransformManager()
         // Black-hole pull is tuned per 1/60 s step; scale by simulated time.
-        const simDt = this.simDt ?? 1 / 60
+        const simDt = this.game.simDt ?? 1 / 60
         const step = simDt * 60
                 // Handle Active Black Holes lifecycle
-                if (this.activeBlackHoles && this.activeBlackHoles.length > 0) {
-                for (let i = this.activeBlackHoles.length - 1; i >= 0; i--) {
-                    const bh = this.activeBlackHoles[i]
+                if (this.game.activeBlackHoles && this.game.activeBlackHoles.length > 0) {
+                for (let i = this.game.activeBlackHoles.length - 1; i >= 0; i--) {
+                    const bh = this.game.activeBlackHoles[i]
                     const timeAlive = now - bh.spawnTime
         
                     if (timeAlive > bh.duration) {
-                        this.dynamicBodies.delete(bh.rigidBody)
-                        this.world.removeRigidBody(bh.rigidBody)
-                        this.effectPool?.releaseProjectile(bh)
+                        this.game.dynamicBodies.delete(bh.rigidBody)
+                        this.game.world.removeRigidBody(bh.rigidBody)
+                        this.game.effectPool?.releaseProjectile(bh)
         
-                        this.activeBlackHoles.splice(i, 1)
+                        this.game.activeBlackHoles.splice(i, 1)
                     } else {
                         const pos = bh.rigidBody.translation()
                         const radius = 25.0
@@ -43,10 +47,10 @@ export class GameLoopEffectsTick {
                         // the WASM binary has not been built yet).
                         const physics = getMarblePhysics()
                         const bhRb = bh.rigidBody
-                        const playerRb = this.playerMarble ? this.playerMarble.rigidBody : null
+                        const playerRb = this.game.playerMarble ? this.game.playerMarble.rigidBody : null
                         const targets = []
         
-                        for (const body of this.dynamicBodies) {
+                        for (const body of this.game.dynamicBodies) {
                             if (body === bhRb) continue
                             if (body === playerRb) continue
         
@@ -63,8 +67,8 @@ export class GameLoopEffectsTick {
                         }
         
                         if (targets.length > FORCE_BATCH_THRESHOLD) {
-                            if (!this._forceBatchBuffers) this._forceBatchBuffers = new PhysicsBatchBuffers(128)
-                            const buf = this._forceBatchBuffers
+                            if (!this.game._forceBatchBuffers) this.game._forceBatchBuffers = new PhysicsBatchBuffers(128)
+                            const buf = this.game._forceBatchBuffers
                             buf.ensure(targets.length)
         
                             for (const [i, t] of targets.entries()) {
@@ -90,8 +94,8 @@ export class GameLoopEffectsTick {
                                 }, true)
                             }
                         } else {
-                            if (!this._forceBatchBuffers) this._forceBatchBuffers = new PhysicsBatchBuffers(16)
-                            const scalarBuf = this._forceBatchBuffers.forces
+                            if (!this.game._forceBatchBuffers) this.game._forceBatchBuffers = new PhysicsBatchBuffers(16)
+                            const scalarBuf = this.game._forceBatchBuffers.forces
                             for (const { body, pos: bodyPos, strength } of targets) {
                                 physics.computeForceFieldInto(
                                     scalarBuf,
@@ -111,9 +115,9 @@ export class GameLoopEffectsTick {
                         const r = bh.rigidBody.rotation()
                         const pulse = 1.0 + Math.sin(timeAlive * 0.01) * 0.1
                         const s = 1.5 * pulse // Adjust visual size
-                        const visualVisible = this.cullingManager?.isVisible(`black-hole:${bh.entity}`, [pos.x, pos.y, pos.z], s, 'dynamic') ?? true
-                        this.cullingManager?.setEntityVisible(bh.entity, visualVisible, `black-hole:${bh.entity}`)
-                        if (bh.lightEntity) this.cullingManager?.setEntityVisible(bh.lightEntity, visualVisible, `black-hole-light:${bh.lightEntity}`)
+                        const visualVisible = this.game.cullingManager?.isVisible(`black-hole:${bh.entity}`, [pos.x, pos.y, pos.z], s, 'dynamic') ?? true
+                        this.game.cullingManager?.setEntityVisible(bh.entity, visualVisible, `black-hole:${bh.entity}`)
+                        if (bh.lightEntity) this.game.cullingManager?.setEntityVisible(bh.lightEntity, visualVisible, `black-hole-light:${bh.lightEntity}`)
         
                         if (!visualVisible) {
                             bh._forceTransformSync = true
@@ -141,8 +145,8 @@ export class GameLoopEffectsTick {
                 }
         
                 // Handle Active Missiles lifecycle
-                for (let i = this.activeMissiles.length - 1; i >= 0; i--) {
-                    const m = this.activeMissiles[i]
+                for (let i = this.game.activeMissiles.length - 1; i >= 0; i--) {
+                    const m = this.game.activeMissiles[i]
                     const timeAlive = now - m.spawnTime
         
                     const pos = m.rigidBody.translation()
@@ -158,13 +162,13 @@ export class GameLoopEffectsTick {
                         const dir = { x: vel.x / speed, y: vel.y / speed, z: vel.z / speed }
                         // Plus a little extra for radius
                         const rayDist = speed * Math.max(simDt, 1 / 60) + 0.2
-                        const hit = this.physicsQueries.castRay(pos, dir, rayDist, {
+                        const hit = this.game.physicsQueries.castRay(pos, dir, rayDist, {
                             excludeBody: m.rigidBody,
                             excludeSensors: true,
                         })
 
                         // Ignore the player who fired it
-                        const firedBy = this.playerMarble?.rigidBody.handle
+                        const firedBy = this.game.playerMarble?.rigidBody.handle
                         if (hit && hit.bodyHandle !== firedBy) {
                             hitTarget = true
                             hitPos = hit.point
@@ -173,19 +177,19 @@ export class GameLoopEffectsTick {
         
                     if (hitTarget || timeAlive > m.duration) {
                         if (hitTarget) {
-                            this.explodeMissile(hitPos)
+                            this.game.explodeMissile(hitPos)
                         }
-                        this.dynamicBodies.delete(m.rigidBody)
-                        this.world.removeRigidBody(m.rigidBody)
-                        this.effectPool?.releaseProjectile(m)
+                        this.game.dynamicBodies.delete(m.rigidBody)
+                        this.game.world.removeRigidBody(m.rigidBody)
+                        this.game.effectPool?.releaseProjectile(m)
         
-                        this.activeMissiles.splice(i, 1)
+                        this.game.activeMissiles.splice(i, 1)
                     } else {
                         const r = m.rigidBody.rotation()
                         const s = 0.4
-                        const visualVisible = this.cullingManager?.isVisible(`missile:${m.entity}`, [pos.x, pos.y, pos.z], s, 'dynamic') ?? true
-                        this.cullingManager?.setEntityVisible(m.entity, visualVisible, `missile:${m.entity}`)
-                        if (m.lightEntity) this.cullingManager?.setEntityVisible(m.lightEntity, visualVisible, `missile-light:${m.lightEntity}`)
+                        const visualVisible = this.game.cullingManager?.isVisible(`missile:${m.entity}`, [pos.x, pos.y, pos.z], s, 'dynamic') ?? true
+                        this.game.cullingManager?.setEntityVisible(m.entity, visualVisible, `missile:${m.entity}`)
+                        if (m.lightEntity) this.game.cullingManager?.setEntityVisible(m.lightEntity, visualVisible, `missile-light:${m.lightEntity}`)
         
                         if (!visualVisible) {
                             m._forceTransformSync = true
@@ -212,32 +216,32 @@ export class GameLoopEffectsTick {
                 }
         
                 // Handle Active Bombs lifecycle
-                for (let i = this.activeBombs.length - 1; i >= 0; i--) {
-                    const b = this.activeBombs[i]
+                for (let i = this.game.activeBombs.length - 1; i >= 0; i--) {
+                    const b = this.game.activeBombs[i]
                     const timeAlive = now - b.spawnTime
         
                     if (timeAlive > b.duration) {
-                        this.explodeBomb(b)
-                        this.dynamicBodies.delete(b.rigidBody)
-                        this.world.removeRigidBody(b.rigidBody)
-                        this.effectPool?.releaseProjectile(b)
+                        this.game.explodeBomb(b)
+                        this.game.dynamicBodies.delete(b.rigidBody)
+                        this.game.world.removeRigidBody(b.rigidBody)
+                        this.game.effectPool?.releaseProjectile(b)
         
-                        this.activeBombs.splice(i, 1)
+                        this.game.activeBombs.splice(i, 1)
                     } else {
                         const timeLeft = b.duration - timeAlive
                         const blinkRate = Math.max(50, timeLeft / 5) // Speeds up as it gets closer
                         const blink = Math.floor(now / blinkRate) % 2 === 0
         
                         const color = blink ? [1.0, 0.2, 0.0] : [0.2, 0.2, 0.2]
-                        setColor3IfChanged(this, b, b.matInstance, color, now, 40)
+                        setColor3IfChanged(this.game, b, b.matInstance, color, now, 40)
         
                         // Sync Filament transform to Rapier rigid body
                         const t = b.rigidBody.translation()
                         const r = b.rigidBody.rotation()
                         const s = 0.8
-                        const visualVisible = this.cullingManager?.isVisible(`bomb:${b.entity}`, [t.x, t.y, t.z], s, 'dynamic') ?? true
-                        this.cullingManager?.setEntityVisible(b.entity, visualVisible, `bomb:${b.entity}`)
-                        if (b.lightEntity) this.cullingManager?.setEntityVisible(b.lightEntity, visualVisible, `bomb-light:${b.lightEntity}`)
+                        const visualVisible = this.game.cullingManager?.isVisible(`bomb:${b.entity}`, [t.x, t.y, t.z], s, 'dynamic') ?? true
+                        this.game.cullingManager?.setEntityVisible(b.entity, visualVisible, `bomb:${b.entity}`)
+                        if (b.lightEntity) this.game.cullingManager?.setEntityVisible(b.lightEntity, visualVisible, `bomb-light:${b.lightEntity}`)
         
                         if (!visualVisible) {
                             b._forceTransformSync = true

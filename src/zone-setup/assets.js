@@ -2,16 +2,20 @@ import { buildMarbleLodMeshes } from '../marble-lod.js';
 import { CUBE_VERTICES, CUBE_INDICES } from '../cube-geometry.js';
 
 export class ZoneSetupAssets {
+    constructor(game) {
+        this.game = game;
+    }
+
     async setupAssets() {
-        if (this.rendererType === 'simple-webgl') {
-            this.material = this.engine.createMaterial(new Uint8Array())
-            this.hasProceduralMaterial = false
-            this.vb = { debugShape: 'box' }
-            this.ib = { debugShape: 'box-indices' }
-            this.sphereVb = { debugShape: 'sphere' }
-            this.sphereIb = { debugShape: 'sphere-indices' }
-            this.createCueStick()
-            this.createGrappleLine()
+        if (this.game.rendererType === 'simple-webgl') {
+            this.game.material = this.game.engine.createMaterial(new Uint8Array())
+            this.game.hasProceduralMaterial = false
+            this.game.vb = { debugShape: 'box' }
+            this.game.ib = { debugShape: 'box-indices' }
+            this.game.sphereVb = { debugShape: 'sphere' }
+            this.game.sphereIb = { debugShape: 'sphere-indices' }
+            this.game.createCueStick()
+            this.game.createGrappleLine()
             console.log('[ASSETS] Simple debug renderer using lightweight geometry handles')
             return
         }
@@ -50,7 +54,7 @@ export class ZoneSetupAssets {
         }
 
         try {
-            this.material = this.engine.createMaterial(new Uint8Array(materialBuffer))
+            this.game.material = this.game.engine.createMaterial(new Uint8Array(materialBuffer))
             console.log(`[ASSETS] Material created from ${materialFile}`)
         } catch (e) {
             // If the preferred material fails, try the fallback directly
@@ -59,7 +63,7 @@ export class ZoneSetupAssets {
                 console.warn('[ASSETS] Primary material creation failed, trying baked_color.filmat...', e)
                 const resp = await fetch(fallbackUrl)
                 const buf = await resp.arrayBuffer()
-                this.material = this.engine.createMaterial(new Uint8Array(buf))
+                this.game.material = this.game.engine.createMaterial(new Uint8Array(buf))
                 materialFile = fallbackUrl
                 console.log('[ASSETS] Fallback material created')
             } else {
@@ -69,34 +73,34 @@ export class ZoneSetupAssets {
 
         // Track whether the enhanced procedural material is active so we know
         // which material parameters are safe to set on material instances.
-        this.hasProceduralMaterial = (materialFile === './baked_procedural.filament')
-        console.log(`[ASSETS] Procedural material active: ${this.hasProceduralMaterial}`)
+        this.game.hasProceduralMaterial = (materialFile === './baked_procedural.filament')
+        console.log(`[ASSETS] Procedural material active: ${this.game.hasProceduralMaterial}`)
 
-        const VertexAttribute = this.Filament['VertexAttribute']
-        const AttributeType = this.Filament['VertexBuffer$AttributeType']
+        const VertexAttribute = this.game.Filament['VertexAttribute']
+        const AttributeType = this.game.Filament['VertexBuffer$AttributeType']
 
-        this.vb = this.Filament.VertexBuffer.Builder()
+        this.game.vb = this.game.Filament.VertexBuffer.Builder()
             .vertexCount(24)
             .bufferCount(1)
             .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, 36)
             .attribute(VertexAttribute.TANGENTS, 0, AttributeType.FLOAT4, 12, 36)
             .attribute(VertexAttribute.UV0, 0, AttributeType.FLOAT2, 28, 36)
-            .build(this.engine)
-        this.vb.setBufferAt(this.engine, 0, CUBE_VERTICES)
+            .build(this.game.engine)
+        this.game.vb.setBufferAt(this.game.engine, 0, CUBE_VERTICES)
 
-        this.ib = this.Filament.IndexBuffer.Builder()
+        this.game.ib = this.game.Filament.IndexBuffer.Builder()
             .indexCount(36)
-            .bufferType(this.Filament['IndexBuffer$IndexType'].USHORT)
-            .build(this.engine)
-        this.ib.setBuffer(this.engine, CUBE_INDICES)
+            .bufferType(this.game.Filament['IndexBuffer$IndexType'].USHORT)
+            .build(this.game.engine)
+        this.game.ib.setBuffer(this.game.engine, CUBE_INDICES)
 
-        buildMarbleLodMeshes(this, 0.5)
-        if (!this.sphereVb || !this.sphereIb) {
+        buildMarbleLodMeshes(this.game, 0.5)
+        if (!this.game.sphereVb || !this.game.sphereIb) {
             throw new Error('[ASSETS] Failed to build marble LOD meshes')
         }
 
-        this.createCueStick()
-        this.createGrappleLine()
+        this.game.createCueStick()
+        this.game.createGrappleLine()
     }
 
 }

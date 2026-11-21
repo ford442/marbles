@@ -2,18 +2,22 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
 
 export class AbilityMissiles {
+    constructor(game) {
+        this.game = game;
+    }
+
     spawnMissile() {
         const now = Date.now()
-        if (this.lastMissileTime !== 0 && now - this.lastMissileTime < this.missileCooldown) return
-        if (!this.effectPool?.budget.canSpawnProjectile('missile')) return
+        if (this.game.lastMissileTime !== 0 && now - this.game.lastMissileTime < this.game.missileCooldown) return
+        if (!this.game.effectPool?.budget.canSpawnProjectile('missile')) return
 
-        const pos = this.playerMarble.rigidBody.translation()
+        const pos = this.game.playerMarble.rigidBody.translation()
 
-        const cosP = Math.cos(this.pitchAngle)
-        const sinP = Math.sin(this.pitchAngle)
-        const dirX = Math.sin(this.aimYaw) * cosP
+        const cosP = Math.cos(this.game.pitchAngle)
+        const sinP = Math.sin(this.game.pitchAngle)
+        const dirX = Math.sin(this.game.aimYaw) * cosP
         const dirY = sinP
-        const dirZ = Math.cos(this.aimYaw) * cosP
+        const dirZ = Math.cos(this.game.aimYaw) * cosP
 
         const spawnPos = {
             x: pos.x + dirX * 1.5,
@@ -21,9 +25,9 @@ export class AbilityMissiles {
             z: pos.z + dirZ * 1.5
         }
 
-        const slot = this.effectPool.acquireProjectile('missile', spawnPos)
+        const slot = this.game.effectPool.acquireProjectile('missile', spawnPos)
         if (!slot) return
-        this.lastMissileTime = now
+        this.game.lastMissileTime = now
 
         const missileSpeed = 40.0
 
@@ -35,16 +39,16 @@ export class AbilityMissiles {
             .setGravityScale(0)
             .setCcdEnabled(true)
 
-        const body = this.world.createRigidBody(bodyDesc)
+        const body = this.game.world.createRigidBody(bodyDesc)
         const colliderDesc = RAPIER.ColliderDesc.ball(0.2)
             .setRestitution(0.5)
             .setFriction(0.5)
             .setDensity(0.5)
-        this.world.createCollider(colliderDesc, body)
+        this.game.world.createCollider(colliderDesc, body)
 
-        this.effectPool.bindProjectileLight(slot, body)
+        this.game.effectPool.bindProjectileLight(slot, body)
 
-        this.activeMissiles.push({
+        this.game.activeMissiles.push({
             entity: slot.entity,
             rigidBody: body,
             matInstance: slot.matInstance,
@@ -53,7 +57,7 @@ export class AbilityMissiles {
             spawnTime: now,
             duration: 3000
         })
-        this.dynamicBodies.add(body)
+        this.game.dynamicBodies.add(body)
 
         if (audio.playAbility) audio.playAbility('missile', spawnPos)
     }
@@ -86,11 +90,11 @@ export class AbilityMissiles {
             }
         }
 
-        for (const m of this.marbles) {
+        for (const m of this.game.marbles) {
             applyExplosionForce(m.rigidBody)
         }
 
-        for (const obj of this.dynamicObjects) {
+        for (const obj of this.game.dynamicObjects) {
             applyExplosionForce(obj.rigidBody)
         }
     }

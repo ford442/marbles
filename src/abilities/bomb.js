@@ -2,35 +2,39 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
 
 export class AbilityBomb {
+    constructor(game) {
+        this.game = game;
+    }
+
     spawnBomb() {
         const now = Date.now()
-        if (now - this.lastBombTime < this.bombCooldown) return
-        if (!this.effectPool?.budget.canSpawnProjectile('bomb')) return
+        if (now - this.game.lastBombTime < this.game.bombCooldown) return
+        if (!this.game.effectPool?.budget.canSpawnProjectile('bomb')) return
 
-        const pos = this.playerMarble.rigidBody.translation()
+        const pos = this.game.playerMarble.rigidBody.translation()
         const spawnPos = { x: pos.x, y: pos.y + 1.0, z: pos.z }
 
-        const slot = this.effectPool.acquireProjectile('bomb', spawnPos)
+        const slot = this.game.effectPool.acquireProjectile('bomb', spawnPos)
         if (!slot) return
-        this.lastBombTime = now
+        this.game.lastBombTime = now
 
-        const linvel = this.playerMarble.rigidBody.linvel()
+        const linvel = this.game.playerMarble.rigidBody.linvel()
 
         const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
             .setTranslation(spawnPos.x, spawnPos.y, spawnPos.z)
             .setLinvel(linvel.x * 0.5, linvel.y + 5.0, linvel.z * 0.5)
             .setCcdEnabled(true)
 
-        const body = this.world.createRigidBody(bodyDesc)
+        const body = this.game.world.createRigidBody(bodyDesc)
         const colliderDesc = RAPIER.ColliderDesc.ball(0.4)
             .setRestitution(0.5)
             .setFriction(0.5)
             .setDensity(2.0)
-        this.world.createCollider(colliderDesc, body)
+        this.game.world.createCollider(colliderDesc, body)
 
-        this.effectPool.bindProjectileLight(slot, body)
+        this.game.effectPool.bindProjectileLight(slot, body)
 
-        this.activeBombs.push({
+        this.game.activeBombs.push({
             entity: slot.entity,
             rigidBody: body,
             matInstance: slot.matInstance,
@@ -39,7 +43,7 @@ export class AbilityBomb {
             spawnTime: now,
             duration: 2500
         })
-        this.dynamicBodies.add(body)
+        this.game.dynamicBodies.add(body)
     }
 
     explodeBomb(bomb) {
@@ -70,11 +74,11 @@ export class AbilityBomb {
             }
         }
 
-        for (const m of this.marbles) {
+        for (const m of this.game.marbles) {
             applyExplosionForce(m.rigidBody)
         }
 
-        for (const obj of this.dynamicObjects) {
+        for (const obj of this.game.dynamicObjects) {
             applyExplosionForce(obj.rigidBody)
         }
     }

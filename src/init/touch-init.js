@@ -1,17 +1,21 @@
 import { TouchControls } from '../input/touch-controls.js';
 
 export class InitTouchControls {
+    constructor(game) {
+        this.game = game;
+    }
+
     initTouchControls() {
-        this.touchControls = new TouchControls(this);
-        this.touchControls.init();
-        if (this.settings?.controls?.touch) {
-            this.touchControls.applyConfig(this.settings.controls.touch);
+        this.game.touchControls = new TouchControls(this.game);
+        this.game.touchControls.init();
+        if (this.game.settings?.controls?.touch) {
+            this.game.touchControls.applyConfig(this.game.settings.controls.touch);
         }
     }
 
     applyTouchSettings() {
-        if (this.touchControls && this.settings?.controls?.touch) {
-            this.touchControls.applyConfig(this.settings.controls.touch);
+        if (this.game.touchControls && this.game.settings?.controls?.touch) {
+            this.game.touchControls.applyConfig(this.game.settings.controls.touch);
         }
     }
 }

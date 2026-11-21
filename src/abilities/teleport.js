@@ -1,24 +1,28 @@
 import { audio } from '../audio.js';
 
 export class AbilityTeleport {
-    triggerTeleport() {
-        if (!this.playerMarble) return
-        this.lastTeleportTime = Date.now()
+    constructor(game) {
+        this.game = game;
+    }
 
-        const pos = this.playerMarble.rigidBody.translation()
-        const cosP = Math.cos(this.pitchAngle)
-        const sinP = Math.sin(this.pitchAngle)
-        const dirX = Math.sin(this.aimYaw) * cosP
+    triggerTeleport() {
+        if (!this.game.playerMarble) return
+        this.game.lastTeleportTime = Date.now()
+
+        const pos = this.game.playerMarble.rigidBody.translation()
+        const cosP = Math.cos(this.game.pitchAngle)
+        const sinP = Math.sin(this.game.pitchAngle)
+        const dirX = Math.sin(this.game.aimYaw) * cosP
         const dirY = sinP
-        const dirZ = Math.cos(this.aimYaw) * cosP
+        const dirZ = Math.cos(this.game.aimYaw) * cosP
 
         const newPos = {
-            x: pos.x + dirX * this.teleportDistance,
-            y: pos.y + dirY * this.teleportDistance,
-            z: pos.z + dirZ * this.teleportDistance
+            x: pos.x + dirX * this.game.teleportDistance,
+            y: pos.y + dirY * this.game.teleportDistance,
+            z: pos.z + dirZ * this.game.teleportDistance
         }
 
-        this.playerMarble.rigidBody.setTranslation(newPos, true)
+        this.game.playerMarble.rigidBody.setTranslation(newPos, true)
 
         if (audio && audio.playTrick) {
             audio.playTrick()
@@ -26,6 +30,6 @@ export class AbilityTeleport {
 
         console.log(`[GAME] Teleported to ${newPos.x.toFixed(2)}, ${newPos.y.toFixed(2)}, ${newPos.z.toFixed(2)}`)
         
-        if (this.hudManager) this.hudManager.markAbilityUsed('teleport')
+        if (this.game.hudManager) this.game.hudManager.markAbilityUsed('teleport')
     }
 }

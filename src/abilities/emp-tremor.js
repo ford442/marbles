@@ -2,22 +2,26 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { audio } from '../audio.js';
 
 export class AbilityEmpTremor {
-    fireEMP() {
-        if (!this.playerMarble) return
-        const now = Date.now()
-        if (now - this.lastEmpTime < this.empCooldown) return
-        this.lastEmpTime = now
+    constructor(game) {
+        this.game = game;
+    }
 
-        const pos = this.playerMarble.rigidBody.translation()
+    fireEMP() {
+        if (!this.game.playerMarble) return
+        const now = Date.now()
+        if (now - this.game.lastEmpTime < this.game.empCooldown) return
+        this.game.lastEmpTime = now
+
+        const pos = this.game.playerMarble.rigidBody.translation()
         const empRadius = 15.0
         const empForce = 50.0
 
         // Find all dynamic objects
         let hits = 0
-        const bodiesToCheck = [...(this.marbles || []), ...(this.dynamicObjects || [])]
+        const bodiesToCheck = [...(this.game.marbles || []), ...(this.game.dynamicObjects || [])]
 
         for (const obj of bodiesToCheck) {
-            if (obj === this.playerMarble) continue
+            if (obj === this.game.playerMarble) continue
             if (!obj.rigidBody) continue
 
             const objPos = obj.rigidBody.translation()
@@ -42,35 +46,35 @@ export class AbilityEmpTremor {
             }
         }
 
-        if (hits > 0 && typeof this.awardTrickPoints === 'function') {
-            this.awardTrickPoints('EMP Blast!', 30 * hits, '#aaddff')
+        if (hits > 0 && typeof this.game.awardTrickPoints === 'function') {
+            this.game.awardTrickPoints('EMP Blast!', 30 * hits, '#aaddff')
         }
 
         if (audio.playAbility) audio.playAbility('emp', pos)
 
         // Spawn EMP visual effect
-        this.spawnEMPEffect(pos)
+        this.game.spawnEMPEffect(pos)
 
         console.log(`[GAME] EMP Shockwave fired! Hit ${hits} objects.`)
         
-        if (this.hudManager) this.hudManager.markAbilityUsed('emp')
+        if (this.game.hudManager) this.game.hudManager.markAbilityUsed('emp')
     }
 
     fireTremor() {
-        if (!this.playerMarble) return
+        if (!this.game.playerMarble) return
         const now = Date.now()
-        if (now - this.lastTremorTime < this.tremorCooldown) return
-        this.lastTremorTime = now
+        if (now - this.game.lastTremorTime < this.game.tremorCooldown) return
+        this.game.lastTremorTime = now
 
-        const pos = this.playerMarble.rigidBody.translation()
+        const pos = this.game.playerMarble.rigidBody.translation()
         const tremorRadius = 25.0
         const tremorForce = 80.0
 
         let hits = 0
-        const bodiesToCheck = [...(this.marbles || []), ...(this.dynamicObjects || []), ...(this.movingPlatforms || [])]
+        const bodiesToCheck = [...(this.game.marbles || []), ...(this.game.dynamicObjects || []), ...(this.game.movingPlatforms || [])]
 
         for (const obj of bodiesToCheck) {
-            if (obj === this.playerMarble) continue
+            if (obj === this.game.playerMarble) continue
             if (!obj.rigidBody) continue
 
             const objPos = obj.rigidBody.translation()
@@ -96,15 +100,15 @@ export class AbilityEmpTremor {
             }
         }
 
-        if (hits > 0 && typeof this.awardTrickPoints === 'function') {
-            this.awardTrickPoints(`Ground Slam! (${hits} hit)`, 30 * hits, '#cd853f')
+        if (hits > 0 && typeof this.game.awardTrickPoints === 'function') {
+            this.game.awardTrickPoints(`Ground Slam! (${hits} hit)`, 30 * hits, '#cd853f')
         }
 
-        if (this.hudManager) this.hudManager.markAbilityUsed('groundslam')
+        if (this.game.hudManager) this.game.hudManager.markAbilityUsed('groundslam')
 
         // Add a visual particle ring at the impact point
-        if (this.effectPool) {
-            this.effectPool.spawnVisualParticle({
+        if (this.game.effectPool) {
+            this.game.effectPool.spawnVisualParticle({
                 color: [0.8, 0.4, 0.1],
                 roughness: 0.9,
                 spawnTime: Date.now(),
@@ -119,7 +123,7 @@ export class AbilityEmpTremor {
         }
 
         // Trigger camera shake
-        this.tremorShakeTimer = 30
+        this.game.tremorShakeTimer = 30
 
         if (audio.playAbility) audio.playAbility('emp', pos)
     }
@@ -127,9 +131,9 @@ export class AbilityEmpTremor {
     spawnEMPEffect(pos) {
         const now = Date.now()
         const duration = 1500
-        const startRadius = this.playerMarble ? (this.playerMarble.scale * 0.5 || 0.5) : 0.5
+        const startRadius = this.game.playerMarble ? (this.game.playerMarble.scale * 0.5 || 0.5) : 0.5
 
-        this.effectPool?.spawnVisualParticle({
+        this.game.effectPool?.spawnVisualParticle({
             color: [0.0, 1.0, 1.0],
             roughness: 0.1,
             spawnTime: now,
@@ -141,7 +145,7 @@ export class AbilityEmpTremor {
             maxRadius: 50.0
         })
 
-        const sparkCount = this.effectPool?.budget.getVisualBurstCount(12) ?? 12
+        const sparkCount = this.game.effectPool?.budget.getVisualBurstCount(12) ?? 12
         for (let i = 0; i < sparkCount; i++) {
             const angle = (i / sparkCount) * Math.PI * 2
             const sparkPos = {
@@ -149,15 +153,15 @@ export class AbilityEmpTremor {
                 y: pos.y + (Math.random() - 0.5) * 0.5,
                 z: pos.z + Math.sin(angle) * 1.0
             }
-            this.spawnEMPSpark(sparkPos, angle, duration)
+            this.game.spawnEMPSpark(sparkPos, angle, duration)
         }
 
-        this.triggerEMPFlash()
+        this.game.triggerEMPFlash()
     }
 
     spawnEMPSpark(pos, angle, parentDuration) {
         const speed = 20.0
-        this.effectPool?.spawnVisualParticle({
+        this.game.effectPool?.spawnVisualParticle({
             color: [0.2, 0.9, 1.0],
             roughness: 0.0,
             spawnTime: Date.now(),

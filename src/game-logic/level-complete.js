@@ -11,6 +11,10 @@ import { recordLevelPlayed } from '../pwa/pwa-state.js';
 import { recheckInstallBannerEligibility } from '../pwa/install-prompt.js';
 
 export class GameLogicLevelComplete {
+    constructor(game) {
+        this.game = game;
+    }
+
     setupReplayShareButtons() {
         const btnCopy = document.getElementById('btn-copy-replay')
         const btnImport = document.getElementById('btn-import-replay')
@@ -18,25 +22,25 @@ export class GameLogicLevelComplete {
 
         if (btnCopy && !btnCopy.dataset.bound) {
             btnCopy.dataset.bound = '1'
-            btnCopy.addEventListener('click', () => this.copyGhostReplay())
+            btnCopy.addEventListener('click', () => this.game.copyGhostReplay())
         }
 
         if (btnImport && !btnImport.dataset.bound) {
             btnImport.dataset.bound = '1'
-            btnImport.addEventListener('click', () => this.importGhostReplay())
+            btnImport.addEventListener('click', () => this.game.importGhostReplay())
         }
 
         if (btnRaceLeader && !btnRaceLeader.dataset.bound) {
             btnRaceLeader.dataset.bound = '1'
-            btnRaceLeader.addEventListener('click', () => this.queueLeaderboardGhost())
+            btnRaceLeader.addEventListener('click', () => this.game.queueLeaderboardGhost())
         }
     }
 
     queueLeaderboardGhost() {
-        const ghostId = this._leaderboardTopGhostId
+        const ghostId = this.game._leaderboardTopGhostId
         if (!ghostId) return
-        this._pendingLeaderboardGhostId = ghostId
-        this.setReplayImportStatus('Leaderboard ghost queued — press Retry to race it.')
+        this.game._pendingLeaderboardGhostId = ghostId
+        this.game.setReplayImportStatus('Leaderboard ghost queued — press Retry to race it.')
     }
 
     async refreshLeaderboardSection(levelId) {
@@ -51,9 +55,9 @@ export class GameLogicLevelComplete {
         section.style.display = 'block'
         list.innerHTML = '<li>Loading leaderboard…</li>'
         if (btnRace) btnRace.style.display = 'none'
-        this._leaderboardTopGhostId = null
+        this.game._leaderboardTopGhostId = null
 
-        const entries = await this.cloudClient?.fetchLeaderboard(levelId) || []
+        const entries = await this.game.cloudClient?.fetchLeaderboard(levelId) || []
         if (!entries.length) {
             list.innerHTML = '<li>No global times yet.</li>'
             return
@@ -65,7 +69,7 @@ export class GameLogicLevelComplete {
 
         const top = entries[0]
         if (top?.ghostId && btnRace) {
-            this._leaderboardTopGhostId = top.ghostId
+            this.game._leaderboardTopGhostId = top.ghostId
             btnRace.style.display = 'inline-block'
         }
     }
@@ -78,18 +82,18 @@ export class GameLogicLevelComplete {
     }
 
     async copyGhostReplay() {
-        const blob = this.ghostReplay?.exportReplay(this.currentLevel)
+        const blob = this.game.ghostReplay?.exportReplay(this.game.currentLevel)
         if (!blob) {
-            this.setReplayImportStatus('No ghost replay saved for this level.', true)
+            this.game.setReplayImportStatus('No ghost replay saved for this level.', true)
             return
         }
 
         try {
             await navigator.clipboard.writeText(blob)
-            this.setReplayImportStatus('Ghost replay copied to clipboard.')
+            this.game.setReplayImportStatus('Ghost replay copied to clipboard.')
         } catch {
             window.prompt('Copy this ghost replay:', blob)
-            this.setReplayImportStatus('Replay shown in prompt — copy manually.')
+            this.game.setReplayImportStatus('Replay shown in prompt — copy manually.')
         }
     }
 
@@ -98,13 +102,13 @@ export class GameLogicLevelComplete {
         if (!pasted?.trim()) return
 
         try {
-            const result = this.ghostReplay.importReplay(pasted, this.currentLevel)
-            this.setReplayImportStatus(`Imported ghost for ${result.levelId}.`)
-            if (result.levelId === this.currentLevel && !this.ghostEntity) {
-                this.createGhostMarble?.()
+            const result = this.game.ghostReplay.importReplay(pasted, this.game.currentLevel)
+            this.game.setReplayImportStatus(`Imported ghost for ${result.levelId}.`)
+            if (result.levelId === this.game.currentLevel && !this.game.ghostEntity) {
+                this.game.createGhostMarble?.()
             }
         } catch (e) {
-            this.setReplayImportStatus(e?.message || 'Invalid replay data.', true)
+            this.game.setReplayImportStatus(e?.message || 'Invalid replay data.', true)
         }
     }
 
@@ -112,11 +116,11 @@ export class GameLogicLevelComplete {
         const modal = document.getElementById('level-complete-modal')
         if (!modal) return
 
-        recordLevelPlayed(this.currentLevel)
+        recordLevelPlayed(this.game.currentLevel)
         recheckInstallBannerEligibility()
 
-        const level = getLevel(this.currentLevel)
-        const levelName = level?.name || this.currentLevel
+        const level = getLevel(this.game.currentLevel)
+        const levelName = level?.name || this.game.currentLevel
         const thresholds = getMedalThresholds(level)
 
         const formattedTime = formatRunTime(completionTime)
@@ -125,9 +129,9 @@ export class GameLogicLevelComplete {
         const medalEmojiStr = medalEmoji(medal)
 
         // Calculate score breakdown
-        const baseScore = this.score || 0
+        const baseScore = this.game.score || 0
         const timeBonus = Math.max(0, Math.floor((180 - completionTime) * 10))
-        const maxCombo = this.combo || 1
+        const maxCombo = this.game.combo || 1
         const comboBonus = (maxCombo - 1) * 50
         const totalScore = baseScore + timeBonus + comboBonus
 
@@ -147,12 +151,12 @@ export class GameLogicLevelComplete {
 
         const replaySection = document.getElementById('replay-share-section')
         if (replaySection) {
-            const hasReplay = Boolean(this.ghostReplay?.exportReplay(this.currentLevel))
+            const hasReplay = Boolean(this.game.ghostReplay?.exportReplay(this.game.currentLevel))
             replaySection.style.display = hasReplay ? 'flex' : 'none'
         }
-        this.setupReplayShareButtons()
-        this.setReplayImportStatus('')
-        void this.refreshLeaderboardSection(this.currentLevel)
+        this.game.setupReplayShareButtons()
+        this.game.setReplayImportStatus('')
+        void this.game.refreshLeaderboardSection(this.game.currentLevel)
 
         // Setup button handlers with smooth transitions
         const btnNext = document.getElementById('btn-next-level')
@@ -161,16 +165,16 @@ export class GameLogicLevelComplete {
 
         // Get ordered list of level IDs
         const levelIds = getOrderedLevelIds()
-        const currentIndex = levelIds.indexOf(this.currentLevel)
+        const currentIndex = levelIds.indexOf(this.game.currentLevel)
         const nextLevelId = levelIds[currentIndex + 1]
 
         if (btnNext) {
             btnNext.onclick = () => {
-                this.hideLevelCompleteModal(() => {
-                    if (nextLevelId && typeof this.loadLevel === 'function') {
-                        this.loadLevel(nextLevelId)
-                    } else if (typeof this.returnToMenu === 'function') {
-                        this.returnToMenu()
+                this.game.hideLevelCompleteModal(() => {
+                    if (nextLevelId && typeof this.game.loadLevel === 'function') {
+                        this.game.loadLevel(nextLevelId)
+                    } else if (typeof this.game.returnToMenu === 'function') {
+                        this.game.returnToMenu()
                     }
                 })
             }
@@ -179,9 +183,9 @@ export class GameLogicLevelComplete {
 
         if (btnRetry) {
             btnRetry.onclick = () => {
-                this.hideLevelCompleteModal(() => {
-                    if (typeof this.loadLevel === 'function') {
-                        this.loadLevel(this.currentLevel)
+                this.game.hideLevelCompleteModal(() => {
+                    if (typeof this.game.loadLevel === 'function') {
+                        this.game.loadLevel(this.game.currentLevel)
                     }
                 })
             }
@@ -189,9 +193,9 @@ export class GameLogicLevelComplete {
 
         if (btnMenu) {
             btnMenu.onclick = () => {
-                this.hideLevelCompleteModal(() => {
-                    if (typeof this.returnToMenu === 'function') {
-                        this.returnToMenu()
+                this.game.hideLevelCompleteModal(() => {
+                    if (typeof this.game.returnToMenu === 'function') {
+                        this.game.returnToMenu()
                     }
                 })
             }
@@ -203,7 +207,7 @@ export class GameLogicLevelComplete {
 
         // Trigger confetti after modal appears
         setTimeout(() => {
-            this.startConfetti()
+            this.game.startConfetti()
         }, 300)
     }
 
@@ -214,7 +218,7 @@ export class GameLogicLevelComplete {
             modal.classList.add('exiting')
             
             // Stop confetti immediately
-            this.stopConfetti()
+            this.game.stopConfetti()
             
             // Wait for exit animation to complete before hiding
             setTimeout(() => {
@@ -294,21 +298,21 @@ export class GameLogicLevelComplete {
         }
 
         // Store animation ID for cleanup
-        this.confettiAnimationId = animationId
+        this.game.confettiAnimationId = animationId
         animate()
 
         // Auto-stop after 5 seconds
-        this.confettiTimeout = setTimeout(() => this.stopConfetti(), 5000)
+        this.game.confettiTimeout = setTimeout(() => this.game.stopConfetti(), 5000)
     }
 
     stopConfetti() {
-        if (this.confettiAnimationId) {
-            cancelAnimationFrame(this.confettiAnimationId)
-            this.confettiAnimationId = null
+        if (this.game.confettiAnimationId) {
+            cancelAnimationFrame(this.game.confettiAnimationId)
+            this.game.confettiAnimationId = null
         }
-        if (this.confettiTimeout) {
-            clearTimeout(this.confettiTimeout)
-            this.confettiTimeout = null
+        if (this.game.confettiTimeout) {
+            clearTimeout(this.game.confettiTimeout)
+            this.game.confettiTimeout = null
         }
         const canvas = document.getElementById('confetti-canvas')
         if (canvas) {
@@ -318,25 +322,25 @@ export class GameLogicLevelComplete {
     }
 
     resize() {
-        const { cssWidth, cssHeight, bufferWidth, bufferHeight } = getRenderDimensions(this.settings)
+        const { cssWidth, cssHeight, bufferWidth, bufferHeight } = getRenderDimensions(this.game.settings)
         const width = bufferWidth
         const height = bufferHeight
 
-        this.canvas.style.width = cssWidth + 'px'
-        this.canvas.style.height = cssHeight + 'px'
-        this.canvas.width = width
-        this.canvas.height = height
+        this.game.canvas.style.width = cssWidth + 'px'
+        this.game.canvas.style.height = cssHeight + 'px'
+        this.game.canvas.width = width
+        this.game.canvas.height = height
 
         console.log(`[RESIZE] Canvas: ${width}x${height} (css ${cssWidth}x${cssHeight})`)
 
-        if (this.view && this.camera) {
-            this.view.setViewport([0, 0, width, height])
+        if (this.game.view && this.game.camera) {
+            this.game.view.setViewport([0, 0, width, height])
             const aspect = width / height
             // Use optional chaining for safe $-prefixed enum access across all Filament builds
-            const CameraFov = this.Filament?.['Camera$Fov']
+            const CameraFov = this.game.Filament?.['Camera$Fov']
             const fovMode = CameraFov ? CameraFov.VERTICAL : 0
-            this.camera.setProjectionFov(this.currentFov, aspect, 0.1, 1000.0, fovMode)
-            this.camera.lookAt([0, 10, 20], [0, 0, 0], [0, 1, 0])
+            this.game.camera.setProjectionFov(this.game.currentFov, aspect, 0.1, 1000.0, fovMode)
+            this.game.camera.lookAt([0, 10, 20], [0, 0, 0], [0, 1, 0])
         }
     }
 }

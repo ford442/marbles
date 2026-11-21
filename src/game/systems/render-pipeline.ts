@@ -29,10 +29,13 @@ export interface StaticBatchFlusher {
 export class RenderPipeline {
     game: RenderPipelineHost;
     physicsWorld: StaticBatchFlusher | undefined;
+    /** Physics step + transform sync + Filament draw (`game-loop/sync.js`). */
+    sync: GameLoopSyncMethods;
 
     constructor(game: RenderPipelineHost, { physicsWorld }: { physicsWorld?: StaticBatchFlusher } = {}) {
         this.game = game;
         this.physicsWorld = physicsWorld;
+        this.sync = new GameLoopSyncMethods(game);
     }
 
     renderAndSync(): void {
@@ -53,7 +56,7 @@ export class RenderPipeline {
     }
 
     syncTransformsAndRender(now: number): unknown {
-        return GameLoopSyncMethods.prototype.syncTransformsAndRender.call(this.game, now);
+        return this.sync.syncTransformsAndRender(now);
     }
 
     flushStaticBatches(...args: unknown[]): unknown {
