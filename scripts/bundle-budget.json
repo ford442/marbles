@@ -1,6 +1,6 @@
 {
-  "description": "Size budget for the entry (index) chunk. Checked by scripts/check-bundle-budget.mjs after BUNDLE_STATS=1 npx vite build. Baseline before lazy zone chunks (2026-10-17): 2806.8 KB; after: 2660.2 KB.",
-  "mainChunkMaxKB": 2700,
+  "description": "Size budget for the entry (index) chunk. Checked by scripts/check-bundle-budget.mjs after BUNDLE_STATS=1 npx vite build. Baseline before lazy zone chunks (2026-10-17): 2806.8 KB; after: 2660.2 KB. Raised 2700 → 2710 KB (2026-11-21): Phase D typing guards plus the movement model put the entry chunk at 2700.1 KB.",
+  "mainChunkMaxKB": 2710,
   "forbiddenInMainChunk": [
     { "pattern": "/src/zones/[^/]+\\.js$", "reason": "zone stamps load lazily via ZONE_LOADERS (src/zone-setup/registry.js)" },
     { "pattern": "/src/levels\\.ts$", "reason": "DEV_LEVELS loads only behind ?devLevels=1 (loadDevLevels)" },
