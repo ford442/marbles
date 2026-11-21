@@ -7,6 +7,8 @@
  * `@ts-nocheck`). `checkJs` is off, so plain JS in the program is parsed but
  * never checked.
  *
+ * Generated code (src/types/generated/) is excluded from both sides.
+ *
  * Ratcheted against scripts/ts-coverage-baseline.json, failing when:
  *   - the typed-file count goes down,
  *   - the typed share of src/ LOC goes down, or
@@ -29,6 +31,8 @@ const SRC = path.join(ROOT, 'src');
 const BASELINE_PATH = path.join(ROOT, 'scripts', 'ts-coverage-baseline.json');
 const SOURCE_EXT = /\.(?:js|ts)$/;
 const SUPPRESSION = /@ts-(?:ignore|expect-error|nocheck)\b/g;
+/** Generated from assets/schemas/ (scripts/gen-schema-types.mjs): not hand-written, not counted. */
+const EXCLUDED_DIRS = [path.join(SRC, 'types', 'generated')];
 
 const args = new Set(process.argv.slice(2));
 
@@ -37,7 +41,9 @@ function listSourceFiles(dir) {
     const out = [];
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         const full = path.join(dir, entry.name);
-        if (entry.isDirectory()) out.push(...listSourceFiles(full));
+        if (entry.isDirectory()) {
+            if (!EXCLUDED_DIRS.includes(full)) out.push(...listSourceFiles(full));
+        }
         else if (SOURCE_EXT.test(entry.name)) out.push(full);
     }
     return out;

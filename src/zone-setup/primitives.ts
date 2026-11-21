@@ -14,91 +14,23 @@
  * Rotation is always given as named axes (`yawDeg`, `pitchDeg`, `rollDeg`)
  * and converted with `quatFromYawPitchRoll` — never positional Euler args.
  */
+import type {
+    BoxZone, Color, MoverZone, RampZone, Rotation, SpinnerZone, TriggerZone,
+} from '../types/generated/map-schema.ts';
 import { quatFromYawPitchRoll, quatMultiply, quatRotateVec3, type Quat, type Vec3 } from '../math.ts';
 import { applyVelocityChange, type ImpulseBody } from '../game/systems/body-impulse.ts';
 
 export type Vec3Input = readonly [number, number, number] | { x: number; y: number; z: number };
-export type RGB = [number, number, number];
 
-export interface RotationSpec {
-    yawDeg?: number;
-    pitchDeg?: number;
-    rollDeg?: number;
-}
-
-interface SurfaceFields {
-    color?: RGB;
-    /** Track surface preset key or alias (see physics-world-pure.ts). */
-    material?: string;
-    friction?: number;
-    restitution?: number;
-}
-
-export interface BoxZone extends SurfaceFields {
-    type: 'box';
-    pos: Vec3Input;
-    /** Full extents (not half-extents). */
-    size: Vec3Input;
-    rot?: RotationSpec;
-}
-
-export interface RampZone extends SurfaceFields {
-    type: 'ramp';
-    /** Centre of the ramp's top surface at its start / end. */
-    from: Vec3Input;
-    to: Vec3Input;
-    width: number;
-    thickness?: number;
-}
-
-export type MoverEase = 'linear' | 'sine';
-
-export interface MoverZone extends SurfaceFields {
-    type: 'mover';
-    shape?: 'box';
-    size: Vec3Input;
-    /** Waypoints (≥ 2). The body ping-pongs along them unless `loop` is true. */
-    path: Vec3Input[];
-    /** Seconds for one full cycle (there and back, or once round the loop). */
-    period: number;
-    ease?: MoverEase;
-    loop?: boolean;
-    /** Cycle offset in [0, 1). */
-    phase?: number;
-    rot?: RotationSpec;
-}
-
-export interface SpinnerZone extends SurfaceFields {
-    type: 'spinner';
-    pos: Vec3Input;
-    size: Vec3Input;
-    axis: 'x' | 'y' | 'z';
-    /** Revolutions per minute; negative spins the other way. */
-    rpm: number;
-    /** Starting angle in degrees. */
-    phaseDeg?: number;
-    rot?: RotationSpec;
-}
-
-export interface TriggerAction {
-    /** Velocity change in m/s, applied regardless of marble mass. */
-    boost?: Vec3Input;
-    /** Replace the marble's velocity (m/s). */
-    setVelocity?: Vec3Input;
-    /** Send the marble back to its respawn point. */
-    respawn?: boolean;
-}
-
-export interface TriggerZone {
-    type: 'trigger';
-    pos: Vec3Input;
-    size: Vec3Input;
-    rot?: RotationSpec;
-    on?: 'enter' | 'stay';
-    do: TriggerAction;
-    /** When set, a thin pad of this colour marks the trigger's floor. */
-    color?: RGB;
-}
+// Authored primitive shapes come from the map schema (one source of truth with
+// ajv validation and the editor); see src/types/map.ts.
+export type { BoxZone, RampZone, MoverZone, SpinnerZone, TriggerZone };
+export type RGB = Color;
+export type RotationSpec = Rotation;
+export type MoverEase = NonNullable<MoverZone['ease']>;
+export type TriggerAction = TriggerZone['do'];
+/** Surface fields shared by the solid primitives (box, ramp, mover, spinner). */
+type SurfaceFields = Pick<BoxZone, 'color' | 'material' | 'friction' | 'restitution'>;
 
 export type PrimitiveZone = BoxZone | RampZone | MoverZone | SpinnerZone | TriggerZone;
 
