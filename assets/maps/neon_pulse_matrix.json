@@ -224,6 +224,7 @@
       {"frames": 2, "keys": ["forward"], "yawDeg": 180},
       {"frames": 2, "keys": ["forward"], "yawDeg": 0},
       {"frames": 2, "keys": ["forward"], "yawDeg": 10}
-    ]
+    ],
+    "par": 17.5
   }
 }

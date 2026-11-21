@@ -135,6 +135,7 @@
       {"frames": 2, "keys": ["forward"], "yawDeg": 0},
       {"frames": 17, "keys": [], "yawDeg": 340}
     ],
+    "par": 14.47,
     "tolerance": 0.35
   }
 }
