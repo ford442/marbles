@@ -32,14 +32,16 @@ export class ZoneSetupAssets {
             return
         }
 
-        // Load the known-good material by default. The procedural package was
-        // compiled by an older matc and can abort newer Filament runtimes during
-        // createMaterial(), so keep it as an explicit development opt-in.
+        // Load the simple material by default; the procedural one is an
+        // explicit opt-in (`?proceduralMaterial=1`). Both are compiled by
+        // `npm run build:materials` with the matc of the vendored Filament
+        // release: a package from any other matc version fails createMaterial().
         const useProceduralMaterial = new URLSearchParams(window.location.search).get('proceduralMaterial') === '1'
         const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) || '/marbles/';
         const normalizedBase = base.endsWith('/') ? base : `${base}/`;
+        const proceduralUrl = `${normalizedBase}baked_procedural.filament`
         const materialFiles = useProceduralMaterial
-            ? [`${normalizedBase}baked_procedural.filament`, `${normalizedBase}baked_color.filmat`]
+            ? [proceduralUrl, `${normalizedBase}baked_color.filmat`]
             : [`${normalizedBase}baked_color.filmat`]
         let materialBuffer: ArrayBuffer | null = null
         let materialFile: string | null = null
@@ -85,7 +87,7 @@ export class ZoneSetupAssets {
 
         // Track whether the enhanced procedural material is active so we know
         // which material parameters are safe to set on material instances.
-        this.game.hasProceduralMaterial = (materialFile === './baked_procedural.filament')
+        this.game.hasProceduralMaterial = (materialFile === proceduralUrl)
         console.log(`[ASSETS] Procedural material active: ${this.game.hasProceduralMaterial}`)
 
         const VertexAttribute = this.game.Filament['VertexAttribute']

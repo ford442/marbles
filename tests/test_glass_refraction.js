@@ -3,6 +3,7 @@
  */
 
 import fs from 'fs';
+import { createHash } from 'crypto';
 
 console.log('=== Testing Glass Refraction System ===\n');
 
@@ -29,10 +30,15 @@ const checks = [
         }
     },
     {
-        name: 'Compiled material file updated',
+        // Size says nothing about staleness; the lock written by
+        // `npm run build:materials` records which source the binary came from.
+        name: 'Compiled material is built from the current source',
         check: () => {
-            const stats = fs.statSync('public/baked_procedural.filament');
-            return stats.size > 350000 && stats.size < 450000;
+            const lock = JSON.parse(fs.readFileSync('scripts/materials.lock.json', 'utf8'));
+            const entry = lock.outputs['public/baked_procedural.filament'];
+            const sha = (file) => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+            return sha('public/custom_material_procedural.mat') === entry.sourceSha256
+                && sha('public/baked_procedural.filament') === entry.sha256;
         }
     },
     {

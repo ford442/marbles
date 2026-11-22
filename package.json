@@ -10,6 +10,9 @@
     "build:wasm": "bash wasm/build.sh",
     "build:wasm:debug": "bash wasm/build.sh --debug",
     "check:wasm": "node scripts/check-wasm-artifacts.mjs",
+    "vendor:filament": "node scripts/vendor-filament.mjs",
+    "build:materials": "node scripts/build-materials.mjs",
+    "check:materials": "node scripts/vendor-filament.mjs --check && node scripts/build-materials.mjs --check",
     "check:bundle": "node scripts/check-bundle-budget.mjs",
     "test:levels": "node --experimental-strip-types --no-warnings tests/levels/test_manifest_levels.js && node --experimental-strip-types --no-warnings tests/levels/test_dev_levels.js",
     "test:wasm:parity": "node tests/test_wasm_bridge_wasm.js && node tests/test_wasm_parity_ulp.js",
@@ -47,7 +50,6 @@
     "ws": "^8.21.0"
   },
   "dependencies": {
-    "@dimforge/rapier3d-compat": "0.21.0",
-    "filament": "^1.51.5"
+    "@dimforge/rapier3d-compat": "0.21.0"
   }
 }

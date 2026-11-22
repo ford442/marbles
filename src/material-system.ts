@@ -396,11 +396,11 @@ export function applyFullPreset(matInstance: any, preset: any, hasProcedural: bo
         // IBL / specular parameters — wired from material-presets.js / material-variants.js.
         // These are optional parameters; use try/catch per-parameter since older material
         // versions may not expose all three uniforms.
-        if (preset.clearCoatIor !== undefined) {
-            try {
-                matInstance.setFloatParameter('clearCoatIor', preset.clearCoatIor);
-            } catch (e: any) { console.debug('[MAT] clearCoatIor not available in this material version:', e.message); }
-        }
+        // `preset.clearCoatIor` is not sent: the material declares no such
+        // uniform, and Filament aborts (it does not throw) on an unknown
+        // name, so the try/catch below cannot make a parameter optional.
+        // tests/test_filament_pipeline.js checks every name set in src/
+        // against custom_material_procedural.mat.
         if (preset.environmentIntensity !== undefined) {
             try {
                 matInstance.setFloatParameter('environmentIntensity', preset.environmentIntensity);

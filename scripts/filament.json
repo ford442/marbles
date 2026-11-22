@@ -1,0 +1,64 @@
+{
+  "description": "Pinned Filament release. The web runtime (public/filament.{js,wasm}) and the matc that compiles the materials below must come from the same release: Filament refuses a material package whose version differs from the runtime's. Update with `npm run vendor:filament` then `npm run build:materials` (see docs/FILAMENT_MATERIALS.md).",
+  "version": "1.59.5",
+  "materialVersion": 59,
+  "archiveUrl": "https://github.com/google/filament/releases/download/v{version}/filament-v{version}-{platform}.tgz",
+  "archives": {
+    "web": {
+      "sha256": "2017b869fb05c6abd18e50b0514021c3e856a9ca5cee91bc15fe5a48362ff2c5"
+    },
+    "linux": {
+      "sha256": "e5808cc46265b2d67d32e9aa29b3bf647f34bec46ee791102f73dcd56140a484"
+    },
+    "mac": {
+      "sha256": "32eb0db64523bd7aaefdf4584fcd1ae7738294faa3791d730abad5586bac7de4"
+    }
+  },
+  "runtime": {
+    "public/filament.js": {
+      "sha256": "19ee743e2245afad3acda03db5a1f3fcde45ba6b42a7ecfe92557a4f66229aa2"
+    },
+    "public/filament.wasm": {
+      "sha256": "f7108b9c95f2b7f06f7a659263acc0a1f36a7f8214d9f374efba9bbbbbcfbb70"
+    }
+  },
+  "matcFlags": [
+    "--api",
+    "opengl",
+    "--platform",
+    "mobile"
+  ],
+  "materials": [
+    {
+      "source": "public/custom_material.mat",
+      "output": "public/baked_color.filmat"
+    },
+    {
+      "source": "public/custom_material_procedural.mat",
+      "output": "public/baked_procedural.filament"
+    },
+    {
+      "source": "public/custom_material_enhanced.mat",
+      "note": "not loaded by the game; compiled to check it still builds"
+    },
+    {
+      "source": "public/galactic_core.mat",
+      "note": "not loaded by the game; compiled to check it still builds"
+    },
+    {
+      "source": "public/neon_glow.mat",
+      "note": "not loaded by the game; compiled to check it still builds"
+    },
+    {
+      "source": "public/shadow_ninja.mat",
+      "note": "not loaded by the game; compiled to check it still builds"
+    },
+    {
+      "source": "public/volcanic_magma.mat",
+      "note": "not loaded by the game; compiled to check it still builds"
+    }
+  ],
+  "notMaterials": {
+    "public/marble_materials.mat": "reference notes: every material block in it is commented out, so there is nothing for matc to compile"
+  }
+}

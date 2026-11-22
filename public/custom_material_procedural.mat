@@ -91,7 +91,7 @@ fragment {
     }
 
     void material(inout MaterialInputs material) {
-        vec3 wp = getWorldPositionVector();
+        vec3 wp = getWorldPosition();
         vec3 wn = normalize(getWorldGeometricNormalVector());
         float freq = max(materialParams.bumpFrequency, 1.0);
         float scale = materialParams.bumpScale;
