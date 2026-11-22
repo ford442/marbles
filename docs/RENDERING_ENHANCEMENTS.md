@@ -370,11 +370,13 @@ this.setEnvironment('ice')          // visualMethods alias (prevents nightMode f
 ## Technical Notes
 
 ### Shader Compilation
-The enhanced material (`custom_material_procedural.mat`) needs to be compiled with Filament's `matc` tool:
+The procedural material (`custom_material_procedural.mat` → `baked_procedural.filament`) is compiled with the `matc` of the pinned Filament release:
 
 ```bash
-matc -p web -o baked_enhanced.filmat custom_material_procedural.mat
+npm run build:materials
 ```
+
+See [FILAMENT_MATERIALS.md](./FILAMENT_MATERIALS.md). A material compiled by any other `matc` version will not load.
 
 ### Performance Considerations
 - SH 3-band IBL: Negligible GPU cost (evaluated per-pixel as a dot-product)

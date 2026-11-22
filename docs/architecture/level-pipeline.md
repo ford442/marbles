@@ -88,6 +88,8 @@ Movers and spinners are posed from **simulated time** (`ZoneScope.time`, advance
 
 The headless build seeds `Math.random`, so zones that randomise their layout build identically every time and solutions replay exactly. In game those layouts still vary, so a solution there proves the seeded layout is finishable. Prefer deterministic geometry in v2 maps.
 
+**Solutions are tied to the physics engine version.** A solution is an open-loop input track, so any solver change makes it miss; the `par` drift check is what notices. After the Rapier 0.13 → 0.21 upgrade, 40 of 43 had to be re-recorded. Scene queries need a step before they see new colliders, so `buildHeadlessLevel` ends with a zero-length one (`refreshSceneQueries`).
+
 **Solutions are tied to the reference marble.** Held-key movement is a raw impulse of 0.5 per 60 Hz frame (`frame-input.ts`), and it is not scaled by mass. That includes full air control, as in game. A light marble therefore accelerates much harder than a heavy one, so solutions are recorded against `REFERENCE_MARBLE` (the default-unlocked `classic_red`: radius 0.5, density 1.5, friction 0.015, restitution 0.8). Mass-scaling movement would invalidate every recorded solution; re-record them if that changes.
 
 ### Authoring a solution — `npm run level:lab`

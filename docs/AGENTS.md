@@ -21,9 +21,9 @@ The game features **24 manifest JSON levels** in normal play (plus 52 `DEV_LEVEL
 | Component | Technology | Version / Notes |
 |-----------|------------|-----------------|
 | Build Tool | Vite | ^7.3.1 |
-| 3D Engine | Filament (Google) | ^1.51.5, loaded via global `filament.js` script tag |
+| 3D Engine | Filament (Google) | 1.59.5, vendored from the release pinned in `scripts/filament.json`, loaded via global `filament.js` script tag |
 | Debug Renderer | Simplified WebGL2 | Opt-in with `?renderer=simple`, shares Rapier/game state through a Filament-like adapter |
-| Physics Engine | Rapier3D-Compat | ^0.13.0 (`@dimforge/rapier3d-compat`) |
+| Physics Engine | Rapier3D-Compat | 0.21.0, pinned exactly (`@dimforge/rapier3d-compat`) |
 | Language | JavaScript (ES Modules) + TypeScript/TSX | Mixed codebase |
 | UI Framework | React | Used in sequencer/importer modals |
 | Backend | Python + FastAPI | Storage API for songs/samples/shaders |
@@ -301,7 +301,7 @@ assetsInclude: ['**/*.wasm', '**/*.filmat']
 The game uses custom Filament materials (`public/custom_material.mat` and variants):
 - Parameters: `baseColor` (float3), `roughness` (float)
 - Shading model: lit, opaque
-- Pre-compiled to `public/baked_color.filmat` for runtime
+- Compiled to `public/baked_color.filmat` by `npm run build:materials` (see `docs/FILAMENT_MATERIALS.md`)
 
 ### Devcontainer
 
@@ -335,6 +335,6 @@ Archived WebGPU renderer: `docs/backups/experimental-wasm-renderer/` (not on the
 - **Modifying physics**: Use Rapier APIs via `RAPIER.*` namespace after `RAPIER.init()`
 - **Modifying rendering**: Use Filament APIs via `this.Filament.*` after initialization
 - **Modifying UI**: Edit React/TSX files in `src/components/` or `src/sequencer/`
-- **Material changes**: Edit `public/custom_material.mat`, recompile with Filament `matc` tool to `public/baked_color.filmat`
+- **Material changes**: Edit the `.mat` source in `public/`, then `npm run build:materials` (uses the `matc` of the Filament release pinned in `scripts/filament.json`) and commit the binary plus `scripts/materials.lock.json`
 - **Python backend changes**: Prefer editing files under `storage/routes/` and `storage/services/` rather than the monolithic `universal/app_storage_manager.py`
 - **Asset validation**: Run `node scripts/validate-assets.cjs` to validate JSON assets against schemas

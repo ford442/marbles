@@ -60,7 +60,9 @@ Documented in [`docs/multiplayer.md`](../multiplayer.md).
 
 ## Determinism
 
-Cross-browser/platform determinism is an **explicit non-goal**. The reference environment is the host's browser + Rapier WASM build. Ranked seasons (Phase 4) require Option C (headless sim) or a controlled host stack.
+Cross-browser/platform determinism is an **explicit non-goal** for host authority. The reference environment is the host's browser + Rapier WASM build. Ranked seasons (Phase 4) require Option C (headless sim) or a controlled host stack.
+
+For Option C, the starting point is verified: a headless Node simulation and a browser client on the same build produce the same Rapier state bit for bit when given the same inputs on the same fixed steps (`npm run test:determinism`, `npm run test:e2e:determinism`). [physics-determinism.md](./physics-determinism.md) lists what a ranked mode still has to add (step-indexed inputs, one step rate, one MarblePhysics backend).
 
 ## Desync handling
 

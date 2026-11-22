@@ -130,6 +130,7 @@ Slices communicate through `this.game.*`, typed by their host. Prefer:
 
 - [language-strategy.md](./language-strategy.md) — language boundaries, C++ rules, archived React/WebGPU
 - [physics-worker.md](./physics-worker.md) — SharedArrayBuffer physics worker (120 Hz spike)
+- [physics-determinism.md](./physics-determinism.md) — what is bit-for-bit reproducible, how it is tested, raycast contract
 - [product-epic.md](./product-epic.md) — 12–18 month north-star (workshop, ranked, hero content)
 - [workshop-platform.md](./workshop-platform.md) — Workshop UGC data model + moderation ADR
 - [level-pipeline.md](./level-pipeline.md) — JSON vs code level inventory and migration policy

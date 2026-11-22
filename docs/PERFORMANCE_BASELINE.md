@@ -150,7 +150,7 @@ Notes:
 - Game hot paths using `computeForceFieldsBatch` above `FORCE_BATCH_THRESHOLD`: `effects-tick.js` (black hole), `frame-input.js` (magnet), `game-loop/repel-pulse.js` (Shield + Violet Light, `falloffExp=0` constant-magnitude repel).
 - CI: `npm run build:wasm` → `check:wasm` → `git diff --exit-code public/wasm/` (the build is byte-reproducible, so committed artefacts must match the C++) → `test:wasm:parity` → Debug/ASan compile smoke, before unit tests (Emscripten **3.1.50** — see `wasm/README.md`).
 - Local dev without emsdk continues to use JS fallbacks silently (`npm run build:wasm` skips gracefully when Emscripten is absent).
-- Shared test vectors live in `tests/test_wasm_bridge.js` and `tests/test_wasm_bridge_wasm.js`.
+- Shared test vectors live in `tests/test_wasm_bridge.js` and `tests/test_wasm_bridge_wasm.js`; the float32 ULP bound against the JS fallbacks lives in `tests/test_wasm_parity_ulp.js` (both run by `npm run test:wasm:parity`).
 
 ### Frame-time A/B (ability-heavy levels)
 
@@ -236,3 +236,65 @@ Each flag was added cumulatively on top of the SIMD spring/segment kernels, buil
 | **Final** | **14,762 / 6,326** | **18,921 / 8,007** | |
 
 Net vs. the previous committed build: wasm −14% raw / −15% gzip, glue −4 B, with two more SIMD kernels. The Debug/ASan target (`npm run build:wasm:debug`) compiles but is not `-Weverything`-clean (raw-pointer `-Wunsafe-buffer-usage`, Embind `-Wmissing-prototypes` / `-Wglobal-constructors`), so CI runs it as a compile smoke without `-Werror`.
+
+### Float semantics: `-ffast-math` removed (2026-11-22)
+
+Release was `-O3 -ffast-math`. It is now `-O3 -fno-math-errno -fno-trapping-math -ffp-contract=off`: every float32 operation is correctly rounded, NaN and infinity follow IEEE 754, and nothing is reassociated, so the kernels compute the same bits on every machine and stay within a fixed distance of the JS fallbacks. `-fno-math-errno` and `-fno-trapping-math` are the parts of fast-math that cost nothing in correctness. `-ffp-contract=off` rules out fused multiply-add if relaxed-simd is ever enabled; it changes the binary but not the results today.
+
+Size (Emscripten 3.1.50, bytes raw / `gzip -9`):
+
+| Build | `marble_physics.js` | `marble_physics.wasm` |
+| --- | ---: | ---: |
+| `-ffast-math` | 14,762 / 6,326 | 18,921 / 8,007 |
+| strict | 14,762 / 6,326 | 19,000 / 8,006 |
+
+Speed: `npm run bench:wasm:batch -- --baseline-dir <fast-math public/wasm>` (1000 entities, min of 40 interleaved samples, three runs, Node v22.23.5, 4 cores). The benchmark now also times the scalar `*Out` entry points (one call per entity), which is where a compiler flag could matter; the batch kernels are hand-written SIMD.
+
+| Kernel | `-ffast-math` (ms) | strict (ms) | Change across runs |
+| --- | ---: | ---: | --- |
+| `computeForceFieldsBatch` | 0.0129–0.0132 | 0.0130–0.0132 | within ±1% (noise) |
+| `applyVelocityDampingBatch` | 0.0024 | 0.0024–0.0025 | within ±2% (noise) |
+| `computeSpringForcesBatch` | 0.0045–0.0046 | 0.0046 | within ±1% (noise) |
+| `closestPointsOnSegmentBatch` | 0.0047–0.0049 | 0.0048 | within ±2% (noise) |
+| `computeForceFieldOut` × 1000 (`falloffExp = 2`) | 0.0485–0.0490 | 0.0439–0.0445 | **8.5–9.4% faster**, repeatable; cause not investigated |
+| `applyVelocityDampingOut` × 1000 | 0.0235–0.0249 | 0.0233–0.0249 | within ±1% (noise) |
+| `computeSpringForceOut` × 1000 | 0.0508–0.0519 | 0.0509–0.0519 | within ±1% (noise) |
+| `closestPointOnSegmentOut` × 1000 | 0.0397–0.0428 | 0.0392–0.0425 | within ±1.5% (noise) |
+
+Dropping `-ffast-math` costs no measurable speed.
+
+Parity with the JS fallbacks, from `node tests/test_wasm_parity_ulp.js --report`. Error is in float32 ULPs of the magnitude of the terms each kernel adds up, over 20,000 seeded samples per scalar kernel and batches of 1–257 entities:
+
+| Kernel | Max ULP, `-ffast-math` | Max ULP, strict | Bound in the test |
+| --- | ---: | ---: | ---: |
+| `vec3Distance` | 2.00 | 2.00 | 4 |
+| `vec3DistanceSq` | 3.58 | 3.58 | 8 |
+| `vec3Dot` | 1.99 | 1.99 | 4 |
+| `vec3Length` | 1.35 | 1.35 | 4 |
+| `vec3Normalize` | 2.78 | 2.78 | 6 |
+| `computeDopplerRate` | 1.98 | 1.98 | 4 |
+| `applyVelocityDamping` (+ batch) | 2.00 | 2.00 | 4 |
+| `computeForceField` | 11.95 | 13.94 | 24 |
+| `computeForceFieldsBatch` | 9.00 | 8.00 | 24 |
+| `computeSpringForce` | 3.98 | 3.98 | 8 |
+| `computeSpringForcesBatch` | 5.81 | 5.81 | 12 |
+| `reflectVelocity` | 5.99 | 5.99 | 12 |
+| `closestPointOnSegment` | 5.96 | 5.96 | 12 |
+| `closestPointsOnSegmentBatch` | 5.56 | 5.56 | 12 |
+
+On finite inputs the two builds are equally close to the fallbacks; the force field is the loosest because `pow(dist, falloffExp)` multiplies the distance's rounding error by the exponent. What the flag changes is non-finite inputs. With `-ffast-math`, a NaN component made `vec3Normalize` return a zero vector (JS: NaN) and made `applyVelocityDamping` return NaN in all three components (JS: only the NaN one), because the compiler was allowed to assume the comparisons guarding those paths never see a NaN. The strict build matches the fallbacks in all 189 NaN / ±Infinity cases. Separately, the SIMD batch kernels masked out a NaN distance where the scalar kernels and the fallbacks propagate it; they now use the scalar predicates. `vec3Normalize`'s JS cut-off (1e-8) was also aligned with the C++ one (1e-6).
+
+The bound does not cover inputs within rounding distance of a kernel's cut-off (`maxDist`, the 1e-6 zero-length guards), where float32 and float64 can take different branches.
+
+## Bundle: Rapier 0.21 (2026-11-22)
+
+Rapier's WASM grew from 1.5 MB (0.13.1) to 3.1 MB (0.21.0, which added soft bodies). `@dimforge/rapier3d-compat` inlines it as base64, once in the main bundle and once in the physics-worker bundle.
+
+| Chunk | Rapier 0.13.1 | Rapier 0.21.0 | gzip (0.21.0) |
+| --- | ---: | ---: | ---: |
+| entry (`index-*.js`) | 2,700 KB (Rapier inlined) | 633 KB (game code only) | 175 KB |
+| `rapier-*.js` (new, own chunk) | — | 4,334 KB | 1,652 KB |
+| `physics-worker-*.js` | about 2,100 KB | 4,354 KB | 1,659 KB |
+
+`rapier3d-compat` alone is 2,070 KB / 763 KB gzip at 0.13.1 and 4,340 KB / 1,653 KB gzip at 0.21.0, so a first visit downloads about 0.9 MB more (gzip), and twice that on desktops that start the worker. Rapier is split into its own chunk (`manualChunks` in `vite.config.js`) so returning players keep it cached across game releases. `scripts/bundle-budget.json` budgets the three chunks separately. Rapier 0.19.3, the last release before soft bodies, is 2,239 KB / 834 KB gzip if the size ever has to come back down.
+

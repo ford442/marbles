@@ -15,6 +15,7 @@ npm run dev              # Start Vite dev server (http://localhost:5173)
 npm run build            # Build for production
 npm run preview          # Preview production build
 npm run build:wasm       # (optional) Compile the C++ WASM physics module
+npm run build:materials  # Recompile Filament materials with the pinned matc (downloads it on first use)
 ```
 
 The dev server runs on port 5173 with CORS headers pre-configured for WebGL and SharedArrayBuffer.
@@ -82,6 +83,7 @@ Phase B subsystems (`PhysicsWorld`, `InputSystem`, `MarbleRegistry`, `AbilitySys
 ### Rendering Pipeline
 
 **Filament Integration** (WebGL2/WASM)
+- Runtime 1.59.5 is vendored in `public/filament.{js,wasm}` from the release pinned in `scripts/filament.json` (`npm run vendor:filament`); there is no npm `filament` dependency. Compiled materials must come from the same release's `matc` (`npm run build:materials`). See `docs/FILAMENT_MATERIALS.md`
 - Loaded via UMD pattern in `src/init/`
 - Requires COOP/COEP headers for SharedArrayBuffer (configured in vite.config.js)
 - Assets (GLTF, materials) loaded through Filament's asset pipeline
@@ -248,6 +250,10 @@ npm run typecheck              # Strict tsc over all of src/
 npm run typecheck:coverage     # Coverage ratchet (scripts/ts-coverage-baseline.json)
 npm run gen:schema-types       # Regenerate src/types/generated/ from assets/schemas/
 npm run test:e2e:actions       # Fire every ability/menu action on a loaded level (dev server on :5173)
+npm run test:determinism       # Main-thread vs worker Rapier state, hashed per step (add -- --update to re-record)
+npm run test:e2e:determinism   # Same scenario in Chromium must match the Node digests (starts its own server)
+npm run test:wasm:parity       # WASM kernels vs JS fallbacks: fixed vectors + float32 ULP bound
+npm run check:materials        # Vendored Filament runtime + compiled materials match the pin
 
 # Review & Debug
 # Check console in browser for physics logs and rendering status
@@ -262,7 +268,9 @@ npm run test:e2e:actions       # Fire every ability/menu action on a loaded leve
 - Held-key movement is a raw impulse that isn't scaled by mass, so light marbles accelerate much harder. Recorded level `solution`s are tied to the reference marble (`classic_red`).
 - `docs/backups/` (including the `_backup_*` files and `orphan-react-stack/`) is intentionally archived and excluded from `tsconfig.json` — not dead weight to clean up, already correctly documented in AGENTS.md's "Non-obvious gotchas".
 - `npm run lint` and `npm run typecheck` are clean (2026-11-21). `typecheck` is strict (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `erasableSyntaxOnly`) and covers all of `src/` plus `scripts/level-lab.mjs`; JS is checked only where a file has `// @ts-check`, and every `src/` file now does or is `.ts`. `npm run typecheck:coverage` (CI) fails if typed files / typed LOC share drop or suppressions grow — run `node scripts/ts-coverage.mjs --update` after raising coverage. Map/marble/sound types are generated from `assets/schemas/*.json` (`npm run gen:schema-types`; `validate:assets` checks they are fresh). See `docs/architecture/language-strategy.md`.
-- The entry chunk sits at ~2700 KB against the 2710 KB budget (`scripts/bundle-budget.json`). Typed-only class fields must be `declare foo: T` (otherwise ES2022 emits them as field initialisers, which grows the bundle and changes construction order).
+- The entry chunk sits at ~633 KB against the 645 KB budget (`scripts/bundle-budget.json`); Rapier builds into its own `rapier-*.js` chunk (4.33 MB, separate budget) because 0.21's WASM is twice the size of 0.13's. Typed-only class fields must be `declare foo: T` (otherwise ES2022 emits them as field initialisers, which grows the bundle and changes construction order).
+- Rapier is pinned exactly (`0.21.0`). Any solver change invalidates the recorded level `solution`s and the determinism digests (`tests/fixtures/physics-determinism.json`); re-record both when upgrading. `World.updateSceneQueries()` no longer exists: scene queries see new colliders only after a step. See `docs/architecture/physics-determinism.md`.
+- Do not build the WASM module with `-ffast-math`, and do not set a material parameter the `.mat` does not declare: Filament aborts instead of throwing (`docs/FILAMENT_MATERIALS.md`).
 - `backend/core/app_storage_manager.py` is the single copy of the legacy monolithic storage module (the byte-identical `backend/shared/hf/` duplicate was removed 2026-09-26; nothing imported either). The live API is `backend/storage/` (`uvicorn storage.main:app`).
 - The WebGPU boot probe (`src/webgpu/boot-probe.js`, run from `InitCore.init()` before Filament loads) is **not** a hard requirement: on failure Filament still boots on WebGL2, `window.webgpuProbe.ok === false`, `window.rendererFallbackReason` is set, and particles/gpu-chores run on the CPU. The probe requests a descriptor sized to the particle + chores working set, matches the WebGL `powerPreference`, and allows one device recovery after a loss. `?renderer=simple` is a dev/e2e-only flag. See `docs/WEBGPU_BOOT_PROBE.md` and `docs/RENDERER_FALLBACK.md`.
 
@@ -272,6 +280,8 @@ npm run test:e2e:actions       # Fire every ability/menu action on a loaded leve
 - **Rapier3D**: https://rapier.rs/
 - **WebGPU Boot Probe**: See `docs/WEBGPU_BOOT_PROBE.md`
 - **GPU Chores**: See `docs/GPU_CHORES.md`
+- **Physics determinism**: See `docs/architecture/physics-determinism.md`
+- **Filament runtime + materials**: See `docs/FILAMENT_MATERIALS.md`
 - **Asset Contributing**: See `docs/CONTRIBUTING.md`
 - **Game Design Analysis**: Historical snapshot — see `docs/GAME_ANALYSIS.md` (archived; 7-level era)
 

@@ -176,4 +176,4 @@ node scripts/stress-relay.mjs   # requires relay running
 
 ## Determinism reality check
 
-Rapier WASM in each browser is **not** cross-platform deterministic. Phase 1–2 avoids this by not syncing physics — only transforms (+ visual abilities). Host authority (Phase 3) uses the host browser as reference. Ranked modes should use Option C (headless sim) — see [host-authority.md](./architecture/host-authority.md).
+Live play is **not** deterministic across clients today, and Phase 1–2 avoids the question by not syncing physics — only transforms (+ visual abilities). The engine itself is no longer the obstacle: on one build, Rapier computes the same bits in Node, in the browser and on both physics backends when inputs land on the same fixed steps (tested, see [physics-determinism.md](./architecture/physics-determinism.md)). What remains is how inputs are delivered: the worker applies them when they arrive, and the two backends default to different step rates. Host authority (Phase 3) uses the host browser as reference. Ranked modes should use Option C (headless sim) — see [host-authority.md](./architecture/host-authority.md).

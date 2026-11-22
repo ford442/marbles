@@ -1,7 +1,7 @@
 # Physics Worker Architecture
 
 **Status:** Default-on for capable desktops (manifest campaign) — October 2026 (fixed-step contract); snapshot layout v4 with recycled body slots, Party Race host sim on the worker clock — November 2026  
-**Related:** [game-loop.md](./game-loop.md), [language-strategy.md](./language-strategy.md), [host-authority.md](./host-authority.md)
+**Related:** [game-loop.md](./game-loop.md), [language-strategy.md](./language-strategy.md), [host-authority.md](./host-authority.md), [physics-determinism.md](./physics-determinism.md)
 
 ## Overview
 
@@ -124,7 +124,7 @@ All gameplay raycasts go through `game.physicsQueries` ([`physics-queries.ts`](.
 | `hitBodyType` | `Int32` (−1 = parentless collider) |
 | `colliderHandle` | `Float64` |
 
-The request carries `excludeBodyIndex`, `solid`, `groups` and `excludeSensors`; the worker runs the same `RapierPhysicsQueries` implementation as the main thread, so exclusion and hit fields are identical across backends. The main thread returns a `RayHit` whose `body` is the registered proxy (`physicsQueries.isBodyAlive(body)` tells callers when it has been removed).
+The request carries `excludeBodyIndex`, `solid`, `groups`, `excludeSensors` and `excludeDynamic`; the worker runs the same `RapierPhysicsQueries` implementation as the main thread, so exclusion and hit fields are identical across backends. `point` is rounded to float32 on the main thread as well, so both backends return the same bits. The contract (toi units, self-hit, each filter) is pinned by `testRayQueryContract`; see [physics-determinism.md](./physics-determinism.md#raycast-contract) for what Rapier 0.21 changed about `excludeSensors`. The main thread returns a `RayHit` whose `body` is the registered proxy (`physicsQueries.isBodyAlive(body)` tells callers when it has been removed).
 
 ## Tick policy (fixed-step contract)
 
@@ -189,6 +189,8 @@ Record `window.perfMonitor.getLevelSummary()` and `latestSyncWork.physicsStepMs`
 ## Tests
 
 `tests/test_physics_parity.js` runs the same gameplay scenarios (grounding, velocity readback, blink, grapple, double jump, missile CCD, slow-mo) against the main-thread backend and against `WorkerPhysicsBackend` driving `createWorkerSim` in-process over real SharedArrayBuffers. Any backend divergence should fail there first.
+
+`tests/test_physics_determinism.js` runs one seeded scene and input stream through both backends and compares a hash of the whole Rapier world after every step, at 120 Hz and 60 Hz ([physics-determinism.md](./physics-determinism.md)). It is the test that fails when the transport stops being bit-exact; `npm run test:e2e:determinism` repeats it in Chromium.
 
 `tests/test_physics_worker_slots.js` uses the same in-process worker. It covers:
 

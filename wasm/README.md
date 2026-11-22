@@ -143,14 +143,22 @@ node tests/benchmark_wasm_batch_simd.mjs --baseline-dir /path/to/old/public/wasm
 1. Implement the function in `marble_physics.cpp` (+ `*Out` / `Batch` variants when hot).
 2. Register in the `EMSCRIPTEN_BINDINGS` block.
 3. Add JS fallback(s) in `src/wasm-bridge.js` under `jsFallback`.
-4. Add parity tests in `tests/test_wasm_bridge.js` and `tests/test_wasm_bridge_wasm.js`.
+4. Add parity tests in `tests/test_wasm_bridge.js` and `tests/test_wasm_bridge_wasm.js`,
+   and a kernel entry (generator, term scale, ULP bound) in `tests/test_wasm_parity_ulp.js`.
+   Write SIMD kernels with the scalar kernel's comparisons, not their negations,
+   so a NaN takes the same path in both.
 5. `npm run build:wasm` and commit `public/wasm/*`.
 
 ## Link flags (release)
 
 See `wasm/CMakeLists.txt`:
 
-- `-O3`, `-ffast-math`, `-sASSERTIONS=0`
+- `-O3 -fno-math-errno -fno-trapping-math -ffp-contract=off`, `-sASSERTIONS=0`.
+  **Not** `-ffast-math`: results must be the same bits on every machine and
+  NaN / infinity must behave as in the JS fallbacks. `npm run test:wasm:parity`
+  holds each kernel to a float32 ULP bound against them
+  (`tests/test_wasm_parity_ulp.js`); benchmark and ULP tables are in
+  `docs/PERFORMANCE_BASELINE.md` → "Float semantics".
 - `-msimd128` and `-mnontrapping-fptoint` on **both** compile and link lines
   (target features must reach any link-time codegen)
 - `-sMODULARIZE=1` + `EXPORT_NAME=MarblePhysicsModule`
