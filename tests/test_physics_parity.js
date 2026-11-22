@@ -44,6 +44,8 @@ const SCENE = {
         translation: [6, 1.5, 0],
         collider: { type: 'cuboid', halfExtents: [1, 1, 1], density: 1 },
     },
+    // Sensor volume well away from the other scenarios: rays must be able to skip it.
+    trigger: { type: 'fixed', translation: [-12, 4, -12], collider: { type: 'sensor_ball', radius: 1 } },
     player: {
         type: 'dynamic',
         translation: [0, PLAYER_REST_Y, 0],
@@ -403,9 +405,92 @@ function testTimeScale(h) {
     assert.ok(Math.abs(slow - 0.2) < 0.02, `${h.name}: slow-mo 0.2× → ${slow} s sim`);
 }
 
+/**
+ * The `RayQueryOptions` contract (toi units, self-hit, filters), identical on
+ * both backends. The filter half pins a Rapier 0.13 → 0.21 change: 0.13's JS
+ * `QueryFilterFlags` were one bit off, so `excludeSensors` really excluded
+ * dynamic bodies and still hit sensors.
+ */
+function testRayQueryContract(h) {
+    resetPlayer(h);
+    h.stepTime(0.25);
+    const queries = h.game.physicsQueries;
+    const DOWN = { x: 0, y: -1, z: 0 };
+    const near = (a, b, label) => assert.ok(Math.abs(a - b) < 1e-3, `${h.name}: ${label} (got ${a}, want ${b})`);
+
+    // toi is in units of |dir|, and point = origin + dir * toi.
+    const floorFrom = { x: 20, y: 10, z: 20 };
+    const unit = queries.castRay(floorFrom, DOWN, 100);
+    near(unit.toi, 9.5, 'floor toi');
+    assert.equal(unit.bodyType, 'fixed', `${h.name}: floor is fixed`);
+    near(unit.point.y, 0.5, 'hit point on the floor surface');
+    near(unit.normal.y, 1, 'floor normal');
+    const doubled = queries.castRay(floorFrom, { x: 0, y: -2, z: 0 }, 100);
+    near(doubled.toi, 4.75, 'toi scales with 1/|dir|');
+    near(doubled.point.y, 0.5, 'point uses dir * toi');
+    assert.equal(queries.castRay(floorFrom, DOWN, 9.4), null, `${h.name}: maxToi bounds the ray`);
+
+    // Self-hit: a solid ray from inside the caster hits it at toi 0 unless excluded.
+    const centre = h.bodies.player.translation();
+    const self = queries.castRay(centre, DOWN, 100);
+    assert.equal(self.body, h.bodies.player, `${h.name}: unfiltered ray from the centre hits the caster`);
+    near(self.toi, 0, 'self-hit toi');
+    const below = queries.castRay(centre, DOWN, 100, { excludeBody: h.bodies.player });
+    assert.equal(below.bodyType, 'fixed', `${h.name}: excludeBody skips the caster`);
+    near(below.toi, PLAYER_RADIUS, 'ground distance from the centre');
+    // Sideways, so the caster's boundary doesn't tie with the floor it rests on.
+    const hollow = queries.castRay(centre, { x: -1, y: 0, z: 0 }, 100, { solid: false });
+    assert.equal(hollow.body, h.bodies.player, `${h.name}: solid:false hits the caster's own boundary`);
+    near(hollow.toi, PLAYER_RADIUS, 'solid:false toi from the centre');
+
+    // Sensors: hit by default, skipped by excludeSensors (also when the ray starts inside one).
+    const aboveTrigger = { x: -12, y: 10, z: -12 };
+    const sensorHit = queries.castRay(aboveTrigger, DOWN, 100);
+    near(sensorHit.toi, 5, 'default ray stops at the sensor');
+    assert.equal(sensorHit.body, h.bodies.trigger, `${h.name}: sensor hit names its body`);
+    near(queries.castRay(aboveTrigger, DOWN, 100, { excludeSensors: true }).toi, 9.5, 'excludeSensors reaches the floor');
+    near(queries.castRay({ x: -12, y: 4, z: -12 }, DOWN, 100, { excludeSensors: true }).toi, 3.5, 'excludeSensors from inside a sensor');
+
+    // Dynamic bodies: still hit with excludeSensors, skipped only by excludeDynamic.
+    const aboveCrate = { x: 6, y: 10, z: 0 };
+    for (const opts of [undefined, { excludeSensors: true }]) {
+        const hit = queries.castRay(aboveCrate, DOWN, 100, opts);
+        assert.equal(hit.body, h.bodies.crate, `${h.name}: ${JSON.stringify(opts)} hits the dynamic crate`);
+        assert.equal(hit.bodyType, 'dynamic');
+        near(hit.toi, 7.5, 'crate top');
+    }
+    const past = queries.castRay(aboveCrate, DOWN, 100, { excludeSensors: true, excludeDynamic: true });
+    assert.equal(past.bodyType, 'fixed', `${h.name}: excludeDynamic skips the crate`);
+    near(past.toi, 9.5, 'excludeDynamic reaches the floor');
+}
+
+/**
+ * Control for testMissileDoesNotTunnel: the same missile without CCD passes
+ * through a thin plate, so the CCD flag is what stops it.
+ *
+ * The plate is dynamic. Since Rapier 0.21 a fast body is stopped by a thin
+ * *fixed* wall even without CCD (the 0.13 control tunnelled there), so only a
+ * dynamic target still tells the two apart.
+ */
 function testCcdControl() {
-    // Control for testMissileDoesNotTunnel: the same missile without CCD does
-    // pass through the wall, so the assertion above is meaningful.
+    const PLATE_Z = 8;
+    const fire = (ccd) => {
+        const world = new RAPIER.World({ x: 0, y: 0, z: 0 });
+        const plate = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(0, 1.7, PLATE_Z));
+        world.createCollider(RAPIER.ColliderDesc.cuboid(2, 2, 0.05).setDensity(50), plate);
+        const body = world.createRigidBody(
+            RAPIER.RigidBodyDesc.dynamic().setTranslation(0, 1.7, 1.5).setLinvel(0, 0, 40).setCcdEnabled(ccd),
+        );
+        world.createCollider(RAPIER.ColliderDesc.ball(0.2).setDensity(0.5), body);
+        for (let i = 0; i < 30; i++) world.step();
+        return { z: body.translation().z, plateVz: plate.linvel().z };
+    };
+    const off = fire(false);
+    assert.ok(off.z > PLATE_Z + 5 && off.plateVz === 0, `without CCD the missile tunnels a thin dynamic plate (control, z=${off.z})`);
+    const on = fire(true);
+    assert.ok(on.z < PLATE_Z + 1 && on.plateVz > 0, `with CCD the same missile hits the plate (z=${on.z})`);
+
+    // Fixed thin walls stop it either way on this Rapier.
     const world = new RAPIER.World(GRAVITY);
     createBodyFromDescriptor(world, SCENE.wall);
     const body = world.createRigidBody(
@@ -413,11 +498,12 @@ function testCcdControl() {
     );
     world.createCollider(RAPIER.ColliderDesc.ball(0.2).setDensity(0.5), body);
     for (let i = 0; i < 30; i++) world.step();
-    assert.ok(body.translation().z > WALL_Z, 'without CCD the missile tunnels (control)');
+    assert.ok(body.translation().z < WALL_Z, 'a thin fixed wall stops the missile even without CCD');
 }
 
 const SCENARIOS = [
     testGrounding,
+    testRayQueryContract,
     testVelocityReadback,
     testBlinkTargetFinite,
     testGrappleNeverTargetsCaster,

@@ -47,7 +47,7 @@
     "ws": "^8.21.0"
   },
   "dependencies": {
-    "@dimforge/rapier3d-compat": "^0.13.0",
+    "@dimforge/rapier3d-compat": "0.21.0",
     "filament": "^1.51.5"
   }
 }

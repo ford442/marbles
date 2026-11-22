@@ -113,6 +113,8 @@ export interface CreatePhysicsBackendOptions {
 export interface WorkerBackendInitOptions {
     /** Test hook: build the worker (defaults to the bundled module worker). */
     createWorker?: () => Worker;
+    /** Fixed tick rate; defaults to `?physicsHz=` (120). */
+    physicsHz?: 60 | 120;
 }
 
 /** Spin-wait budget for a synchronous worker raycast. */
@@ -317,7 +319,7 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
             throw new Error('SharedArrayBuffer unavailable');
         }
 
-        this.physicsHz = resolvePhysicsHzFromSearch(
+        this.physicsHz = options.physicsHz ?? resolvePhysicsHzFromSearch(
             typeof window !== 'undefined' ? window.location.search : '',
         );
 
@@ -830,6 +832,7 @@ export class WorkerPhysicsBackend implements PhysicsBackend {
             solid: opts.solid ?? true,
             groups: opts.groups ?? null,
             excludeSensors: opts.excludeSensors === true,
+            excludeDynamic: opts.excludeDynamic === true,
             excludeBodyIndex: exclude ? (exclude._bodyIndex ?? exclude.handle) : null,
         });
 
