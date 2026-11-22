@@ -1,10 +1,38 @@
 {
-  "description": "Size budget for the entry (index) chunk. Checked by scripts/check-bundle-budget.mjs after BUNDLE_STATS=1 npx vite build. Baseline before lazy zone chunks (2026-10-17): 2806.8 KB; after: 2660.2 KB. Raised 2700 → 2710 KB (2026-11-21): Phase D typing guards plus the movement model put the entry chunk at 2700.1 KB.",
-  "mainChunkMaxKB": 2710,
+  "description": "Size budgets checked by scripts/check-bundle-budget.mjs after BUNDLE_STATS=1 npx vite build. mainChunkMaxKB is the entry (index) chunk: game code only since Rapier moved to its own chunk (2026-11-22, with the Rapier 0.21 upgrade); it was 2700.1 KB with Rapier 0.13.1 inlined and is 633.2 KB without it. chunkBudgetsKB covers the physics engine: Rapier 0.21's WASM is 3.1 MB (1.5 MB in 0.13.1), base64-inlined once in the rapier chunk and once in the physics-worker bundle, so each went from about 2.1 MB to about 4.35 MB. A rule that matches no chunk fails the check.",
+  "mainChunkMaxKB": 645,
+  "chunkBudgetsKB": [
+    {
+      "pattern": "^assets/rapier-[^/]+\\.js$",
+      "maxKB": 4400,
+      "reason": "@dimforge/rapier3d-compat (JS glue + inlined WASM); grows only when the dependency is upgraded"
+    },
+    {
+      "pattern": "^assets/physics-worker-[^/]+\\.js$",
+      "maxKB": 4420,
+      "reason": "the worker bundles its own copy of Rapier plus the worker sim"
+    }
+  ],
   "forbiddenInMainChunk": [
-    { "pattern": "/src/zones/[^/]+\\.js$", "reason": "zone stamps load lazily via ZONE_LOADERS (src/zone-setup/registry.js)" },
-    { "pattern": "/src/levels\\.ts$", "reason": "DEV_LEVELS loads only behind ?devLevels=1 (loadDevLevels)" },
-    { "pattern": "/src/editor/(?!mode\\.js$)", "reason": "the map editor is a lazy chunk (bootMapEditor import in init/core.ts)" },
-    { "pattern": "/node_modules/ajv/", "reason": "full schema validation runs in CI and the editor only" }
+    {
+      "pattern": "/src/zones/[^/]+\\.js$",
+      "reason": "zone stamps load lazily via ZONE_LOADERS (src/zone-setup/registry.js)"
+    },
+    {
+      "pattern": "/src/levels\\.ts$",
+      "reason": "DEV_LEVELS loads only behind ?devLevels=1 (loadDevLevels)"
+    },
+    {
+      "pattern": "/src/editor/(?!mode\\.js$)",
+      "reason": "the map editor is a lazy chunk (bootMapEditor import in init/core.ts)"
+    },
+    {
+      "pattern": "/node_modules/ajv/",
+      "reason": "full schema validation runs in CI and the editor only"
+    },
+    {
+      "pattern": "/node_modules/@dimforge/rapier3d-compat/",
+      "reason": "Rapier ships in its own long-cached chunk (manualChunks in vite.config.js)"
+    }
   ]
 }

@@ -5,8 +5,10 @@
  *   BUNDLE_STATS=1 npx vite build && node scripts/check-bundle-budget.mjs [distDir]
  *
  * Fails when the entry chunk exceeds scripts/bundle-budget.json
- * `mainChunkMaxKB`, or when it contains a module matching
- * `forbiddenInMainChunk` (zone stamps, DEV_LEVELS, editor, ajv). Module →
+ * `mainChunkMaxKB`, when a chunk listed in `chunkBudgetsKB` (Rapier, the
+ * physics worker) exceeds its own budget, or when the entry chunk contains a
+ * module matching `forbiddenInMainChunk` (zone stamps, DEV_LEVELS, editor,
+ * ajv, Rapier). Module →
  * chunk membership comes from rollup-plugin-visualizer's raw-data output.
  */
 import fs from 'node:fs';
@@ -31,6 +33,21 @@ const entryKB = entrySize / 1000;
 console.log(`entry chunk ${entryFile}: ${entryKB.toFixed(1)} KB (budget ${budget.mainChunkMaxKB} KB)`);
 if (entryKB > budget.mainChunkMaxKB) {
     fail(`entry chunk is ${entryKB.toFixed(1)} KB, over the ${budget.mainChunkMaxKB} KB budget`);
+}
+
+// Other chunks with their own budget (the physics engine). Each rule must
+// match exactly one built file, so a renamed chunk cannot slip out of its budget.
+const assetFiles = fs.readdirSync(path.join(distDir, 'assets')).map((name) => `assets/${name}`);
+for (const rule of budget.chunkBudgetsKB ?? []) {
+    const matches = assetFiles.filter((file) => new RegExp(rule.pattern).test(file));
+    if (matches.length !== 1) {
+        fail(`chunk budget ${rule.pattern} matched ${matches.length} files (expected 1) — ${rule.reason}`);
+        continue;
+    }
+    const file = /** @type {string} */ (matches[0]);
+    const kb = fs.statSync(path.join(distDir, file)).size / 1000;
+    console.log(`chunk ${file}: ${kb.toFixed(1)} KB (budget ${rule.maxKB} KB)`);
+    if (kb > rule.maxKB) fail(`${file} is ${kb.toFixed(1)} KB, over its ${rule.maxKB} KB budget — ${rule.reason}`);
 }
 
 const statsPath = path.join(distDir, 'bundle-stats.json');

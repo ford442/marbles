@@ -122,7 +122,18 @@ assetsInclude: ['**/*.wasm', '**/*.filmat', '**/*.glb', '**/*.gltf', '**/*.wgsl'
     rollupOptions: {
       // marble_physics.js is loaded dynamically by src/wasm-bridge.js when the
       // WASM binary is present; it must remain a static asset rather than a bundle.
-      external: [/\/wasm\/marble_physics\.js$/]
+      external: [/\/wasm\/marble_physics\.js$/],
+      output: {
+        // Rapier (JS glue + its WASM inlined as base64, ~4.3 MB since 0.21)
+        // gets its own chunk: its hash only changes when the dependency does,
+        // so returning players keep it cached across game releases, and the
+        // entry-chunk budget measures game code. scripts/bundle-budget.json
+        // budgets this chunk separately.
+        manualChunks(id) {
+          if (id.includes('/node_modules/@dimforge/rapier3d-compat/')) return 'rapier';
+          return undefined;
+        },
+      },
     }
   }
 });
