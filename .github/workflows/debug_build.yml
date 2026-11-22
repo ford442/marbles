@@ -8,6 +8,9 @@ on:
   workflow_dispatch:
 
 # Marbles 3D — validate assets, run unit tests, lint, typecheck, build WASM + Vite bundle.
+# Reproducibility gates: committed public/wasm/* must match a fresh Emscripten build,
+# committed Filament materials must match a fresh matc build (npm run check:materials),
+# and the physics determinism digests must match on this runner (npm run test:determinism).
 # E2E smoke (tests/e2e/smoke.cjs): optional job after build — continue-on-error on PRs.
 # Local: npm run build && npm run preview -- --port 5173 &  then  BASE_URL=http://localhost:5173 npm run test:e2e:smoke
 # Full missile e2e: npm run dev  then  npm run test:e2e
@@ -46,6 +49,8 @@ jobs:
       - name: Committed WASM matches source
         run: git diff --exit-code --stat -- public/wasm/
 
+      # WASM vs JS fallback: fixed vectors, then the per-kernel float32 ULP bound
+      # and NaN / Infinity parity (tests/test_wasm_parity_ulp.js).
       - name: WASM parity tests
         run: npm run test:wasm:parity
 
@@ -54,8 +59,31 @@ jobs:
       - name: Build WASM (Debug/ASan smoke)
         run: npm run build:wasm:debug
 
+      # matc comes from the Filament release pinned in scripts/filament.json
+      # (sha256-checked); cache the download between runs.
+      - name: Cache Filament tools
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/filament-tools
+          key: filament-tools-${{ runner.os }}-${{ hashFiles('scripts/filament.json') }}
+
+      # The vendored runtime is the pinned release, and every material
+      # recompiles to the committed binary with that release's matc.
+      - name: Filament runtime + materials match the pinned release
+        run: npm run check:materials
+        env:
+          FILAMENT_TOOLS_DIR: ${{ runner.temp }}/filament-tools
+
       - name: Validate assets
         run: npm run validate:assets
+
+      # Same seed + inputs through the main-thread and worker backends: the
+      # Rapier snapshot must hash identically on every step, and the run digest
+      # must equal the one recorded in tests/fixtures (i.e. this runner computes
+      # the same bits as the machine that recorded it). Also part of the unit
+      # suite below; run on its own first so a determinism break is named.
+      - name: Physics determinism (main vs worker, pinned digest)
+        run: npm run test:determinism
 
       - name: Unit tests + level completability harness (tests/levels/)
         run: node scripts/run-unit-tests.mjs
@@ -131,3 +159,8 @@ jobs:
 
       - name: E2E gameplay actions (every ability / menu action on a live level)
         run: BASE_URL=http://127.0.0.1:5173/ npm run test:e2e:actions
+
+      # Chromium (page + Web Worker) must reproduce the digests Node recorded.
+      # Starts its own dev server on a free port.
+      - name: E2E physics determinism (browser == Node)
+        run: npm run test:e2e:determinism

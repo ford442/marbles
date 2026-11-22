@@ -29,6 +29,8 @@
     "test:e2e:smoke:worker": "PHYSICS_WORKER=1 node tests/e2e/smoke.cjs",
     "test:e2e:smoke:main": "PHYSICS_WORKER=0 node tests/e2e/smoke.cjs",
     "test:e2e:actions": "node tests/e2e/gameplay-actions.cjs",
+    "test:e2e:determinism": "node tests/e2e/determinism.mjs",
+    "test:determinism": "node --experimental-strip-types --no-warnings tests/test_physics_determinism.js",
     "lint": "eslint src tests scripts --ext .js,.cjs,.mjs,.ts --ignore-pattern tests/e2e --quiet",
     "typecheck": "tsc --noEmit",
     "typecheck:coverage": "node scripts/ts-coverage.mjs",

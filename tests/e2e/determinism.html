@@ -1,0 +1,33 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Physics determinism (browser)</title>
+<!-- Served by the Vite dev server that tests/e2e/determinism.mjs starts. -->
+<script type="module">
+    import { runBothBackends } from '../support/physics-determinism.js';
+
+    const RATES = [120, 60];
+    const summarise = (r) => ({ hz: r.hz, rapier: r.rapier, firstMismatch: r.firstMismatch, main: r.main.digest, worker: r.worker.digest });
+
+    async function onPage() {
+        const out = [];
+        for (const hz of RATES) out.push(summarise(await runBothBackends({ hz })));
+        return out;
+    }
+
+    /** The same runs inside a real Web Worker (Rapier's WASM instantiated off the main thread). */
+    function inWorker() {
+        return new Promise((resolve, reject) => {
+            const worker = new Worker(new URL('./determinism.worker.js', import.meta.url), { type: 'module' });
+            worker.onmessage = (e) => { worker.terminate(); if (e.data.error) reject(new Error(e.data.error)); else resolve(e.data.results); };
+            worker.onerror = (e) => reject(new Error(e.message || 'determinism worker failed to load'));
+            worker.postMessage({ rates: RATES });
+        });
+    }
+
+    window.runDeterminism = async () => ({
+        crossOriginIsolated: self.crossOriginIsolated,
+        page: await onPage(),
+        worker: await inWorker(),
+    });
+    window.determinismReady = true;
+</script>
