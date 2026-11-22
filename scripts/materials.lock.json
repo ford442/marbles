@@ -1,0 +1,24 @@
+{
+  "filament": "1.59.5",
+  "materialVersion": 59,
+  "matcFlags": [
+    "--api",
+    "opengl",
+    "--platform",
+    "mobile"
+  ],
+  "outputs": {
+    "public/baked_color.filmat": {
+      "source": "public/custom_material.mat",
+      "sourceSha256": "46c9b58c78b7a7576b3a6073506d9bc5700a2dbf5206b217bc2ad7fcbb49cfeb",
+      "sha256": "264545226a78dd1e3ee467fcea3a827e157c7e542ec879c5f915b545d7a09447",
+      "bytes": 461939
+    },
+    "public/baked_procedural.filament": {
+      "source": "public/custom_material_procedural.mat",
+      "sourceSha256": "cfbab604c4c96ceef92add75ec90072cd533e61babc6c743faacd2169833880b",
+      "sha256": "f387c9bb22ab2bcf45f0768d1d7235ce406146c808301f050bbbf768aa1737f7",
+      "bytes": 1446793
+    }
+  }
+}

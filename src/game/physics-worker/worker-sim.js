@@ -207,6 +207,7 @@ export function createWorkerSim({
                 solid: data.solid !== false,
                 groups: data.groups ?? undefined,
                 excludeSensors: data.excludeSensors === true,
+                excludeDynamic: data.excludeDynamic === true,
                 excludeBody: excludeIndex != null ? bodies[excludeIndex] : null,
             }) : null;
 

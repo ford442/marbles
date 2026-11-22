@@ -289,8 +289,11 @@ export class MarbleRegistry {
         if (info.anisotropy !== undefined) mat.setFloatParameter('anisotropyStrength', info.anisotropy);
         if (info.grainScale !== undefined) mat.setFloatParameter('grainScale', info.grainScale);
         if (info.scratchesIntensity !== undefined) mat.setFloatParameter('scratchesIntensity', info.scratchesIntensity);
-        if (info.emissive !== undefined) {
-            mat.setColor3Parameter('emissive', g.Filament.RgbType.LINEAR, info.emissive);
+        // Marble data flags glowing marbles with `emissive: true` (the glow
+        // colour is their lightColor / color); a preset may give an RGB instead.
+        const glow = Array.isArray(info.emissive) ? info.emissive : info.emissive ? (info.lightColor || info.color) : null;
+        if (Array.isArray(glow) && glow.length === 3) {
+            mat.setColor3Parameter('emissive', g.Filament.RgbType.LINEAR, glow);
         }
         if (info.emissiveIntensity !== undefined) {
             mat.setFloatParameter('emissiveIntensity', info.emissiveIntensity);

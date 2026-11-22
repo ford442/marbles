@@ -40,6 +40,8 @@ export interface RayQueryOptions {
     groups?: number | undefined;
     /** Skip sensor colliders (pickups, triggers). */
     excludeSensors?: boolean | undefined;
+    /** Skip colliders attached to dynamic bodies (marbles, props, projectiles). */
+    excludeDynamic?: boolean | undefined;
 }
 
 export interface PhysicsQueries {
@@ -59,13 +61,33 @@ export function rayBodyTypeFromRapier(type: RAPIER.RigidBodyType | null | undefi
     return type == null ? null : BODY_TYPE_BY_RAPIER[type] ?? null;
 }
 
+/**
+ * `origin + dir * toi`, rounded to float32. The worker backend returns hits
+ * through a Float32Array, so the main thread rounds too: gameplay code that
+ * builds on a hit point (blink target, grapple anchor) then feeds the same
+ * bits to the simulation on either backend.
+ */
 export function rayPointAt(origin: Vec3, dir: Vec3, toi: number): Vec3 {
-    return { x: origin.x + dir.x * toi, y: origin.y + dir.y * toi, z: origin.z + dir.z * toi };
+    return {
+        x: Math.fround(origin.x + dir.x * toi),
+        y: Math.fround(origin.y + dir.y * toi),
+        z: Math.fround(origin.z + dir.z * toi),
+    };
 }
 
-/** Query filter flags for the given options (`undefined` when nothing is filtered). */
+/**
+ * Query filter flags for the given options (`undefined` when nothing is filtered).
+ *
+ * Rapier 0.13's JS flag values were one bit below the engine's, so
+ * `EXCLUDE_SENSORS` there really excluded dynamic bodies and still hit
+ * sensors. 0.21 matches the engine; `tests/test_physics_parity.js` pins both
+ * flags on both backends.
+ */
 export function rayQueryFlags(opts: RayQueryOptions): RAPIER.QueryFilterFlags | undefined {
-    return opts.excludeSensors ? RAPIER.QueryFilterFlags.EXCLUDE_SENSORS : undefined;
+    let flags = 0;
+    if (opts.excludeSensors) flags |= RAPIER.QueryFilterFlags.EXCLUDE_SENSORS;
+    if (opts.excludeDynamic) flags |= RAPIER.QueryFilterFlags.EXCLUDE_DYNAMIC;
+    return flags === 0 ? undefined : flags;
 }
 
 /**

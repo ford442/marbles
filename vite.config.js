@@ -104,7 +104,7 @@ export default defineConfig({
     headers: CROSS_ORIGIN_ISOLATION_HEADERS,
   },
   optimizeDeps: {
-    exclude: ['@dimforge/rapier3d-compat', 'filament']
+    exclude: ['@dimforge/rapier3d-compat']
   },
 assetsInclude: ['**/*.wasm', '**/*.filmat', '**/*.glb', '**/*.gltf', '**/*.wgsl'],
   plugins: [

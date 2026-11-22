@@ -194,13 +194,29 @@ export async function buildHeadlessLevel(level, { verbose = false, seed = HEADLE
         }
         game.physicsWorld.flushStaticBatches?.();
         // Static checks ray-cast before the first step.
-        game.world.propagateModifiedBodyPositionsToColliders();
-        game.world.updateSceneQueries();
+        refreshSceneQueries(game.world);
     } finally {
         Math.random = realRandom;
         restore?.();
     }
     return game;
+}
+
+/**
+ * Make ray casts see colliders created since the last step. Rapier's scene
+ * queries read the broad-phase BVH, which only `step()` rebuilds (0.13's
+ * `updateSceneQueries()` is gone), so run one zero-length step: poses and
+ * velocities are untouched and later steps follow the same trajectory.
+ * @param {RAPIER.World} world
+ */
+export function refreshSceneQueries(world) {
+    const dt = world.timestep;
+    world.timestep = 0;
+    try {
+        world.step();
+    } finally {
+        world.timestep = dt;
+    }
 }
 
 function muteConsole() {

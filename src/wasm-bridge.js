@@ -148,7 +148,8 @@ const jsFallback = {
     /** Normalises a 3-D vector to unit length.  Returns {x, y, z}. */
     vec3Normalize(x, y, z) {
         const len = Math.sqrt(x * x + y * y + z * z);
-        if (len < 1e-8) return { x: 0, y: 0, z: 0 };
+        // Same cut-off as the C++ kernel (1e-6f) so both paths agree on what counts as zero-length.
+        if (len < 1e-6) return { x: 0, y: 0, z: 0 };
         return { x: x / len, y: y / len, z: z / len };
     },
 

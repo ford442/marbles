@@ -180,6 +180,7 @@ export const WORKER_MSG = /** @type {const} */ ({
  * @property {boolean} [solid]
  * @property {number | null} [groups]
  * @property {boolean} [excludeSensors]
+ * @property {boolean} [excludeDynamic]
  * @property {number | null} [excludeBodyIndex]
  */
 

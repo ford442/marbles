@@ -94,6 +94,7 @@ export class GameLoopCamera {
                                     solid: false,
                                     excludeBody: target.rigidBody,
                                     excludeSensors: true,
+                                    excludeDynamic: true,
                                 })
                                 if (hit) {
                                     const safeDist = hit.toi - 0.2
@@ -266,6 +267,7 @@ export class GameLoopCamera {
                                     solid: false,
                                     excludeBody: target.rigidBody,
                                     excludeSensors: true,
+                                    excludeDynamic: true,
                                 })
                                 if (hit) {
                                     const safeDist = hit.toi - 0.2
@@ -345,6 +347,7 @@ export class GameLoopCamera {
                                 solid: false,
                                 excludeBody: target?.rigidBody,
                                 excludeSensors: true,
+                                excludeDynamic: true,
                             });
         
                             if (hit) {

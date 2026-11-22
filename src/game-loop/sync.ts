@@ -776,10 +776,13 @@ if (this.game.renderSpeedLines) {
         if (this.game.renderer && this.game.swapChain && this.game.view) {
             const renderStart = performance.now()
             try {
-                // === MODERN / RECOMMENDED FILAMENT PATTERN ===
-                if (this.game.renderer.beginFrame(this.game.swapChain)) {
+                // Filament's JS `Renderer.render(swapChain, view)` is the whole
+                // frame: beginFrame, renderView, endFrame, then engine.execute().
+                // Do not wrap it in another beginFrame/endFrame pair: that ends
+                // the frame twice, which Filament >= 1.59 aborts on ("SwapChain
+                // must remain valid until endFrame is called").
+                {
                     this.game.renderer.render(this.game.swapChain, this.game.view);
-                    this.game.renderer.endFrame();
                     perfCounts.renderedFrame = true
 
                     // First-frame handling (loading screen)

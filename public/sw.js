@@ -1,4 +1,7 @@
-const CACHE_VERSION = 'marbles3d-v3';
+// Bump whenever files that must change together are replaced at the same URLs
+// (filament.js + filament.wasm + the compiled materials): cache-first would
+// otherwise mix an old runtime with new materials for one load.
+const CACHE_VERSION = 'marbles3d-v4';
 const API_CACHE = 'marbles3d-api-v1';
 const SW_SCOPE = new URL('./', self.location.href).pathname;
 const PRECACHE_MANIFEST_URL = `${SW_SCOPE}precache-manifest.json`;

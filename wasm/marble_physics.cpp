@@ -417,13 +417,16 @@ inline void computeForceFieldsBatchSimd(float* positions, float* strengths, floa
         const v128_t invDist  = wasm_f32x4_div(vOne, dist);
         const v128_t scale    = wasm_f32x4_mul(invDist, forceMag);
 
-        const v128_t validMask = wasm_v128_and(
-            wasm_f32x4_le(dist, vMaxDist),
-            wasm_f32x4_ge(dist, vEpsilon));
+        // The scalar kernel's cut-off (`dist > maxDist || dist < 1e-6`),
+        // not its negation: a NaN distance fails both comparisons, so it is
+        // not zeroed and comes out as NaN, as in the scalar and JS paths.
+        const v128_t zeroMask = wasm_v128_or(
+            wasm_f32x4_gt(dist, vMaxDist),
+            wasm_f32x4_lt(dist, vEpsilon));
 
-        const v128_t fx = wasm_v128_bitselect(wasm_f32x4_mul(dx, scale), vZero, validMask);
-        const v128_t fy = wasm_v128_bitselect(wasm_f32x4_mul(dy, scale), vZero, validMask);
-        const v128_t fz = wasm_v128_bitselect(wasm_f32x4_mul(dz, scale), vZero, validMask);
+        const v128_t fx = wasm_v128_bitselect(vZero, wasm_f32x4_mul(dx, scale), zeroMask);
+        const v128_t fy = wasm_v128_bitselect(vZero, wasm_f32x4_mul(dy, scale), zeroMask);
+        const v128_t fz = wasm_v128_bitselect(vZero, wasm_f32x4_mul(dz, scale), zeroMask);
 
         storeVec3x4(out + base, fx, fy, fz);
     }
@@ -573,11 +576,13 @@ inline void computeSpringForcesBatchSimd(const float* positions, const float* an
         const v128_t fMag = wasm_f32x4_sub(wasm_f32x4_mul(stiff, extension),
                                            wasm_f32x4_mul(damp, velAlongAxis));
 
-        const v128_t validMask = wasm_f32x4_ge(dist, vEps);
+        // `dist < 1e-6` as in the scalar kernel: a NaN distance is not
+        // zeroed, it propagates.
+        const v128_t zeroMask = wasm_f32x4_lt(dist, vEps);
         storeVec3x4(out + base,
-                    wasm_v128_bitselect(wasm_f32x4_mul(nx, fMag), vZero, validMask),
-                    wasm_v128_bitselect(wasm_f32x4_mul(ny, fMag), vZero, validMask),
-                    wasm_v128_bitselect(wasm_f32x4_mul(nz, fMag), vZero, validMask));
+                    wasm_v128_bitselect(vZero, wasm_f32x4_mul(nx, fMag), zeroMask),
+                    wasm_v128_bitselect(vZero, wasm_f32x4_mul(ny, fMag), zeroMask),
+                    wasm_v128_bitselect(vZero, wasm_f32x4_mul(nz, fMag), zeroMask));
     }
 
     computeSpringForcesBatchScalar(positions, anchors, velocities, restLengths,
@@ -754,8 +759,10 @@ inline void closestPointsOnSegmentBatchSimd(const float* p0, const float* p1,
                            wasm_f32x4_mul(wasm_f32x4_sub(qy, ay), dy)),
             wasm_f32x4_mul(wasm_f32x4_sub(qz, az), dz));
 
-        const v128_t validMask = wasm_f32x4_ge(lenSq, vEps);
-        v128_t t = wasm_v128_bitselect(wasm_f32x4_div(proj, lenSq), vZero, validMask);
+        // `lenSq < 1e-12` as in the scalar kernel, so a NaN length is not
+        // treated as degenerate and t (hence the result) is NaN.
+        const v128_t degenerateMask = wasm_f32x4_lt(lenSq, vEps);
+        v128_t t = wasm_v128_bitselect(vZero, wasm_f32x4_div(proj, lenSq), degenerateMask);
         t = wasm_f32x4_min(wasm_f32x4_max(t, vZero), vOne);
 
         storeVec3x4(out + base,

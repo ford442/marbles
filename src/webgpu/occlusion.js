@@ -7,7 +7,7 @@
  * accepts video frames, and no `EXT_external_objects` / `WEBGL_shared_sources`
  * style GPU resource sharing between WebGL2 and WebGPU contexts is
  * standardized in any shipping browser. Filament's WASM bindings used here
- * (node_modules/filament/filament.d.ts) also expose no readPixels or
+ * (docs/reference/filament.d.ts) also expose no readPixels or
  * depth-texture readback, so there's no depth image to copy even via a CPU
  * round trip.
  *
