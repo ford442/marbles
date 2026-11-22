@@ -4,7 +4,8 @@
  *
  * Throughput benchmark for the SIMD-vectorized WASM batch kernels
  * (computeForceFieldsBatch, applyVelocityDampingBatch, computeSpringForcesBatch,
- * closestPointsOnSegmentBatch) against a 1000-entity workload. Reports absolute throughput for the currently built
+ * closestPointsOnSegmentBatch) and their scalar `*Out` counterparts (one call
+ * per entity) against a 1000-entity workload. Reports absolute throughput for the currently built
  * public/wasm/marble_physics.{js,wasm}, and — when --baseline-dir points at
  * a previously built copy of those files (e.g. checked out from git history
  * before a WASM change) — reports the improvement between the two.
@@ -157,11 +158,74 @@ function makeSegmentFn(runner, count) {
     return () => runner.closestPointsOnSegmentBatch(p0, p1, q, out, count);
 }
 
+// ── Scalar entry points (`*Out`): one WASM call per entity ───────────────────
+// The path the game takes below FORCE_BATCH_THRESHOLD. Unlike the hand-written
+// SIMD batch loops, this code is whatever the compiler makes of the scalar
+// C++, so it is where a float-semantics flag change (e.g. dropping
+// -ffast-math) would show up.
+
+function makeScalarForceFieldFn(runner, count) {
+    const { positions, strengths } = makeForceFieldDataset(count);
+    const mod = runner._mod;
+    const ptr = runner._scalarOutPtr;
+    return () => {
+        for (let i = 0; i < count; i++) {
+            const b = i * 3;
+            mod.computeForceFieldOut(ptr, 0, 0, 0, positions[b], positions[b + 1], positions[b + 2], strengths[i], 2.0, 0.5, 25, 0);
+        }
+    };
+}
+
+function makeScalarVelocityDampingFn(runner, count) {
+    const { velocities } = makeVelocityDataset(count);
+    const mod = runner._mod;
+    const ptr = runner._scalarOutPtr;
+    return () => {
+        for (let i = 0; i < count; i++) {
+            const b = i * 3;
+            mod.applyVelocityDampingOut(ptr, velocities[b], velocities[b + 1], velocities[b + 2], 0.8, 1 / 60, 8);
+        }
+    };
+}
+
+function makeScalarSpringFn(runner, count) {
+    const d = makeSpringDataset(count);
+    const mod = runner._mod;
+    const ptr = runner._scalarOutPtr;
+    return () => {
+        for (let i = 0; i < count; i++) {
+            const b = i * 3;
+            mod.computeSpringForceOut(
+                ptr, d.positions[b], d.positions[b + 1], d.positions[b + 2],
+                d.anchors[b], d.anchors[b + 1], d.anchors[b + 2],
+                d.restLengths[i], d.stiffnesses[i], d.dampings[i],
+                d.velocities[b], d.velocities[b + 1], d.velocities[b + 2],
+            );
+        }
+    };
+}
+
+function makeScalarSegmentFn(runner, count) {
+    const { p0, p1, q } = makeSegmentDataset(count);
+    const mod = runner._mod;
+    const ptr = runner._scalarOutPtr;
+    return () => {
+        for (let i = 0; i < count; i++) {
+            const b = i * 3;
+            mod.closestPointOnSegmentOut(ptr, p0[b], p0[b + 1], p0[b + 2], p1[b], p1[b + 1], p1[b + 2], q[b], q[b + 1], q[b + 2]);
+        }
+    };
+}
+
 const KERNELS = [
     ['computeForceFieldsBatch', makeForceFieldFn],
     ['applyVelocityDampingBatch', makeVelocityDampingFn],
     ['computeSpringForcesBatch', makeSpringFn],
     ['closestPointsOnSegmentBatch', makeSegmentFn],
+    ['computeForceFieldOut (scalar, per entity)', makeScalarForceFieldFn],
+    ['applyVelocityDampingOut (scalar, per entity)', makeScalarVelocityDampingFn],
+    ['computeSpringForceOut (scalar, per entity)', makeScalarSpringFn],
+    ['closestPointOnSegmentOut (scalar, per entity)', makeScalarSegmentFn],
 ];
 
 function warmup(fn, ms) {

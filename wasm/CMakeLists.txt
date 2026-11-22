@@ -22,16 +22,33 @@ if(EMSCRIPTEN)
         -fvisibility=hidden    # Smaller binary / better inlining
     )
 
-    # Release: max optimization, no runtime safety nets.
+    # Release: max optimization, strict IEEE 754 float semantics.
+    #
+    # Deliberately NOT -ffast-math. That flag lets the compiler assume no NaN
+    # or infinity ever occurs (so guards like `len < 1e-6f` are compiled away
+    # for them), reassociate sums and replace x / y with x * (1 / y), all of
+    # which make results differ from the JS fallbacks in src/wasm-bridge.js
+    # and, in principle, between compiler versions. Ranked races and ghost
+    # replays need every client to compute the same bits.
+    #
+    # What is kept from it is the part that costs nothing in correctness:
+    #   -fno-math-errno     sqrt/pow need not set errno → f32.sqrt is one instruction
+    #   -fno-trapping-math  float ops cannot trap in WASM, so they may be
+    #                       hoisted and speculated freely
+    # -ffp-contract=off pins "no fused multiply-add": WASM has none today,
+    # but relaxed-simd does, and a contracted a*b+c rounds differently.
+    #
+    # tests/test_wasm_parity_ulp.js holds the result to a per-kernel ULP bound
+    # against the fallbacks, including NaN / ±Infinity inputs.
     target_compile_options(marble_physics PRIVATE
-        $<$<CONFIG:Release>:-O3 -ffast-math -fno-exceptions>
+        $<$<CONFIG:Release>:-O3 -fno-math-errno -fno-trapping-math -ffp-contract=off -fno-exceptions>
     )
 
     # Debug: -fsanitize=address catches OOB/UAF bugs in the batch kernels'
     # raw pointer arithmetic; -Weverything is Clang-only (Emscripten uses
-    # upstream Clang) and surfaces UB the Release build's -ffast-math would
-    # otherwise silently paper over. Not used in CI — for local `./build.sh
-    # --debug` runs only.
+    # upstream Clang) and surfaces UB that -O3 would otherwise silently
+    # paper over. CI only compiles it (see debug_build.yml); run it under
+    # Node with `./build.sh --debug`.
     target_compile_options(marble_physics PRIVATE
         $<$<CONFIG:Debug>:-O0 -g -fsanitize=address -Weverything -Wno-c++98-compat>
     )
@@ -92,6 +109,6 @@ if(EMSCRIPTEN)
         # -sAGGRESSIVE_VARIABLE_ELIMINATION=1
     )
 else()
-    # Native / testing build
-    target_compile_options(marble_physics PRIVATE -O3 -ffast-math)
+    # Native / testing build: same float semantics as the WASM Release build.
+    target_compile_options(marble_physics PRIVATE -O3 -fno-math-errno -fno-trapping-math -ffp-contract=off)
 endif()
